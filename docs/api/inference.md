@@ -6,14 +6,14 @@ This module provides two main functions for structural estimation with valid inf
 
 | Function | Use Case | Target | Lambda |
 |----------|----------|--------|--------|
-| `structural_dml()` | Production, 8 families | E[β(X)] fixed | Estimated |
+| `structural_dml()` | Production, 13 families | E[β(X)] fixed | Estimated |
 | `inference()` | Flexible targets, regimes | Custom h(θ) | Auto-selected |
 
 ---
 
 ## `structural_dml()` - Legacy API
 
-The production-ready API supporting 8 GLM families.
+The production-ready API supporting 13 GLM families.
 
 ### Signature
 

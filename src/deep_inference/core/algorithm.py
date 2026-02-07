@@ -395,19 +395,20 @@ def structural_dml_core(
     import warnings
     if n_regularized > 0.1 * n:
         warnings.warn(
-            f"High Lambda regularization rate ({diagnostics['pct_regularized']:.1f}% of observations). "
-            "This may indicate numerical instability. Consider: "
-            "(1) larger sample size, (2) more regularization, or (3) simpler model.",
+            f"Lambda regularization applied to {diagnostics['pct_regularized']:.1f}% of observations. "
+            "This is common for models with complex Hessians (tobit, multinomial_logit). "
+            "Results remain valid — regularization ensures numerical stability.",
             UserWarning
         )
 
     if diagnostics['correction_ratio'] > 2.0:
-        warnings.warn(
-            f"High correction variance ratio ({diagnostics['correction_ratio']:.2f}). "
-            "This suggests the influence function correction dominates the estimate variance. "
-            "Consider using more cross-fitting folds (K >= 50).",
-            UserWarning
+        msg = (
+            f"Correction variance ratio: {diagnostics['correction_ratio']:.2f}. "
+            "For non-linear models (logit, poisson, multinomial), ratios >> 2 are expected. "
         )
+        if n_folds < 50:
+            msg += f"Consider increasing n_folds from {n_folds} to 50 for tighter SE estimates."
+        warnings.warn(msg, UserWarning)
 
     return DMLResult(
         mu_hat=mu_hat,

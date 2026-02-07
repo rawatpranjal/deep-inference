@@ -20,7 +20,7 @@ metrics
 
 | API | Use Case |
 |-----|----------|
-| `structural_dml()` | Production, 8 families, fixed target E[β] |
+| `structural_dml()` | Production, 13 families, fixed target E[β] |
 | `inference()` | Flexible targets, regime detection, RCT support |
 
 ### Main Entry Points
@@ -54,7 +54,8 @@ result = inference(
 ```python
 from deep_inference import FAMILY_REGISTRY
 print(list(FAMILY_REGISTRY.keys()))
-# ['linear', 'logit', 'poisson', 'tobit', 'negbin', 'gamma', 'gumbel', 'weibull']
+# ['linear', 'logit', 'poisson', 'tobit', 'negbin', 'gamma', 'gumbel', 'weibull',
+#  'gaussian', 'probit', 'beta', 'zip', 'multinomial_logit']
 ```
 
 ### Family Classes
@@ -62,7 +63,11 @@ print(list(FAMILY_REGISTRY.keys()))
 ```python
 from deep_inference import (
     LinearFamily, LogitFamily, PoissonFamily, TobitFamily,
-    NegBinFamily, GammaFamily, GumbelFamily, WeibullFamily
+    NegBinFamily, GammaFamily, GumbelFamily, WeibullFamily,
+    MultinomialLogitFamily,
+)
+from deep_inference.families import (
+    GaussianFamily, ProbitFamily, BetaFamily, ZIPFamily,
 )
 ```
 

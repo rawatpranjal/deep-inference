@@ -2,6 +2,14 @@
 
 ## 2026-02-07
 
+### Tester Feedback: Discoverability, Warnings, UX
+- Fixed "8 families" → "13 families" in API docs (`docs/api/index.md`, `docs/api/inference.md`)
+- Updated FAMILY_REGISTRY print output and import list to include all 13 families (gaussian, probit, beta, zip, multinomial_logit were missing)
+- Improved correction_ratio warning: now explains high ratios are expected for non-linear models, only suggests more folds if n_folds < 50
+- Improved Lambda regularization warning: reassures users that regularization is expected and safe for complex Hessians
+- Added `inference()` API to module docstring for discoverability
+- Added 4 missing families (gaussian, probit, beta, zip) to `structural_dml()` family arg docs
+
 ### Multinomial Logit Documentation, Tutorial, and Showcase Notebook
 - Added `docs/tutorials/multinomial.md`: Full tutorial mirroring logit.md structure (DGP, data encoding, example, results, applications)
 - Added `tutorials/07_multinomial_logit.ipynb`: End-to-end showcase notebook with parameter recovery and visualization
