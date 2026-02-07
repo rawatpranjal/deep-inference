@@ -2,6 +2,12 @@
 
 ## 2026-02-07
 
+### Multinomial Logit Documentation, Tutorial, and Showcase Notebook
+- Added `docs/tutorials/multinomial.md`: Full tutorial mirroring logit.md structure (DGP, data encoding, example, results, applications)
+- Added `tutorials/07_multinomial_logit.ipynb`: End-to-end showcase notebook with parameter recovery and visualization
+- Updated API docs: families.md, models.md, targets.md, inference.md with MNL entries
+- Updated README.md, getting_started, quickstart with MNL in supported families tables
+
 ### Fix Multinomial Logit Parameter Recovery & Coverage
 - **Root cause**: `structural_dml()` (legacy API) hardcoded `patience=10` for early stopping, fatal for multinomial logit (3-way split + high-dim random T = noisy validation loss)
 - **Fix**: Added `patience` parameter to `structural_dml()` and `structural_dml_core()`, forwarded to `train_structural_net()` (default=10, backwards-compatible)

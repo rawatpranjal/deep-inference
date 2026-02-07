@@ -47,6 +47,7 @@ result = structural_dml(
 | `tobit` | Y = max(0, α + βT + σε) | 3 | Censored |
 | `negbin` | Y ~ NegBin(exp(α + βT), r) | 2 | Overdispersed counts |
 | `weibull` | Y ~ Weibull(k, exp(α + βT)) | 2 | Survival/duration |
+| `multinomial_logit` | P(Y=j) = softmax(α_j + X'_j β) | (J-1)+K | Discrete choice (J>=3) |
 
 ### Example
 
@@ -139,7 +140,7 @@ result = inference(
     T,                      # (n,) treatments
     X,                      # (n, d) covariates
     # Model specification (choose one):
-    model='logit',          # Built-in: 'linear', 'logit'
+    model='logit',          # Built-in: 'linear', 'logit', 'multinomial_logit'
     loss=None,              # OR custom loss function
     theta_dim=None,         # Required if custom loss
     # Target specification (choose one):

@@ -115,6 +115,7 @@ The package abstracts the math of influence functions. You simply select the fam
 | **Tobit** | $Y = \max(0, \alpha(X) + \beta(X)T + \sigma\varepsilon)$ | Labor Supply, Censored Demand |
 | **NegBin** | $Y \sim \text{NegBin}(\exp(\alpha(X) + \beta(X)T), r)$ | Count Data with Overdispersion |
 | **Weibull** | $Y \sim \text{Weibull}(k, \exp(\alpha(X) + \beta(X)T))$ | Duration Analysis, Survival |
+| **Multinomial Logit** | $P(Y=j) = \text{softmax}(\alpha_j(X) + X'_j \beta(X))$ | Transportation, Brand Choice |
 
 *Note: For complex models like Tobit, `deep-inference` automatically handles the joint estimation of structural variance $\sigma(X)$ required for consistent inference.*
 
@@ -151,6 +152,7 @@ Comprehensive eval suite validates every mathematical component. [Full results â
 | 05 | Influence Functions | Coverage 88% |
 | 06 | Frequentist Coverage | PASS |
 | 07 | End-to-End | 7/7 PASS |
+| 09 | Multinomial Logit | 98% coverage PASS |
 
 ## Citation
 
