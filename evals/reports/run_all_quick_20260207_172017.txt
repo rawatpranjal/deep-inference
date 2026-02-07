@@ -1,0 +1,307 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/pranjal/deepest/evals/run_all.py", line 172, in <module>
+    results = run_all_evals(
+              ^^^^^^^^^^^^^^
+  File "/Users/pranjal/deepest/evals/run_all.py", line 78, in run_all_evals
+    results["regime_b"] = run_regime_b(quick=quick, verbose=verbose, M=M)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/pranjal/deepest/evals/regime_b/run_regime_b.py", line 35, in run_regime_b
+    results["eval_01"] = run_eval_01_theta_recovery(n=n, verbose=verbose)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/pranjal/deepest/evals/regime_b/eval_01_theta_recovery.py", line 77, in run_eval_01_theta_recovery
+    rmse_alpha = np.sqrt(np.mean((alpha_hat - alpha_true) ** 2))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/numpy/_core/fromnumeric.py", line 3822, in mean
+    return mean(axis=axis, dtype=dtype, out=out, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: mean() received an invalid combination of arguments - got (out=NoneType, dtype=NoneType, axis=NoneType, ), but expected one of:
+ * (*, torch.dtype dtype = None)
+ * (tuple of ints dim, bool keepdim = False, *, torch.dtype dtype = None)
+ * (tuple of names dim, bool keepdim = False, *, torch.dtype dtype = None)
+
+================================================================================
+COMPREHENSIVE EVALUATION REPORT - ALL 3 REGIMES
+================================================================================
+
+Generated: 2026-02-07T17:20:18.943686
+Quick mode: True
+Coverage simulations (M): 10
+Report output: evals/reports
+
+================================================================================
+
+
+The Three Lambda Regimes:
+  Regime A: RCT + Known F_T      -> ComputeLambda (Monte Carlo)
+  Regime B: Linear Model         -> AnalyticLambda (E[TT'|X])
+  Regime C: Observational Logit  -> EstimateLambda (3-way split)
+
+================================================================================
+
+
+
+
+################################################################################
+# REGIME A: RANDOMIZED CONTROLLED TRIAL (RCT)
+# Lambda Strategy: ComputeLambda (Monte Carlo)
+################################################################################
+
+
+
+============================================================
+EVAL 01: LAMBDA COMPUTATION (Regime A)
+============================================================
+
+DGP: RCT Logit
+  T ~ Bernoulli(0.5)
+  α*(x) = x, β*(x) = 1
+
+Oracle Formula:
+  Λ = 0.5 * σ(α)(1-σ(α)) * [[1,0],[0,0]]
+    + 0.5 * σ(α+β)(1-σ(α+β)) * [[1,1],[1,1]]
+
+--- θ = [0. 1.] ---
+Oracle Λ:
+  [[0.223306, 0.098306],
+   [0.098306, 0.098306]]
+Eigenvalues: [0.04431428 0.27729765]
+Package Λ:
+  [[0.223039, 0.099306],
+   [0.099306, 0.099306]]
+Max Error: 0.001000
+
+--- θ = [0.5 1. ] ---
+Oracle Λ:
+  [[0.192075, 0.074573],
+   [0.074573, 0.074573]]
+Eigenvalues: [0.03838819 0.22826012]
+Package Λ:
+  [[0.192034, 0.074650],
+   [0.074650, 0.074650]]
+Max Error: 0.000076
+
+--- θ = [-1.  1.] ---
+Oracle Λ:
+  [[0.223306, 0.125000],
+   [0.125000, 0.125000]]
+Eigenvalues: [0.03983613 0.30846983]
+Package Λ:
+  [[0.223167, 0.124325],
+   [0.124325, 0.124325]]
+Max Error: 0.000675
+
+--- θ = [1. 2.] ---
+Oracle Λ:
+  [[0.120894, 0.022588],
+   [0.022588, 0.022588]]
+Eigenvalues: [0.0176465  0.12583612]
+Package Λ:
+  [[0.121557, 0.022390],
+   [0.022390, 0.022390]]
+Max Error: 0.000663
+
+============================================================
+VALIDATION CRITERIA
+============================================================
+  Max error < 0.05: PASS
+  All eigenvalues > 0: PASS
+
+============================================================
+EVAL 01: PASS
+============================================================
+
+
+
+============================================================
+EVAL 02: TWO-WAY SPLIT VERIFICATION (Regime A)
+============================================================
+
+Expected Behavior:
+  - ComputeLambda.requires_separate_fold = False
+  - CrossFitter uses 2-way split: Train | Test
+  - No additional fold for Lambda estimation
+
+--- ComputeLambda Properties ---
+  requires_theta: True
+  requires_separate_fold: False
+
+============================================================
+VALIDATION CRITERIA
+============================================================
+  requires_separate_fold = False: PASS
+
+============================================================
+EVAL 02: PASS
+============================================================
+
+
+
+============================================================
+EVAL 03: BOUNDARY STABILITY (Regime A)
+============================================================
+
+Stress Test:
+  When α is extreme (e.g., α=10), probabilities → 0/1
+  This makes σ(1-σ) → 0, causing Lambda → singular
+
+--- θ = [10.  1.] ---
+  σ(α) = 0.999955, σ(α+β) = 0.999983
+  σ(1-σ) at T=0: 4.54e-05
+  σ(1-σ) at T=1: 1.67e-05
+  Lambda =
+    [[3.10e-05, 8.35e-06],
+     [8.35e-06, 8.35e-06]]
+  Eigenvalues: [5.60942922e-06 3.37896176e-05]
+  Min eigenvalue: 5.61e-06
+  Condition number: 6.02e+00
+  Has NaN: False, Has Inf: False
+
+--- θ = [-10.   1.] ---
+  σ(α) = 0.000045, σ(α+β) = 0.000123
+  σ(1-σ) at T=0: 4.54e-05
+  σ(1-σ) at T=1: 1.23e-04
+  Lambda =
+    [[8.44e-05, 6.17e-05],
+     [6.17e-05, 6.17e-05]]
+  Eigenvalues: [1.03137139e-05 1.35763540e-04]
+  Min eigenvalue: 1.03e-05
+  Condition number: 1.32e+01
+  Has NaN: False, Has Inf: False
+
+--- θ = [5. 5.] ---
+  σ(α) = 0.993307, σ(α+β) = 0.999955
+  σ(1-σ) at T=0: 6.65e-03
+  σ(1-σ) at T=1: 4.54e-05
+  Lambda =
+    [[3.35e-03, 2.27e-05],
+     [2.27e-05, 2.27e-05]]
+  Eigenvalues: [2.25429200e-05 3.34688122e-03]
+  Min eigenvalue: 2.25e-05
+  Condition number: 1.48e+02
+  Has NaN: False, Has Inf: False
+
+--- θ = [0. 0.] ---
+  σ(α) = 0.500000, σ(α+β) = 0.500000
+  σ(1-σ) at T=0: 2.50e-01
+  σ(1-σ) at T=1: 2.50e-01
+  Lambda =
+    [[2.50e-01, 1.25e-01],
+     [1.25e-01, 1.25e-01]]
+  Eigenvalues: [0.04774575 0.32725425]
+  Min eigenvalue: 4.77e-02
+  Condition number: 6.85e+00
+  Has NaN: False, Has Inf: False
+
+============================================================
+VALIDATION CRITERIA
+============================================================
+  No NaN in Lambda: PASS
+  No Inf in Lambda: PASS
+  All PSD (or near-PSD with regularization): PASS
+
+============================================================
+EVAL 03: PASS
+============================================================
+
+
+
+============================================================
+EVAL 04: FREQUENTIST COVERAGE (Regime A)
+============================================================
+
+DGP: RCT Logit
+  T ~ Bernoulli(0.5)
+  True ATE = 0.216890
+
+Simulation Settings:
+  M = 10 replications
+  n = 300 observations
+
+------------------------------------------------------------
+RUNNING SIMULATIONS
+------------------------------------------------------------
+  Running simulation 5/10...
+  Running simulation 10/10...
+
+============================================================
+RESULTS
+============================================================
+
+--- Simulation Summary ---
+  Valid: 10/10, Failed: 0
+
+--- Point Estimation ---
+  True ATE: 0.216890
+  Mean(μ̂): 0.194081
+  Bias: -0.022810
+
+--- Standard Error ---
+  Empirical SE: 0.054887
+  Mean SE (IF): 0.057060
+  SE Ratio: 0.9619
+
+--- Coverage ---
+  Coverage: 90.0% (9/10)
+
+--- z-Score Distribution ---
+  Mean z: -0.4101 (should be ~0)
+  Std z: 0.9622 (should be ~1)
+
+--- Individual Results (first 10) ---
+  Sim   μ̂         SE         CI_lo      CI_hi      Cov  
+-------------------------------------------------------
+  1     0.2145     0.0570     0.1027     0.3263     T    
+  2     0.2364     0.0583     0.1221     0.3508     T    
+  3     0.1256     0.0551     0.0177     0.2336     T    
+  4     0.1983     0.0557     0.0892     0.3075     T    
+  5     0.2264     0.0564     0.1158     0.3370     T    
+  6     0.2106     0.0568     0.0993     0.3219     T    
+  7     0.2099     0.0569     0.0985     0.3214     T    
+  8     0.2620     0.0600     0.1443     0.3797     T    
+  9     0.1934     0.0572     0.0814     0.3054     T    
+  10    0.0636     0.0572     -0.0486    0.1757     F    
+
+============================================================
+VALIDATION CRITERIA
+============================================================
+  Coverage in [80%, 99%]: PASS
+  SE Ratio in [0.5, 2.0]: PASS
+  |Bias| < 0.1: PASS
+
+============================================================
+EVAL 04: PASS
+============================================================
+
+============================================================
+REGIME A SUMMARY
+============================================================
+  eval_01: PASS
+  eval_02: PASS
+  eval_03: PASS
+  eval_04: PASS
+
+
+
+
+################################################################################
+# REGIME B: LINEAR MODEL (CONFOUNDED)
+# Lambda Strategy: AnalyticLambda (E[TT'|X])
+################################################################################
+
+
+
+============================================================
+EVAL 01: θ RECOVERY (Regime B)
+============================================================
+
+DGP: Linear with x² intercept
+  α*(x) = x²
+  β*(x) = 2x - 1
+  X ~ Uniform(0.0, 1.0)
+  T = 0.5X + N(0, 1.0²)
+
+--- Data Generated (n=500) ---
+  Y: mean=0.4741, std=0.7845
+  T: mean=0.2569, std=1.0281

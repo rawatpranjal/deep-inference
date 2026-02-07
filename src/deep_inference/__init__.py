@@ -438,6 +438,7 @@ def inference(
         # Built-in target
         target_map = {
             "beta": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
+            "average_slope": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
             "ame": AME(param_index=1, model_type="logit" if model == "logit" else "linear"),
         }
         if target not in target_map:

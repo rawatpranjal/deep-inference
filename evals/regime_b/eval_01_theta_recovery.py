@@ -65,6 +65,8 @@ def run_eval_01_theta_recovery(n: int = 1000, verbose: bool = True):
 
         # Get theta predictions
         theta_hat = result.theta_hat  # (n, 2)
+        if isinstance(theta_hat, torch.Tensor):
+            theta_hat = theta_hat.detach().numpy()
 
         alpha_true = theta_true[:, 0].numpy()
         beta_true = theta_true[:, 1].numpy()
