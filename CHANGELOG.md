@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-02-07
+
+### Fix Multinomial Logit Parameter Recovery & Coverage
+- **Root cause**: `structural_dml()` (legacy API) hardcoded `patience=10` for early stopping, fatal for multinomial logit (3-way split + high-dim random T = noisy validation loss)
+- **Fix**: Added `patience` parameter to `structural_dml()` and `structural_dml_core()`, forwarded to `train_structural_net()` (default=10, backwards-compatible)
+- **Eval_09 tuning**: patience=50, epochs=300, n=10000 (recovery), n=8000 (coverage) — multinomial logit with 3-way split needs more data than binary logit
+- **Results**: Recovery PASS (RMSE 0.08-0.12, Corr 0.78-0.90), Coverage **98%** (SE ratio=0.97, z_mean=0.14, z_std=0.96)
+
+### Paper Transcription, Eval Standardization, and Multinomial Choice Model
+- **Docling transcriptions**: Transcribed 4 PDFs (FLM 2021, 2023, 2025 + Hetzenecker & Osterhaus 2024) to markdown with preserved equations
+- **Standardized eval metrics**: Created `evals/common/metrics.py` with strict thresholds, fixed broken imports in `evals/common/__init__.py`, refactored `eval_06_coverage.py`
+- **Multinomial logit model**: Implemented conditional logit (McFadden) with J alternatives — `models/multinomial.py`, `families/multinomial.py`, `targets/choice_probability.py`, `evals/dgp_multinomial.py`, `evals/eval_09_multinomial.py`
+- **Validation**: Score/Hessian match oracle to machine precision (max error ~1e-16), Lambda MC passes all thresholds, all tests registered and importable
+- **Cross-reference report**: `references/verification_report.md` verifying implementation against papers
+
 ## 2026-01-16 (Night - Late)
 
 ### Package Defaults Updated to Match Validated Settings

@@ -10,6 +10,7 @@ H_θ(x, θ; t̃) → Jacobian (gradient if scalar target)
 from .base import Target, BaseTarget, CustomTarget, TargetMetadata, target_from_fn
 from .average_param import AverageParameter, AverageBeta
 from .marginal_effect import AverageMarginalEffect, AME
+from .choice_probability import ChoiceProbabilityTarget, MultinomialAME
 
 __all__ = [
     # Protocol and base classes
@@ -23,4 +24,7 @@ __all__ = [
     "AverageBeta",
     "AverageMarginalEffect",
     "AME",
+    # Multinomial targets
+    "ChoiceProbabilityTarget",
+    "MultinomialAME",
 ]

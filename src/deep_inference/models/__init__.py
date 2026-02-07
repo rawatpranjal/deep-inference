@@ -10,6 +10,7 @@ from .base import (
 )
 from .linear import LinearModel, Linear
 from .logit import LogitModel, Logit
+from .multinomial import MultinomialLogitModel, MultinomialLogit
 
 __all__ = [
     # Neural network
@@ -27,4 +28,6 @@ __all__ = [
     "Linear",
     "LogitModel",
     "Logit",
+    "MultinomialLogitModel",
+    "MultinomialLogit",
 ]

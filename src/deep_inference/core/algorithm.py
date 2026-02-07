@@ -100,6 +100,7 @@ def structural_dml_core(
     ridge: float = 1e-4,
     lambda_method: str = 'ridge',
     ridge_alpha: float = 1000.0,
+    patience: int = 10,
     verbose: bool = False,
 ) -> DMLResult:
     """
@@ -135,6 +136,7 @@ def structural_dml_core(
         lambda_method: Method for Lambda estimation ('ridge', 'lgbm', 'rf', 'mlp', 'aggregate').
             Default 'ridge' is recommended for validated coverage.
         ridge_alpha: Regularization strength for Ridge Lambda (default 1000.0)
+        patience: Early stopping patience for StructuralNet training (default 10)
         verbose: Print progress
 
     Returns:
@@ -253,6 +255,7 @@ def structural_dml_core(
             loss_fn=loss_fn,
             epochs=epochs,
             lr=lr,
+            patience=patience,
             verbose=False,
         )
         histories.append(history)

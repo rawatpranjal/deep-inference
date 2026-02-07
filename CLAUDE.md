@@ -52,19 +52,22 @@ src/deep_inference/
 │   ├── algorithm.py         # Legacy DML algorithm
 │   ├── autodiff.py          # Gradient/Hessian computation
 │   └── lambda_estimator.py  # Legacy Lambda estimation
-├── families/                 # 8 GLM families (legacy API)
+├── families/                 # 13 GLM families (legacy API)
 │   ├── base.py              # BaseFamily protocol
 │   ├── linear.py, logit.py, poisson.py, gamma.py
 │   ├── gumbel.py, tobit.py, negbin.py, weibull.py
+│   ├── multinomial.py       # Conditional logit (McFadden)
 ├── models/                   # NEW: Structural models
 │   ├── base.py              # StructuralModel protocol
 │   ├── linear.py, logit.py  # Built-in models
+│   ├── multinomial.py       # Conditional logit (McFadden) J alternatives
 │   ├── structural_net.py    # Neural network θ(x)
 │   └── custom.py            # CustomModel, model_from_loss()
 ├── targets/                  # NEW: Target functionals
 │   ├── base.py              # Target protocol, BaseTarget
 │   ├── average_parameter.py # E[θ_j] target
 │   ├── marginal_effect.py   # AME target
+│   ├── choice_probability.py # Multinomial choice probability + AME
 │   └── custom.py            # CustomTarget with autodiff Jacobian
 ├── lambda_/                  # NEW: Lambda strategies
 │   ├── base.py              # LambdaStrategy protocol
@@ -240,6 +243,10 @@ evals/
 ├── eval_04_jacobian.py # Target Jacobian: H_θ autodiff vs chain rule
 ├── eval_05_psi.py      # Influence function assembly: ψ package vs Oracle
 ├── eval_06_coverage.py # Frequentist coverage: Monte Carlo validation
+├── eval_09_multinomial.py # Multinomial logit: recovery + autodiff + lambda + coverage
+├── dgp_multinomial.py  # Multinomial logit DGP with oracle formulas
+├── common/
+│   └── metrics.py      # Standardized thresholds + validation functions
 └── run_all.py          # Run all evals, produce full report
 ```
 
@@ -410,6 +417,7 @@ Full benchmark: `tutorials/02_logit_oracle.ipynb`
 | **Probit** | Φ(η) | `-y·log(Φ) - (1-y)·log(1-Φ)` | Mills ratio | Autodiff | 2 |
 | **Beta** | Logit | `lgamma(μφ) + lgamma((1-μ)φ) - ...` | Digamma terms | Autodiff | 2 |
 | **ZIP** | Mixed | Mixture: π + (1-π)·Poisson | Autodiff | Autodiff | 4 |
+| **MultinomialLogit** | Softmax | `-log softmax(V)[y]` | `(p_j - 1{Y=j})·[1,x]` | `p_j(δ_{jm}-p_m)` blocks | (J-1)+K |
 
 Where: `η = α + β·t`, `μ = g⁻¹(η)`, `z = (y/λ)^k` (Weibull) or `(y-μ)/σ` (Gumbel), `r = 1/overdispersion`, `Φ` = normal CDF
 
@@ -492,7 +500,86 @@ mlp            0.997      67.0%      0.650    -0.0150     FAIL
 
 **Conclusion**: Use ridge (default), aggregate, or lgbm. **Never use mlp** for production.
 
+## Paper Transcriptions
+
+Docling-transcribed (markdown with equations):
+- `references/FLM2021_docling.md` - DNN Estimation & Inference (Econometrica)
+- `references/FLM2023_docling.md` - Deep Learning for Heterogeneity (earlier revision)
+- `references/FLM2025_docling.md` - Deep Learning for Heterogeneity (extended)
+- `references/HO2024_multinomial_docling.md` - Multinomial Choice (Hetzenecker & Osterhaus)
+
+Legacy plaintext: `references/FLM2021.txt`, `references/FLM2025.txt`
+
+Cross-reference report: `references/verification_report.md`
+
+## Standardized Eval Metrics
+
+Central thresholds in `evals/common/metrics.py`:
+
+| Category | Metric | Threshold | Tests |
+|----------|--------|-----------|-------|
+| Coverage | coverage | 90-99% | Valid CIs |
+| Coverage | se_ratio | 0.7-1.5 | SE calibration |
+| Coverage | abs_bias | < 0.05 | Unbiasedness |
+| Coverage | z_mean | (-0.3, 0.3) | z-score centering |
+| Coverage | z_std | 0.7-1.5 | z-score spread |
+| Recovery | rmse | < 0.3 | θ̂ accuracy |
+| Recovery | correlation | > 0.7 | θ̂ manifold |
+| Autodiff | error | < 1e-6 | Precision |
+| Lambda | frobenius | < 0.15 | Λ̂ accuracy |
+| Lambda | min_eig | > 1e-4 | Stability |
+| Lambda | non_psd | = 0 | PSD guarantee |
+| Psi | correlation | > 0.9 | ψ accuracy |
+| Psi | rmse | < 0.1 | ψ scale |
+
+Functions: `validate_coverage_run()`, `validate_recovery_run()`, `validate_autodiff_run()`, `validate_lambda_run()`, `validate_psi_run()`, `format_validation_table()`
+
+## Multinomial Logit (Conditional Logit / McFadden)
+
+**Paper**: Hetzenecker & Osterhaus (2024) — "Deep Learning for Heterogeneous Parameters in Discrete Choice Models" (arXiv 2408.09560)
+
+### Model
+
+```
+P(Y=j | W, X) = exp(V_ij) / Σ_m exp(V_im)
+V_ij = α_j(W) + x'_ij · β(W)
+
+α_0 = 0 (reference), θ = [α_1,...,α_{J-1}, β_1,...,β_K]
+```
+
+Data encoding:
+- `W` = individual characteristics (NN input → θ(W))
+- `T` = packed alternative attributes: `(n, J*K)`, unpacked to `(J, K)` inside model
+- `Y` = chosen alternative index: `(n,)` as float (0, 1, ..., J-1)
+- `theta_dim` = (J-1) + K
+
+### Usage
+
+```python
+# Legacy API
+result = structural_dml(Y, T, X, family='multinomial_logit',
+                        n_alternatives=3, n_attributes=2)
+
+# New API
+result = inference(Y, T, X, model='multinomial_logit', target='beta')
+```
+
+### DGP (eval_09)
+
+J=3, K=2, d_w=3. Heterogeneous α_j(W) = a0_j + a1_j*W[0], β_k(W) = b0_k + b1_k*W[0].
+Target: μ* = E[β_1(W)] = -0.8.
+
+### Key Properties
+
+| Property | Value |
+|----------|-------|
+| `hessian_depends_on_theta` | True (softmax probs) |
+| `hessian_depends_on_y` | False (Fisher information) |
+| Regime (randomized) | A (compute Λ via MC) |
+| Regime (observational) | C (estimate Λ, 3-way split) |
+
 ## References
 
 - Farrell, Liang, Misra (2021): Econometrica
 - Farrell, Liang, Misra (2025): Extended theory
+- Hetzenecker, Osterhaus (2024): arXiv 2408.09560
