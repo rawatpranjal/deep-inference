@@ -1,25 +1,17 @@
 """
 deep_inference: Structural Deep Learning with Valid Inference
 
-A from-scratch implementation of the Farrell-Liang-Misra framework
-for structural deep learning with valid inference.
-
 Usage:
-    # Pre-built family
+    # Legacy API (13 GLM families)
     from deep_inference import structural_dml
     result = structural_dml(Y, T, X, family='logit')
 
-    # Custom loss function
-    def my_loss(y, t, theta):
-        alpha, beta = theta[:, 0], theta[:, 1]
-        mu = alpha + beta * t
-        return (y - mu) ** 2
+    # New API (flexible targets + regimes)
+    from deep_inference import inference
+    result = inference(Y, T, X, model='logit', target='ame', t_tilde=0.0)
 
-    result = structural_dml(Y, T, X, loss_fn=my_loss, theta_dim=2)
-
-    # Access results
-    print(f"Estimate: {result.mu_hat:.4f} +/- {result.se:.4f}")
-    print(f"95% CI: [{result.ci_lower:.4f}, {result.ci_upper:.4f}]")
+    # Results
+    print(result.summary())
 """
 
 import numpy as np
@@ -87,6 +79,10 @@ def structural_dml(
                 - 'tobit': Y = max(0, alpha + beta*T + sigma*eps)
                 - 'negbin': Y ~ NegBin(exp(alpha + beta*T), r)
                 - 'weibull': Y ~ Weibull(shape, exp(alpha + beta*T))
+                - 'gaussian': Y ~ N(alpha + beta*T, sigma(X))
+                - 'probit': P(Y=1) = Phi(alpha + beta*T)
+                - 'beta': Y ~ Beta(mu*phi, (1-mu)*phi), logit link
+                - 'zip': Y ~ ZIP(lambda, pi), zero-inflated Poisson
                 - 'multinomial_logit': P(Y=j) = softmax(α_j + x'_j·β)
         target: Target functional for inference (family-specific):
                 - logit: 'beta' (log-odds, default) or 'ame' (average marginal effect)
