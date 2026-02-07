@@ -113,6 +113,10 @@ result = structural_dml(Y, T, X, family='poisson')
 result = structural_dml(Y, T, X, family='tobit')
 
 # And more: gamma, gumbel, negbin, weibull
+
+# Multinomial Logit: discrete choice among J alternatives
+result = structural_dml(Y, T, X, family='multinomial_logit',
+                        n_alternatives=3, n_attributes=2, patience=50)
 ```
 
 ## New `inference()` API

@@ -37,3 +37,4 @@ Neural networks are powerful function approximators, but naive inference (just a
 | Poisson | Count data | Patent counts |
 | Tobit | Censored data | Labor supply |
 | NegBin | Overdispersed counts | Doctor visits |
+| Multinomial Logit | Discrete choice (J>=3) | Transportation mode |

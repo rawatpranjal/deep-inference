@@ -15,6 +15,7 @@ negbin
 gamma
 gumbel
 weibull
+multinomial
 multimodal
 ```
 
@@ -40,6 +41,7 @@ Each tutorial covers:
 | Positive right-skewed | Gamma | Gamma | [Gamma](gamma.md) |
 | Extreme values (maxima) | Gumbel | Gumbel | [Gumbel](gumbel.md) |
 | Time-to-event | Weibull | Weibull | [Weibull](weibull.md) |
+| Discrete choice (J>=3) | Categorical | Multinomial Logit | [Multinomial](multinomial.md) |
 | **High-dim embeddings** | Any | Any | [Multimodal](multimodal.md) |
 
 ## Common Workflow

@@ -86,6 +86,20 @@ beta_hat = theta_hat[:, 1]
 | 10,000 < n < 100,000 | `[128, 64, 32]` |
 | n > 100,000 | `[256, 128, 64]` |
 
+### MultinomialLogitModel
+
+For multinomial logit (conditional logit / McFadden) choice models:
+
+```python
+from deep_inference.models.multinomial import MultinomialLogitModel
+
+model = MultinomialLogitModel(n_alternatives=3, n_attributes=2)
+# theta_dim = (J-1) + K = 4
+# theta = [alpha_1, ..., alpha_{J-1}, beta_1, ..., beta_K]
+# Hessian: Fisher information (no Y dependence, depends on theta)
+# Requires 3-way cross-fitting
+```
+
 ## Custom Network Usage
 
 For advanced users who want to use the network directly:

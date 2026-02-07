@@ -8,6 +8,8 @@ The `targets` module defines what quantity you want to estimate. A **target** is
 |--------|---------|----------|
 | `AverageParameter` | E[θ_j] | Average treatment effect |
 | `AME` | E[p(1-p)·β] | Marginal effect on probability |
+| `ChoiceProbabilityTarget` | P(Y=j \| W, X) | Multinomial choice probability |
+| `MultinomialAME` | ∂P(Y=j)/∂x_{jk} | Multinomial marginal effect |
 | `CustomTarget` | User-defined h(x,θ,t̃) | Any custom functional |
 
 ---
@@ -59,6 +61,58 @@ Where p_i = σ(α_i + β_i·t̃).
 ∂H/∂α = p(1-p)(1-2p)·β / n
 ∂H/∂β = p(1-p)[1 + (1-2p)·β·t̃] / n
 ```
+
+### ChoiceProbabilityTarget
+
+For multinomial logit models: probability of choosing a specific alternative.
+
+```python
+from deep_inference.targets.choice_probability import ChoiceProbabilityTarget
+
+# P(Y=j | W, X) for alternative j=1
+target = ChoiceProbabilityTarget(
+    alternative=1,        # Which alternative (0-indexed)
+    n_alternatives=3,     # Total alternatives J
+    n_attributes=2        # Attributes per alternative K
+)
+```
+
+**Formula:**
+```
+H = P(Y=j|W,X) = softmax(V)[j]
+V_j = alpha_j + x'_j * beta
+```
+
+**Jacobian (closed-form):**
+```
+∂P_j/∂alpha_m = P_{m+1}(delta_{j,m+1} - P_j)
+∂P_j/∂beta_k = P_j(x̃_{jk} - x̄_pk)
+```
+
+Where $\bar{x}_{pk} = \sum_j P_j x_{jk}$ is the probability-weighted mean attribute.
+
+### MultinomialAME
+
+Average Marginal Effect for multinomial logit: how a unit change in attribute $k$ affects the probability of choosing alternative $j$.
+
+```python
+from deep_inference.targets.choice_probability import MultinomialAME
+
+# dP(Y=1)/dx_{1,0}: effect of attribute 0 on probability of alternative 1
+target = MultinomialAME(
+    alternative=1,        # Which alternative
+    attribute=0,          # Which attribute
+    n_alternatives=3,     # Total alternatives J
+    n_attributes=2        # Attributes per alternative K
+)
+```
+
+**Formula:**
+```
+∂P_j/∂x_{jk} = beta_k * P_j * (1 - P_j)
+```
+
+This generalizes the familiar binary logit AME to the multinomial context.
 
 ---
 

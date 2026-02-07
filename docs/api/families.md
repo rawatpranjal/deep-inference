@@ -17,7 +17,7 @@ family = get_family("logit")
 ```python
 from deep_inference import FAMILY_REGISTRY
 print(list(FAMILY_REGISTRY.keys()))
-# ['linear', 'logit', 'poisson', 'tobit', 'negbin', 'gamma', 'gumbel', 'weibull']
+# ['linear', 'logit', 'poisson', 'tobit', 'negbin', 'gamma', 'gumbel', 'weibull', 'multinomial_logit']
 ```
 
 ## Base Class
@@ -126,6 +126,18 @@ from deep_inference import WeibullFamily
 family = WeibullFamily(shape=1.0)
 # Model: Y ~ Weibull(shape, exp(alpha + beta * T))
 # Use for duration/survival analysis
+```
+
+### MultinomialLogitFamily
+
+```python
+from deep_inference import MultinomialLogitFamily
+
+family = MultinomialLogitFamily(n_alternatives=3, n_attributes=2, target='beta', target_idx=0)
+# Model: P(Y=j) = softmax(alpha_j(W) + X'_ij * beta(W))
+# Loss: Categorical cross-entropy
+# Hessian: Fisher information (depends on theta, 3-way splitting)
+# theta_dim = (J-1) + K = 4
 ```
 
 ## Usage Example
