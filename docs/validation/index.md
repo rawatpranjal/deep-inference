@@ -13,6 +13,7 @@ eval_04
 eval_05
 eval_06
 eval_07
+eval_09
 verification
 ```
 
@@ -20,7 +21,7 @@ verification
 
 ## Eval Suite Overview
 
-The package includes 7 evals in `evals/` validating Theorem 2.
+The package includes 8 evals in `evals/` validating Theorem 2.
 
 | Eval | Component | Tests | Result | Details |
 |------|-----------|-------|--------|---------|
@@ -31,8 +32,9 @@ The package includes 7 evals in `evals/` validating Theorem 2.
 | [05](eval_05.md) | Influence Function ψ | Assembly + coverage | 4/4 PASS | [→](eval_05.md) |
 | [06](eval_06.md) | Frequentist Coverage | Monte Carlo M=50 | PASS | [→](eval_06.md) |
 | [07](eval_07.md) | End-to-End | Full workflow | 7/7 PASS | [→](eval_07.md) |
+| [09](eval_09.md) | Multinomial Logit | Recovery + Coverage | 98% coverage PASS | [→](eval_09.md) |
 
-**Total: 224+ individual checks, all passing.**
+**Total: 228+ individual checks, all passing.**
 
 ---
 
@@ -59,6 +61,9 @@ Monte Carlo (M=50, n=5000) confirms valid CIs with z-scores ~ N(0,1). [Details �
 ### Eval 07: End-to-End
 Full analyst workflow: Oracle vs Bootstrap vs NN comparison shows IF correction is essential. [Details →](eval_07.md)
 
+### Eval 09: Multinomial Logit
+Multinomial logit (conditional logit) validated with 98% coverage (M=50, n=8000). Recovery, autodiff, Lambda, and coverage all PASS. [Details →](eval_09.md)
+
 ---
 
 ## Running Evals
@@ -75,6 +80,7 @@ python3 -m evals.eval_04_jacobian
 python3 -m evals.eval_05_psi
 python3 -m evals.eval_06_coverage
 python3 -m evals.eval_07_e2e
+python3 -m evals.eval_09_multinomial
 ```
 
 ---
