@@ -1,13 +1,35 @@
 """
 Common Test Utilities
 
-Shared utilities and cross-regime tests for evaluation suite.
+Shared utilities, metrics, and cross-regime tests for evaluation suite.
 """
 
-from .test_numerical_stability import run_stability_tests
-from .test_crossfit_isolation import run_crossfit_isolation_test
+from .metrics import (
+    COVERAGE_THRESHOLDS,
+    RECOVERY_THRESHOLDS,
+    AUTODIFF_THRESHOLDS,
+    LAMBDA_THRESHOLDS,
+    PSI_THRESHOLDS,
+    check_metric,
+    validate_coverage_run,
+    validate_recovery_run,
+    validate_autodiff_run,
+    validate_lambda_run,
+    validate_psi_run,
+    format_validation_table,
+)
 
 __all__ = [
-    "run_stability_tests",
-    "run_crossfit_isolation_test",
+    "COVERAGE_THRESHOLDS",
+    "RECOVERY_THRESHOLDS",
+    "AUTODIFF_THRESHOLDS",
+    "LAMBDA_THRESHOLDS",
+    "PSI_THRESHOLDS",
+    "check_metric",
+    "validate_coverage_run",
+    "validate_recovery_run",
+    "validate_autodiff_run",
+    "validate_lambda_run",
+    "validate_psi_run",
+    "format_validation_table",
 ]

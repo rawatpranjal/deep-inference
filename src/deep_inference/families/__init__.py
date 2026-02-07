@@ -13,6 +13,7 @@ from .weibull import WeibullFamily
 from .probit import ProbitFamily
 from .beta import BetaFamily
 from .zip import ZIPFamily
+from .multinomial import MultinomialLogitFamily
 
 FAMILY_REGISTRY = {
     "linear": LinearFamily,
@@ -27,6 +28,7 @@ FAMILY_REGISTRY = {
     "probit": ProbitFamily,
     "beta": BetaFamily,
     "zip": ZIPFamily,
+    "multinomial_logit": MultinomialLogitFamily,
 }
 
 
@@ -48,6 +50,7 @@ def get_family(name: str, **kwargs) -> BaseFamily:
               - 'probit': P(Y=1) = Phi(alpha + beta*T) (normal CDF link)
               - 'beta': Y ~ Beta(mu*phi, (1-mu)*phi), mu=sigmoid(alpha+beta*T)
               - 'zip': Zero-Inflated Poisson mixture model
+              - 'multinomial_logit': Conditional logit (McFadden) multinomial choice
         **kwargs: Additional arguments passed to family constructor.
                   Examples:
                   - target='ame' for logit (average marginal effect)
@@ -79,6 +82,7 @@ __all__ = [
     "ProbitFamily",
     "BetaFamily",
     "ZIPFamily",
+    "MultinomialLogitFamily",
     "get_family",
     "FAMILY_REGISTRY",
 ]

@@ -43,6 +43,7 @@ def structural_dml(
     hidden_dims: List[int] = [64, 32],
     epochs: int = 200,
     lr: float = 0.01,
+    patience: int = 10,
     verbose: bool = False,
     store_data: bool = True,
     **kwargs,
@@ -86,6 +87,7 @@ def structural_dml(
                 - 'tobit': Y = max(0, alpha + beta*T + sigma*eps)
                 - 'negbin': Y ~ NegBin(exp(alpha + beta*T), r)
                 - 'weibull': Y ~ Weibull(shape, exp(alpha + beta*T))
+                - 'multinomial_logit': P(Y=j) = softmax(α_j + x'_j·β)
         target: Target functional for inference (family-specific):
                 - logit: 'beta' (log-odds, default) or 'ame' (average marginal effect)
                 - tobit: 'latent' (effect on Y*, default) or 'observed' (effect on E[Y])
@@ -96,6 +98,7 @@ def structural_dml(
         hidden_dims: Neural network hidden layer sizes
         epochs: Training epochs per fold
         lr: Learning rate
+        patience: Early stopping patience (default=10; use 50 for complex models)
         verbose: Print progress
         store_data: Store X for prediction methods (default=True)
         **kwargs: Additional arguments to structural_dml_core
@@ -155,10 +158,16 @@ def structural_dml(
 
     # Get family or use custom functions
     if family is not None:
-        # Build family kwargs (e.g., target='ame' for logit)
+        # Build family kwargs (e.g., target='ame' for logit, n_alternatives=3 for multinomial)
+        # Known family constructor params that should NOT pass through to structural_dml_core
+        FAMILY_CONSTRUCTOR_PARAMS = {'target', 'n_alternatives', 'n_attributes', 'target_idx',
+                                     'shape', 'scale', 'overdispersion', 'sigma'}
         family_kwargs = {}
         if target is not None:
             family_kwargs['target'] = target
+        for param in list(kwargs.keys()):
+            if param in FAMILY_CONSTRUCTOR_PARAMS:
+                family_kwargs[param] = kwargs.pop(param)
 
         fam = get_family(family, **family_kwargs)
         loss_fn = fam.loss
@@ -166,16 +175,19 @@ def structural_dml(
         three_way = fam.hessian_depends_on_theta()
 
         # Use closed-form functions if available
-        # Create test inputs with correct theta dimension
+        # Create test inputs with correct dimensions
         test_theta = Tensor([[0.0] * theta_dim])
+        # Determine treatment dimension for test (T may be multi-dim for multinomial)
+        t_test_dim = getattr(fam, 'J', 1) * getattr(fam, 'K', 1) if hasattr(fam, 'J') else 1
+        test_t = Tensor([0.0] * t_test_dim) if t_test_dim > 1 else Tensor([0.0])
         try:
-            grad_result = fam.gradient(Tensor([0.0]), Tensor([0.0]), test_theta)
+            grad_result = fam.gradient(Tensor([0.0]), test_t.unsqueeze(0), test_theta)
             gradient_fn = fam.gradient if grad_result is not None else None
         except Exception:
             gradient_fn = None
 
         try:
-            hess_result = fam.hessian(Tensor([0.0]), Tensor([0.0]), test_theta)
+            hess_result = fam.hessian(Tensor([0.0]), test_t.unsqueeze(0), test_theta)
             hessian_fn = fam.hessian if hess_result is not None else None
         except Exception:
             hessian_fn = None
@@ -208,6 +220,7 @@ def structural_dml(
         hidden_dims=hidden_dims,
         epochs=epochs,
         lr=lr,
+        patience=patience,
         three_way=three_way,
         gradient_fn=gradient_fn,
         hessian_fn=hessian_fn,
@@ -385,8 +398,8 @@ def inference(
 
         result = inference(Y, T, X, loss=my_loss, target_fn=my_target, theta_dim=2)
     """
-    from .models import Linear, Logit, CustomModel, model_from_loss
-    from .targets import AverageParameter, AME, CustomTarget
+    from .models import Linear, Logit, MultinomialLogit, CustomModel, model_from_loss
+    from .targets import AverageParameter, AME, CustomTarget, ChoiceProbabilityTarget, MultinomialAME
     from .lambda_ import select_lambda_strategy, Regime, detect_regime
     from .engine import run_crossfit
 
@@ -407,6 +420,7 @@ def inference(
         model_map = {
             "linear": Linear(),
             "logit": Logit(),
+            "multinomial_logit": MultinomialLogit(),
         }
         if model not in model_map:
             raise ValueError(f"Unknown model: {model}. Available: {list(model_map.keys())}")
@@ -509,8 +523,9 @@ from .families import (
 )
 
 # New architecture exports
-from .models import StructuralModel, CustomModel, Linear, Logit
-from .targets import Target, CustomTarget, AverageParameter, AME
+from .models import StructuralModel, CustomModel, Linear, Logit, MultinomialLogit
+from .targets import Target, CustomTarget, AverageParameter, AME, ChoiceProbabilityTarget, MultinomialAME
+from .families import MultinomialLogitFamily
 from .lambda_ import Regime, detect_regime, select_lambda_strategy
 
 __all__ = [
@@ -538,10 +553,14 @@ __all__ = [
     'CustomModel',
     'Linear',
     'Logit',
+    'MultinomialLogit',
+    'MultinomialLogitFamily',
     'Target',
     'CustomTarget',
     'AverageParameter',
     'AME',
+    'ChoiceProbabilityTarget',
+    'MultinomialAME',
     'Regime',
     'detect_regime',
     'select_lambda_strategy',

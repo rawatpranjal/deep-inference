@@ -276,20 +276,10 @@ def run_eval_06(
     print("VALIDATION CRITERIA")
     print("=" * 60)
 
-    criteria = {
-        f"Coverage in [85%, 99%]": 0.85 <= metrics["coverage"] <= 0.99,
-        f"SE Ratio in [0.5, 2.0]": 0.5 <= metrics["se_ratio"] <= 2.0,
-        f"|Bias| < 0.1": abs(metrics["bias"]) < 0.1,
-        f"|z_mean| < 0.5": abs(metrics["z_mean"]) < 0.5 if not np.isnan(metrics["z_mean"]) else False,
-        f"z_std in [0.5, 2.0]": 0.5 <= metrics["z_std"] <= 2.0 if not np.isnan(metrics["z_std"]) else False,
-    }
+    from evals.common.metrics import validate_coverage_run, format_validation_table
 
-    all_pass = True
-    for name, passed in criteria.items():
-        status = "PASS" if passed else "FAIL"
-        print(f"  {name}: {status}")
-        if not passed:
-            all_pass = False
+    all_pass, criteria = validate_coverage_run(metrics)
+    print(format_validation_table(criteria))
 
     print("\n" + "=" * 60)
     if all_pass:
