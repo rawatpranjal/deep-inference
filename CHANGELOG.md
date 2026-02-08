@@ -2,6 +2,11 @@
 
 ## 2026-02-08
 
+### Reference Library
+- Downloaded + Docling-transcribed 18 papers (22 total with existing 4) on DNN + Influence Functions / Semiparametric Efficiency
+- Papers organized into 6 categories: Core Framework, Applications, Automatic Debiasing/Riesz, DNN Architecture+IF, Theory, Frontier
+- Updated `docs/index.md` and `docs/theory/index.md` with full categorized citations (22 papers)
+
 ### Documentation
 - Fixed paper citations: removed 4 non-IF papers (Wei & Jiang, Kase et al., Dell, Chernozhukov et al.), added 2 confirmed DNN+IF papers (Chen et al. 2024 *J. Econometrics*, Chernozhukov et al. 2022 RieszNet *ICML*)
 

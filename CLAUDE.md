@@ -502,11 +502,41 @@ mlp            0.997      67.0%      0.650    -0.0150     FAIL
 
 ## Paper Transcriptions
 
-Docling-transcribed (markdown with equations):
-- `references/FLM2021_docling.md` - DNN Estimation & Inference (Econometrica)
-- `references/FLM2023_docling.md` - Deep Learning for Heterogeneity (earlier revision)
-- `references/FLM2025_docling.md` - Deep Learning for Heterogeneity (extended)
-- `references/HO2024_multinomial_docling.md` - Multinomial Choice (Hetzenecker & Osterhaus)
+Docling-transcribed (markdown with equations), 22 papers:
+
+**Core Framework:**
+- `references/FLM2021_docling.md` - FLM 2021 DNN Estimation & Inference (*Econometrica*)
+- `references/FLM2023_docling.md` - FLM 2023 Deep Learning for Heterogeneity (earlier revision)
+- `references/FLM2025_docling.md` - FLM 2025 Deep Learning for Individual Heterogeneity
+
+**Applications:**
+- `references/DM2023_docling.md` - Dubé & Misra 2023 Personalized Pricing (*JPE*)
+- `references/HO2024_multinomial_docling.md` - Hetzenecker & Osterhaus 2024 Multinomial Choice
+- `references/CL2026_docling.md` - Colangelo & Lee 2026 Continuous Treatments (*JBES*)
+- `references/CLMZ2024_docling.md` - Chen, Liu, Ma, Zhang 2024 General Treatment Effects (*J Econometrics*)
+- `references/DeDL2025_docling.md` - Ye et al. 2025 Combinatorial Experiments (*Management Science*)
+
+**Automatic Debiasing / Riesz:**
+- `references/RieszNet2022_docling.md` - Chernozhukov et al. 2022 RieszNet (*ICML*)
+- `references/CNSS2020_adversarial_riesz_docling.md` - Chernozhukov, Newey, Singh 2022 (*Econometrica*)
+- `references/IN_glr_docling.md` - CNQS 2021 Automatic Debiased ML via Neural Nets for GLR
+- `references/HH2025_docling.md` - Hines & Hines 2025 Moment-Constrained Debiasing (*CLeaR*)
+
+**DNN Architecture + IF:**
+- `references/Dragonnet2019_docling.md` - Shi, Blei, Veitch 2019 DragonNet (*NeurIPS*)
+- `references/TDA2025_docling.md` - Li, McCoy et al. 2025 Targeted Deep Architectures
+- `references/DeepLTMLE2024_docling.md` - Shirakawa et al. 2024 Deep LTMLE (*ICML*)
+- `references/DNASE2024_docling.md` - Liu et al. 2024 DNA-SE (*ICML*)
+- `references/CLearner2025_docling.md` - Cai et al. 2025 C-Learner
+
+**Theory:**
+- `references/YCY2025_docling.md` - Yan, Chen, Yao 2025 Overparameterized NN Semiparametric
+- `references/Metzger2022_docling.md` - Metzger 2022 Adversarial Estimators
+- `references/FS2023_docling.md` - Foster & Syrgkanis 2023 Orthogonal Statistical Learning (*Ann Stat*)
+
+**Frontier:**
+- `references/GDR2026_docling.md` - Melnychuk & Feuerriegel 2026 GDR-Learners (*ICLR*)
+- `references/NNES2025_docling.md` - Nguyen 2025 NNES for DDC Models (JMP)
 
 Legacy plaintext: `references/FLM2021.txt`, `references/FLM2025.txt`
 
