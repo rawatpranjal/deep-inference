@@ -15,12 +15,12 @@ Deep Learning for Individual Heterogeneity with Valid Inference
     <p>95% confidence intervals that actually cover 95% of the time</p>
   </div>
   <div class="feature-card">
-    <h3>8 Model Families</h3>
-    <p>Linear, Logit, Poisson, Tobit, Gamma, NegBin, Weibull, Gumbel</p>
+    <h3>13 Model Families</h3>
+    <p>Linear, Logit, Poisson, Gamma, NegBin, Weibull, Gumbel, Tobit, Gaussian, Probit, Beta, ZIP, Multinomial Logit</p>
   </div>
   <div class="feature-card">
-    <h3>Flexible Targets</h3>
-    <p>AME, custom targets with autodiff Jacobians</p>
+    <h3>Economic Targets</h3>
+    <p>AME, Elasticity, WTP, Consumer Welfare, and custom targets with autodiff</p>
   </div>
   <div class="feature-card">
     <h3>Regime Detection</h3>
@@ -111,18 +111,37 @@ result.plot_heterogeneity(feature_idx=1)  # β(X) vs X₁
 
 ![Heterogeneity plot](_static/quickstart_heterogeneity.png)
 
-### New `inference()` API
+## Economic Targets
 
-The new API supports flexible targets and randomization mode:
+The `inference()` API supports economic target functionals with autodiff Jacobians:
 
 ```python
 from deep_inference import inference
-from deep_inference.lambda_.compute import Normal
 
-# Average Marginal Effect (probability scale)
+# Price elasticity at P=2.0
+result = inference(Y, T, X, model='logit', target='elasticity', t_tilde=2.0)
+print(result.summary())
+
+# Consumer welfare
+result = inference(Y, T, X, model='logit', target='welfare', t_tilde=2.0)
+
+# Average marginal effect
 result = inference(Y, T, X, model='logit', target='ame', t_tilde=0.0)
 
-# Randomized experiment (compute Lambda instead of estimating)
+# Custom target with autodiff Jacobian
+import torch
+def my_target(x, theta, t_tilde):
+    p = torch.sigmoid(theta[0] + theta[1] * t_tilde)
+    return p * (1 - p) * theta[1]
+
+result = inference(Y, T, X, model='logit', target_fn=my_target)
+```
+
+For randomized experiments, `inference()` computes Lambda directly instead of estimating:
+
+```python
+from deep_inference.lambda_.compute import Normal
+
 result = inference(Y, T, X, model='logit', target='beta',
                    is_randomized=True, treatment_dist=Normal(0, 1))
 ```
@@ -157,6 +176,8 @@ api/index
 
 - Farrell, Liang, Misra (2021): "Deep Neural Networks for Estimation and Inference" *Econometrica*
 - Farrell, Liang, Misra (2025): "Deep Learning for Individual Heterogeneity" *Working Paper*
+- Dubé, Misra (2023): "Personalized Pricing and Consumer Welfare" *Journal of Political Economy*
+- Colangelo, Lee (2026): "Double Debiased Machine Learning for Treatment Effects" *Working Paper*
 
 ## License
 
