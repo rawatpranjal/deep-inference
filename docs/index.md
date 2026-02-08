@@ -220,14 +220,39 @@ api/index
 
 ## References
 
-- Farrell, Liang, Misra (2021): "Deep Neural Networks for Estimation and Inference" *Econometrica*
-- Farrell, Liang, Misra (2025): "Deep Learning for Individual Heterogeneity" *Working Paper*
-- Dubé, Misra (2023): "Personalized Pricing and Consumer Welfare" *Journal of Political Economy*
-- Colangelo, Lee (2026): "Double Debiased Machine Learning for Treatment Effects" *Working Paper*
-- Hetzenecker, Osterhaus (2024): "Deep Learning for Heterogeneous Parameters in Discrete Choice Models" *arXiv 2408.09560*
-- Momin (2025): "Heterogeneous Treatment Effects Using Deep Neural Networks" *SSRN 5149650*
-- Chen, Liu, Ma, Zhang (2024): "Causal Inference of General Treatment Effects using Neural Networks" *Journal of Econometrics*
-- Chernozhukov, Newey, Quintas-Martinez, Syrgkanis (2022): "RieszNet and ForestRiesz: Automatic Debiased Machine Learning with Neural Nets" *ICML 2022*
+### Core Framework
+- Farrell, Liang, Misra (2021): "Deep Neural Networks for Estimation and Inference" *Econometrica* ([pdf](references/FLM2021_docling.md))
+- Farrell, Liang, Misra (2025): "Deep Learning for Individual Heterogeneity" *Working Paper* ([pdf](references/FLM2025_docling.md))
+
+### Applications
+- Dubé, Misra (2023): "Personalized Pricing and Consumer Welfare" *Journal of Political Economy* ([pdf](references/DM2023_docling.md))
+- Hetzenecker, Osterhaus (2024): "Deep Learning for Heterogeneous Parameters in Discrete Choice Models" *arXiv 2408.09560* ([pdf](references/HO2024_multinomial_docling.md))
+- Colangelo, Lee (2026): "Double Debiased Machine Learning Nonparametric Inference with Continuous Treatments" *JBES* ([pdf](references/CL2026_docling.md))
+- Momin (2025): "Heterogeneous Treatment Effects and Counterfactual Policy Targeting Using Deep Neural Networks" *SSRN 5149650*
+- Chen, Liu, Ma, Zhang (2024): "Causal Inference of General Treatment Effects using Neural Networks" *Journal of Econometrics* ([pdf](references/CLMZ2024_docling.md))
+- Ye, Zhang, Zhang, Zhang, Zhang (2025): "Deep-Learning-Based Causal Inference for Large-Scale Combinatorial Experiments" *Management Science* ([pdf](references/DeDL2025_docling.md))
+
+### Automatic Debiasing / Riesz Representation
+- Chernozhukov, Newey, Quintas-Martinez, Syrgkanis (2022): "RieszNet and ForestRiesz: Automatic Debiased Machine Learning with Neural Nets" *ICML* ([pdf](references/RieszNet2022_docling.md))
+- Chernozhukov, Newey, Singh (2022): "Automatic Debiased Machine Learning of Causal and Structural Effects" *Econometrica* ([pdf](references/CNSS2020_adversarial_riesz_docling.md))
+- Chernozhukov, Newey, Quintas-Martinez, Syrgkanis (2021): "Automatic Debiased Machine Learning via Neural Nets for Generalized Linear Regression" *Working Paper* ([pdf](references/IN_glr_docling.md))
+- Hines, Hines (2025): "Automatic Debiasing of Neural Networks via Moment-Constrained Learning" *CLeaR* ([pdf](references/HH2025_docling.md))
+
+### DNN Architecture + Influence Functions
+- Shi, Blei, Veitch (2019): "Adapting Neural Networks for the Estimation of Treatment Effects" *NeurIPS* ([pdf](references/Dragonnet2019_docling.md))
+- Li, McCoy et al. (2025): "Targeted Deep Architectures for Estimation and Inference" *arXiv 2507.12435* ([pdf](references/TDA2025_docling.md))
+- Shirakawa et al. (2024): "Deep Longitudinal Targeted Minimum Loss-based Estimation" *ICML* ([pdf](references/DeepLTMLE2024_docling.md))
+- Liu et al. (2024): "DNA-SE: Towards Deep Neural-Nets Assisted Semiparametric Estimation" *ICML* ([pdf](references/DNASE2024_docling.md))
+- Cai, Fonseca, Hou, Namkoong (2025): "C-Learner: Constrained Learning for Causal Inference and Semiparametric Statistics" *arXiv 2405.09493* ([pdf](references/CLearner2025_docling.md))
+
+### Theory
+- Yan, Chen, Yao (2025): "Overparameterized Neural Networks in Semiparametric Inference" *arXiv 2504.19089* ([pdf](references/YCY2025_docling.md))
+- Metzger (2022): "Adversarial Estimators" *arXiv 2204.10495* ([pdf](references/Metzger2022_docling.md))
+- Foster, Syrgkanis (2023): "Orthogonal Statistical Learning" *Annals of Statistics* ([pdf](references/FS2023_docling.md))
+
+### Frontier
+- Melnychuk, Feuerriegel (2026): "GDR-Learners: Generalized Doubly Robust Learners for Causal Inference" *ICLR* ([pdf](references/GDR2026_docling.md))
+- Nguyen (2025): "Neural Network Estimation and Simulation for Dynamic Discrete Choice Models" *Georgetown JMP* ([pdf](references/NNES2025_docling.md))
 
 ## License
 
