@@ -2,6 +2,9 @@
 
 ## 2026-02-07 (v0.1.6)
 
+### Documentation
+- Updated front page Economic Targets section: added custom loss/target example showing built-in vs custom equivalence, added statsmodels-style output table
+
 ### Economic Targets & Paper Integration
 - Added 3 new built-in targets for economic applications: `Elasticity`, `WTP` (Willingness To Pay), `ConsumerWelfare`
 - New targets are accessible via `inference(..., target='elasticity')`, `target='wtp'`, `target='welfare'`
