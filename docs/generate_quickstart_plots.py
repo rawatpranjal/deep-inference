@@ -39,6 +39,13 @@ def main():
 
     print(result.summary())
 
+    # Also run inference() API for Economic Targets section
+    from deep_inference import inference
+
+    print("\n--- inference() API: Built-in AME ---")
+    result_ame = inference(Y, T, X, model='logit', target='ame', t_tilde=0.0)
+    print(result_ame.summary())
+
     # Ensure _static directory exists
     static_dir = os.path.join(os.path.dirname(__file__), '_static')
     os.makedirs(static_dir, exist_ok=True)
