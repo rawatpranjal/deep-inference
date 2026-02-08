@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-02-07 (v0.1.5)
+
+### Input Validation & Gallery Expansion
+- Added `_validate_inputs()` defensive input checking to both `structural_dml()` and `inference()` APIs — catches NaN, Inf, shape mismatches, constant treatment, sparse matrices, and family-specific constraints (negative counts for Poisson, non-positive values for Gamma/Weibull)
+- Auto-converts Python lists and pandas objects via `np.asarray()` (no more crashes on non-ndarray input)
+- Added hyperparameter validation (epochs, n_folds, lr must be positive) in both entry points and `structural_dml_core()`
+- Added `n_alternatives >= 2` check to `MultinomialLogitFamily`
+- Expanded gallery documentation from 3 to 8 examples (added Tobit, Gamma, Weibull, Multinomial Logit, Gaussian)
+
 ## 2026-02-07
 
 ### Tester Feedback: Discoverability, Warnings, UX

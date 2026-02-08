@@ -49,6 +49,8 @@ class MultinomialLogitFamily(BaseFamily):
             target: Target functional - 'beta' for attribute coefficient
             target_idx: Which β to target (0-indexed)
         """
+        if n_alternatives < 2:
+            raise ValueError(f"n_alternatives must be >= 2, got {n_alternatives}. Use family='logit' for binary.")
         self.J = n_alternatives
         self.K = n_attributes
         self.theta_dim = (self.J - 1) + self.K

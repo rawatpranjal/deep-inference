@@ -142,6 +142,12 @@ def structural_dml_core(
     Returns:
         DMLResult with estimates and diagnostics
     """
+    # Hyperparameter validation
+    if epochs <= 0:
+        raise ValueError(f"epochs must be positive, got {epochs}")
+    if n_folds <= 0:
+        raise ValueError(f"n_folds must be positive, got {n_folds}")
+
     n = len(Y)
     d_x = X.shape[1]
 

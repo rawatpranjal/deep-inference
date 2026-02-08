@@ -22,6 +22,76 @@ from .core import structural_dml_core, DMLResult
 from .families import get_family, FAMILY_REGISTRY, BaseFamily
 
 
+def _validate_inputs(Y, T, X, family_name=None):
+    """Validate and convert inputs. Returns (Y, T, X) as numpy arrays."""
+    import warnings
+
+    # Sparse matrix check (issue 13)
+    try:
+        import scipy.sparse
+        if scipy.sparse.issparse(Y) or scipy.sparse.issparse(T) or scipy.sparse.issparse(X):
+            raise ValueError("Sparse matrices not supported. Convert with .toarray() first.")
+    except ImportError:
+        pass
+
+    # Auto-convert lists, pandas, etc. (issues 11, 12)
+    Y = np.asarray(Y, dtype=np.float64)
+    T = np.asarray(T, dtype=np.float64)
+    X = np.asarray(X, dtype=np.float64)
+
+    # Shape checks (issues 5, 6)
+    if Y.ndim != 1:
+        raise ValueError(f"Y must be 1D array, got shape {Y.shape}")
+    if T.ndim not in (1, 2):
+        raise ValueError(f"T must be 1D or 2D array, got {T.ndim}D")
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+    elif X.ndim != 2:
+        raise ValueError(f"X must be 1D or 2D array, got {X.ndim}D")
+
+    n = len(Y)
+    if len(T) != n:
+        raise ValueError(f"Y and T length mismatch: len(Y)={n}, len(T)={len(T)}")
+    if len(X) != n:
+        raise ValueError(f"Y and X length mismatch: len(Y)={n}, len(X)={len(X)}")
+
+    # NaN/Inf checks (issues 3, 4)
+    for name, arr in [("Y", Y), ("T", T), ("X", X)]:
+        if np.any(np.isnan(arr)):
+            raise ValueError(f"{name} contains NaN values")
+        if np.any(np.isinf(arr)):
+            raise ValueError(f"{name} contains Inf values")
+
+    # Constant treatment (issue 1)
+    if T.ndim == 1 and np.std(T) == 0:
+        raise ValueError(
+            f"Treatment T is constant (all values = {T[0]}). "
+            "Cannot estimate treatment effects without variation in T."
+        )
+
+    # All zeros in Y (issue 2)
+    if np.all(Y == 0):
+        warnings.warn("All Y values are zero. Results may be unreliable.", UserWarning)
+
+    # Family-specific checks (issues 7, 8)
+    if family_name in ('poisson', 'negbin'):
+        if np.any(Y < 0):
+            raise ValueError(f"Y contains negative values, invalid for family='{family_name}'.")
+
+    if family_name in ('logit', 'probit'):
+        if len(np.unique(Y)) == 1:
+            warnings.warn(
+                f"All Y values are {Y[0]}. Perfect separation — estimation may fail.",
+                UserWarning,
+            )
+
+    if family_name in ('gamma', 'weibull'):
+        if np.any(Y <= 0):
+            raise ValueError(f"Y contains non-positive values, invalid for family='{family_name}'.")
+
+    return Y, T, X
+
+
 def structural_dml(
     Y: np.ndarray,
     T: np.ndarray,
@@ -151,6 +221,17 @@ def structural_dml(
 
     if loss_fn is not None and theta_dim is None:
         raise ValueError("Must provide 'theta_dim' when using custom loss_fn")
+
+    # Data validation and conversion
+    Y, T, X = _validate_inputs(Y, T, X, family_name=family)
+
+    # Hyperparameter validation
+    if epochs <= 0:
+        raise ValueError(f"epochs must be positive, got {epochs}")
+    if n_folds <= 0:
+        raise ValueError(f"n_folds must be positive, got {n_folds}")
+    if lr <= 0:
+        raise ValueError(f"lr must be positive, got {lr}")
 
     # Get family or use custom functions
     if family is not None:
@@ -398,6 +479,9 @@ def inference(
     from .targets import AverageParameter, AME, CustomTarget, ChoiceProbabilityTarget, MultinomialAME
     from .lambda_ import select_lambda_strategy, Regime, detect_regime
     from .engine import run_crossfit
+
+    # Data validation and conversion
+    Y, T, X = _validate_inputs(Y, T, X, family_name=model)
 
     # Convert inputs to tensors
     Y_t = torch.tensor(Y, dtype=torch.float32)
