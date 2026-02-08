@@ -3,7 +3,7 @@
 ## 2026-02-08
 
 ### Documentation
-- Added 6 new references: Hetzenecker & Osterhaus (2024), Wei & Jiang (2025), Kase et al. (2025), Momin (2025), Dell (2025), Chernozhukov et al. (2025)
+- Fixed paper citations: removed 4 non-IF papers (Wei & Jiang, Kase et al., Dell, Chernozhukov et al.), added 2 confirmed DNN+IF papers (Chen et al. 2024 *J. Econometrics*, Chernozhukov et al. 2022 RieszNet *ICML*)
 
 ## 2026-02-07 (v0.1.6)
 
