@@ -4,7 +4,8 @@
 
 ### Documentation
 - Updated front page Economic Targets section: added custom loss/target example showing built-in vs custom equivalence, added statsmodels-style output table
-- Economic Targets output table now shows real (verified) output from generate_quickstart_plots.py
+- Economic Targets section now shows real output for BOTH built-in and custom AME, proving equivalence
+- Added `detect_hessian_y_dependence()` to autodiff/hessian.py (was referenced but missing)
 
 ### Economic Targets & Paper Integration
 - Added 3 new built-in targets for economic applications: `Elasticity`, `WTP` (Willingness To Pay), `ConsumerWelfare`

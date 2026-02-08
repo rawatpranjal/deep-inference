@@ -46,6 +46,19 @@ def main():
     result_ame = inference(Y, T, X, model='logit', target='ame', t_tilde=0.0)
     print(result_ame.summary())
 
+    print("\n--- inference() API: Custom AME ---")
+
+    def my_loss(y, t, theta):
+        p = torch.sigmoid(theta[0] + theta[1] * t)
+        return -y * torch.log(p + 1e-7) - (1 - y) * torch.log(1 - p + 1e-7)
+
+    def my_ame(x, theta, t_tilde):
+        p = torch.sigmoid(theta[0] + theta[1] * t_tilde)
+        return p * (1 - p) * theta[1]
+
+    result_custom = inference(Y, T, X, loss=my_loss, target_fn=my_ame, theta_dim=2, t_tilde=0.0)
+    print(result_custom.summary())
+
     # Ensure _static directory exists
     static_dir = os.path.join(os.path.dirname(__file__), '_static')
     os.makedirs(static_dir, exist_ok=True)
