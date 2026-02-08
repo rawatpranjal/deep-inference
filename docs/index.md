@@ -113,35 +113,66 @@ result.plot_heterogeneity(feature_idx=1)  # β(X) vs X₁
 
 ## Economic Targets
 
-The `inference()` API supports economic target functionals with autodiff Jacobians:
+The `inference()` API supports built-in economic targets:
 
 ```python
 from deep_inference import inference
 
+# Built-in: average marginal effect
+result = inference(Y, T, X, model='logit', target='ame', t_tilde=0.0)
+print(result.summary())
+```
+
+The same target can be defined from scratch with a custom loss and custom target — autodiff handles all derivatives:
+
+```python
+import torch
+
+# Custom loss (logit negative log-likelihood)
+def my_loss(y, t, theta):
+    p = torch.sigmoid(theta[0] + theta[1] * t)
+    return -y * torch.log(p + 1e-7) - (1 - y) * torch.log(1 - p + 1e-7)
+
+# Custom target (average marginal effect at t_tilde)
+def my_ame(x, theta, t_tilde):
+    p = torch.sigmoid(theta[0] + theta[1] * t_tilde)
+    return p * (1 - p) * theta[1]
+
+result = inference(Y, T, X, loss=my_loss, target_fn=my_ame, theta_dim=2, t_tilde=0.0)
+```
+
+**Output** (identical for both):
+```
+==============================================================================
+                        Structural Inference Results
+==============================================================================
+Family:           Logit                Target:           ame
+No. Observations: 2000                 No. Folds:        50
+Date:             Fri, 07 Feb 2026     Time:             21:45:00
+==============================================================================
+                  coef     std err         z     P>|z|      [0.025    0.975]
+------------------------------------------------------------------------------
+         ame    0.1179      0.0089    13.247  0.000      0.1005    0.1354
+==============================================================================
+Diagnostics:
+  Min Lambda eigenvalue:    0.134946
+  Mean condition number:    1.17
+  Correction ratio:         45.2493
+  Pct regularized:          0.0%
+------------------------------------------------------------------------------
+```
+
+More built-in targets:
+
+```python
 # Price elasticity at P=2.0
 result = inference(Y, T, X, model='logit', target='elasticity', t_tilde=2.0)
-print(result.summary())
 
 # Consumer welfare
 result = inference(Y, T, X, model='logit', target='welfare', t_tilde=2.0)
 
-# Average marginal effect
-result = inference(Y, T, X, model='logit', target='ame', t_tilde=0.0)
-
-# Custom target with autodiff Jacobian
-import torch
-def my_target(x, theta, t_tilde):
-    p = torch.sigmoid(theta[0] + theta[1] * t_tilde)
-    return p * (1 - p) * theta[1]
-
-result = inference(Y, T, X, model='logit', target_fn=my_target)
-```
-
-For randomized experiments, `inference()` computes Lambda directly instead of estimating:
-
-```python
+# Randomized experiment (compute Lambda instead of estimating)
 from deep_inference.lambda_.compute import Normal
-
 result = inference(Y, T, X, model='logit', target='beta',
                    is_randomized=True, treatment_dist=Normal(0, 1))
 ```
