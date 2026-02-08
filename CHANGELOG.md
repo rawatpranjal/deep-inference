@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-02-08
+
+### Documentation
+- Added 6 new references: Hetzenecker & Osterhaus (2024), Wei & Jiang (2025), Kase et al. (2025), Momin (2025), Dell (2025), Chernozhukov et al. (2025)
+
 ## 2026-02-07 (v0.1.6)
 
 ### Documentation

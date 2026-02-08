@@ -224,6 +224,12 @@ api/index
 - Farrell, Liang, Misra (2025): "Deep Learning for Individual Heterogeneity" *Working Paper*
 - Dubé, Misra (2023): "Personalized Pricing and Consumer Welfare" *Journal of Political Economy*
 - Colangelo, Lee (2026): "Double Debiased Machine Learning for Treatment Effects" *Working Paper*
+- Hetzenecker, Osterhaus (2024): "Deep Learning for Heterogeneous Parameters in Discrete Choice Models" *arXiv 2408.09560*
+- Wei, Jiang (2025): "Estimating Parameters of Structural Models Using Neural Networks" *arXiv 2502.04945*
+- Kase, Melosi, Rottner (2025): "Estimating Nonlinear Heterogeneous Agent Models with Neural Networks" *BIS Working Paper 1241*
+- Momin (2025): "Heterogeneous Treatment Effects Using Deep Neural Networks" *SSRN 5149650*
+- Dell (2025): "Deep Learning for Economists" *Journal of Economic Literature*
+- Chernozhukov, Demirer, Duflo, Fernández-Val (2025): "Generic Machine Learning Inference on Heterogeneous Treatment Effects" *Econometrica*
 
 ## License
 
