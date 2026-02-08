@@ -1,0 +1,103 @@
+[Parallel(n_jobs=4)]: Using backend LokyBackend with 4 concurrent workers.
+======================================================================
+EVAL 10: NEW TARGET FUNCTIONALS
+======================================================================
+
+============================================================
+PART 1: JACOBIAN VALIDATION (closed-form vs autodiff)
+============================================================
+  DoseResponse              max_error = 0.00e+00  PASS
+  Profit                    max_error = 0.00e+00  PASS
+  ConditionalVariance       max_error = 1.49e-08  PASS
+
+============================================================
+PART 2: COVERAGE VALIDATION (Monte Carlo)
+============================================================
+
+Settings: M=10, n=3000, epochs=100, lambda=lgbm
+  dose_response: t̃=0.0, μ*=0.500000
+  profit: t̃=1.0, μ*=0.695406
+  conditional_variance: t̃=0.0, μ*=0.241016
+
+────────────────────────────────────────────────────────────
+TARGET: dose_response (t̃=0.0)
+────────────────────────────────────────────────────────────
+[Parallel(n_jobs=4)]: Done   6 out of  10 | elapsed:  7.7min remaining:  5.1min
+[Parallel(n_jobs=4)]: Done  10 out of  10 | elapsed: 11.0min finished
+[Parallel(n_jobs=4)]: Using backend LokyBackend with 4 concurrent workers.
+[Parallel(n_jobs=4)]: Done   6 out of  10 | elapsed:  7.1min remaining:  4.7min
+[Parallel(n_jobs=4)]: Done  10 out of  10 | elapsed: 10.6min finished
+[Parallel(n_jobs=4)]: Using backend LokyBackend with 4 concurrent workers.
+[Parallel(n_jobs=4)]: Done   6 out of  10 | elapsed:  6.9min remaining:  4.6min
+[Parallel(n_jobs=4)]: Done  10 out of  10 | elapsed: 10.3min finished
+
+  μ*_true     = 0.500000
+  Mean(μ̂)    = 0.522998
+  Bias       = 0.022998
+  Emp SE     = 0.030218
+  Mean SE    = 0.015363
+  SE Ratio   = 1.9669
+  Coverage   = 60.0% (6/10)
+  z_mean     = 1.5358
+  z_std      = 1.9274
+
+  Validation:
+  Coverage in [90%, 99%]: FAIL
+  SE Ratio in [0.7, 1.5]: FAIL
+  |Bias| < 0.05: PASS
+  |z_mean| < 0.3: FAIL
+  z_std in [0.7, 1.5]: FAIL
+
+────────────────────────────────────────────────────────────
+TARGET: profit (t̃=1.0)
+────────────────────────────────────────────────────────────
+
+  μ*_true     = 0.695406
+  Mean(μ̂)    = 0.701657
+  Bias       = 0.006252
+  Emp SE     = 0.010640
+  Mean SE    = 0.010816
+  SE Ratio   = 0.9837
+  Coverage   = 90.0% (9/10)
+  z_mean     = 0.5828
+  z_std      = 0.9928
+
+  Validation:
+  Coverage in [90%, 99%]: PASS
+  SE Ratio in [0.7, 1.5]: PASS
+  |Bias| < 0.05: PASS
+  |z_mean| < 0.3: FAIL
+  z_std in [0.7, 1.5]: PASS
+
+────────────────────────────────────────────────────────────
+TARGET: conditional_variance (t̃=0.0)
+────────────────────────────────────────────────────────────
+
+  μ*_true     = 0.241016
+  Mean(μ̂)    = 0.234011
+  Bias       = -0.007004
+  Emp SE     = 0.007642
+  Mean SE    = 0.003872
+  SE Ratio   = 1.9737
+  Coverage   = 50.0% (5/10)
+  z_mean     = -1.5151
+  z_std      = 1.8251
+
+  Validation:
+  Coverage in [90%, 99%]: FAIL
+  SE Ratio in [0.7, 1.5]: FAIL
+  |Bias| < 0.05: PASS
+  |z_mean| < 0.3: FAIL
+  z_std in [0.7, 1.5]: FAIL
+
+======================================================================
+EVAL 10: SUMMARY
+======================================================================
+
+  Part 1 (Jacobians): PASS
+  dose_response: Coverage=60.0%, SE_ratio=1.967 → FAIL
+  profit: Coverage=90.0%, SE_ratio=0.984 → FAIL
+  conditional_variance: Coverage=50.0%, SE_ratio=1.974 → FAIL
+
+  Overall: FAIL
+======================================================================

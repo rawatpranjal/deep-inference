@@ -1,0 +1,52 @@
+======================================================================
+EVAL 11: COMBINATORIAL MODEL (DeDL2025)
+======================================================================
+
+============================================================
+PART 1: LINK FUNCTION VALIDATION
+============================================================
+  gen_sigmoid_ii: G=4.290744, expected=4.290745, err=3.71e-07  PASS
+  multiplicative: G=3.300000, expected=3.300000, err=1.91e-07  PASS
+  sigmoid:        G=2.716298, expected=2.716298, err=2.44e-07  PASS
+  gen_sigmoid_i:  G=3.929175, expected=3.929175, err=2.23e-07  PASS
+
+  Loss (gen_sigmoid_ii): 1.666021, expected=1.666022, err=9.47e-07  PASS
+  Hessian (Fisher): max_err=0.00e+00  PASS
+  Hessian y-invariance: err=0.00e+00  PASS
+
+============================================================
+PART 2: ORACLE ATE VALIDATION
+============================================================
+
+  Treatment       Oracle μ*    MC μ̂        Error        Status
+  ------------------------------------------------------------
+  [1, 0, 0]       0.920239     0.920127     0.000112     PASS
+  [0, 1, 0]       0.527551     0.527773     0.000222     PASS
+  [0, 0, 1]       0.319120     0.318873     0.000248     PASS
+  [1, 1, 0]       1.248450     1.248555     0.000104     PASS
+  [1, 1, 1]       1.366452     1.366527     0.000074     PASS
+
+============================================================
+PART 3: AUTODIFF JACOBIAN CONSISTENCY
+============================================================
+  Treatment [1, 0, 0]: max_error = 5.12e-02  FAIL
+  Treatment [1, 1, 0]: max_error = 4.98e-02  FAIL
+  Treatment [1, 1, 1]: max_error = 3.56e-02  FAIL
+
+============================================================
+PART 4: COMPUTE_LAMBDA_INTEGRAL (Regime A)
+============================================================
+  Lambda integral error: 0.00e+00  PASS
+  Min eigenvalue: 0.007103  PASS
+  Shape: torch.Size([5, 5]) (expected: (5, 5))  PASS
+
+======================================================================
+EVAL 11: SUMMARY
+======================================================================
+  Part 1 (Link functions):    PASS
+  Part 2 (Oracle ATEs):       PASS
+  Part 3 (ATE Jacobians):     FAIL
+  Part 4 (Lambda integral):   PASS
+
+  Overall: FAIL
+======================================================================

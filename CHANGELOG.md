@@ -2,6 +2,13 @@
 
 ## 2026-02-08
 
+### New Targets & Combinatorial Model
+- Added 4 new target functionals: `DoseResponse` (CL2026), `Profit` (DM2023), `TailProbability` (GDR2026), `ConditionalVariance` (GDR2026)
+- Added `CombinatorialModel` with 4 link functions (multiplicative, sigmoid, gen_sigmoid_i, gen_sigmoid_ii) from DeDL2025
+- Added `MultiTreatmentATE` target for combinatorial experiment ATE estimation
+- New targets accessible via `inference(..., target='dose_response')`, `target='profit'`, etc.
+- Added eval_10 (new target Jacobian + coverage validation) and eval_11 (combinatorial model validation)
+
 ### Reference Library
 - Downloaded + Docling-transcribed 18 papers (22 total with existing 4) on DNN + Influence Functions / Semiparametric Efficiency
 - Papers organized into 6 categories: Core Framework, Applications, Automatic Debiasing/Riesz, DNN Architecture+IF, Theory, Frontier

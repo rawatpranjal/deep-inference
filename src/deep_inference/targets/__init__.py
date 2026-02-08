@@ -14,6 +14,11 @@ from .choice_probability import ChoiceProbabilityTarget, MultinomialAME
 from .elasticity import Elasticity
 from .wtp import WTP
 from .welfare import ConsumerWelfare
+from .dose_response import DoseResponse
+from .profit import Profit
+from .tail_probability import TailProbability
+from .conditional_variance import ConditionalVariance
+from .multi_treatment import MultiTreatmentATE
 
 __all__ = [
     # Protocol and base classes
@@ -31,6 +36,13 @@ __all__ = [
     "Elasticity",
     "WTP",
     "ConsumerWelfare",
+    # Counterfactual targets
+    "DoseResponse",
+    "Profit",
+    "TailProbability",
+    "ConditionalVariance",
+    # Combinatorial treatment targets
+    "MultiTreatmentATE",
     # Multinomial targets
     "ChoiceProbabilityTarget",
     "MultinomialAME",

@@ -11,6 +11,7 @@ from .base import (
 from .linear import LinearModel, Linear
 from .logit import LogitModel, Logit
 from .multinomial import MultinomialLogitModel, MultinomialLogit
+from .combinatorial import CombinatorialModel, Combinatorial
 
 __all__ = [
     # Neural network
@@ -30,4 +31,7 @@ __all__ = [
     "Logit",
     "MultinomialLogitModel",
     "MultinomialLogit",
+    # Combinatorial models
+    "CombinatorialModel",
+    "Combinatorial",
 ]

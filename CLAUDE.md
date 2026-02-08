@@ -61,12 +61,18 @@ src/deep_inference/
 │   ├── base.py              # StructuralModel protocol
 │   ├── linear.py, logit.py  # Built-in models
 │   ├── multinomial.py       # Conditional logit (McFadden) J alternatives
+│   ├── combinatorial.py     # Multi-treatment model (DeDL2025, 4 link functions)
 │   ├── structural_net.py    # Neural network θ(x)
 │   └── custom.py            # CustomModel, model_from_loss()
 ├── targets/                  # NEW: Target functionals
 │   ├── base.py              # Target protocol, BaseTarget
 │   ├── average_parameter.py # E[θ_j] target
 │   ├── marginal_effect.py   # AME target
+│   ├── dose_response.py     # E[G(θ, t̃)] average predicted outcome (CL2026)
+│   ├── profit.py            # E[t̃·G(θ, t̃)] expected revenue (DM2023)
+│   ├── tail_probability.py  # E[P(Y > c | θ, t̃)] exceedance prob (GDR2026)
+│   ├── conditional_variance.py # E[Var(Y | θ, t̃)] model variance (GDR2026)
+│   ├── multi_treatment.py   # E[G(θ,t) - G(θ,t₀)] combinatorial ATE (DeDL2025)
 │   ├── choice_probability.py # Multinomial choice probability + AME
 │   └── custom.py            # CustomTarget with autodiff Jacobian
 ├── lambda_/                  # NEW: Lambda strategies
@@ -244,6 +250,8 @@ evals/
 ├── eval_05_psi.py      # Influence function assembly: ψ package vs Oracle
 ├── eval_06_coverage.py # Frequentist coverage: Monte Carlo validation
 ├── eval_09_multinomial.py # Multinomial logit: recovery + autodiff + lambda + coverage
+├── eval_10_new_targets.py # New targets: DoseResponse, Profit, ConditionalVariance Jacobians + coverage
+├── eval_11_combinatorial.py # Combinatorial model: link functions, ATEs, Jacobians, Lambda integral
 ├── dgp_multinomial.py  # Multinomial logit DGP with oracle formulas
 ├── common/
 │   └── metrics.py      # Standardized thresholds + validation functions
