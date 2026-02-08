@@ -96,3 +96,21 @@ $$\Pi(r) = L\left[P(r)(M(1-D(r))r - D(r)) + (1-P(r))Mr_0\right]$$
 - **ML alone** fits data well but extrapolates nonsensically and can't answer causal questions
 - **Structure alone** provides interpretability but misses heterogeneity
 - **Combined**: ML learns heterogeneity patterns $\theta(X)$ while structure ensures valid economics
+
+---
+
+## Applications and Related Work
+
+### Personalized Pricing (Dube & Misra, 2022)
+
+Dube & Misra (2022, *JPE*) apply the FLM framework to personalized pricing with heterogeneous demand. By estimating $\beta(X)$ (price sensitivity) as a function of consumer characteristics, they compute:
+
+- **Price elasticities**: $\eta(X) = (1-p) \cdot \beta(X) \cdot P$ — how responsive each consumer is to price changes
+- **Optimal personalized prices**: via the Lerner markup rule $\frac{P-MC}{P} = -1/\eta$
+- **Consumer welfare**: using the Small & Rosen (1981) logsum formula $CS = \log(1 + e^V) / |\beta_{\text{price}}|$
+
+`deep-inference` implements all three as built-in targets: `Elasticity`, `WTP`, `ConsumerWelfare`. See the [Pricing Tutorial](../tutorials/pricing.md).
+
+### Continuous Treatment Inference (Colangelo & Lee, 2026)
+
+Colangelo & Lee (2026) develop double debiased ML for nonparametric inference with continuous treatments. They cite FLM DNNs as valid nuisance estimators that achieve the required convergence rates. `deep-inference` complements their nonparametric approach with a structural alternative: all model families natively support continuous $T$, enabling dose-response analysis with economic structure. See the [Continuous Treatment Tutorial](../tutorials/continuous_treatment.md).

@@ -476,7 +476,7 @@ def inference(
         result = inference(Y, T, X, loss=my_loss, target_fn=my_target, theta_dim=2)
     """
     from .models import Linear, Logit, MultinomialLogit, CustomModel, model_from_loss
-    from .targets import AverageParameter, AME, CustomTarget, ChoiceProbabilityTarget, MultinomialAME
+    from .targets import AverageParameter, AME, CustomTarget, ChoiceProbabilityTarget, MultinomialAME, Elasticity, WTP, ConsumerWelfare
     from .lambda_ import select_lambda_strategy, Regime, detect_regime
     from .engine import run_crossfit
 
@@ -520,6 +520,9 @@ def inference(
             "beta": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
             "average_slope": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
             "ame": AME(param_index=1, model_type="logit" if model == "logit" else "linear"),
+            "elasticity": Elasticity(model_type=model if model in ("logit", "poisson", "gamma", "negbin") else "logit"),
+            "wtp": WTP(attribute_index=1, price_index=2),
+            "welfare": ConsumerWelfare(price_coef_index=1),
         }
         if target not in target_map:
             raise ValueError(f"Unknown target: {target}. Available: {list(target_map.keys())}")
@@ -605,7 +608,7 @@ from .families import (
 
 # New architecture exports
 from .models import StructuralModel, CustomModel, Linear, Logit, MultinomialLogit
-from .targets import Target, CustomTarget, AverageParameter, AME, ChoiceProbabilityTarget, MultinomialAME
+from .targets import Target, CustomTarget, AverageParameter, AME, ChoiceProbabilityTarget, MultinomialAME, Elasticity, WTP, ConsumerWelfare
 from .families import MultinomialLogitFamily
 from .lambda_ import Regime, detect_regime, select_lambda_strategy
 
@@ -642,6 +645,9 @@ __all__ = [
     'AME',
     'ChoiceProbabilityTarget',
     'MultinomialAME',
+    'Elasticity',
+    'WTP',
+    'ConsumerWelfare',
     'Regime',
     'detect_regime',
     'select_lambda_strategy',

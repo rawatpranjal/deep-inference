@@ -11,6 +11,9 @@ from .base import Target, BaseTarget, CustomTarget, TargetMetadata, target_from_
 from .average_param import AverageParameter, AverageBeta
 from .marginal_effect import AverageMarginalEffect, AME
 from .choice_probability import ChoiceProbabilityTarget, MultinomialAME
+from .elasticity import Elasticity
+from .wtp import WTP
+from .welfare import ConsumerWelfare
 
 __all__ = [
     # Protocol and base classes
@@ -24,6 +27,10 @@ __all__ = [
     "AverageBeta",
     "AverageMarginalEffect",
     "AME",
+    # Economic targets
+    "Elasticity",
+    "WTP",
+    "ConsumerWelfare",
     # Multinomial targets
     "ChoiceProbabilityTarget",
     "MultinomialAME",

@@ -17,6 +17,8 @@ gumbel
 weibull
 multinomial
 multimodal
+pricing
+continuous_treatment
 ```
 
 ## Overview
@@ -43,6 +45,8 @@ Each tutorial covers:
 | Time-to-event | Weibull | Weibull | [Weibull](weibull.md) |
 | Discrete choice (J>=3) | Categorical | Multinomial Logit | [Multinomial](multinomial.md) |
 | **High-dim embeddings** | Any | Any | [Multimodal](multimodal.md) |
+| **Pricing / Elasticity** | Bernoulli | Logit | [Pricing](pricing.md) |
+| **Dose-response (continuous T)** | Any | Any | [Continuous Treatment](continuous_treatment.md) |
 
 ## Common Workflow
 
