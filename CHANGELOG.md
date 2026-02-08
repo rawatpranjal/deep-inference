@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-02-07 (v0.1.6)
+
+### Economic Targets & Paper Integration
+- Added 3 new built-in targets for economic applications: `Elasticity`, `WTP` (Willingness To Pay), `ConsumerWelfare`
+- New targets are accessible via `inference(..., target='elasticity')`, `target='wtp'`, `target='welfare'`
+- Added personalized pricing tutorial (`docs/tutorials/pricing.md`) based on Dube & Misra (2022, JPE)
+- Added continuous treatment tutorial (`docs/tutorials/continuous_treatment.md`) based on Colangelo & Lee (2026)
+- Added paper citations to theory documentation
+
 ## 2026-02-07 (v0.1.5)
 
 ### Input Validation & Gallery Expansion
