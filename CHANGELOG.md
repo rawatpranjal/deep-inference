@@ -8,6 +8,7 @@
 - Added personalized pricing tutorial (`docs/tutorials/pricing.md`) based on Dube & Misra (2022, JPE)
 - Added continuous treatment tutorial (`docs/tutorials/continuous_treatment.md`) based on Colangelo & Lee (2026)
 - Added paper citations to theory documentation
+- Updated front page (`docs/index.md`): 8→13 model families, new Economic Targets card, `inference()` examples with elasticity/welfare/AME, added Dubé & Misra and Colangelo & Lee references
 
 ## 2026-02-07 (v0.1.5)
 
