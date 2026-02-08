@@ -161,3 +161,47 @@ def detect_hessian_theta_dependence(
     max_rel_diff = rel_diff.max().item()
 
     return max_rel_diff > tol
+
+
+def detect_hessian_y_dependence(
+    loss_fn: Callable[[Tensor, Tensor, Tensor], Tensor],
+    y_sample: Tensor,
+    t_sample: Tensor,
+    theta_dim: int,
+    n_test: int = 10,
+    tol: float = 0.01,
+) -> bool:
+    """
+    Detect if Hessian depends on y values.
+
+    If ℓ_θθ varies with y, the Fisher information ≠ Hessian,
+    affecting Lambda estimation.
+
+    Args:
+        loss_fn: Loss function for single observation
+        y_sample: Sample outcomes for testing
+        t_sample: Sample treatments for testing
+        theta_dim: Dimension of parameter vector
+        n_test: Number of test points
+        tol: Tolerance for detecting dependence
+
+    Returns:
+        True if Hessian depends on y
+    """
+    n = min(len(y_sample), n_test)
+    t = t_sample[:n]
+    theta = torch.randn(n, theta_dim)
+
+    # Create two different y values
+    y_1 = torch.randn(n)
+    y_2 = torch.randn(n) * 2 + 1  # Different scale and shift
+
+    # Compute Hessians at each (use loop for compatibility)
+    H_1 = compute_hessian_loop(loss_fn, y_1, t, theta)
+    H_2 = compute_hessian_loop(loss_fn, y_2, t, theta)
+
+    # Check if they differ (relative tolerance)
+    rel_diff = torch.abs(H_1 - H_2) / (torch.abs(H_1) + 1e-8)
+    max_rel_diff = rel_diff.max().item()
+
+    return max_rel_diff > tol
