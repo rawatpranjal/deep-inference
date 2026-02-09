@@ -20,7 +20,7 @@ Deep Learning for Individual Heterogeneity with Valid Inference
   </div>
   <div class="feature-card">
     <h3>Economic Targets</h3>
-    <p>AME, Elasticity, WTP, Consumer Welfare, and custom targets with autodiff</p>
+    <p>AME, Elasticity, WTP, Dose-Response, Profit, Consumer Welfare, Conditional Variance, and custom targets with autodiff</p>
   </div>
   <div class="feature-card">
     <h3>Regime Detection</h3>
@@ -185,6 +185,15 @@ result = inference(Y, T, X, model='logit', target='elasticity', t_tilde=2.0)
 
 # Consumer welfare
 result = inference(Y, T, X, model='logit', target='welfare', t_tilde=2.0)
+
+# Dose-response: average predicted outcome at treatment level
+result = inference(Y, T, X, model='logit', target='dose_response', t_tilde=1.0)
+
+# Expected profit/revenue at price level
+result = inference(Y, T, X, model='logit', target='profit', t_tilde=2.0)
+
+# Conditional variance (risk heterogeneity)
+result = inference(Y, T, X, model='logit', target='conditional_variance', t_tilde=0.0)
 
 # Randomized experiment (compute Lambda instead of estimating)
 from deep_inference.lambda_.compute import Normal

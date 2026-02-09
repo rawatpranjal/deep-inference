@@ -100,6 +100,55 @@ model = MultinomialLogitModel(n_alternatives=3, n_attributes=2)
 # Requires 3-way cross-fitting
 ```
 
+### CombinatorialModel
+
+For multi-treatment combinatorial experiments with binary treatment vectors T ∈ {0,1}^m.
+
+```python
+from deep_inference.models.combinatorial import CombinatorialModel
+
+model = CombinatorialModel(n_treatments=3, link='gen_sigmoid_ii')
+# theta_dim = m + 2 = 5 for gen_sigmoid_ii
+# theta = [θ₀, θ₁, θ₂, θ₃, θ₄]
+```
+
+**Four link functions:**
+
+| Link | Formula | θ_dim | Description |
+|------|---------|-------|-------------|
+| `multiplicative` | θ₀ · ∏(1 + θ_k · t_k) | m+1 | Product interaction |
+| `sigmoid` | a/(1+exp(-(θ₀ + Σ θ_k·t_k))) + b | m+1 | Bounded response with fixed scale |
+| `gen_sigmoid_i` | θ_{m+1} · σ(Σ θ_k·t_k) | m+1 | Flexible scale, no intercept |
+| `gen_sigmoid_ii` | θ_{m+1} · σ(θ₀ + Σ θ_k·t_k) | m+2 | Most flexible (recommended) |
+
+**Hessian properties:**
+- Uses Fisher information: 2·G_θ·G_θ' (does NOT depend on y)
+- `hessian_depends_on_theta = True` (G_θ depends on θ)
+- `hessian_depends_on_y = False` (Fisher information)
+- Requires 3-way cross-fitting (Regime C)
+
+**Lambda computation for randomized experiments:**
+
+```python
+# Compute Λ(x) via Monte Carlo for Regime A
+import torch
+t_samples = torch.randint(0, 2, (1000, 3)).float()
+Lambda = model.compute_lambda_integral(theta, t_samples)
+```
+
+**Usage with MultiTreatmentATE:**
+
+```python
+from deep_inference.targets import MultiTreatmentATE
+
+model = CombinatorialModel(n_treatments=3, link='gen_sigmoid_ii')
+target = MultiTreatmentATE(model=model, treatment=[1, 0, 1])
+```
+
+*Reference: Ye et al. (2025, Management Science) — DeDL: Debiased Deep Learning for Combinatorial Experiments*
+
+---
+
 ## Custom Network Usage
 
 For advanced users who want to use the network directly:

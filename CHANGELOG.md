@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-02-08
+## 2026-02-08 (v0.2.0)
 
 ### New Targets & Combinatorial Model
 - Added 4 new target functionals: `DoseResponse` (CL2026), `Profit` (DM2023), `TailProbability` (GDR2026), `ConditionalVariance` (GDR2026)
@@ -8,6 +8,11 @@
 - Added `MultiTreatmentATE` target for combinatorial experiment ATE estimation
 - New targets accessible via `inference(..., target='dose_response')`, `target='profit'`, etc.
 - Added eval_10 (new target Jacobian + coverage validation) and eval_11 (combinatorial model validation)
+
+### Eval & Documentation
+- Fixed eval_10 defaults: n=5000→8000 for targets with degenerate Jacobians at t̃=0; added t̃=0.5 test point
+- Updated docs: feature card, target examples, API reference for all 5 new targets and CombinatorialModel
+- Version bump 0.1.6 → 0.2.0 (significant feature release)
 
 ### Reference Library
 - Downloaded + Docling-transcribed 18 papers (22 total with existing 4) on DNN + Influence Functions / Semiparametric Efficiency
