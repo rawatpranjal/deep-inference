@@ -8,6 +8,11 @@ The `targets` module defines what quantity you want to estimate. A **target** is
 |--------|---------|----------|
 | `AverageParameter` | E[θ_j] | Average treatment effect |
 | `AME` | E[p(1-p)·β] | Marginal effect on probability |
+| `DoseResponse` | E[G(θ, t̃)] | Average predicted outcome at treatment level |
+| `Profit` | E[t̃ · G(θ, t̃)] | Expected revenue at price level |
+| `TailProbability` | E[P(Y > c \| θ, t̃)] | Exceedance/risk probability |
+| `ConditionalVariance` | E[Var(Y \| θ, t̃)] | Model-implied outcome variance |
+| `MultiTreatmentATE` | E[G(θ, t) - G(θ, t₀)] | Combinatorial treatment effect |
 | `ChoiceProbabilityTarget` | P(Y=j \| W, X) | Multinomial choice probability |
 | `MultinomialAME` | ∂P(Y=j)/∂x_{jk} | Multinomial marginal effect |
 | `CustomTarget` | User-defined h(x,θ,t̃) | Any custom functional |
@@ -61,6 +66,151 @@ Where p_i = σ(α_i + β_i·t̃).
 ∂H/∂α = p(1-p)(1-2p)·β / n
 ∂H/∂β = p(1-p)[1 + (1-2p)·β·t̃] / n
 ```
+
+### DoseResponse
+
+Average predicted outcome at a given treatment level — the fundamental counterfactual target.
+
+```python
+from deep_inference.targets import DoseResponse
+
+# Target: E[σ(α + β·t̃)] at treatment level t̃=1.0
+target = DoseResponse(model_type='logit')
+```
+
+**Formula (logit):**
+```
+H(θ, t̃) = σ(α + β·t̃)
+```
+
+**Jacobian (closed-form):**
+```
+∂H/∂α = p(1-p)
+∂H/∂β = p(1-p)·t̃
+```
+
+Where p = σ(α + β·t̃). Supports `logit`, `linear`, and `poisson` model types.
+
+**Usage:**
+```python
+from deep_inference import inference
+result = inference(Y, T, X, model='logit', target='dose_response', t_tilde=1.0)
+```
+
+*Reference: Colangelo & Lee (2026, JBES)*
+
+### Profit
+
+Expected revenue per consumer at a given price level: price × purchase probability.
+
+```python
+from deep_inference.targets import Profit
+
+target = Profit(model_type='logit')
+```
+
+**Formula (logit):**
+```
+H(θ, t̃) = t̃ · σ(α + β·t̃)
+```
+
+**Jacobian (closed-form):**
+```
+∂H/∂α = t̃·p(1-p)
+∂H/∂β = t̃·p(1-p)·t̃
+```
+
+**Usage:**
+```python
+result = inference(Y, T, X, model='logit', target='profit', t_tilde=2.0)
+```
+
+*Reference: Dubé & Misra (2023, JPE)*
+
+### TailProbability
+
+Probability that the outcome exceeds a threshold: P(Y > c | θ, t̃).
+
+```python
+from deep_inference.targets import TailProbability
+
+# P(Y > 5 | Poisson rate) at exposure level t̃=1.0
+target = TailProbability(threshold=5, model_type='poisson')
+```
+
+**Formula (Poisson):**
+```
+H(θ, t̃) = 1 - Σ_{k=0}^{c} e^{-λ}·λ^k/k!   where λ = exp(α + β·t̃)
+```
+
+**Formula (logit, c=0):**
+```
+H(θ, t̃) = σ(α + β·t̃)    (identical to DoseResponse)
+```
+
+**Formula (linear/Gaussian):**
+```
+H(θ, t̃) = 1 - Φ((c - μ)/σ)   where μ = α + β·t̃
+```
+
+Closed-form Jacobian for logit and linear; autodiff for Poisson.
+
+*Reference: Melnychuk & Feuerriegel (2026, ICLR)*
+
+### ConditionalVariance
+
+Model-implied variance of outcomes — captures heterogeneity in risk across covariates.
+
+```python
+from deep_inference.targets import ConditionalVariance
+
+target = ConditionalVariance(model_type='logit')
+```
+
+**Formula (logit):**
+```
+H(θ, t̃) = p(1-p)   where p = σ(α + β·t̃)
+```
+
+**Jacobian (closed-form):**
+```
+∂H/∂α = p(1-p)(1-2p)
+∂H/∂β = p(1-p)(1-2p)·t̃
+```
+
+**Usage:**
+```python
+result = inference(Y, T, X, model='logit', target='conditional_variance', t_tilde=0.0)
+```
+
+*Reference: Melnychuk & Feuerriegel (2026, ICLR)*
+
+### MultiTreatmentATE
+
+Average treatment effect for combinatorial experiments with multiple binary treatments.
+
+```python
+from deep_inference.targets import MultiTreatmentATE
+from deep_inference.models.combinatorial import CombinatorialModel
+
+model = CombinatorialModel(n_treatments=3, link='gen_sigmoid_ii')
+target = MultiTreatmentATE(
+    model=model,
+    treatment=[1, 0, 1],   # Apply treatments 1 and 3
+    control=[0, 0, 0],     # vs no treatment
+)
+```
+
+**Formula:**
+```
+H(θ) = G(θ, t) - G(θ, t₀)
+```
+
+Where G is the structural link function from `CombinatorialModel`. Jacobian computed via autodiff.
+
+*Reference: Ye et al. (2025, Management Science)*
+
+---
 
 ### ChoiceProbabilityTarget
 

@@ -10,8 +10,8 @@ sys.path.insert(0, os.path.abspath("../src"))
 project = "deep-inference"
 copyright = "2024, Pranjal Rawat"
 author = "Pranjal Rawat"
-version = "0.1.6"
-release = "0.1.6"
+version = "0.2.0"
+release = "0.2.0"
 
 # -- General configuration ---------------------------------------------------
 extensions = [
