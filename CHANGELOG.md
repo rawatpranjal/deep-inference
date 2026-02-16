@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-15
+
+- Created standalone `results.tex` for deep-aesthetics paper — 17-page results dump with all numeric findings from embedding training, choice model, hedonic, event study, and Arm A/B scorecard. Compiles independently with `pdflatex`.
+
 ## 2026-02-08 (v0.2.0)
 
 ### New Targets & Combinatorial Model
