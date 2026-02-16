@@ -616,6 +616,15 @@ Target: μ* = E[β_1(W)] = -0.8.
 | Regime (randomized) | A (compute Λ via MC) |
 | Regime (observational) | C (estimate Λ, 3-way split) |
 
+## Results Document
+
+`/Users/pranjal/Dropbox/deep-aesthetics/paper/results.tex` — Standalone results dump.
+- Compiles independently: `cd paper && pdflatex results.tex`
+- Contains ALL numeric results from all three applications + Arm A/B comparison
+- 8 sections: Data, Embeddings, Choice Model, Hedonic Prediction, Price Indices, Event Study (Items), Event Study (Users), Scorecard
+- For evaluation only — not part of the paper
+- Update after re-running any analysis pipeline
+
 ## References
 
 - Farrell, Liang, Misra (2021): Econometrica
