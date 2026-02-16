@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-16
+
+- Fixed epoch count bug in `generate_results.py` — regex `\s*` was consuming newlines, causing 3-4 epoch rows to be silently skipped. Also added `total_epochs` header extraction for robustness. Arm A/C now correctly show 50 epochs (was 47/46).
+
 ## 2026-02-15
 
 - Created `generate_results.py` automated pipeline — one-click generation of 22-page results PDF with 22 figures and 16 tables from parsed .txt/.json/.npy output files. Supports selective section generation and `--figures-only`/`--no-compile` modes.
