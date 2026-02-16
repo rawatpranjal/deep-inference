@@ -2,7 +2,7 @@
 
 ## 2026-02-15
 
-- Created standalone `results.tex` for deep-aesthetics paper — 17-page results dump with all numeric findings from embedding training, choice model, hedonic, event study, and Arm A/B scorecard. Compiles independently with `pdflatex`.
+- Created `generate_results.py` automated pipeline — one-click generation of 22-page results PDF with 22 figures and 16 tables from parsed .txt/.json/.npy output files. Supports selective section generation and `--figures-only`/`--no-compile` modes.
 
 ## 2026-02-08 (v0.2.0)
 

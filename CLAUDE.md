@@ -616,14 +616,57 @@ Target: μ* = E[β_1(W)] = -0.8.
 | Regime (randomized) | A (compute Λ via MC) |
 | Regime (observational) | C (estimate Λ, 3-way split) |
 
-## Results Document
+## Results Document (Automated Pipeline)
 
-`/Users/pranjal/Dropbox/deep-aesthetics/paper/results.tex` — Standalone results dump.
-- Compiles independently: `cd paper && pdflatex results.tex`
-- Contains ALL numeric results from all three applications + Arm A/B comparison
-- 8 sections: Data, Embeddings, Choice Model, Hedonic Prediction, Price Indices, Event Study (Items), Event Study (Users), Scorecard
+**Generator:** `/Users/pranjal/Dropbox/deep-aesthetics/final-analysis/generate_results.py`
+**Output:** `/Users/pranjal/Dropbox/deep-aesthetics/paper/results.tex` + `results.pdf`
+**Figures:** `/Users/pranjal/Dropbox/deep-aesthetics/final-analysis/results_figures/` (22 PDFs)
+
+### Usage
+
+```bash
+cd /Users/pranjal/Dropbox/deep-aesthetics/final-analysis
+
+# Full pipeline (all sections, all figures, compile PDF)
+python3 generate_results.py
+
+# Selective sections
+python3 generate_results.py --sections eda hedonic event_item
+
+# Figures only (no LaTeX/PDF)
+python3 generate_results.py --figures-only
+
+# Skip compilation
+python3 generate_results.py --no-compile
+```
+
+### Architecture (8 layers, ~1500 lines)
+
+1. **Imports + Constants** — paths, colors
+2. **Path Registry** — 30+ file paths (txt, json, npy, parquet)
+3. **Parsers** (8) — regex-based extraction from output .txt files
+4. **Figure Generators** (22) — matplotlib, saved as PDF
+5. **LaTeX Table Generators** — f-string templates
+6. **Section Functions** (8) — each returns (figs, latex)
+7. **TEX Assembly + Compilation** — pdflatex x2
+8. **CLI** — argparse entry point
+
+### 8 Sections
+
+| Section | Figures | Tables | Key Sources |
+|---------|---------|--------|-------------|
+| Data | 1 | 1 | ref_prices.npy |
+| EDA | 3 | 0 | item/user embeddings, alpha arrays |
+| Embeddings | 4 | 2 | 08_train.txt, 21_train.txt, 24_comparison.txt |
+| Choice | 3 | 2 | fit_logs, biz_apps, alpha .npy |
+| Hedonic | 4 | 4 | ablation x3, price_indices x3, residuals |
+| Event (Items) | 3 | 2 | event_study JSON x2, comparison x2 |
+| Event (Users) | 3 | 4 | user JSON x2, comparison x2 |
+| Scorecard | 1 | 1 | aggregated from other sections |
+
+- Auto-generated — do NOT hand-edit `results.tex`
+- Re-run after any analysis pipeline changes
 - For evaluation only — not part of the paper
-- Update after re-running any analysis pipeline
 
 ## References
 
