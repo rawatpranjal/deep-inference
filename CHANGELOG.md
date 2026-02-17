@@ -2,6 +2,7 @@
 
 ## 2026-02-18
 
+- Copied deep-aesthetics reference implementations to `application/`: embedding training (01), choice model fitting (02), MLE core, model config. Added symlink to pre-trained artifacts.
 - Downloaded Nevo (2000) "Practitioner's Guide to Random-Coefficients Logit" PDF and docling transcription to `references/Nevo2000.pdf` and `references/Nevo2000_docling.md`.
 
 ## 2026-02-16
