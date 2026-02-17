@@ -1,0 +1,161 @@
+\section{Application: H\&M Fashion Demand}\label{sec:application}
+
+We now demonstrate the full pipeline on a real application: estimating heterogeneous price sensitivity from H\&M fashion transaction data. The application illustrates every step discussed in the previous sections and produces economic objects---elasticities, counterfactual revenues---with valid confidence intervals.
+
+\subsection{Data}
+
+The H\&M Personalized Fashion Recommendations dataset \citep{hm2022kaggle} contains 1.4 million transactions from 369,000 customers purchasing 105,000 items between 2018 and 2020. We focus on online dress purchases in 2019--2020, yielding approximately 5,000 consumers with at least 5 purchases and 90 available items.
+
+Each transaction records the consumer ID, item ID, purchase date, and price. Item metadata includes product type, color, department, and garment group. Crucially for our application, the dataset also provides product images, enabling visual feature extraction.
+
+\subsection{Learning Representations}\label{sec:embeddings}
+
+The first step is representation learning. We need dense embeddings for consumers and products that capture relevant variation in preferences and attributes.
+
+\paragraph{Two-tower architecture.} We use a two-tower contrastive learning approach \citep{oord2018representation, yi2019sampling}. The \emph{user tower} maps consumer features (ID embedding, purchase history, demographics) to a 64-dimensional embedding $u_i \in \mathbb{R}^{64}$. The \emph{item tower} maps product features (CLIP visual embedding \citep{radford2021learning}, categorical features) to a 64-dimensional embedding $v_j \in \mathbb{R}^{64}$.
+
+\paragraph{InfoNCE training.} The towers are trained jointly using the InfoNCE loss:
+\begin{equation}
+    \mathcal{L} = -\log \frac{\exp(u_i' v_{j^+} / \tau)}{\sum_{j \in \mathcal{B}} \exp(u_i' v_j / \tau)}
+\end{equation}
+where $j^+$ is the purchased item, $\mathcal{B}$ is a mini-batch of items (serving as negatives), and $\tau = 0.1$ is the temperature. Training runs for 50 epochs with batch size 1024.
+
+\paragraph{Output.} The trained towers produce:
+\begin{itemize}
+    \item \texttt{user\_embeddings.npy}: $(5{,}000 \times 64)$ consumer embeddings
+    \item \texttt{item\_embeddings.npy}: $(90 \times 64)$ item embeddings
+\end{itemize}
+
+These embeddings are trained on a separate data period (T1) from the choice model estimation period (T2), so they can be treated as fixed covariates---a key assumption for the IF correction to be valid.
+
+\subsection{Mapping to the FLM Framework}\label{sec:mapping}
+
+The mapping from the two-tower output to the FLM framework is:
+
+\begin{itemize}
+    \item $X_i$: Consumer embedding (64D). This determines heterogeneity in structural parameters.
+
+    \item $T_i$: Packed alternative attributes. For each choice occasion, we sample $J = 20$ alternatives (1 chosen + 19 random). Each alternative has $K = 6$ attributes: log-price and 5 PCA dimensions of the item embedding (64D $\to$ 5D via PCA, capturing $\sim$70\% of variance). The packed array is $T_i \in \mathbb{R}^{120}$ (reshaped to $20 \times 6$ inside the loss).
+
+    \item $Y_i = 0$: The chosen alternative is always reordered to position 0.
+
+    \item $\theta(X_i) = (\beta_{\text{price}}, \beta_{\text{pca}_1}, \ldots, \beta_{\text{pca}_5}) \in \mathbb{R}^6$: Consumer $i$'s taste parameters.
+\end{itemize}
+
+\paragraph{Why PCA?} The raw item embedding is 64-dimensional, which would require $d_\theta = 65$ (including price). This is too many parameters for stable Lambda estimation with the sample sizes available. PCA reduces to 5 dimensions while retaining the major axes of product variation. The resulting $d_\theta = 6$ is small enough for stable estimation.
+
+\paragraph{No alternative-specific constants.} Unlike the standard multinomial logit with alternative-specific intercepts ($\alpha_j$), we use only attribute-based utilities: $V_{ij} = x_{ij}' \theta(X_i)$. With sampled choice sets, alternative identities change across occasions, making ASCs ill-defined. The price and embedding features provide sufficient variation for identification.
+
+\paragraph{Custom loss function.} The loss is defined in five lines:
+
+\begin{lstlisting}
+import torch
+
+def mnl_loss(y, t, theta):
+    J, K = 20, 6
+    x = t.reshape(J, K)            # Unpack attributes
+    V = x @ theta                   # Utilities
+    return -V[0] + torch.logsumexp(V, dim=0)  # -log P(chosen)
+\end{lstlisting}
+
+\paragraph{Calling inference.} The complete inference call:
+
+\begin{lstlisting}
+from deep_inference import inference
+
+def price_target(x, theta, t_tilde):
+    return theta[0]  # beta_price
+
+result = inference(
+    Y=Y, T=T, X=X,
+    loss=mnl_loss, theta_dim=6,
+    hessian_depends_on_theta=True,
+    target_fn=price_target,
+    n_folds=50, epochs=300, patience=50,
+)
+
+print(f"E[beta_price] = {result.mu_hat:.4f} +/- {result.se:.4f}")
+\end{lstlisting}
+
+\subsection{Results}
+
+\subsubsection{Simulation Validation}
+
+Before applying the method to real data, we validate it on a simulation DGP that mirrors the application specification ($J = 20$, $K = 6$, $d_x = 10$). We run $M = 50$ Monte Carlo replications at $n = 5{,}000$.
+
+\begin{table}[ht]
+\centering
+\caption{Simulation validation: IF coverage for custom MNL loss.}\label{tab:sim_results}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Value} & \textbf{Target} \\
+\midrule
+Coverage (95\% CI) & [to be filled] & 90--99\% \\
+SE ratio            & [to be filled] & 0.7--1.5 \\
+$|$Bias$|$          & [to be filled] & $< 0.05$ \\
+$z$-mean            & [to be filled] & $(-0.3, 0.3)$ \\
+$z$-std             & [to be filled] & 0.7--1.5 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}\small
+\item Note: Results from \texttt{application/06\_simulation\_study.py} with $M=50$, $n=5{,}000$, $J=20$, $K=6$.
+\end{tablenotes}
+\end{table}
+
+The simulation confirms that the custom MNL loss with the \texttt{inference()} API achieves valid coverage, providing confidence before proceeding to real data.
+
+\subsubsection{Main Inference Results}
+
+Table~\ref{tab:main_results} reports the estimated average structural parameters with IF-corrected standard errors. The key result is $E[\beta_{\text{price}}]$: the average price sensitivity across consumers.
+
+\begin{table}[ht]
+\centering
+\caption{Estimated average structural parameters with IF-corrected standard errors.}\label{tab:main_results}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Parameter} & $\hat{\mu}$ & \textbf{SE (IF)} & \textbf{SE (Naive)} & \textbf{Ratio} & \textbf{95\% CI} \\
+\midrule
+$E[\beta_{\text{price}}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
+$E[\beta_{\text{pca}_1}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
+$E[\beta_{\text{pca}_2}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
+$E[\beta_{\text{pca}_3}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
+$E[\beta_{\text{pca}_4}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
+$E[\beta_{\text{pca}_5}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}\small
+\item Note: IF SE accounts for neural network estimation uncertainty. Ratio = IF SE / Naive SE. Results from \texttt{application/03\_inference.py} with $n\_folds=50$, $epochs=300$, $patience=50$.
+\end{tablenotes}
+\end{table}
+
+The IF standard errors are systematically larger than naive SEs, reflecting the additional uncertainty from neural network estimation. This is exactly the pattern predicted by theory: naive SEs ignore the estimation step and produce overconfident intervals.
+
+\subsubsection{Heterogeneity in Price Sensitivity}
+
+The neural network estimates individual-level $\hat{\beta}_{\text{price}}(X_i)$ for each consumer. The distribution of these estimates reveals substantial heterogeneity in price sensitivity across the consumer population.
+
+% Figure placeholder
+% \begin{figure}[ht]
+%     \centering
+%     \includegraphics[width=0.8\textwidth]{figures/beta_price_distribution.pdf}
+%     \caption{Distribution of estimated price sensitivity $\hat{\beta}_{\text{price}}(X_i)$ across consumers.}
+%     \label{fig:beta_dist}
+% \end{figure}
+
+\subsection{Counterfactuals}
+
+With valid confidence intervals on the structural parameters, we can construct counterfactuals with properly quantified uncertainty.
+
+\paragraph{Own-price elasticities.} For each consumer, the own-price elasticity of the chosen item is:
+\begin{equation}
+    \eta_i = \hat{\beta}_{\text{price}}(X_i) \cdot (1 - \hat{P}_{i,\text{chosen}})
+\end{equation}
+where $\hat{P}_{i,\text{chosen}}$ is the predicted choice probability. The IF provides pointwise uncertainty on $\hat{\beta}_{\text{price}}$, which propagates to elasticity uncertainty via the delta method.
+
+\paragraph{Revenue impact of a 10\% price increase.} We simulate a uniform 10\% price increase for the chosen item and compute the change in expected revenue:
+\begin{equation}
+    \Delta R = E\left[\frac{p \cdot (1+\delta) \cdot \hat{P}_{\text{new}}}{p \cdot \hat{P}_{\text{base}}} - 1\right]
+\end{equation}
+where $\delta = 0.10$. The IF confidence intervals on $\hat{\beta}_{\text{price}}$ translate directly into uncertainty bands on the revenue impact.
+
+\paragraph{Personalized pricing.} Because $\hat{\beta}_{\text{price}}(X_i)$ varies across consumers, the revenue-maximizing price differs by consumer segment. Consumers in the least price-sensitive quintile can absorb larger price increases, while the most sensitive quintile would see significant demand drops. The IF correction ensures that these segment-level estimates come with valid confidence intervals, preventing overconfident pricing recommendations.

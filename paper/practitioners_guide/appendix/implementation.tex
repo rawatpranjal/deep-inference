@@ -1,0 +1,166 @@
+\section{Implementation Details}\label{app:implementation}
+
+This appendix provides annotated code for the H\&M application and a diagnostics interpretation guide.
+
+\subsection{Installation}
+
+\begin{lstlisting}[language=bash, numbers=none]
+pip install deep-inference
+\end{lstlisting}
+
+\noindent The package requires Python $\geq$ 3.8, PyTorch $\geq$ 1.12, NumPy, and scikit-learn (for ridge Lambda estimation). GPU support is automatic via PyTorch's CUDA backend.
+
+\subsection{Data Preparation}
+
+The data preparation script loads pre-trained embeddings, applies PCA to item embeddings, and constructs choice sets.
+
+\begin{lstlisting}
+import numpy as np
+from sklearn.decomposition import PCA
+
+# Load pre-trained two-tower embeddings
+user_emb = np.load("artifacts/user_embeddings.npy")  # (5000, 64)
+item_emb = np.load("artifacts/item_embeddings.npy")  # (90, 64)
+prices = np.load("artifacts/ref_prices.npy")          # (90,)
+
+# PCA on item embeddings: 64D -> 5D
+pca = PCA(n_components=5)
+item_pca = pca.fit_transform(item_emb)
+print(f"Variance explained: {pca.explained_variance_ratio_.sum():.1%}")
+
+# Build item attribute matrix: [log_price, pca_1, ..., pca_5]
+log_prices = np.log(prices + 1e-6)
+item_attrs = np.column_stack([log_prices, item_pca])  # (90, 6)
+
+# For each purchase occasion, construct choice set
+J = 20  # 1 chosen + 19 random alternatives
+K = 6   # log_price + 5 PCA dims
+rng = np.random.RandomState(42)
+
+Y_list, T_list, X_list = [], [], []
+
+for user_id, chosen_item_id in transactions:
+    # Consumer embedding
+    X_list.append(user_emb[user_id])
+
+    # Pack chosen item first, then J-1 random alternatives
+    t_row = np.zeros(J * K)
+    t_row[:K] = item_attrs[chosen_item_id]
+
+    others = np.setdiff1d(np.arange(len(item_attrs)), [chosen_item_id])
+    sampled = rng.choice(others, J - 1, replace=False)
+    for j, alt_id in enumerate(sampled):
+        t_row[(j+1)*K : (j+2)*K] = item_attrs[alt_id]
+
+    T_list.append(t_row)
+    Y_list.append(0.0)  # Chosen is always index 0
+
+Y = np.array(Y_list, dtype=np.float32)
+T = np.array(T_list, dtype=np.float32)
+X = np.array(X_list, dtype=np.float32)
+np.save("data/Y.npy", Y)
+np.save("data/T.npy", T)
+np.save("data/X.npy", X)
+\end{lstlisting}
+
+\subsection{Inference Call}
+
+The inference call is concise once the data is prepared:
+
+\begin{lstlisting}
+import torch
+import numpy as np
+from deep_inference import inference
+
+# Load prepared data
+Y = np.load("data/Y.npy")    # (n,)
+T = np.load("data/T.npy")    # (n, 120)
+X = np.load("data/X.npy")    # (n, 64)
+
+# Custom MNL loss (5 lines)
+J, K = 20, 6
+
+def mnl_loss(y, t, theta):
+    x = t.reshape(J, K)            # (20, 6) attribute matrix
+    V = x @ theta                   # (20,) utilities
+    return -V[0] + torch.logsumexp(V, dim=0)
+
+# Target: average price sensitivity
+def price_target(x, theta, t_tilde):
+    return theta[0]
+
+# Run inference
+result = inference(
+    Y=Y, T=T, X=X,
+    loss=mnl_loss,
+    theta_dim=K,                    # 6 parameters per consumer
+    hessian_depends_on_theta=True,  # Softmax probs depend on theta
+    hessian_depends_on_y=False,     # Fisher information Hessian
+    target_fn=price_target,
+    n_folds=50,                     # Cross-fitting folds
+    epochs=300,                     # Training epochs
+    patience=50,                    # CRITICAL for 3-way split
+    hidden_dims=[64, 32],           # Network architecture
+    lr=0.01,                        # Learning rate
+    verbose=True,                   # Print progress
+)
+
+# Results
+print(f"E[beta_price] = {result.mu_hat:.4f} +/- {result.se:.4f}")
+print(f"95% CI: [{result.ci_lower:.4f}, {result.ci_upper:.4f}]")
+
+# Diagnostics
+print(f"Regime: {result.diagnostics.get('regime', 'C')}")
+print(f"Lambda method: {result.diagnostics.get('lambda_method')}")
+\end{lstlisting}
+
+\subsection{Running All Parameters}
+
+To estimate all $K$ parameters, loop over target indices:
+
+\begin{lstlisting}
+param_names = ["log_price", "pca_1", "pca_2", "pca_3", "pca_4", "pca_5"]
+
+for k, name in enumerate(param_names):
+    target_fn = lambda x, theta, t_tilde, idx=k: theta[idx]
+
+    result = inference(
+        Y=Y, T=T, X=X,
+        loss=mnl_loss, theta_dim=K,
+        hessian_depends_on_theta=True,
+        target_fn=target_fn,
+        n_folds=50, epochs=300, patience=50,
+    )
+    print(f"E[{name}] = {result.mu_hat:.4f} +/- {result.se:.4f}")
+\end{lstlisting}
+
+\subsection{Diagnostics Interpretation Guide}
+
+\begin{enumerate}
+    \item \textbf{Check the regime.} The output should say ``Regime C'' for our multinomial model. If it says Regime A or B, something is wrong with the Hessian detection.
+
+    \item \textbf{Check Lambda eigenvalues.} If a warning about small eigenvalues appears, the model may be poorly identified. Consider: (a) reducing $d_\theta$ (more PCA compression), (b) increasing $n$, or (c) using a different Lambda method.
+
+    \item \textbf{Check the correction ratio.} For multinomial logit, values of 70--90 are normal. For binary logit, values of 2--3 are normal. Very large values ($> 200$) suggest Lambda estimation problems.
+
+    \item \textbf{Verify with simulation.} Before trusting results on real data, run the simulation study (\texttt{application/06\_simulation\_study.py}) with a DGP matching your application specification. If simulation coverage is near 95\%, you can be confident in the real-data results.
+
+    \item \textbf{Compare IF to naive SE.} The IF SE should be larger than the naive SE. If it is smaller, something is wrong. The ratio depends on the model: 2--5$\times$ for binary logit, potentially larger for multinomial.
+\end{enumerate}
+
+\subsection{Companion Repository}
+
+The complete code for the application is available at:
+
+\begin{center}
+    \texttt{https://github.com/rawatpranjal/deep-inference/tree/main/application}
+\end{center}
+
+\noindent The repository includes:
+\begin{itemize}
+    \item Pre-trained embedding artifacts (via symlink)
+    \item Data preparation, inference, comparison, and counterfactual scripts
+    \item Simulation study with coverage validation
+    \item Figure generation for the paper
+    \item The \texttt{deep-inference} package source code
+\end{itemize}

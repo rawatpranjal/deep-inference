@@ -399,6 +399,9 @@ def inference(
     loss: Optional[Callable] = None,
     target_fn: Optional[Callable] = None,
     theta_dim: Optional[int] = None,
+    # Hessian property overrides (for custom loss with non-scalar T)
+    hessian_depends_on_theta: Optional[bool] = None,
+    hessian_depends_on_y: Optional[bool] = None,
     # Evaluation point
     t_tilde: Optional[float] = None,
     # Randomization settings (for Regime A)
@@ -438,6 +441,9 @@ def inference(
         target_fn: Custom target: h(x, theta, t_tilde) -> scalar
 
         theta_dim: Parameter dimension (required for custom loss)
+        hessian_depends_on_theta: Override auto-detection for custom loss
+            (needed when T is multi-dimensional and auto-detection fails)
+        hessian_depends_on_y: Override auto-detection for custom loss
         t_tilde: Evaluation point (default: mean(T))
 
         # Regime settings:
@@ -509,7 +515,11 @@ def inference(
         # Custom loss
         if theta_dim is None:
             raise ValueError("theta_dim required for custom loss")
-        struct_model = model_from_loss(loss, theta_dim)
+        struct_model = model_from_loss(
+            loss, theta_dim,
+            hessian_depends_on_theta=hessian_depends_on_theta,
+            hessian_depends_on_y=hessian_depends_on_y,
+        )
     else:
         raise ValueError("Must provide 'model' or 'loss'")
 
