@@ -2,7 +2,11 @@
 
 ## 2026-02-18
 
-- Copied deep-aesthetics reference implementations to `application/`: embedding training (01), choice model fitting (02), MLE core, model config. Added symlink to pre-trained artifacts.
+- Created practitioner's guide paper: `paper/practitioners_guide/` (26 pages, 5 sections + appendix, Nevo 2000 style). Full LaTeX skeleton with references.bib, Makefile, and all section prose.
+- Created `application/` pipeline: 8 scripts (00_prep_data through 07_generate_figures) for H&M fashion demand example with custom MNL loss + IF inference.
+- Added `hessian_depends_on_theta`/`hessian_depends_on_y` pass-through to `inference()` API for custom losses with non-scalar T.
+- Generated 6 paper figures (coverage comparison, beta distribution, SE comparison, elasticities, counterfactuals, Lambda methods).
+- Copied deep-aesthetics reference implementations to `application/`: embedding training (01), choice model fitting (02), MLE core, model config.
 - Downloaded Nevo (2000) "Practitioner's Guide to Random-Coefficients Logit" PDF and docling transcription to `references/Nevo2000.pdf` and `references/Nevo2000_docling.md`.
 
 ## 2026-02-16

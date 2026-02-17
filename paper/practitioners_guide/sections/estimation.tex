@@ -1,0 +1,160 @@
+\section{Estimation in Practice}\label{sec:estimation}
+
+This section is the heart of the guide. We walk through every step of the estimation procedure, discuss the choices practitioners must make, and flag the pitfalls that can silently invalidate results.
+
+\subsection{Data Requirements}
+
+The method requires individual-level data in triplets $(Y_i, T_i, X_i)$:
+
+\begin{itemize}
+    \item \textbf{Outcomes} $Y$: The variable being modeled. Can be continuous (sales, duration), binary (purchase, click), count (visits), or discrete choice (chosen alternative index).
+
+    \item \textbf{Treatments/actions} $T$: The variable(s) whose effect varies across individuals. For discrete choice, $T$ contains the attributes of all alternatives (prices, features). For treatment effects, $T$ is the treatment indicator or dose.
+
+    \item \textbf{Covariates} $X$: The individual characteristics that drive heterogeneity. These are the neural network's inputs. Higher-dimensional $X$ allows the network to capture richer heterogeneity patterns, but requires more data.
+\end{itemize}
+
+\paragraph{Sample size considerations.} Neural networks are data-hungry. As a rough guide:
+\begin{itemize}
+    \item $n \geq 2{,}000$ for binary logit with $d_\theta = 2$
+    \item $n \geq 5{,}000$ for multinomial logit with $d_\theta \leq 6$
+    \item $n \geq 8{,}000$ for multinomial logit with $d_\theta = 4$ and three-way split
+\end{itemize}
+The three-way split (Regime C) reduces effective training data to about 60\% of $n$, so more data is needed than for Regime A or B models.
+
+\paragraph{Choice set construction.} For multinomial choice models, each observation requires a full choice set: the chosen item plus $J-1$ alternatives. When the full choice set is too large (e.g., 100,000 products), sample $J-1$ random alternatives per occasion. This is consistent with McFadden's sampling theorem and standard in the IO literature \citep{train2009discrete}. We use $J = 20$ in our application.
+
+\subsection{The Algorithm}
+
+The estimation proceeds in five steps, all handled internally by the \texttt{inference()} function:
+
+\begin{enumerate}
+    \item[\textbf{Step 0.}] \textbf{Prepare data.} Encode $T$ as a numeric array with consistent shape across observations. For multinomial logit: pack alternative attributes as $(n, J \times K)$.
+
+    \item[\textbf{Step 1.}] \textbf{Cross-fitting.} Split data into $K$ folds. For each fold, train the structural network $\hat{\theta}(X)$ on the remaining $K-1$ folds and predict on the held-out fold. This produces out-of-sample estimates $\hat{\theta}(X_i)$ for all $i$.
+
+    \item[\textbf{Step 2.}] \textbf{Estimate Lambda.} Compute individual Hessians $\nabla_\theta^2 \ell(Y_i, T_i, \hat{\theta}(X_i))$ via autodiff. Regress these Hessians on $X$ using ridge regression to obtain $\hat{\Lambda}(X_i) = E[\nabla_\theta^2 \ell \mid X_i]$.
+
+    \item[\textbf{Step 3.}] \textbf{Compute scores and Jacobians.} Evaluate the score $\ell_\theta(Y_i, T_i, \hat{\theta}(X_i))$ and target Jacobian $H_\theta(X_i, \hat{\theta}(X_i), \tilde{t})$ at each observation.
+
+    \item[\textbf{Step 4.}] \textbf{Assemble $\psi$ and compute SE.} Combine the pieces: $\psi_i = H_i - H_{\theta,i} \hat{\Lambda}_i^{-1} \ell_{\theta,i}$. Compute $\hat{\mu} = \bar{\psi}$ and $\widehat{\text{SE}} = \text{sd}(\psi) / \sqrt{n}$.
+\end{enumerate}
+
+In code, this entire pipeline is a single function call:
+
+\begin{lstlisting}
+from deep_inference import inference
+
+result = inference(Y, T, X, loss=my_loss, theta_dim=6,
+                   target_fn=my_target,
+                   hessian_depends_on_theta=True,
+                   n_folds=50, epochs=300, patience=50)
+
+print(f"Estimate: {result.mu_hat:.4f} +/- {result.se:.4f}")
+print(f"95% CI: [{result.ci_lower:.4f}, {result.ci_upper:.4f}]")
+\end{lstlisting}
+
+\subsection{Cross-Fitting Details}
+
+Cross-fitting is essential for valid inference. It prevents the neural network from ``seeing'' the same data used to evaluate the influence function, eliminating a bias term that would otherwise require undersmoothing conditions.
+
+\paragraph{Number of folds.} We recommend $K = 50$ folds. With fewer folds, each training set is smaller, potentially degrading $\hat{\theta}$. With more folds, computational cost increases linearly. In our experience, $K = 50$ provides a good balance for $n \geq 2{,}000$. At smaller sample sizes, $K = 20$ may be necessary.
+
+\paragraph{Two-way vs.\ three-way splitting.} When the Hessian depends on $\theta$ (Regime C), estimating $\Lambda$ on the same data used to estimate $\theta$ would introduce dependence. The three-way split resolves this: within each fold, the data is further split so that $\hat{\theta}$ and $\hat{\Lambda}$ are estimated on independent subsets. The effective training sample for $\hat{\theta}$ drops to about 60\% of $n$.
+
+\paragraph{Practical implication.} Three-way splitting is triggered automatically when the package detects that the Hessian depends on $\theta$. For the multinomial logit, this is always the case (softmax probabilities depend on $\theta$). The practitioner does not need to manage the splitting manually, but should be aware that more data is needed than for linear models.
+
+\subsection{Lambda Estimation}\label{sec:lambda_est}
+
+Lambda estimation is the most delicate step in the pipeline. An incorrect $\hat{\Lambda}$ directly corrupts the standard errors.
+
+\begin{table}[ht]
+\centering
+\caption{Lambda estimation methods: comparison on logit simulation ($n=5{,}000$, $M=50$).}\label{tab:lambda_methods}
+\begin{tabular}{lcccl}
+\toprule
+\textbf{Method} & \textbf{Corr.\ w/ Oracle} & \textbf{Coverage} & \textbf{SE Ratio} & \textbf{Notes} \\
+\midrule
+Ridge ($\alpha=1000$) & 0.508 & 96\% & 0.91 & \textbf{Default, recommended} \\
+Aggregate             & 0.000 & 95\% & 1.00 & Ignores $X$-dependence \\
+LGBM                  & 0.978 & 96\% & 1.00 & Good accuracy \\
+MLP                   & 0.997 & \textbf{67\%} & 0.65 & \textbf{Never use} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Ridge (default).} Ridge regression with strong regularization ($\alpha = 1000$) pulls $\hat{\Lambda}(X)$ toward the population mean Hessian. This sacrifices some accuracy in estimating heterogeneity in $\Lambda$ but produces reliable standard errors. The high regularization parameter may seem counterintuitive---but recall that Lambda is not the object of interest; it is a nuisance quantity in the IF formula. We only need it to be ``close enough'' for valid inference.
+
+\paragraph{MLP: a cautionary tale.} An MLP Lambda estimator achieves the highest correlation with the oracle (0.997) yet produces catastrophically invalid standard errors (67\% coverage). The problem is overfitting: the MLP captures noise in the individual Hessians, producing $\hat{\Lambda}(X)$ estimates that are too extreme. Since $\Lambda^{-1}$ appears in the IF formula, extreme Lambda values create extreme $\psi_i$ values, inflating the variance estimator. The lesson: \textit{high correlation with the oracle does not guarantee valid inference}.
+
+\subsection{Network Architecture}
+
+The structural network maps $X \to \theta(X)$ via a multi-layer perceptron. Key settings:
+
+\begin{itemize}
+    \item \textbf{Hidden dimensions}: \texttt{[64, 32]} default. Two layers with decreasing width. Rarely needs tuning. Larger networks ([128, 64, 32]) may help with very rich heterogeneity patterns but require more data.
+
+    \item \textbf{Learning rate}: 0.01. Standard for Adam optimizer with structural losses.
+
+    \item \textbf{Epochs}: 200 for binary models, 300 for multinomial. The network needs enough training to learn the structural relationship.
+
+    \item \textbf{Patience}: \textbf{At least 50 for multinomial models.} This is the number of epochs to wait without improvement before early stopping. With three-way splitting, the validation set is small and noisy, causing premature stopping if patience is too low. With \texttt{patience=10} (a common default), the network stops at epoch 15--20 and severely underfits. This is the single most common pitfall we have encountered.
+
+    \item \textbf{Dropout}: 0.1 (fixed). Mild regularization to prevent overfitting.
+\end{itemize}
+
+\subsection{Diagnostics}\label{sec:diagnostics}
+
+After running \texttt{inference()}, several diagnostic quantities should be checked:
+
+\begin{enumerate}
+    \item \textbf{Minimum Lambda eigenvalue} $> 10^{-4}$. If the smallest eigenvalue of $\hat{\Lambda}$ is too close to zero, the Hessian is nearly singular. This typically means the model is poorly identified or the sample size is too small. The package adds a ridge regularization ($10^{-4}$) to prevent numerical issues, but a warning is printed.
+
+    \item \textbf{Correction ratio}. The ratio $\text{Var}(\text{correction})/\text{Var}(H_i)$ measures how much the IF correction contributes. For binary logit, values of 2--3 are normal. For multinomial logit, values of 70--90 are normal due to the higher-dimensional $\theta$. Do not be alarmed by large correction ratios for multinomial models.
+
+    \item \textbf{SE ratio} $\in [0.7, 1.5]$. In simulation studies where the truth is known, the ratio of estimated SE to empirical SE should be near 1. Values below 0.7 suggest underestimated uncertainty; values above 1.5 suggest overestimation. On real data, this diagnostic is not directly available, but the other checks provide confidence.
+
+    \item \textbf{$z$-score distribution.} If running multiple targets or a simulation study, the $z$-scores $(\hat{\mu} - \mu^*)/\text{SE}$ should have mean $\approx 0$ and standard deviation $\approx 1$. Departures indicate systematic bias or SE miscalibration.
+\end{enumerate}
+
+\subsection{Common Pitfalls}\label{sec:pitfalls}
+
+\begin{enumerate}
+    \item \textbf{Patience too low.} This is the number one cause of bad results. With three-way splitting, the validation set is small (about 7\% of data with $K=50$), making the validation loss noisy. Low patience triggers early stopping before the network has learned the structural relationship. \textbf{Fix:} Set \texttt{patience=50} or higher for multinomial models.
+
+    \item \textbf{MLP Lambda.} Using an MLP to estimate $\Lambda(X)$ produces beautiful correlation with the oracle but invalid standard errors. \textbf{Fix:} Use \texttt{ridge} (default) or \texttt{lgbm}.
+
+    \item \textbf{Sample size too small.} Three-way splitting with $K=50$ folds means each fold has $n/50$ observations, of which 60\% are used for training. At $n = 2{,}000$, that is 24 observations per fold for training---borderline for a neural network with $d_\theta = 6$. \textbf{Fix:} Use $n \geq 5{,}000$ for multinomial models.
+
+    \item \textbf{Ignoring diagnostics.} The package prints warnings for suspicious Lambda eigenvalues and correction ratios. Do not suppress these warnings. They are the first sign that something is wrong.
+
+    \item \textbf{Non-differentiable loss.} The IF correction requires computing the Hessian $\nabla_\theta^2 \ell$ via automatic differentiation. If the loss function contains non-differentiable operations (\texttt{int()}, \texttt{if/else} on tensors), the autodiff will fail. \textbf{Fix:} Use \texttt{torch} operations throughout the loss function.
+
+    \item \textbf{Data-dependent indexing.} For multinomial logit with reordered choice sets (chosen alternative always at index 0), use \texttt{V[0]} instead of \texttt{V[int(y)]}. The \texttt{int()} call breaks \texttt{torch.vmap}, which is used internally for batched Hessian computation.
+\end{enumerate}
+
+\subsection{Quick Start: Binary Logit}
+
+For readers who want to try the method before diving into the multinomial application, here is a minimal binary logit example:
+
+\begin{lstlisting}
+import numpy as np
+from deep_inference import inference
+
+# Simulated data
+np.random.seed(42)
+n = 5000
+X = np.random.randn(n, 5)          # Covariates
+T = np.random.randn(n)             # Treatment
+beta_true = 0.5 + 0.3 * X[:, 0]   # Heterogeneous effect
+p = 1 / (1 + np.exp(-(1.0 + beta_true * T)))
+Y = np.random.binomial(1, p).astype(float)
+
+# Run inference
+result = inference(Y, T, X, model='logit', target='beta')
+print(f"E[beta] = {result.mu_hat:.3f} +/- {result.se:.3f}")
+print(f"95% CI: [{result.ci_lower:.3f}, {result.ci_upper:.3f}]")
+# Expected: E[beta] ~ 0.5 with valid coverage
+\end{lstlisting}
+
+\noindent The entire IF pipeline runs in about 2 minutes on a laptop CPU for $n = 5{,}000$.
