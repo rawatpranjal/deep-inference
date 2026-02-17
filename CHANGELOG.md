@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-18
+
+- Downloaded Nevo (2000) "Practitioner's Guide to Random-Coefficients Logit" PDF and docling transcription to `references/Nevo2000.pdf` and `references/Nevo2000_docling.md`.
+
 ## 2026-02-16
 
 - Fixed epoch count bug in `generate_results.py` — regex `\s*` was consuming newlines, causing 3-4 epoch rows to be silently skipped. Also added `total_epochs` header extraction for robustness. Arm A/C now correctly show 50 epochs (was 47/46).
