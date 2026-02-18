@@ -18,6 +18,7 @@ FIGURES_DIR = ROOT.parent / "paper" / "practitioners_guide" / "figures"
 DEEP_AESTHETICS_DIR = Path("/Users/pranjal/Dropbox/deep-aesthetics/final-analysis")
 EMBEDDINGS_DIR = DEEP_AESTHETICS_DIR / "embeddings" / "artifacts_arm_a"
 TRANSACTIONS_DIR = DEEP_AESTHETICS_DIR / "choice"
+CHOICE_PREP_DIR = DEEP_AESTHETICS_DIR / "choice" / "artifacts_arm_a" / "prep"
 
 # === Data Settings ===
 # Choice set construction

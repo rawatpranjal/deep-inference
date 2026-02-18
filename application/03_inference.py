@@ -70,7 +70,7 @@ def make_target_fn(param_idx):
 # Inference
 # ──────────────────────────────────────────────────────────────────────────────
 
-def run_inference(Y, T, X, target_idx=0, verbose=True):
+def run_inference(Y, T, X, target_idx=0, verbose=True, n_folds=None, epochs=None):
     """Run IF-corrected inference for a single target parameter.
 
     Args:
@@ -79,18 +79,23 @@ def run_inference(Y, T, X, target_idx=0, verbose=True):
         X: (n, d_x) consumer embeddings
         target_idx: Index of theta parameter to target
         verbose: Print progress
+        n_folds: Override number of folds (default: config)
+        epochs: Override training epochs (default: config)
 
     Returns:
         InferenceResult
     """
     from deep_inference import inference
 
+    n_folds_use = n_folds if n_folds is not None else N_FOLDS
+    epochs_use = epochs if epochs is not None else EPOCHS
+
     target_fn = make_target_fn(target_idx)
     param_name = ATTRIBUTE_NAMES[target_idx] if target_idx < len(ATTRIBUTE_NAMES) else f"theta_{target_idx}"
 
     print(f"\n  Running inference for E[{param_name}(X)]...")
     print(f"  n={len(Y)}, J={J}, K={K}, theta_dim={THETA_DIM}")
-    print(f"  n_folds={N_FOLDS}, epochs={EPOCHS}, patience={PATIENCE}")
+    print(f"  n_folds={n_folds_use}, epochs={epochs_use}, patience={PATIENCE}")
 
     result = inference(
         Y=Y, T=T, X=X,
@@ -99,8 +104,8 @@ def run_inference(Y, T, X, target_idx=0, verbose=True):
         hessian_depends_on_theta=True,
         hessian_depends_on_y=False,
         target_fn=target_fn,
-        n_folds=N_FOLDS,
-        epochs=EPOCHS,
+        n_folds=n_folds_use,
+        epochs=epochs_use,
         patience=PATIENCE,
         hidden_dims=HIDDEN_DIMS,
         lr=LEARNING_RATE,
@@ -149,6 +154,10 @@ def main():
                         help="Run inference for all K parameters")
     parser.add_argument("--data-dir", type=str, default=None,
                         help="Override data directory")
+    parser.add_argument("--n-folds", type=int, default=None,
+                        help="Override number of cross-fitting folds")
+    parser.add_argument("--epochs", type=int, default=None,
+                        help="Override training epochs")
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir) if args.data_dir else DATA_DIR
@@ -196,9 +205,11 @@ def main():
     results = {}
     if args.all_params:
         for idx in range(K):
-            results[idx] = run_inference(Y, T, X, target_idx=idx)
+            results[idx] = run_inference(Y, T, X, target_idx=idx,
+                                         n_folds=args.n_folds, epochs=args.epochs)
     else:
-        results[args.target_idx] = run_inference(Y, T, X, target_idx=args.target_idx)
+        results[args.target_idx] = run_inference(Y, T, X, target_idx=args.target_idx,
+                                                  n_folds=args.n_folds, epochs=args.epochs)
 
     # Summary table
     if len(results) > 1:
@@ -217,12 +228,25 @@ def main():
     results_dict = {}
     for idx, r in results.items():
         name = ATTRIBUTE_NAMES[idx] if idx < len(ATTRIBUTE_NAMES) else f"theta_{idx}"
-        results_dict[name] = {
+        entry = {
             "mu_hat": float(r.mu_hat),
             "se": float(r.se),
             "ci_lower": float(r.ci_lower),
             "ci_upper": float(r.ci_upper),
         }
+        # Add naive SE if available
+        if hasattr(r, 'theta_hat') and r.theta_hat is not None:
+            theta_hat = r.theta_hat
+            if isinstance(theta_hat, torch.Tensor):
+                theta_hat = theta_hat.numpy()
+            naive_se = float(theta_hat[:, idx].std() / np.sqrt(len(theta_hat)))
+            entry["naive_se"] = naive_se
+            entry["se_ratio"] = float(r.se / naive_se) if naive_se > 0 else None
+        # Add diagnostics
+        if hasattr(r, 'diagnostics') and r.diagnostics:
+            entry["diagnostics"] = {k: (float(v) if isinstance(v, (int, float)) else str(v))
+                                     for k, v in r.diagnostics.items()}
+        results_dict[name] = entry
 
     import json
     with open(RESULTS_DIR / "inference_results.json", "w") as f:

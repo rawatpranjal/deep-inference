@@ -2,6 +2,12 @@
 
 ## 2026-02-18
 
+- **Real H&M inference results**: Ran IF-corrected inference on 10,681 real H&M purchase occasions with custom MNL loss. All 6 parameters estimated (beta_price + 5 PCA style dims). IF SEs ~2x larger than naive SEs across all parameters. E[beta_price] = -0.359 (negative as expected).
+- Rewrote `application/00_prep_data.py` to load real data from deep-aesthetics pipeline (purchases_train.parquet, maps.pkl, d_matrix.npy, x_matrix.npy, price_jt.npz).
+- Updated `application/config.py` with CHOICE_PREP_DIR path.
+- Updated `application/03_inference.py` with --n-folds and --epochs CLI overrides, enhanced JSON output with naive SE and diagnostics.
+- Filled placeholder tables in `paper/practitioners_guide/sections/application.tex` with real inference results.
+- Created `paper/practitioners_guide/guidelines.md` — writing style guide synthesized from Nevo (2000), Cameron & Miller (2015), Beine et al. (2016).
 - Downloaded and docling-transcribed 2 practitioner's guide papers to `references/`: Cameron & Miller (2015, JHR) on cluster-robust inference, Beine et al. (2016, World Economy) on gravity models of migration. Kumbhakar et al. (2015) is a CUP book and not freely available as PDF.
 - Created practitioner's guide paper: `paper/practitioners_guide/` (26 pages, 5 sections + appendix, Nevo 2000 style). Full LaTeX skeleton with references.bib, Makefile, and all section prose.
 - Created `application/` pipeline: 8 scripts (00_prep_data through 07_generate_figures) for H&M fashion demand example with custom MNL loss + IF inference.

@@ -1,17 +1,23 @@
 """
-Data Preparation: H&M Transactions → (Y, T, X) for deep_inference
+Data Preparation: H&M Transactions -> (Y, T, X) for deep_inference
 
-This script loads pre-trained two-tower embeddings and H&M transaction data,
-constructs choice sets with sampled alternatives, and produces the data
-arrays needed by the inference() API.
+Loads real H&M purchase data from the deep-aesthetics pipeline
+(choice/artifacts_arm_a/prep/) and constructs the arrays needed
+by inference() with a custom MNL loss.
+
+Data sources:
+    purchases_train.parquet  — 10,681 real purchase occasions
+    maps.pkl                 — cust_to_i / sku_to_j index mappings
+    d_matrix.npy             — (4833, 64) user embeddings
+    x_matrix.npy             — (83, 64) item embeddings
+    price_jt.npz             — (83, 89) time-varying price panel
 
 Pipeline:
-    1. Load pre-trained embeddings from artifacts_arm_a/
-    2. Load H&M transactions, filter to online dresses 2019-2020
-    3. PCA on item embeddings (64D → 5D)
-    4. For each purchase occasion, sample J-1 non-chosen alternatives
-    5. Pack attributes: T_i = [x_0, x_1, ..., x_{J-1}] where x_j = (log_price, pca_1,...,pca_5)
-    6. Save: Y.npy, T.npy, X.npy → application/data/
+    1. Load real purchases + index mappings from prep/
+    2. Load user/item embeddings from prep/
+    3. PCA on item embeddings (64D -> 5D)
+    4. For each purchase: pack chosen + J-1 sampled alternatives
+    5. Save: Y.npy, T.npy, X.npy -> application/data/
 
 Outputs:
     data/Y.npy  — (n,) float32, always 0 (chosen alternative is first)
@@ -20,85 +26,66 @@ Outputs:
 
 Usage:
     python application/00_prep_data.py
-    python application/00_prep_data.py --j 10 --pca-dims 3  # smaller choice sets
+    python application/00_prep_data.py --j 10 --pca-dims 3
 """
 
 import sys
 import os
 import argparse
 import numpy as np
+import pandas as pd
+import pickle
 from pathlib import Path
 from sklearn.decomposition import PCA
 
-# Configuration
 sys.path.insert(0, os.path.dirname(__file__))
 from config import (
-    J, K, PCA_DIMS, MIN_PURCHASES,
-    EMBEDDINGS_DIR, DATA_DIR,
+    J, K, PCA_DIMS, CHOICE_PREP_DIR, DATA_DIR,
 )
 
 
-def load_embeddings():
-    """Load pre-trained two-tower embeddings and reference prices."""
-    user_emb = np.load(EMBEDDINGS_DIR / "user_embeddings.npy")
-    item_emb = np.load(EMBEDDINGS_DIR / "item_embeddings.npy")
-    ref_prices = np.load(EMBEDDINGS_DIR / "ref_prices.npy")
+def load_real_data():
+    """Load real H&M purchases, embeddings, and mappings from prep directory."""
 
-    print(f"  User embeddings:  {user_emb.shape}")
-    print(f"  Item embeddings:  {item_emb.shape}")
-    print(f"  Reference prices: {ref_prices.shape}")
-    print(f"  Price range:      [{ref_prices.min():.2f}, {ref_prices.max():.2f}]")
+    print(f"  Source: {CHOICE_PREP_DIR}")
 
-    return user_emb, item_emb, ref_prices
+    # Load purchases
+    purchases = pd.read_parquet(CHOICE_PREP_DIR / "purchases_train.parquet")
+    print(f"  Purchases:     {purchases.shape[0]:,} occasions")
+    print(f"  Columns:       {list(purchases.columns)}")
+    print(f"  Price range:   [{purchases['price_euros'].min():.2f}, {purchases['price_euros'].max():.2f}] EUR")
 
+    # Load index mappings
+    with open(CHOICE_PREP_DIR / "maps.pkl", "rb") as f:
+        maps = pickle.load(f)
+    cust_to_i = maps['cust_to_i']
+    sku_to_j = maps['sku_to_j']
+    print(f"  Customers:     {len(cust_to_i):,} (mapped to 0..{len(cust_to_i)-1})")
+    print(f"  Articles:      {len(sku_to_j):,} (mapped to 0..{len(sku_to_j)-1})")
 
-def load_transactions():
-    """Load H&M transaction data.
+    # Load embeddings (from prep dir — already subsampled to choice set)
+    d_matrix = np.load(CHOICE_PREP_DIR / "d_matrix.npy")
+    x_matrix = np.load(CHOICE_PREP_DIR / "x_matrix.npy")
+    print(f"  User emb:      {d_matrix.shape}")
+    print(f"  Item emb:      {x_matrix.shape}")
 
-    Looks for preprocessed data in the deep-aesthetics pipeline.
-    Falls back to creating synthetic transactions from embeddings.
-    """
-    # Try loading from deep-aesthetics choice model prep
-    choice_dir = Path(os.environ.get(
-        "CHOICE_DATA_DIR",
-        "/Users/pranjal/Dropbox/deep-aesthetics/final-analysis/choice"
-    ))
+    # Load time-varying prices for reference prices of non-chosen alternatives
+    price_data = np.load(CHOICE_PREP_DIR / "price_jt.npz", allow_pickle=True)
+    price_panel = price_data['p']  # (83, 89) with NaNs
+    ref_prices = np.nanmedian(price_panel, axis=1)  # median price per item
+    print(f"  Price panel:   {price_panel.shape} (items x weeks)")
+    print(f"  Ref prices:    [{ref_prices.min():.2f}, {ref_prices.max():.2f}] EUR (median)")
 
-    prep_file = choice_dir / "prep_cache.npz"
-    if prep_file.exists():
-        data = np.load(prep_file, allow_pickle=True)
-        print(f"  Loaded prep cache from {prep_file}")
-        return data
-
-    # If no prep cache, we need the raw transaction data
-    # Look for the user-item mapping
-    user_items_file = choice_dir / "user_item_matrix.npz"
-    if user_items_file.exists():
-        data = np.load(user_items_file, allow_pickle=True)
-        print(f"  Loaded user-item matrix from {user_items_file}")
-        return data
-
-    print("  WARNING: No transaction data found. Using synthetic transactions.")
-    return None
+    return purchases, cust_to_i, sku_to_j, d_matrix, x_matrix, ref_prices
 
 
 def pca_embeddings(item_emb, n_components=PCA_DIMS):
-    """Reduce item embedding dimension via PCA.
-
-    Args:
-        item_emb: (n_items, 64) item embeddings
-        n_components: Number of PCA dimensions
-
-    Returns:
-        item_pca: (n_items, n_components) PCA-reduced embeddings
-        pca: fitted PCA object
-        variance_explained: fraction of variance explained
-    """
+    """Reduce item embedding dimension via PCA."""
     pca = PCA(n_components=n_components)
     item_pca = pca.fit_transform(item_emb)
     variance_explained = pca.explained_variance_ratio_.sum()
 
-    print(f"  PCA: {item_emb.shape[1]}D → {n_components}D")
+    print(f"  PCA: {item_emb.shape[1]}D -> {n_components}D")
     print(f"  Variance explained: {variance_explained:.1%}")
     print(f"  Per-component: {pca.explained_variance_ratio_}")
 
@@ -106,106 +93,84 @@ def pca_embeddings(item_emb, n_components=PCA_DIMS):
 
 
 def construct_choice_sets(
-    user_emb, item_pca, ref_prices,
-    n_alternatives=J,
-    transactions=None,
-    seed=42,
+    purchases, cust_to_i, sku_to_j, d_matrix, x_matrix_pca, ref_prices,
+    n_alternatives=J, seed=42,
 ):
-    """Construct choice occasions with sampled alternatives.
+    """Construct choice occasions with sampled alternatives from real purchases.
 
     For each purchase occasion:
-      1. Chosen item attributes: [log_price, pca_1, ..., pca_5]
-      2. Sample J-1 random alternatives from available items
-      3. Pack T_i = concatenate all J items' attributes → (J*K,)
-      4. Y_i = 0 (chosen is always first)
-      5. X_i = consumer embedding
-
-    Args:
-        user_emb: (n_users, d_x) consumer embeddings
-        item_pca: (n_items, pca_dims) PCA'd item embeddings
-        ref_prices: (n_items,) reference prices
-        n_alternatives: J, number of alternatives per occasion
-        transactions: Optional preprocessed transaction data
-        seed: Random seed for alternative sampling
-
-    Returns:
-        Y: (n,) float32, always 0
-        T: (n, J*K) float32, packed attributes
-        X: (n, d_x) float32, consumer embeddings
+      1. Look up consumer embedding via cust_to_i mapping
+      2. Chosen item: [log(actual_price), pca_1, ..., pca_5]
+      3. Sample J-1 non-chosen alternatives from the 83 items
+      4. Non-chosen items: [log(ref_price), pca_1, ..., pca_5]
+      5. Pack T_i = [chosen_attrs, alt1_attrs, ..., alt_{J-1}_attrs]
+      6. Y_i = 0 (chosen is always first)
     """
     rng = np.random.RandomState(seed)
-    n_users = user_emb.shape[0]
-    n_items = item_pca.shape[0]
-    K = item_pca.shape[1] + 1  # pca_dims + log_price
+    n_items = x_matrix_pca.shape[0]
+    K = x_matrix_pca.shape[1] + 1  # pca_dims + log_price
 
-    # Build item attribute matrix: [log_price, pca_1, ..., pca_K-1]
-    log_prices = np.log(ref_prices + 1e-6)
-    item_attributes = np.column_stack([log_prices, item_pca])  # (n_items, K)
+    # Pre-compute item attributes using reference prices (for non-chosen items)
+    log_ref_prices = np.log(ref_prices + 1e-6)
+    item_attributes = np.column_stack([log_ref_prices, x_matrix_pca])  # (83, K)
     print(f"  Item attribute matrix: {item_attributes.shape}")
 
-    if transactions is not None:
-        # Use real transaction data
-        print("  Using real transaction data for choice sets")
-        # Extract user_ids, chosen_item_ids from transactions
-        # This depends on the format of the prep cache
-        if hasattr(transactions, 'files'):
-            # npz format
-            if 'user_ids' in transactions.files and 'item_ids' in transactions.files:
-                user_ids = transactions['user_ids']
-                chosen_ids = transactions['item_ids']
-            else:
-                print("  WARNING: Unrecognized transaction format, falling back to synthetic")
-                transactions = None
+    n_occasions = len(purchases)
+    all_items = np.arange(n_items)
 
-    if transactions is None:
-        # Create synthetic transactions: each user purchases ~5-20 items
-        print("  Generating synthetic purchase occasions")
-        user_ids = []
-        chosen_ids = []
-
-        # Sample a subset of users (not all 241K)
-        n_sample_users = min(5000, n_users)
-        sampled_users = rng.choice(n_users, n_sample_users, replace=False)
-
-        for u in sampled_users:
-            # Each user makes 5-20 purchases
-            n_purchases = rng.randint(MIN_PURCHASES, 20)
-            items = rng.choice(n_items, n_purchases, replace=False)
-            for item in items:
-                user_ids.append(u)
-                chosen_ids.append(item)
-
-        user_ids = np.array(user_ids)
-        chosen_ids = np.array(chosen_ids)
-
-    n_occasions = len(user_ids)
-    print(f"  Purchase occasions: {n_occasions}")
-    print(f"  Unique users: {len(np.unique(user_ids))}")
-
-    # Construct choice sets
     Y = np.zeros(n_occasions, dtype=np.float32)
     T = np.zeros((n_occasions, n_alternatives * K), dtype=np.float32)
-    X = np.zeros((n_occasions, user_emb.shape[1]), dtype=np.float32)
+    X = np.zeros((n_occasions, d_matrix.shape[1]), dtype=np.float32)
+
+    n_skipped = 0
+    valid_indices = []
 
     for i in range(n_occasions):
-        user_id = user_ids[i]
-        chosen_id = chosen_ids[i]
+        row = purchases.iloc[i]
+        cust_id = int(row['customer_id_idx'])
+        art_id = int(row['article_id_idx'])
+        price = float(row['price_euros'])
+
+        # Map to contiguous indices
+        if cust_id not in cust_to_i or art_id not in sku_to_j:
+            n_skipped += 1
+            continue
+
+        cust_i = cust_to_i[cust_id]
+        item_j = sku_to_j[art_id]
 
         # Consumer embedding
-        X[i] = user_emb[user_id]
+        X[len(valid_indices)] = d_matrix[cust_i]
 
-        # Chosen item attributes (position 0)
-        T[i, :K] = item_attributes[chosen_id]
+        # Chosen item: use ACTUAL transaction price
+        chosen_attrs = np.concatenate([
+            [np.log(price + 1e-6)],
+            x_matrix_pca[item_j],
+        ])
+        T[len(valid_indices), :K] = chosen_attrs
 
         # Sample J-1 non-chosen alternatives
-        available = np.setdiff1d(np.arange(n_items), [chosen_id])
+        available = np.setdiff1d(all_items, [item_j])
         sampled = rng.choice(available, n_alternatives - 1, replace=False)
 
-        for j, item_id in enumerate(sampled):
-            start = (j + 1) * K
-            T[i, start:start + K] = item_attributes[item_id]
+        for slot, alt_j in enumerate(sampled):
+            start = (slot + 1) * K
+            T[len(valid_indices), start:start + K] = item_attributes[alt_j]
 
+        valid_indices.append(i)
+
+    n_valid = len(valid_indices)
+    if n_skipped > 0:
+        print(f"  WARNING: Skipped {n_skipped} occasions with unmapped IDs")
+
+    # Trim to valid occasions
+    Y = Y[:n_valid]
+    T = T[:n_valid]
+    X = X[:n_valid]
+
+    print(f"  Valid occasions: {n_valid:,}")
     print(f"  Final shapes: Y{Y.shape}, T{T.shape}, X{X.shape}")
+
     return Y, T, X
 
 
@@ -217,27 +182,22 @@ def main():
     args = parser.parse_args()
 
     print("=" * 60)
-    print("  DATA PREPARATION: H&M → (Y, T, X)")
+    print("  DATA PREPARATION: H&M -> (Y, T, X)")
     print("=" * 60)
 
-    # Step 1: Load embeddings
-    print("\n[1/4] Loading pre-trained embeddings...")
-    user_emb, item_emb, ref_prices = load_embeddings()
+    # Step 1: Load real data
+    print("\n[1/3] Loading real H&M data...")
+    purchases, cust_to_i, sku_to_j, d_matrix, x_matrix, ref_prices = load_real_data()
 
-    # Step 2: Load transactions
-    print("\n[2/4] Loading transaction data...")
-    transactions = load_transactions()
+    # Step 2: PCA on item embeddings
+    print(f"\n[2/3] PCA on item embeddings ({x_matrix.shape[1]}D -> {args.pca_dims}D)...")
+    item_pca, pca_model, var_explained = pca_embeddings(x_matrix, args.pca_dims)
 
-    # Step 3: PCA on item embeddings
-    print(f"\n[3/4] PCA on item embeddings ({item_emb.shape[1]}D → {args.pca_dims}D)...")
-    item_pca, pca_model, var_explained = pca_embeddings(item_emb, args.pca_dims)
-
-    # Step 4: Construct choice sets
-    print(f"\n[4/4] Constructing choice sets (J={args.j})...")
+    # Step 3: Construct choice sets from real purchases
+    print(f"\n[3/3] Constructing choice sets (J={args.j})...")
     Y, T, X = construct_choice_sets(
-        user_emb, item_pca, ref_prices,
+        purchases, cust_to_i, sku_to_j, d_matrix, item_pca, ref_prices,
         n_alternatives=args.j,
-        transactions=transactions,
         seed=args.seed,
     )
 
@@ -250,14 +210,21 @@ def main():
     # Also save PCA model and item attributes for counterfactuals
     np.save(DATA_DIR / "item_pca.npy", item_pca)
     np.save(DATA_DIR / "ref_prices.npy", ref_prices)
-    np.save(DATA_DIR / "log_prices.npy", np.log(ref_prices + 1e-6))
 
     print(f"\n  Saved to: {DATA_DIR.resolve()}")
-    print(f"    Y.npy:          {Y.shape}")
-    print(f"    T.npy:          {T.shape}")
-    print(f"    X.npy:          {X.shape}")
+    print(f"    Y.npy:          {Y.shape}  (all zeros — chosen is always first)")
+    print(f"    T.npy:          {T.shape}  (J={args.j} x K={item_pca.shape[1]+1})")
+    print(f"    X.npy:          {X.shape}  (64D user embeddings)")
     print(f"    item_pca.npy:   {item_pca.shape}")
     print(f"    ref_prices.npy: {ref_prices.shape}")
+
+    # Summary statistics
+    print(f"\n  === Data Summary ===")
+    print(f"  Unique customers: {len(set(int(r['customer_id_idx']) for _, r in purchases.iterrows())):,}")
+    print(f"  Unique items:     {x_matrix.shape[0]}")
+    print(f"  Purchase events:  {Y.shape[0]:,}")
+    print(f"  Chosen price range: [{np.exp(T[:, 0]).min():.2f}, {np.exp(T[:, 0]).max():.2f}] EUR")
+    print(f"  Mean chosen price:  {np.exp(T[:, 0]).mean():.2f} EUR")
     print("=" * 60)
 
 
