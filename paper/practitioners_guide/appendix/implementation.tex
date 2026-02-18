@@ -137,16 +137,26 @@ for k, name in enumerate(param_names):
 \subsection{Diagnostics Interpretation Guide}
 
 \begin{enumerate}
-    \item \textbf{Check the regime.} The output should say ``Regime C'' for our multinomial model. If it says Regime A or B, something is wrong with the Hessian detection.
+    \item \emph{Check the regime.} The output should say ``Regime C'' for our multinomial model. If it says Regime A or B, something is wrong with the Hessian detection. The regime is determined by the \texttt{hessian\_depends\_on\_theta} flag in the structural model protocol (\texttt{models/base.py}): when \texttt{True}, the package activates three-way splitting (Regime C).
 
-    \item \textbf{Check Lambda eigenvalues.} If a warning about small eigenvalues appears, the model may be poorly identified. Consider: (a) reducing $d_\theta$ (more PCA compression), (b) increasing $n$, or (c) using a different Lambda method.
+    \item \emph{Check Lambda eigenvalues.} If a warning about small eigenvalues appears, the model may be poorly identified. Consider: (a) reducing $d_\theta$ (more PCA compression), (b) increasing $n$, or (c) using a different Lambda method.
 
-    \item \textbf{Check the correction ratio.} For multinomial logit, values of 70--90 are normal. For binary logit, values of 2--3 are normal. Very large values ($> 200$) suggest Lambda estimation problems.
+    \item \emph{Check the correction ratio.} For multinomial logit, values of 70--90 are normal. For binary logit, values of 2--3 are normal. Very large values ($> 200$) suggest Lambda estimation problems.
 
-    \item \textbf{Verify with simulation.} Before trusting results on real data, run the simulation study (\texttt{application/06\_simulation\_study.py}) with a DGP matching your application specification. If simulation coverage is near 95\%, you can be confident in the real-data results.
+    \item \emph{Verify with simulation.} Before trusting results on real data, run the simulation study (\texttt{application/06\_simulation\_study.py}) with a DGP matching your application specification. If simulation coverage is near 95\%, you can be confident in the real-data results.
 
-    \item \textbf{Compare IF to naive SE.} The IF SE should be larger than the naive SE. If it is smaller, something is wrong. The ratio depends on the model: 2--5$\times$ for binary logit, potentially larger for multinomial.
+    \item \emph{Compare IF to naive SE.} The IF SE should be larger than the naive SE. If it is smaller, something is wrong. The ratio depends on the model: 2--5$\times$ for binary logit, potentially larger for multinomial.
 \end{enumerate}
+
+\subsection{Implementation-Theory Notes}
+
+Several implementation details reflect specific theoretical requirements:
+
+\paragraph{Static indexing for \texttt{vmap}.} In the multinomial logit loss, we write \texttt{V[0]} (chosen alternative always at index 0) rather than \texttt{V[int(y)]}. This is because \texttt{torch.vmap}, used internally for batched Hessian computation, traces a single computation graph for all batch elements. Dynamic indexing via \texttt{int(y)} would produce a different graph per observation, which \texttt{vmap} cannot handle. The choice set is reordered during data preparation so that the chosen alternative is always first.
+
+\paragraph{Ridge $\alpha = 1000$.} The heavy ridge penalty in Lambda estimation biases $\hat{\Lambda}(X)$ toward the population mean Hessian. This is deliberate: $\Lambda$ is a nuisance parameter, and Neyman orthogonality (Equation~\ref{eq:neyman_orth}) ensures that first-order errors in $\hat{\Lambda}$ do not corrupt $\hat{\mu}$. The high $\alpha$ sacrifices heterogeneity in $\hat{\Lambda}$ (correlation with oracle: 0.508) in exchange for stability (96\% coverage vs.\ 67\% for MLP with correlation 0.997).
+
+\paragraph{60/40 three-way split.} Within each cross-fitting fold, 60\% of the training data is allocated to $\hat{\theta}$ estimation and 40\% to $\hat{\Lambda}$ estimation. The asymmetry reflects that the neural network for $\hat{\theta}$ is more data-hungry than the ridge regression for $\hat{\Lambda}$. This fraction is configurable via \texttt{three\_way\_theta\_frac} in \texttt{engine/crossfit.py}.
 
 \subsection{Companion Repository}
 

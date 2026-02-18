@@ -1,6 +1,6 @@
 \section{Application: H\&M Fashion Demand}\label{sec:application}
 
-We now demonstrate the full pipeline on a real application: estimating heterogeneous price sensitivity from H\&M fashion transaction data. The application illustrates every step discussed in the previous sections and produces economic objects---elasticities, counterfactual revenues---with valid confidence intervals.
+We now demonstrate the full pipeline on a real application: estimating heterogeneous price sensitivity from H\&M fashion transaction data. The application illustrates every step discussed in the previous sections and produces economic objects (elasticities, counterfactual revenues) with valid confidence intervals.
 
 \subsection{Data}
 
@@ -26,7 +26,7 @@ where $j^+$ is the purchased item, $\mathcal{B}$ is a mini-batch of items (servi
     \item \texttt{item\_embeddings.npy}: $(83 \times 64)$ item embeddings
 \end{itemize}
 
-These embeddings are trained on a separate data period (T1) from the choice model estimation period (T2), so they can be treated as fixed covariates---a key assumption for the IF correction to be valid.
+These embeddings are trained on a separate data period (T1) from the choice model estimation period (T2), so they can be treated as fixed covariates, a key assumption for the IF correction to be valid.
 
 \subsection{Mapping to the FLM Framework}\label{sec:mapping}
 
@@ -35,7 +35,7 @@ The mapping from the two-tower output to the FLM framework is:
 \begin{itemize}
     \item $X_i$: Consumer embedding (64D). This determines heterogeneity in structural parameters.
 
-    \item $T_i$: Packed alternative attributes. For each choice occasion, we sample $J = 20$ alternatives (1 chosen + 19 random). Each alternative has $K = 6$ attributes: log-price and 5 PCA dimensions of the item embedding (64D $\to$ 5D via PCA, capturing 34\% of variance---modest, but the five components capture the major axes of aesthetic variation across dresses). The packed array is $T_i \in \mathbb{R}^{120}$ (reshaped to $20 \times 6$ inside the loss).
+    \item $T_i$: Packed alternative attributes. For each choice occasion, we sample $J = 20$ alternatives (1 chosen + 19 random). Each alternative has $K = 6$ attributes: log-price and 5 PCA dimensions of the item embedding (64D $\to$ 5D via PCA, capturing 34\% of variance; modest, but the five components capture the major axes of aesthetic variation across dresses). The packed array is $T_i \in \mathbb{R}^{120}$ (reshaped to $20 \times 6$ inside the loss).
 
     \item $Y_i = 0$: The chosen alternative is always reordered to position 0.
 
@@ -90,15 +90,15 @@ Before applying the method to real data, we validate it on a simulation DGP that
 \toprule
 \textbf{Metric} & \textbf{Value} & \textbf{Target} \\
 \midrule
-Coverage (95\% CI) & [to be filled] & 90--99\% \\
-SE ratio            & [to be filled] & 0.7--1.5 \\
-$|$Bias$|$          & [to be filled] & $< 0.05$ \\
-$z$-mean            & [to be filled] & $(-0.3, 0.3)$ \\
-$z$-std             & [to be filled] & 0.7--1.5 \\
+Coverage (95\% CI) & 98.0\%\textsuperscript{$\dagger$}  & 90--99\% \\
+SE ratio            & 0.972\textsuperscript{$\dagger$}   & 0.7--1.5 \\
+$|$Bias$|$          & 0.002\textsuperscript{$\dagger$}   & $< 0.05$ \\
+$z$-mean            & 0.142\textsuperscript{$\dagger$}   & $(-0.3, 0.3)$ \\
+$z$-std             & 0.962\textsuperscript{$\dagger$}   & 0.7--1.5 \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}\small
-\item Note: Results from \texttt{application/06\_simulation\_study.py} with $M=50$, $n=8{,}000$, $J=20$, $K=6$.
+\item[$\dagger$] Reported from eval\_09 ($J=3$, $K=2$, $d_\theta = 4$, $M=50$, $n=8{,}000$). Application-specific validation ($J=20$, $K=6$) to be added via \texttt{application/06\_simulation\_study.py}.
 \end{tablenotes}
 \end{table}
 
@@ -128,7 +128,7 @@ $E[\beta_{\text{pca}_5}]$ & $1.117$ & $0.054$ & $0.023$ & $2.33$ & $[1.011, 1.22
 \end{tablenotes}
 \end{table}
 
-The IF standard errors are systematically larger than naive SEs by a factor of 1.9--2.3$\times$, reflecting the additional uncertainty from neural network estimation. This is exactly the pattern predicted by theory: naive SEs ignore the estimation step and produce overconfident intervals. Using naive SEs would produce confidence intervals roughly half as wide---intervals that would not cover the true parameter at the nominal 95\% rate.
+The IF standard errors are systematically larger than naive SEs by a factor of 1.9--2.3$\times$, reflecting the additional uncertainty from neural network estimation. This is exactly the pattern predicted by theory: naive SEs ignore the estimation step and produce overconfident intervals. Using naive SEs would produce confidence intervals roughly half as wide, intervals that would not cover the true parameter at the nominal 95\% rate.
 
 The price coefficient $E[\beta_{\text{price}}] = -0.359$ is negative and highly significant, confirming that higher prices reduce purchase probability. In economic terms, a one-unit increase in log-price (approximately a 172\% price increase, or equivalently a 10\% price increase shifts the utility index by roughly $0.036$ units) reduces the average consumer's utility for that item. The PCA coefficients capture heterogeneous taste for different aesthetic dimensions of the dress embedding space, with $\beta_{\text{pca}_1}$ showing the strongest average preference.
 

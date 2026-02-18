@@ -1,10 +1,10 @@
 \section{Introduction}\label{sec:intro}
 
-Individual heterogeneity is ubiquitous in economic data. Consumers differ in their sensitivity to prices, workers respond differently to job training, and patients vary in their treatment effects. Empirical researchers have long recognized this heterogeneity and built it into their models---from random coefficients logit \citep{berry1995automobile, nevo2000practitioner} to varying-coefficient models more broadly. But estimating heterogeneous parameters at the individual level, and doing valid statistical inference on the resulting objects, has remained a difficult task. Traditional approaches typically assume a parametric distribution for heterogeneity (e.g., normal random coefficients) or restrict attention to a small number of discrete types.
+Individual heterogeneity is ubiquitous in economic data. Consumers differ in their sensitivity to prices, workers respond differently to job training, and patients vary in their treatment effects. Empirical researchers have long recognized this heterogeneity and built it into their models, from random coefficients logit \citep{berry1995automobile, nevo2000practitioner} to varying-coefficient models more broadly. But estimating heterogeneous parameters at the individual level, and doing valid statistical inference on the resulting objects, has remained a difficult task. Traditional approaches typically assume a parametric distribution for heterogeneity (e.g., normal random coefficients) or restrict attention to a small number of discrete types.
 
 This paper is a practitioner's guide to a different approach. \citet{farrell2021deep} and \citet{farrell2025deep} show how deep neural networks can directly estimate individual-level structural parameters $\theta(x)$ from observational data, and how influence function corrections deliver valid confidence intervals despite the regularization bias inherent in neural network estimation. The theoretical foundations are in their \textit{Econometrica} papers. Our goal here is to make the method accessible and practical.
 
-The parallel to \citet{nevo2000practitioner} is intentional. Just as Nevo bridged the gap between the BLP theory papers \citep{berry1995automobile} and applied practice, we aim to bridge the gap between the FLM theory and applied implementation. We walk through the entire pipeline---from data preparation to model specification to inference to counterfactuals---using a running example that illustrates every step. We provide complete code, a companion Python package (\texttt{deep-inference}), and a simulation study validating the method.
+The parallel to \citet{nevo2000practitioner} is intentional. Just as Nevo bridged the gap between the BLP theory papers \citep{berry1995automobile} and applied practice, we aim to bridge the gap between the FLM theory and applied implementation. We walk through the entire pipeline, from data preparation to model specification to inference to counterfactuals, using a running example that illustrates every step. We provide complete code, a companion Python package (\texttt{deep-inference}), and a simulation study validating the method.
 
 \subsection{The Idea in Brief}
 
@@ -12,7 +12,7 @@ Consider a structural model with individual-level parameters. A researcher obser
 
 The key insight of FLM is: let a neural network directly output the structural parameters. Train a network $\hat{\theta}(X_i)$ by minimizing the structural loss across observations. Then use influence functions to correct for the regularization bias that neural networks inevitably introduce.
 
-Why is correction necessary? Neural networks use regularization (weight decay, dropout, early stopping) to prevent overfitting. This regularization shrinks estimates toward zero, making naive standard errors---computed from the Hessian of the structural loss---systematically too small. The resulting confidence intervals severely undercover. In our simulations, naive coverage can fall below 20\% when the nominal level is 95\%.
+Why is correction necessary? Neural networks use regularization (weight decay, dropout, early stopping) to prevent overfitting. This regularization shrinks estimates toward zero, making naive standard errors, computed from the Hessian of the structural loss, systematically too small. The resulting confidence intervals severely undercover. In our simulations, naive coverage can fall below 20\% when the nominal level is 95\%.
 
 The influence function (IF) correction accounts for the estimation noise in $\hat{\theta}(X)$. The corrected estimator for a target functional $\mu^* = E[H(X, \theta^*(X), \tilde{t})]$ is:
 \begin{equation}\label{eq:psi_intro}
@@ -22,21 +22,21 @@ where $H_i$ is the target evaluated at the estimated parameters, $H_{\theta,i}$ 
 
 \subsection{Running Example: H\&M Fashion Demand}
 
-Our running application uses the H\&M Personalized Fashion Recommendations dataset \citep{hm2022kaggle}---a publicly available dataset of 1.4 million fashion transactions. We estimate a multinomial choice model for online dress purchases with heterogeneous price sensitivity across consumers.
+Our running application uses the H\&M Personalized Fashion Recommendations dataset \citep{hm2022kaggle}, a publicly available dataset of 1.4 million fashion transactions. We estimate a multinomial choice model for online dress purchases with heterogeneous price sensitivity across consumers.
 
 The application demonstrates the full pipeline:
 \begin{enumerate}
-    \item \textbf{Representation learning.} We train two-tower contrastive embeddings \citep{oord2018representation} to learn dense representations of consumers and products from purchase histories and visual features. Consumer embeddings capture latent taste dimensions; item embeddings capture visual and categorical product attributes.
+    \item \emph{Representation learning.} We train two-tower contrastive embeddings \citep{oord2018representation} to learn dense representations of consumers and products from purchase histories and visual features. Consumer embeddings capture latent taste dimensions; item embeddings capture visual and categorical product attributes.
 
-    \item \textbf{Choice model estimation.} Consumer embeddings become the covariates $X$ that drive heterogeneity. Each consumer has their own price sensitivity $\theta_{\text{price}}(X_i)$ and taste parameters $\theta_{\text{style},k}(X_i)$. The neural network maps the 64-dimensional consumer embedding to these structural parameters.
+    \item \emph{Choice model estimation.} Consumer embeddings become the covariates $X$ that drive heterogeneity. Each consumer has their own price sensitivity $\theta_{\text{price}}(X_i)$ and taste parameters $\theta_{\text{style},k}(X_i)$. The neural network maps the 64-dimensional consumer embedding to these structural parameters.
 
-    \item \textbf{Influence function inference.} The \texttt{deep-inference} package handles cross-fitting, Lambda estimation, influence function assembly, and confidence interval computation. With a five-line custom loss function, the entire inference pipeline runs automatically.
+    \item \emph{Influence function inference.} The \texttt{deep-inference} package handles cross-fitting, Lambda estimation, influence function assembly, and confidence interval computation. With a five-line custom loss function, the entire inference pipeline runs automatically.
 
-    \item \textbf{Counterfactual analysis.} We compute average price elasticities with valid confidence intervals and simulate the revenue impact of a 10\% price increase---with uncertainty bands that properly account for the neural network estimation step.
+    \item \emph{Counterfactual analysis.} We compute average price elasticities with valid confidence intervals and simulate the revenue impact of a 10\% price increase, with uncertainty bands that properly account for the neural network estimation step.
 \end{enumerate}
 
 \subsection{What This Guide Covers}
 
 Section~\ref{sec:framework} develops the framework: the structural model, target functionals, why naive inference fails, the IF correction, and the three Lambda estimation regimes. Section~\ref{sec:estimation} covers estimation in practice: data requirements, the algorithm step by step, cross-fitting, Lambda estimation, network architecture, diagnostics, and common pitfalls. Section~\ref{sec:application} presents the full H\&M application with results. Section~\ref{sec:conclusion} discusses extensions and other structural models. Appendix~\ref{app:implementation} provides annotated code and an installation guide.
 
-Throughout, we emphasize the \emph{practitioner's} perspective: what choices must be made, what can go wrong, and what to look for in the output. We use the first person and aim for clarity over formality.
+Throughout, we emphasize the \emph{practitioner's} perspective: what choices must be made, what can go wrong, and what to look for in the output.
