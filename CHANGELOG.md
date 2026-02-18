@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-19
+
+- Major revision of practitioner's guide paper: added 6 displayed equations to estimation.tex mapping implementation to FLM theory (cross-fitting, Hessian obs, Lambda ridge, PSD projection, IF assembly, SE formula). Expanded Lambda estimation into full Hessian pipeline subsection (5 steps). Added bias decomposition and Neyman orthogonality equations to framework.tex. Removed all 57 \textbf{} from body text (kept table headers), removed all 30+ em dashes. Added validation footnotes with concrete eval numbers throughout. Fixed conclusion sample size claim (n=8000). Filled simulation table with eval_09 results. Added implementation-theory notes to appendix.
+
 ## 2026-02-18
 
 - **Real H&M inference results**: Ran IF-corrected inference on 10,681 real H&M purchase occasions with custom MNL loss. All 6 parameters estimated (beta_price + 5 PCA style dims). IF SEs ~2x larger than naive SEs across all parameters. E[beta_price] = -0.359 (negative as expected).

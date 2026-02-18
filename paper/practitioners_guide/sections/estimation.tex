@@ -1,17 +1,17 @@
 \section{Estimation in Practice}\label{sec:estimation}
 
-This section is the heart of the guide. We walk through every step of the estimation procedure, discuss the choices practitioners must make, and flag the pitfalls that can silently invalidate results.
+This section walks through every step of the estimation procedure, discusses the choices practitioners must make, and flags the pitfalls that can silently invalidate results. For each step, we present the relevant equation from \citet{farrell2025deep} alongside the corresponding implementation in the \texttt{deep-inference} package, making explicit how theory maps to code.
 
 \subsection{Data Requirements}
 
 The method requires individual-level data in triplets $(Y_i, T_i, X_i)$:
 
 \begin{itemize}
-    \item \textbf{Outcomes} $Y$: The variable being modeled. Can be continuous (sales, duration), binary (purchase, click), count (visits), or discrete choice (chosen alternative index).
+    \item \emph{Outcomes} $Y$: The variable being modeled. Can be continuous (sales, duration), binary (purchase, click), count (visits), or discrete choice (chosen alternative index).
 
-    \item \textbf{Treatments/actions} $T$: The variable(s) whose effect varies across individuals. For discrete choice, $T$ contains the attributes of all alternatives (prices, features). For treatment effects, $T$ is the treatment indicator or dose.
+    \item \emph{Treatments/actions} $T$: The variable(s) whose effect varies across individuals. For discrete choice, $T$ contains the attributes of all alternatives (prices, features). For treatment effects, $T$ is the treatment indicator or dose.
 
-    \item \textbf{Covariates} $X$: The individual characteristics that drive heterogeneity. These are the neural network's inputs. Higher-dimensional $X$ allows the network to capture richer heterogeneity patterns, but requires more data.
+    \item \emph{Covariates} $X$: The individual characteristics that drive heterogeneity. These are the neural network's inputs. Higher-dimensional $X$ allows the network to capture richer heterogeneity patterns, but requires more data.
 \end{itemize}
 
 \paragraph{Sample size considerations.} Neural networks are data-hungry. As a rough guide:
@@ -28,17 +28,31 @@ The three-way split (Regime C) reduces effective training data to about 60\% of 
 
 The estimation proceeds in five steps, all handled internally by the \texttt{inference()} function:
 
-\begin{enumerate}
-    \item[\textbf{Step 0.}] \textbf{Prepare data.} Encode $T$ as a numeric array with consistent shape across observations. For multinomial logit: pack alternative attributes as $(n, J \times K)$.
+\paragraph{Step 0: Prepare data.} Encode $T$ as a numeric array with consistent shape across observations. For multinomial logit, pack alternative attributes as $(n, J \times K)$.
 
-    \item[\textbf{Step 1.}] \textbf{Cross-fitting.} Split data into $K$ folds. For each fold, train the structural network $\hat{\theta}(X)$ on the remaining $K-1$ folds and predict on the held-out fold. This produces out-of-sample estimates $\hat{\theta}(X_i)$ for all $i$.
+\paragraph{Step 1: Cross-fitting.} Split data into $K$ folds. For each fold $k$, train the structural network on the remaining $K-1$ folds:
+\begin{equation}\label{eq:crossfit}
+    \hat{\theta}_k(\cdot) = \arg\min_{\theta \in \mathcal{F}} \sum_{i \in I_k^{(\theta)}} \ell(Y_i, T_i, \theta(X_i))
+\end{equation}
+where $\mathcal{F}$ is the neural network function class and $I_k^{(\theta)}$ denotes the theta-training subset of fold $k$'s non-evaluation data.\footnote{In the implementation (\texttt{engine/crossfit.py}, lines 244--351), \texttt{run\_crossfit()} orchestrates this loop: for each fold, it calls \texttt{train\_structural\_net()} on the training indices, then predicts $\hat{\theta}(X_i)$ on the held-out fold.} Then predict $\hat{\theta}_k(X_i)$ on the held-out fold $I_k$. This produces out-of-sample estimates $\hat{\theta}(X_i)$ for all $i$.
 
-    \item[\textbf{Step 2.}] \textbf{Estimate Lambda.} Compute individual Hessians $\nabla_\theta^2 \ell(Y_i, T_i, \hat{\theta}(X_i))$ via autodiff. Regress these Hessians on $X$ using ridge regression to obtain $\hat{\Lambda}(X_i) = E[\nabla_\theta^2 \ell \mid X_i]$.
+\paragraph{Step 2: Estimate Lambda.} Compute individual Hessians via automatic differentiation:
+\begin{equation}\label{eq:hessian_obs}
+    H_i = \nabla_\theta^2 \ell(Y_i, T_i, \hat{\theta}(X_i)) \in \mathbb{R}^{d_\theta \times d_\theta}
+\end{equation}
+Then estimate the conditional expectation $\Lambda(x) = E[H_i \mid X = x]$ by regressing $H_i$ on $X_i$:
+\begin{equation}\label{eq:lambda_ridge}
+    \hat{\Lambda}(x) = \mathrm{vec}^{-1}_{\mathrm{sym}}\!\left(\hat{\beta}_0 + \hat{\beta}_1 x\right), \quad \hat{\beta} = \arg\min_\beta \sum_{i \in I_k^{(\lambda)}} \left\|\mathrm{vech}(H_i) - \beta_0 - \beta_1 X_i\right\|^2 + \alpha \|\beta_1\|^2
+\end{equation}
+where $\mathrm{vech}(\cdot)$ extracts the $d_\theta(d_\theta+1)/2$ unique elements of the symmetric Hessian, $I_k^{(\lambda)}$ is the Lambda-training subset, and $\alpha = 1000$ is the ridge penalty. Section~\ref{sec:lambda_est} discusses this step in detail.
 
-    \item[\textbf{Step 3.}] \textbf{Compute scores and Jacobians.} Evaluate the score $\ell_\theta(Y_i, T_i, \hat{\theta}(X_i))$ and target Jacobian $H_\theta(X_i, \hat{\theta}(X_i), \tilde{t})$ at each observation.
+\paragraph{Step 3: Compute scores and Jacobians.} Evaluate the score $\ell_\theta(Y_i, T_i, \hat{\theta}(X_i))$ and target Jacobian $H_\theta(X_i, \hat{\theta}(X_i), \tilde{t})$ at each observation. For built-in targets (e.g., average parameter), the Jacobian has a known closed form. For custom targets, it is computed via reverse-mode automatic differentiation using \texttt{torch.func.jacrev} inside \texttt{torch.vmap} for efficient batched evaluation.\footnote{See \texttt{autodiff/jacobian.py}, lines 42--82. The \texttt{vmap} batching computes all $n$ Jacobians in a single vectorized call, avoiding a Python loop.}
 
-    \item[\textbf{Step 4.}] \textbf{Assemble $\psi$ and compute SE.} Combine the pieces: $\psi_i = H_i - H_{\theta,i} \hat{\Lambda}_i^{-1} \ell_{\theta,i}$. Compute $\hat{\mu} = \bar{\psi}$ and $\widehat{\text{SE}} = \text{sd}(\psi) / \sqrt{n}$.
-\end{enumerate}
+\paragraph{Step 4: Assemble $\psi$ and compute SE.} Combine the pieces into the influence function and derive the final estimate:
+\begin{equation}\label{eq:psi_assembly}
+    \psi_i = H_i - H_{\theta,i} \hat{\Lambda}_i^{-1} \ell_{\theta,i}, \qquad \hat{\mu} = \frac{1}{n}\sum_{i=1}^n \psi_i, \qquad \widehat{\mathrm{SE}} = \sqrt{\frac{1}{n(n-1)}\sum_{i=1}^n (\psi_i - \hat{\mu})^2}
+\end{equation}
+The Bessel correction $(n-1)$ in the variance ensures unbiased variance estimation. Confidence intervals follow from asymptotic normality: $\hat{\mu} \pm z_{\alpha/2} \cdot \widehat{\mathrm{SE}}$.\footnote{Implementation in \texttt{engine/assembler.py}, lines 56--85: the einsum \texttt{torch.einsum(`nd,nde->ne', h\_jacobian, lambda\_inv)} computes $H_\theta \Lambda^{-1}$, then the dot product with the score yields the correction term. Variance computation is in \texttt{engine/variance.py}, lines 125--149.}
 
 In code, this entire pipeline is a single function call:
 
@@ -60,17 +74,35 @@ Cross-fitting is essential for valid inference. It prevents the neural network f
 
 \paragraph{Number of folds.} We recommend $K = 50$ folds. With fewer folds, each training set is smaller, potentially degrading $\hat{\theta}$. With more folds, computational cost increases linearly. In our experience, $K = 50$ provides a good balance for $n \geq 2{,}000$. At smaller sample sizes, $K = 20$ may be necessary.
 
-\paragraph{Two-way vs.\ three-way splitting.} When the Hessian depends on $\theta$ (Regime C), estimating $\Lambda$ on the same data used to estimate $\theta$ would introduce dependence. The three-way split resolves this: within each fold, the data is further split so that $\hat{\theta}$ and $\hat{\Lambda}$ are estimated on independent subsets. The effective training sample for $\hat{\theta}$ drops to about 60\% of $n$.
+\paragraph{Two-way vs.\ three-way splitting.} When the Hessian depends on $\theta$ (Regime C), estimating $\Lambda$ on the same data used to estimate $\theta$ would introduce dependence. The three-way split resolves this: within each fold, the $K-1$ non-evaluation folds are further split so that $\hat{\theta}$ and $\hat{\Lambda}$ are estimated on independent subsets. Specifically, 60\% of the training data goes to $I_k^{(\theta)}$ and 40\% to $I_k^{(\lambda)}$.\footnote{The split fraction is configurable via \texttt{three\_way\_theta\_frac} in \texttt{engine/crossfit.py}, line 155. The 60/40 default reflects that $\hat{\theta}$ (a neural network) is more data-hungry than $\hat{\Lambda}$ (a ridge regression).} The effective training sample for $\hat{\theta}$ drops to about 60\% of $n$.\footnote{Multinomial logit validation: 88\% coverage at $n=5{,}000$, 98\% at $n=8{,}000$ ($M=50$ replications), confirming the finite-sample cost of three-way splitting (eval\_09).}
 
 \paragraph{Practical implication.} Three-way splitting is triggered automatically when the package detects that the Hessian depends on $\theta$. For the multinomial logit, this is always the case (softmax probabilities depend on $\theta$). The practitioner does not need to manage the splitting manually, but should be aware that more data is needed than for linear models.
 
-\subsection{Lambda Estimation}\label{sec:lambda_est}
+\subsection{Lambda Estimation: The Hessian Pipeline}\label{sec:lambda_est}
 
-Lambda estimation is the most delicate step in the pipeline. An incorrect $\hat{\Lambda}$ directly corrupts the standard errors.
+Lambda estimation is the most delicate step in the pipeline. An incorrect $\hat{\Lambda}$ directly corrupts the standard errors. This section describes the full pipeline from per-observation Hessians to the regularized, positive-semidefinite $\hat{\Lambda}(X)$ that enters the IF formula.
+
+\paragraph{Step 1: Per-observation Hessians.} For each observation in $I_k^{(\lambda)}$, the package computes the $d_\theta \times d_\theta$ Hessian of the loss with respect to $\theta$, evaluated at the cross-fitted $\hat{\theta}(X_i)$. The implementation first checks whether the structural model provides a closed-form \texttt{hessian()} method; if not, it falls back to automatic differentiation via nested reverse-mode calls: \texttt{torch.func.jacrev(jacrev(loss))} applied per observation through \texttt{vmap}.\footnote{See \texttt{lambda\_/estimate.py}, lines 87--154. Closed-form Hessians are available for the built-in logit ($p(1-p)$), Poisson ($\lambda$), and linear (constant) models. Custom losses always use autodiff. Package autodiff matches closed-form oracle Hessians to machine precision ($< 10^{-15}$) on the multinomial logit (eval\_02).}
+
+\paragraph{Step 2: Symmetry exploitation.} Each Hessian $H_i$ is symmetric, so only the $d_\theta(d_\theta + 1)/2$ unique upper-triangle elements need to be stored and regressed. The implementation extracts these via \texttt{hessians[:, triu\_idx[0], triu\_idx[1]]}, reducing memory and the number of regression targets. After prediction, the full symmetric matrix is reconstructed.
+
+\paragraph{Step 3: Ridge regression.} Each unique element of the upper triangle is treated as a separate regression target, and a single ridge regression fits all targets simultaneously:
+\begin{equation}\label{eq:ridge_lambda}
+    \hat{\beta} = \arg\min_\beta \sum_{i \in I_k^{(\lambda)}} \left\|\mathrm{vech}(H_i) - X_i'\beta\right\|^2 + \alpha \|\beta\|^2, \quad \alpha = 1000
+\end{equation}
+The strong regularization ($\alpha = 1000$) biases $\hat{\Lambda}(X)$ toward the population mean Hessian. This sacrifices accuracy in capturing heterogeneity in $\Lambda$ (correlation with oracle: 0.508) but produces reliable standard errors (96\% coverage). The high $\alpha$ may seem counterintuitive, but recall that $\Lambda$ is not the object of interest; it is a nuisance quantity in the IF formula. Neyman orthogonality (Section~\ref{sec:if_correction}) ensures that first-order errors in $\hat{\Lambda}$ do not corrupt $\hat{\mu}$. We only need $\hat{\Lambda}$ ``close enough'' for the second-order remainder to be negligible.
+
+\paragraph{Step 4: PSD projection.} Ridge predictions can produce non-positive-semidefinite matrices. Since $\Lambda^{-1}$ appears in the IF formula, we need $\hat{\Lambda}(X_i) \succ 0$. The package performs an eigendecomposition of each predicted $\hat{\Lambda}(X_i)$ and clamps eigenvalues:
+\begin{equation}\label{eq:psd_proj}
+    \hat{\Lambda}(X_i) = V D_+ V', \quad (D_+)_{jj} = \max\!\left(D_{jj}, \; \frac{\lambda_{\max}}{c_{\max}}\right)
+\end{equation}
+where $V, D$ are from the eigendecomposition, $\lambda_{\max}$ is the largest eigenvalue, and $c_{\max} = 100$ is the maximum allowed condition number.\footnote{See \texttt{lambda\_/estimate.py}, lines 324--367 (\texttt{\_project\_to\_psd}). The condition number bound prevents extreme eigenvalue ratios that would amplify noise through $\Lambda^{-1}$.}
+
+\paragraph{Step 5: Regularized inversion.} Even after PSD projection, a small ridge ($10^{-4}$) is added to the diagonal before inversion: $\hat{\Lambda}_i^{-1} = (\hat{\Lambda}_i + 10^{-4} I)^{-1}$. This is a separate safeguard from the PSD projection, preventing numerical blow-up when eigenvalues are small but positive.\footnote{Minimum Lambda eigenvalue $> 10^{-4}$ is the diagnostic threshold in the validation suite (\texttt{evals/common/metrics.py}). Values below this trigger a warning.}
 
 \begin{table}[ht]
 \centering
-\caption{Lambda estimation methods: comparison on logit simulation ($n=5{,}000$, $M=50$).}\label{tab:lambda_methods}
+\caption{Lambda estimation methods: comparison on logit simulation ($n=5{,}000$, $M=50$, eval\_06).}\label{tab:lambda_methods}
 \begin{tabular}{lcccl}
 \toprule
 \textbf{Method} & \textbf{Corr.\ w/ Oracle} & \textbf{Coverage} & \textbf{SE Ratio} & \textbf{Notes} \\
@@ -83,24 +115,22 @@ MLP                   & 0.997 & \textbf{67\%} & 0.65 & \textbf{Never use} \\
 \end{tabular}
 \end{table}
 
-\paragraph{Ridge (default).} Ridge regression with strong regularization ($\alpha = 1000$) pulls $\hat{\Lambda}(X)$ toward the population mean Hessian. This sacrifices some accuracy in estimating heterogeneity in $\Lambda$ but produces reliable standard errors. The high regularization parameter may seem counterintuitive---but recall that Lambda is not the object of interest; it is a nuisance quantity in the IF formula. We only need it to be ``close enough'' for valid inference.
-
-\paragraph{MLP: a cautionary tale.} An MLP Lambda estimator achieves the highest correlation with the oracle (0.997) yet produces catastrophically invalid standard errors (67\% coverage). The problem is overfitting: the MLP captures noise in the individual Hessians, producing $\hat{\Lambda}(X)$ estimates that are too extreme. Since $\Lambda^{-1}$ appears in the IF formula, extreme Lambda values create extreme $\psi_i$ values, inflating the variance estimator. The lesson: \textit{high correlation with the oracle does not guarantee valid inference}.
+\paragraph{MLP: a cautionary tale.} An MLP Lambda estimator achieves the highest correlation with the oracle (0.997) yet produces catastrophically invalid standard errors (67\% coverage). The MLP overfits the individual Hessians, producing $\hat{\Lambda}(X)$ estimates that are too extreme. Since $\Lambda^{-1}$ appears in the IF formula, extreme Lambda values create extreme $\psi_i$ values, inflating the variance estimator. The lesson: \emph{high correlation with the oracle does not guarantee valid inference}. Coverage, not correlation, is the correct metric for evaluating Lambda estimators.
 
 \subsection{Network Architecture}
 
 The structural network maps $X \to \theta(X)$ via a multi-layer perceptron. Key settings:
 
 \begin{itemize}
-    \item \textbf{Hidden dimensions}: \texttt{[64, 32]} default. Two layers with decreasing width. Rarely needs tuning. Larger networks ([128, 64, 32]) may help with very rich heterogeneity patterns but require more data.
+    \item \emph{Hidden dimensions}: \texttt{[64, 32]} default. Two layers with decreasing width. Rarely needs tuning. Larger networks (\texttt{[128, 64, 32]}) may help with very rich heterogeneity patterns but require more data.
 
-    \item \textbf{Learning rate}: 0.01. Standard for Adam optimizer with structural losses.
+    \item \emph{Learning rate}: 0.01. Standard for Adam optimizer with structural losses.
 
-    \item \textbf{Epochs}: 200 for binary models, 300 for multinomial. The network needs enough training to learn the structural relationship.
+    \item \emph{Epochs}: 200 for binary models, 300 for multinomial. The network needs enough training to learn the structural relationship.
 
-    \item \textbf{Patience}: \textbf{At least 50 for multinomial models.} This is the number of epochs to wait without improvement before early stopping. With three-way splitting, the validation set is small and noisy, causing premature stopping if patience is too low. With \texttt{patience=10} (a common default), the network stops at epoch 15--20 and severely underfits. This is the single most common pitfall we have encountered.
+    \item \emph{Patience}: At least 50 for multinomial models. This is the number of epochs to wait without improvement before early stopping. With three-way splitting, the validation set is small and noisy, causing premature stopping if patience is too low. With \texttt{patience=10} (a common default), the network stops at epoch 15--20 and severely underfits. This is the single most common pitfall we have encountered.\footnote{\texttt{patience=10} yields early stopping at epoch 15--20, producing 0\% coverage. \texttt{patience=50} allows convergence at epoch 150+, producing 98\% coverage ($M=50$, $n=8{,}000$, multinomial logit, eval\_09).}
 
-    \item \textbf{Dropout}: 0.1 (fixed). Mild regularization to prevent overfitting.
+    \item \emph{Dropout}: 0.1 (fixed). Mild regularization to prevent overfitting.
 \end{itemize}
 
 \subsection{Diagnostics}\label{sec:diagnostics}
@@ -108,29 +138,29 @@ The structural network maps $X \to \theta(X)$ via a multi-layer perceptron. Key 
 After running \texttt{inference()}, several diagnostic quantities should be checked:
 
 \begin{enumerate}
-    \item \textbf{Minimum Lambda eigenvalue} $> 10^{-4}$. If the smallest eigenvalue of $\hat{\Lambda}$ is too close to zero, the Hessian is nearly singular. This typically means the model is poorly identified or the sample size is too small. The package adds a ridge regularization ($10^{-4}$) to prevent numerical issues, but a warning is printed.
+    \item \emph{Minimum Lambda eigenvalue} $> 10^{-4}$. If the smallest eigenvalue of $\hat{\Lambda}$ is too close to zero, the Hessian is nearly singular. This typically means the model is poorly identified or the sample size is too small. The package adds ridge regularization ($10^{-4}$) to prevent numerical issues, but prints a warning.
 
-    \item \textbf{Correction ratio}. The ratio $\text{Var}(\text{correction})/\text{Var}(H_i)$ measures how much the IF correction contributes. For binary logit, values of 2--3 are normal. For multinomial logit, values of 70--90 are normal due to the higher-dimensional $\theta$. Do not be alarmed by large correction ratios for multinomial models.
+    \item \emph{Correction ratio.} The ratio $\mathrm{Var}(\text{correction})/\mathrm{Var}(H_i)$ measures how much the IF correction contributes. For binary logit, values of 2--3 are normal. For multinomial logit, values of 70--90 are normal due to the higher-dimensional $\theta$.\footnote{Correction ratios of 70--90 for multinomial logit confirmed across $M=50$ replications in eval\_09. For binary logit, ratios of 2--3 are typical (eval\_06).} Do not be alarmed by large correction ratios for multinomial models.
 
-    \item \textbf{SE ratio} $\in [0.7, 1.5]$. In simulation studies where the truth is known, the ratio of estimated SE to empirical SE should be near 1. Values below 0.7 suggest underestimated uncertainty; values above 1.5 suggest overestimation. On real data, this diagnostic is not directly available, but the other checks provide confidence.
+    \item \emph{SE ratio} $\in [0.7, 1.5]$. In simulation studies where the truth is known, the ratio of estimated SE to empirical SE should be near 1. Values below 0.7 suggest underestimated uncertainty; values above 1.5 suggest overestimation. On real data, this diagnostic is not directly available, but the other checks provide confidence.
 
-    \item \textbf{$z$-score distribution.} If running multiple targets or a simulation study, the $z$-scores $(\hat{\mu} - \mu^*)/\text{SE}$ should have mean $\approx 0$ and standard deviation $\approx 1$. Departures indicate systematic bias or SE miscalibration.
+    \item \emph{$z$-score distribution.} If running multiple targets or a simulation study, the $z$-scores $(\hat{\mu} - \mu^*)/\mathrm{SE}$ should have mean $\approx 0$ and standard deviation $\approx 1$. Departures indicate systematic bias or SE miscalibration.
 \end{enumerate}
 
 \subsection{Common Pitfalls}\label{sec:pitfalls}
 
 \begin{enumerate}
-    \item \textbf{Patience too low.} This is the number one cause of bad results. With three-way splitting, the validation set is small (about 7\% of data with $K=50$), making the validation loss noisy. Low patience triggers early stopping before the network has learned the structural relationship. \textbf{Fix:} Set \texttt{patience=50} or higher for multinomial models.
+    \item \emph{Patience too low.} This is the number one cause of bad results. With three-way splitting, the validation set is small (about 7\% of data with $K=50$), making the validation loss noisy. Low patience triggers early stopping before the network has learned the structural relationship. Fix: set \texttt{patience=50} or higher for multinomial models.
 
-    \item \textbf{MLP Lambda.} Using an MLP to estimate $\Lambda(X)$ produces beautiful correlation with the oracle but invalid standard errors. \textbf{Fix:} Use \texttt{ridge} (default) or \texttt{lgbm}.
+    \item \emph{MLP Lambda.} Using an MLP to estimate $\Lambda(X)$ produces high correlation with the oracle but invalid standard errors. Fix: use \texttt{ridge} (default) or \texttt{lgbm}.
 
-    \item \textbf{Sample size too small.} Three-way splitting with $K=50$ folds means each fold has $n/50$ observations, of which 60\% are used for training. At $n = 2{,}000$, that is 24 observations per fold for training---borderline for a neural network with $d_\theta = 6$. \textbf{Fix:} Use $n \geq 5{,}000$ for multinomial models.
+    \item \emph{Sample size too small.} Three-way splitting with $K=50$ folds means each fold has $n/50$ observations, of which 60\% are used for training. At $n = 2{,}000$, that is 24 observations per fold for training, which is borderline for a neural network with $d_\theta = 6$. Fix: use $n \geq 5{,}000$ for multinomial models, $n \geq 8{,}000$ when three-way splitting is active.
 
-    \item \textbf{Ignoring diagnostics.} The package prints warnings for suspicious Lambda eigenvalues and correction ratios. Do not suppress these warnings. They are the first sign that something is wrong.
+    \item \emph{Ignoring diagnostics.} The package prints warnings for suspicious Lambda eigenvalues and correction ratios. Do not suppress these warnings. They are the first sign that something is wrong.
 
-    \item \textbf{Non-differentiable loss.} The IF correction requires computing the Hessian $\nabla_\theta^2 \ell$ via automatic differentiation. If the loss function contains non-differentiable operations (\texttt{int()}, \texttt{if/else} on tensors), the autodiff will fail. \textbf{Fix:} Use \texttt{torch} operations throughout the loss function.
+    \item \emph{Non-differentiable loss.} The IF correction requires computing the Hessian $\nabla_\theta^2 \ell$ via automatic differentiation. If the loss function contains non-differentiable operations (\texttt{int()}, \texttt{if/else} on tensors), the autodiff will fail. Fix: use \texttt{torch} operations throughout the loss function.
 
-    \item \textbf{Data-dependent indexing.} For multinomial logit with reordered choice sets (chosen alternative always at index 0), use \texttt{V[0]} instead of \texttt{V[int(y)]}. The \texttt{int()} call breaks \texttt{torch.vmap}, which is used internally for batched Hessian computation.
+    \item \emph{Data-dependent indexing.} For multinomial logit with reordered choice sets (chosen alternative always at index 0), use \texttt{V[0]} instead of \texttt{V[int(y)]}. The \texttt{int()} call breaks \texttt{torch.vmap}, which is used internally for batched Hessian computation.\footnote{This is a subtle issue: \texttt{vmap} requires static indexing because it traces a single computation graph for all batch elements. Dynamic indexing via \texttt{int(y)} produces a different graph per observation, which \texttt{vmap} cannot handle.}
 \end{enumerate}
 
 \subsection{Quick Start: Binary Logit}

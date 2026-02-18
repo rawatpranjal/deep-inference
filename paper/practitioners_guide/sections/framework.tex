@@ -1,6 +1,6 @@
 \section{The Framework}\label{sec:framework}
 
-This section lays out the FLM framework as a practitioner would encounter it: we describe the structural model, define target functionals, explain why naive neural network inference fails, present the influence function correction, and classify problems into three ``regimes'' that determine how a key quantity---the expected Hessian $\Lambda(x)$---is handled.
+This section lays out the FLM framework as a practitioner would encounter it: we describe the structural model, define target functionals, explain why naive neural network inference fails, present the influence function correction, and classify problems into three ``regimes'' that determine how a key quantity, the expected Hessian $\Lambda(x)$, is handled.
 
 \subsection{Setup}\label{sec:setup}
 
@@ -52,7 +52,7 @@ Custom      & Any differentiable $\ell(y,t,\theta)$                     & Any   
 
 \subsection{Target Functionals}
 
-We are usually not interested in $\theta^*(X_i)$ for every individual, but rather in some summary---an \emph{average} of a function of $\theta^*$ across the population:
+We are usually not interested in $\theta^*(X_i)$ for every individual, but rather in some summary: an \emph{average} of a function of $\theta^*$ across the population:
 \begin{equation}\label{eq:target}
     \mu^* = E[H(X, \theta^*(X), \tilde{t})]
 \end{equation}
@@ -90,7 +90,13 @@ The problem is quantitatively severe. In our simulations (Section~\ref{sec:appli
     \item The bias is toward zero (regularization shrinks $\hat{\theta}$)
 \end{itemize}
 
-\noindent This is not a small-sample problem---it persists at $n = 50{,}000$. The regularization bias is a \emph{feature} of neural network training (it prevents overfitting) but becomes a \emph{bug} for inference.
+\noindent This is not a small-sample problem; it persists at $n = 50{,}000$. The regularization bias is a \emph{feature} of neural network training (it prevents overfitting) but becomes a \emph{bug} for inference.
+
+To see why formally, consider the decomposition of the naive estimator's error:
+\begin{equation}\label{eq:bias_decomp}
+    \sqrt{n}\!\left(\hat{\mu}_{\text{naive}} - \mu^*\right) = \underbrace{\frac{1}{\sqrt{n}}\sum_{i=1}^n \left[H_i - \mu^*\right]}_{\text{sampling noise}} + \underbrace{\frac{1}{\sqrt{n}}\sum_{i=1}^n H_{\theta,i}\!\left(\hat{\theta}_i - \theta^*_i\right)}_{\text{regularization bias}} + o_P(1)
+\end{equation}
+The first term is standard sampling variability and vanishes at rate $\sqrt{n}$. The second term captures the bias introduced by the neural network's regularization: because $\hat{\theta}$ is systematically shrunk toward zero (by weight decay, dropout, and early stopping), $\hat{\theta}_i - \theta^*_i$ is not mean-zero and this term does not vanish.\footnote{In our validation suite, naive 95\% CIs achieve 0--20\% coverage; IF-corrected CIs achieve 96\% ($M=50$, $n=5{,}000$, binary logit, eval\_06).} The IF correction in the next section is designed precisely to cancel this second term.
 
 \subsection{The Influence Function Correction}\label{sec:if_correction}
 
@@ -112,6 +118,12 @@ The debiased estimator and its standard error are:
 \end{equation}
 
 \paragraph{Intuition.} The correction term $H_{\theta} \Lambda^{-1} \ell_\theta$ is an ``adjustment for what the neural net got wrong.'' The score $\ell_\theta$ measures how far observation $i$'s data is from the fitted model. The Hessian $\Lambda$ converts this into parameter-space error. The Jacobian $H_\theta$ maps this to the target. When the neural net fits perfectly (scores near zero), the correction vanishes. When it makes systematic errors (regularization bias), the correction kicks in.
+
+\paragraph{Neyman orthogonality.} The IF $\psi$ in Equation~\eqref{eq:psi} satisfies the \emph{Neyman orthogonality} condition:
+\begin{equation}\label{eq:neyman_orth}
+    \frac{\partial}{\partial \theta} E[\psi(Y, T, \theta, \Lambda)] \bigg|_{\theta = \theta^*, \Lambda = \Lambda^*} = 0
+\end{equation}
+The correction term $H_\theta \Lambda^{-1} \ell_\theta$ is constructed precisely so that first-order perturbations in $\hat{\theta}$ around $\theta^*$ cancel. This is why the debiased estimator $\hat{\mu} = \bar{\psi}$ achieves $\sqrt{n}$-consistency despite the neural network's slow convergence rate: the estimation error in $\hat{\theta}$ enters only through a second-order remainder, which is negligible at the $\sqrt{n}$ scale.\footnote{Package autodiff matches closed-form oracle scores and Hessians to machine precision ($< 10^{-15}$) on the multinomial logit (eval\_02), ensuring that the Neyman orthogonality condition is satisfied numerically.}
 
 \paragraph{Connection to classical statistics.} Equation~\eqref{eq:psi} is a semiparametric influence function in the tradition of \citet{hampel1974influence} and \citet{newey1994large}. The specific form arises from the ``one-step correction'' or ``debiasing'' approach used widely in semiparametric econometrics \citep{chernozhukov2018double}. The contribution of FLM is showing that this correction remains valid when the first-stage nuisance (the structural parameters) is estimated by a deep neural network.
 
@@ -142,7 +154,7 @@ This is the simplest case. Examples: A/B tests, randomized pricing experiments.
 For linear models, the Hessian is constant ($\nabla_\theta^2 \ell = 2$), so $\Lambda(X) = 2E[T T' \mid X]$, which can be estimated analytically. This avoids the need for three-way splitting.
 
 \paragraph{Regime C: Observational data with nonlinear model.}
-In most applied settings---including our H\&M application---the Hessian depends on $\theta$ (e.g., through $p(1-p)$ in logit or softmax probabilities in multinomial logit). Since $\theta$ is estimated, we cannot simply compute $\Lambda$; we must \emph{estimate} it. FLM propose regressing the individual Hessians on $X$ using a ridge regression. This requires a \emph{three-way} sample split: one third for estimating $\hat{\theta}$, one third for estimating $\hat{\Lambda}$, and one third for assembling the IF. The package handles this automatically.
+In most applied settings, including our H\&M application, the Hessian depends on $\theta$ (e.g., through $p(1-p)$ in logit or softmax probabilities in multinomial logit). Since $\theta$ is estimated, we cannot simply compute $\Lambda$; we must \emph{estimate} it. FLM propose regressing the individual Hessians on $X$ using a ridge regression. This requires a \emph{three-way} sample split: one part for estimating $\hat{\theta}$, one part for estimating $\hat{\Lambda}$, and one part for assembling the IF. The package handles this automatically.
 
 \subsection{The Multinomial Choice Model}\label{sec:mnl}
 
