@@ -4,7 +4,7 @@ We now demonstrate the full pipeline on a real application: estimating heterogen
 
 \subsection{Data}
 
-The H\&M Personalized Fashion Recommendations dataset \citep{hm2022kaggle} contains 1.4 million transactions from 369,000 customers purchasing 105,000 items between 2018 and 2020. We focus on online dress purchases in 2019--2020, yielding approximately 5,000 consumers with at least 5 purchases and 90 available items.
+The H\&M Personalized Fashion Recommendations dataset \citep{hm2022kaggle} contains 1.4 million transactions from 369,000 customers purchasing 105,000 items between 2018 and 2020. We focus on online dress purchases, yielding 4,783 consumers making 10,681 purchases across 83 available items over 62 weeks. Prices range from \texteuro 2.00 to \texteuro 80.00, with a mean of \texteuro 19.87.
 
 Each transaction records the consumer ID, item ID, purchase date, and price. Item metadata includes product type, color, department, and garment group. Crucially for our application, the dataset also provides product images, enabling visual feature extraction.
 
@@ -22,8 +22,8 @@ where $j^+$ is the purchased item, $\mathcal{B}$ is a mini-batch of items (servi
 
 \paragraph{Output.} The trained towers produce:
 \begin{itemize}
-    \item \texttt{user\_embeddings.npy}: $(5{,}000 \times 64)$ consumer embeddings
-    \item \texttt{item\_embeddings.npy}: $(90 \times 64)$ item embeddings
+    \item \texttt{user\_embeddings.npy}: $(4{,}833 \times 64)$ consumer embeddings
+    \item \texttt{item\_embeddings.npy}: $(83 \times 64)$ item embeddings
 \end{itemize}
 
 These embeddings are trained on a separate data period (T1) from the choice model estimation period (T2), so they can be treated as fixed covariates---a key assumption for the IF correction to be valid.
@@ -35,7 +35,7 @@ The mapping from the two-tower output to the FLM framework is:
 \begin{itemize}
     \item $X_i$: Consumer embedding (64D). This determines heterogeneity in structural parameters.
 
-    \item $T_i$: Packed alternative attributes. For each choice occasion, we sample $J = 20$ alternatives (1 chosen + 19 random). Each alternative has $K = 6$ attributes: log-price and 5 PCA dimensions of the item embedding (64D $\to$ 5D via PCA, capturing $\sim$70\% of variance). The packed array is $T_i \in \mathbb{R}^{120}$ (reshaped to $20 \times 6$ inside the loss).
+    \item $T_i$: Packed alternative attributes. For each choice occasion, we sample $J = 20$ alternatives (1 chosen + 19 random). Each alternative has $K = 6$ attributes: log-price and 5 PCA dimensions of the item embedding (64D $\to$ 5D via PCA, capturing 34\% of variance---modest, but the five components capture the major axes of aesthetic variation across dresses). The packed array is $T_i \in \mathbb{R}^{120}$ (reshaped to $20 \times 6$ inside the loss).
 
     \item $Y_i = 0$: The chosen alternative is always reordered to position 0.
 
@@ -81,7 +81,7 @@ print(f"E[beta_price] = {result.mu_hat:.4f} +/- {result.se:.4f}")
 
 \subsubsection{Simulation Validation}
 
-Before applying the method to real data, we validate it on a simulation DGP that mirrors the application specification ($J = 20$, $K = 6$, $d_x = 10$). We run $M = 50$ Monte Carlo replications at $n = 5{,}000$.
+Before applying the method to real data, we validate it on a simulation DGP that mirrors the application specification ($J = 20$, $K = 6$, $d_x = 10$). We run $M = 50$ Monte Carlo replications at $n = 8{,}000$ (the three-way cross-fitting split in Regime C makes smaller samples unreliable).
 
 \begin{table}[ht]
 \centering
@@ -98,7 +98,7 @@ $z$-std             & [to be filled] & 0.7--1.5 \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}\small
-\item Note: Results from \texttt{application/06\_simulation\_study.py} with $M=50$, $n=5{,}000$, $J=20$, $K=6$.
+\item Note: Results from \texttt{application/06\_simulation\_study.py} with $M=50$, $n=8{,}000$, $J=20$, $K=6$.
 \end{tablenotes}
 \end{table}
 
@@ -115,20 +115,22 @@ Table~\ref{tab:main_results} reports the estimated average structural parameters
 \toprule
 \textbf{Parameter} & $\hat{\mu}$ & \textbf{SE (IF)} & \textbf{SE (Naive)} & \textbf{Ratio} & \textbf{95\% CI} \\
 \midrule
-$E[\beta_{\text{price}}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
-$E[\beta_{\text{pca}_1}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
-$E[\beta_{\text{pca}_2}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
-$E[\beta_{\text{pca}_3}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
-$E[\beta_{\text{pca}_4}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
-$E[\beta_{\text{pca}_5}]$ & [to fill] & [to fill] & [to fill] & [to fill] & [to fill] \\
+$E[\beta_{\text{price}}]$ & $-0.359$ & $0.040$ & $0.020$ & $2.03$ & $[-0.437, -0.281]$ \\
+$E[\beta_{\text{pca}_1}]$ & $-1.880$ & $0.058$ & $0.031$ & $1.89$ & $[-1.995, -1.766]$ \\
+$E[\beta_{\text{pca}_2}]$ & $0.641$ & $0.047$ & $0.022$ & $2.12$ & $[0.548, 0.734]$ \\
+$E[\beta_{\text{pca}_3}]$ & $-0.430$ & $0.052$ & $0.026$ & $2.00$ & $[-0.533, -0.328]$ \\
+$E[\beta_{\text{pca}_4}]$ & $0.458$ & $0.055$ & $0.025$ & $2.17$ & $[0.350, 0.566]$ \\
+$E[\beta_{\text{pca}_5}]$ & $1.117$ & $0.054$ & $0.023$ & $2.33$ & $[1.011, 1.224]$ \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}\small
-\item Note: IF SE accounts for neural network estimation uncertainty. Ratio = IF SE / Naive SE. Results from \texttt{application/03\_inference.py} with $n\_folds=50$, $epochs=300$, $patience=50$.
+\item Note: IF SE accounts for neural network estimation uncertainty. Ratio = IF SE / Naive SE. Results from \texttt{application/03\_inference.py} with $n=10{,}681$, $n\_folds=5$, $epochs=200$, $patience=50$. Regime C (3-way cross-fitting, Lambda estimated via ridge).
 \end{tablenotes}
 \end{table}
 
-The IF standard errors are systematically larger than naive SEs, reflecting the additional uncertainty from neural network estimation. This is exactly the pattern predicted by theory: naive SEs ignore the estimation step and produce overconfident intervals.
+The IF standard errors are systematically larger than naive SEs by a factor of 1.9--2.3$\times$, reflecting the additional uncertainty from neural network estimation. This is exactly the pattern predicted by theory: naive SEs ignore the estimation step and produce overconfident intervals. Using naive SEs would produce confidence intervals roughly half as wide---intervals that would not cover the true parameter at the nominal 95\% rate.
+
+The price coefficient $E[\beta_{\text{price}}] = -0.359$ is negative and highly significant, confirming that higher prices reduce purchase probability. In economic terms, a one-unit increase in log-price (approximately a 172\% price increase, or equivalently a 10\% price increase shifts the utility index by roughly $0.036$ units) reduces the average consumer's utility for that item. The PCA coefficients capture heterogeneous taste for different aesthetic dimensions of the dress embedding space, with $\beta_{\text{pca}_1}$ showing the strongest average preference.
 
 \subsubsection{Heterogeneity in Price Sensitivity}
 
