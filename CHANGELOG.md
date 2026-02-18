@@ -2,6 +2,7 @@
 
 ## 2026-02-18
 
+- Downloaded and docling-transcribed 2 practitioner's guide papers to `references/`: Cameron & Miller (2015, JHR) on cluster-robust inference, Beine et al. (2016, World Economy) on gravity models of migration. Kumbhakar et al. (2015) is a CUP book and not freely available as PDF.
 - Created practitioner's guide paper: `paper/practitioners_guide/` (26 pages, 5 sections + appendix, Nevo 2000 style). Full LaTeX skeleton with references.bib, Makefile, and all section prose.
 - Created `application/` pipeline: 8 scripts (00_prep_data through 07_generate_figures) for H&M fashion demand example with custom MNL loss + IF inference.
 - Added `hessian_depends_on_theta`/`hessian_depends_on_y` pass-through to `inference()` API for custom losses with non-scalar T.
