@@ -42,7 +42,7 @@ LAMBDA_METHOD = "ridge"
 RIDGE_ALPHA = 1000.0
 
 # === Simulation Settings ===
-SIM_N = 5000        # Sample size for MC validation
+SIM_N = 8000        # Sample size for MC validation (n=5000 underfits with 3-way split)
 SIM_M = 50          # Number of MC replications
 SIM_D_X = 10        # Consumer embedding dimension (reduced for speed)
 SIM_SEED = 42

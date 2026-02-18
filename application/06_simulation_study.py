@@ -375,11 +375,11 @@ if __name__ == "__main__":
         quick = True
     elif args.full:
         M = args.M or 50
-        n = args.n or 5000
+        n = args.n or 8000
         quick = False
     else:
         M = args.M or 50
-        n = args.n or 5000
+        n = args.n or 8000
         quick = False
 
     # Create report directory
