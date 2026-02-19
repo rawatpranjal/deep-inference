@@ -12,6 +12,7 @@ from .linear import LinearModel, Linear
 from .logit import LogitModel, Logit
 from .multinomial import MultinomialLogitModel, MultinomialLogit
 from .combinatorial import CombinatorialModel, Combinatorial
+from .quantile import QuantileModel, Quantile
 
 __all__ = [
     # Neural network
@@ -34,4 +35,7 @@ __all__ = [
     # Combinatorial models
     "CombinatorialModel",
     "Combinatorial",
+    # Quantile models
+    "QuantileModel",
+    "Quantile",
 ]

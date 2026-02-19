@@ -286,6 +286,9 @@ def structural_dml(
             def target_fn(x, theta):
                 return theta[:, 1].mean()
 
+    # Extract network_factory from kwargs if present
+    network_factory = kwargs.pop('network_factory', None)
+
     result = structural_dml_core(
         Y=Y,
         T=T,
@@ -304,6 +307,7 @@ def structural_dml(
         per_obs_target_fn=per_obs_target_fn,
         per_obs_target_grad_fn=per_obs_target_grad_fn,
         verbose=verbose,
+        network_factory=network_factory,
         **kwargs,
     )
 
@@ -416,10 +420,14 @@ def inference(
     epochs: int = 200,
     lr: float = 0.01,
     patience: int = 50,
+    # Custom network architecture
+    network_factory: Optional[Callable] = None,
     # Other
     ridge: float = 1e-4,
     verbose: bool = False,
     store_data: bool = True,
+    # Model-specific kwargs (e.g., tau, smooth_eps for quantile)
+    **kwargs,
 ) -> InferenceResult:
     """
     General inference with user-provided loss and target.
@@ -481,7 +489,7 @@ def inference(
 
         result = inference(Y, T, X, loss=my_loss, target_fn=my_target, theta_dim=2)
     """
-    from .models import Linear, Logit, MultinomialLogit, CombinatorialModel, CustomModel, model_from_loss
+    from .models import Linear, Logit, MultinomialLogit, CombinatorialModel, Quantile, CustomModel, model_from_loss
     from .targets import AverageParameter, AME, CustomTarget, ChoiceProbabilityTarget, MultinomialAME, Elasticity, WTP, ConsumerWelfare, DoseResponse, Profit, TailProbability, ConditionalVariance, MultiTreatmentATE
     from .lambda_ import select_lambda_strategy, Regime, detect_regime
     from .engine import run_crossfit
@@ -503,10 +511,15 @@ def inference(
     # Resolve model
     if model is not None:
         # Built-in model
+        # Extract quantile-specific kwargs before building model map
+        tau = kwargs.pop("tau", 0.5)
+        smooth_eps = kwargs.pop("smooth_eps", 0.01)
+
         model_map = {
             "linear": Linear(),
             "logit": Logit(),
             "multinomial_logit": MultinomialLogit(),
+            "quantile": Quantile(tau=tau, smooth_eps=smooth_eps),
         }
         if model not in model_map:
             raise ValueError(f"Unknown model: {model}. Available: {list(model_map.keys())}")
@@ -537,6 +550,7 @@ def inference(
             "profit": Profit(model_type=model if model in ("logit", "linear", "poisson") else "logit"),
             "tail_probability": TailProbability(model_type=model if model in ("logit", "poisson", "linear") else "logit"),
             "conditional_variance": ConditionalVariance(model_type=model if model in ("logit", "poisson") else "logit"),
+            "qte": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
         }
         if target not in target_map:
             raise ValueError(f"Unknown target: {target}. Available: {list(target_map.keys())}")
@@ -579,6 +593,7 @@ def inference(
         hidden_dims=hidden_dims,
         ridge=ridge,
         verbose=verbose,
+        network_factory=network_factory,
     )
 
     inf_result = InferenceResult(
@@ -621,7 +636,7 @@ from .families import (
 )
 
 # New architecture exports
-from .models import StructuralModel, CustomModel, Linear, Logit, MultinomialLogit, CombinatorialModel
+from .models import StructuralModel, CustomModel, Linear, Logit, MultinomialLogit, CombinatorialModel, Quantile
 from .targets import Target, CustomTarget, AverageParameter, AME, ChoiceProbabilityTarget, MultinomialAME, Elasticity, WTP, ConsumerWelfare, DoseResponse, Profit, TailProbability, ConditionalVariance, MultiTreatmentATE
 from .families import MultinomialLogitFamily
 from .lambda_ import Regime, detect_regime, select_lambda_strategy
@@ -653,6 +668,7 @@ __all__ = [
     'Logit',
     'MultinomialLogit',
     'MultinomialLogitFamily',
+    'Quantile',
     'Target',
     'CustomTarget',
     'AverageParameter',
