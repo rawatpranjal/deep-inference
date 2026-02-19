@@ -1,0 +1,174 @@
+\section{Evaluation}\label{sec:evaluation}
+
+Before trusting results on real data, it is useful to validate each component of the inference pipeline on simulated data where the ground truth is known. This section describes the evaluation scheme implemented in the companion \texttt{deep-inference} package, which tests every mathematical object in the FLM framework: parameter recovery, automatic differentiation, Lambda estimation, influence function assembly, and frequentist coverage. Table~\ref{tab:eval_overview} summarizes the full suite.
+
+\begin{table}[ht]
+\centering
+\caption{Evaluation suite overview.}\label{tab:eval_overview}
+\begin{tabular}{llll}
+\toprule
+\textbf{Component} & \textbf{What is tested} & \textbf{Key metric} & \textbf{Result} \\
+\midrule
+Parameter recovery  & $\hat{\theta}(x)$ vs $\theta^*(x)$ & RMSE $< 0.3$, Corr $> 0.7$ & 12/12 families pass \\
+Automatic differentiation & $\nabla_\theta \ell$, $\nabla^2_{\theta\theta} \ell$ vs oracle & Max error $< 10^{-6}$ & 31/31 tests pass \\
+Lambda estimation   & $\hat{\Lambda}(x)$ vs $E[\ell_{\theta\theta} \mid X\!=\!x]$ & Frobenius $< 0.15$ & 9/9 methods pass \\
+Target Jacobian     & $H_\theta$ autodiff vs chain rule & Max error $< 10^{-6}$ & 92/92 tests pass \\
+Influence function  & $\psi_{\text{pkg}}$ vs $\psi_{\text{oracle}}$ & Corr $> 0.9$ & 4/4 tests pass \\
+Frequentist coverage & 95\% CI actual coverage & Coverage $\in [90\%, 99\%]$ & 96--98\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The evaluation pipeline follows the dependency structure of the inference procedure: each component depends on the preceding ones, so failures propagate downstream. We present the components in this order, from basic checks to the final coverage test.
+
+\subsection{Parameter Recovery}\label{sec:eval_recovery}
+
+The first check asks whether the neural network can learn $\theta^*(x)$. We generate data from a known DGP where the true structural parameters $\theta^*(x) = (\alpha^*(x), \beta^*(x))$ are specified analytically, train the structural network, and compare $\hat{\theta}(x)$ to $\theta^*(x)$ at each observation.
+
+\paragraph{Metrics.}
+\begin{itemize}
+    \item RMSE: $\sqrt{n^{-1}\sum_i (\hat{\theta}_j(X_i) - \theta^*_j(X_i))^2} < 0.3$
+    \item Correlation: $\mathrm{Corr}(\hat{\theta}_j(X), \theta^*_j(X)) > 0.7$
+\end{itemize}
+
+The companion package tests 12 structural model families (linear, logit, Poisson, gamma, Weibull, Gumbel, tobit, negative binomial, probit, beta, zero-inflated Poisson, multinomial logit) with three random seeds each, all passing these thresholds.
+
+\paragraph{Interpretation.} Parameter recovery is a necessary but not sufficient condition for valid inference. Because the IF correction satisfies Neyman orthogonality (Section~\ref{sec:if_correction}), moderate errors in $\hat{\theta}$ are tolerated --- the estimation error enters only through a second-order remainder. Recovery failures, however, indicate that the network has not learned the structural relationship at all, and downstream inference will be unreliable regardless of the IF correction.
+
+\subsection{Automatic Differentiation}\label{sec:eval_autodiff}
+
+All downstream quantities --- scores $\ell_\theta$, Hessians $\ell_{\theta\theta}$, target Jacobians $H_\theta$ --- are computed via automatic differentiation. This check compares autodiff output to closed-form oracle formulas derived by hand.
+
+\paragraph{Tests.}
+\begin{enumerate}
+    \item \emph{Score accuracy.} Compare $\nabla_\theta \ell$ from \texttt{torch.func.grad} to the analytic gradient. For families with closed-form gradients (logit: $(p-y) \cdot [1, t]$; Poisson: $(\lambda - y) \cdot [1,t]$), the maximum absolute error is typically below $10^{-15}$ (machine precision).
+    \item \emph{Hessian accuracy.} Compare $\nabla^2_{\theta\theta} \ell$ from nested \texttt{jacrev} to the analytic Hessian. Same precision requirement. For families without closed-form Hessians (tobit, ZIP), a finite-difference check with tolerance $10^{-4}$ is used instead.
+    \item \emph{Symmetry.} Verify $\max|H - H^\top| < 10^{-10}$ for all computed Hessians.
+    \item \emph{Positive semi-definiteness.} Verify that Hessians evaluated at fitted parameters have non-negative eigenvalues.
+\end{enumerate}
+
+The suite runs 31 individual checks (scores and Hessians for each family, plus symmetry and PSD), all passing.
+
+\paragraph{Why this matters.} Every subsequent quantity in the pipeline depends on correct derivatives. An error in $\ell_\theta$ corrupts the influence function directly; an error in $\ell_{\theta\theta}$ corrupts the Lambda estimate. Catching these errors early prevents silent downstream failures.
+
+\subsection{Lambda Estimation}\label{sec:eval_lambda}
+
+Lambda estimation ($\hat{\Lambda}(x) \approx E[\ell_{\theta\theta} \mid X\!=\!x]$) is validated by comparing the estimated conditional Hessian to the oracle computed from the known DGP.
+
+\paragraph{Metrics.}
+\begin{itemize}
+    \item Frobenius error: $\|{\hat{\Lambda}(x) - \Lambda^*(x)}\|_F / \|{\Lambda^*(x)}\|_F < 0.15$
+    \item Minimum eigenvalue: $\lambda_{\min}(\hat{\Lambda}(x)) > 10^{-4}$
+    \item Non-PSD count: exactly 0 (after PSD projection)
+\end{itemize}
+
+Since $\Lambda^{-1}$ appears in the IF formula (Equation~\ref{eq:psi}), errors in $\hat{\Lambda}$ propagate directly into the standard errors. Unlike $\hat{\theta}$, there is no Neyman orthogonality protection for $\hat{\Lambda}$ errors --- they enter the variance at first order. This makes Lambda estimation the most sensitive step in the pipeline. Section~\ref{sec:lambda_est} discusses the estimation methods and their comparative performance (Table~\ref{tab:lambda_methods}).
+
+\subsection{Influence Function Assembly}\label{sec:eval_psi}
+
+Given $\hat{\theta}$, $\hat{\Lambda}$, and the scores, the influence function $\psi_i = H_i - H_{\theta,i}\hat{\Lambda}_i^{-1}\ell_{\theta,i}$ is assembled. This check uses the \emph{oracle} $\theta^*$ and $\Lambda^*$ from the known DGP, computes $\psi$ both by hand and via the package, and compares.
+
+\paragraph{Metrics.}
+\begin{itemize}
+    \item Correlation: $\mathrm{Corr}(\psi_{\text{pkg}}, \psi_{\text{oracle}}) > 0.9$
+    \item RMSE: $< 0.1$
+\end{itemize}
+
+\paragraph{Neyman orthogonality check.} An additional diagnostic perturbs $\hat{\theta}$ by $\delta$ and verifies that the bias of $\bar{\psi}$ scales as $O(\delta^2)$, not $O(\delta)$. This confirms that the IF formula is correctly debiasing against first-order perturbations in $\hat{\theta}$, which is the theoretical property that allows valid inference despite the neural network's slow convergence rate.
+
+\subsection{Frequentist Coverage}\label{sec:eval_coverage}
+
+The definitive test: do 95\% confidence intervals actually cover the true parameter 95\% of the time? This is assessed via Monte Carlo simulation.
+
+\paragraph{Protocol.} For $M = 50$ independent replications:
+\begin{enumerate}
+    \item Generate fresh data from the known DGP.
+    \item Run the full inference pipeline (cross-fitting, Lambda estimation, IF assembly).
+    \item Compute $\hat{\mu}$, $\widehat{\mathrm{SE}}$, and the 95\% CI.
+    \item Record whether the CI covers the true $\mu^*$.
+\end{enumerate}
+
+\paragraph{Metrics.}
+\begin{itemize}
+    \item Coverage: fraction of replications where CI covers $\mu^*$, target $\in [90\%, 99\%]$
+    \item SE ratio: $\overline{\widehat{\mathrm{SE}}} / \mathrm{sd}(\hat{\mu}_1, \ldots, \hat{\mu}_M)$, target $\in [0.7, 1.5]$
+    \item Bias: $\overline{\hat{\mu}} - \mu^*$, target $|\text{bias}| < 0.05$
+    \item $z$-scores: $z_m = (\hat{\mu}_m - \mu^*)/\widehat{\mathrm{SE}}_m$ should follow $N(0,1)$
+\end{itemize}
+
+Everything above is a diagnostic; this is the final verdict. Table~\ref{tab:coverage_results} reports the results.
+
+\begin{table}[ht]
+\centering
+\caption{Frequentist coverage results ($M=50$ replications).}\label{tab:coverage_results}
+\begin{tabular}{lccccl}
+\toprule
+\textbf{Model} & $n$ & $d_\theta$ & \textbf{Coverage} & \textbf{SE Ratio} & \textbf{Notes} \\
+\midrule
+Binary logit      & 5,000  & 2 & 96\% & 0.91 & Regime C, ridge $\Lambda$ \\
+Multinomial logit & 8,000  & 4 & 98\% & 0.95 & Regime C, 3-way split, patience=50 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The binary logit result uses 2-way cross-fitting with $K = 20$ folds and 200 training epochs. The multinomial logit uses 3-way splitting with $K = 50$ folds, 300 epochs, and patience of 50. Both use ridge Lambda estimation. The multinomial logit's higher coverage reflects the larger sample size ($n = 8{,}000$) compensating for the three-way split's reduced effective training data.
+
+\subsection{Recommended Evaluation Workflow}\label{sec:eval_workflow}
+
+When applying the framework to a new structural model or dataset, we recommend the following workflow:
+
+\begin{enumerate}
+    \item \emph{Write a simulation DGP.} Define a data-generating process that matches the specification of your application (same model family, similar parameter dimensions, realistic covariate distributions). The DGP should have analytically known $\theta^*(x)$ and $\mu^*$.
+
+    \item \emph{Run parameter recovery.} Train the structural network on simulated data and compare $\hat{\theta}(x)$ to $\theta^*(x)$. If RMSE $> 0.3$ or correlation $< 0.7$, the network architecture or training hyperparameters need adjustment before proceeding.
+
+    \item \emph{Check autodiff.} If using a custom loss function, verify that the autodiff gradients and Hessians match a finite-difference approximation. Errors here propagate silently into all downstream quantities.
+
+    \item \emph{Run a coverage study.} Generate $M = 50$ replications of the full pipeline and check that coverage $\in [90\%, 99\%]$, SE ratio $\in [0.7, 1.5]$, and $|$bias$| < 0.05$. This is the most informative single check.
+
+    \item \emph{Proceed to real data.} If coverage passes, apply the same hyperparameters (epochs, patience, $n_{\text{folds}}$, Lambda method) to the real dataset.
+\end{enumerate}
+
+The package provides a command-line interface for running the full eval suite:
+
+\begin{lstlisting}[language=bash,numbers=none]
+# Run all evals
+python3 -m evals.run_all
+
+# Run individual evals
+python3 -m evals.eval_01_theta
+python3 -m evals.eval_06_coverage
+python3 -m evals.eval_09_multinomial
+\end{lstlisting}
+
+\subsection{Centralized Thresholds}\label{sec:thresholds}
+
+All pass/fail thresholds are defined in a single module (\texttt{evals/common/metrics.py}) and are available programmatically. Table~\ref{tab:thresholds} lists the complete set.
+
+\begin{table}[ht]
+\centering
+\caption{Centralized pass/fail thresholds for the evaluation suite.}\label{tab:thresholds}
+\begin{tabular}{llll}
+\toprule
+\textbf{Category} & \textbf{Metric} & \textbf{Threshold} & \textbf{What it tests} \\
+\midrule
+Coverage    & Coverage          & $[90\%, 99\%]$       & Valid confidence intervals \\
+Coverage    & SE ratio          & $[0.7, 1.5]$         & Standard error calibration \\
+Coverage    & $|\text{bias}|$   & $< 0.05$             & Unbiasedness \\
+Coverage    & $z$-score mean    & $(-0.3, 0.3)$        & $z$-score centering \\
+Coverage    & $z$-score std     & $[0.7, 1.5]$         & $z$-score spread \\
+\midrule
+Recovery    & RMSE              & $< 0.3$              & $\hat{\theta}$ accuracy \\
+Recovery    & Correlation       & $> 0.7$              & $\hat{\theta}$ manifold shape \\
+\midrule
+Autodiff    & Max error         & $< 10^{-6}$          & Derivative precision \\
+\midrule
+Lambda      & Frobenius error   & $< 0.15$             & $\hat{\Lambda}$ accuracy \\
+Lambda      & Min eigenvalue    & $> 10^{-4}$          & Numerical stability \\
+Lambda      & Non-PSD count     & $= 0$                & PSD guarantee \\
+\midrule
+IF assembly & $\psi$ correlation & $> 0.9$             & IF accuracy \\
+IF assembly & $\psi$ RMSE       & $< 0.1$             & IF scale \\
+\bottomrule
+\end{tabular}
+\end{table}

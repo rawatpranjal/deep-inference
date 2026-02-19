@@ -2,6 +2,12 @@
 
 ## 2026-02-19
 
+- Added new Evaluation section (Section 5) to practitioner's guide: parameter recovery, autodiff, lambda estimation, IF assembly, frequentist coverage, recommended workflow, centralized thresholds table. Created `sections/evaluations.tex`.
+- Tone softening throughout: removed "cautionary tale", "catastrophically invalid", "Never use", "is not optional", "must be resisted". Replaced with gentler observations.
+- Removed all BLP/Nevo references from .tex files (framework.tex BLP comparison block, introduction.tex Nevo parallel paragraph, Berry/Nevo citations).
+- Added marketing discrete choice citations (McFadden, Train, Dubé & Misra) to introduction.
+- Added concrete model/target examples (logit, Poisson, multinomial) to "The Idea in Brief" section.
+- Removed author names from main.tex.
 - Major revision of practitioner's guide paper: added 6 displayed equations to estimation.tex mapping implementation to FLM theory (cross-fitting, Hessian obs, Lambda ridge, PSD projection, IF assembly, SE formula). Expanded Lambda estimation into full Hessian pipeline subsection (5 steps). Added bias decomposition and Neyman orthogonality equations to framework.tex. Removed all 57 \textbf{} from body text (kept table headers), removed all 30+ em dashes. Added validation footnotes with concrete eval numbers throughout. Fixed conclusion sample size claim (n=8000). Filled simulation table with eval_09 results. Added implementation-theory notes to appendix.
 
 ## 2026-02-18

@@ -163,12 +163,7 @@ Our application uses a multinomial logit (conditional logit) model \citep{mcfadd
     V_{ij} = x_{ij}' \theta(X_i), \qquad P(Y_i = j \mid X_i) = \frac{e^{V_{ij}}}{\sum_{m=1}^J e^{V_{im}}}
 \end{equation}
 
-This is closely related to the BLP random coefficients model \citep{berry1995automobile, nevo2000practitioner}. The key differences are:
-\begin{enumerate}
-    \item BLP estimates a distribution (e.g., $\theta \sim N(\bar{\theta}, \Sigma)$) using aggregate market-level data. FLM estimates $\theta(X_i)$ for each individual using individual-level data.
-    \item BLP uses GMM with instruments. FLM uses neural networks with influence function correction.
-    \item BLP requires solving a fixed-point contraction mapping for each market. FLM requires only a forward pass through the neural network.
-\end{enumerate}
+The FLM framework estimates $\theta(X_i)$ for each individual using individual-level data and neural networks, rather than assuming a parametric distribution for heterogeneity.
 
 The connection between two-tower embeddings and the FLM framework is natural: the consumer embedding $X_i$ captures the latent heterogeneity dimensions, and the neural network maps $X_i \to \theta(X_i)$. The item attributes $T_i$ include prices and (PCA-reduced) item embeddings.
 
