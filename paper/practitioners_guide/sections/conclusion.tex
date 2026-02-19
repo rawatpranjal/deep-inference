@@ -5,9 +5,9 @@ We have presented a step-by-step guide to the FLM framework for deep learning wi
 Three lessons stand out for practitioners:
 
 \begin{enumerate}
-    \item \emph{Influence function correction is not optional.} Naive neural network standard errors are systematically too small, often by a factor of 3--10$\times$. The resulting confidence intervals can have 0--20\% actual coverage when the nominal level is 95\%. The IF correction is the difference between ``suggestive evidence'' and valid statistical inference.
+    \item \emph{Influence function correction is important for valid inference.} Naive neural network standard errors are systematically too small, often by a factor of 3--10$\times$. The resulting confidence intervals can have 0--20\% actual coverage when the nominal level is 95\%. The IF correction is the difference between ``suggestive evidence'' and valid statistical inference.
 
-    \item \emph{Lambda estimation requires restraint.} The temptation to use a powerful estimator (MLP) for the expected Hessian $\Lambda(X)$ must be resisted. Heavy regularization (ridge with $\alpha = 1000$) produces better inference than a flexible estimator that overfits the Hessians. Coverage, not correlation with the oracle, is the right metric.
+    \item \emph{Lambda estimation requires restraint.} While MLP estimators achieve high correlation with the oracle, ridge regression ($\alpha = 1000$) tends to produce more reliable standard errors in practice. Coverage tends to be a more informative metric than correlation for evaluating Lambda estimators.
 
     \item \emph{Patience matters.} For nonlinear models with three-way cross-fitting, the early stopping patience parameter is critical. Too-low patience causes premature stopping and underfitting. We recommend \texttt{patience=50} as a minimum for multinomial models.
 \end{enumerate}

@@ -110,12 +110,12 @@ where $V, D$ are from the eigendecomposition, $\lambda_{\max}$ is the largest ei
 Ridge ($\alpha=1000$) & 0.508 & 96\% & 0.91 & \textbf{Default, recommended} \\
 Aggregate             & 0.000 & 95\% & 1.00 & Ignores $X$-dependence \\
 LGBM                  & 0.978 & 96\% & 1.00 & Good accuracy \\
-MLP                   & 0.997 & \textbf{67\%} & 0.65 & \textbf{Never use} \\
+MLP                   & 0.997 & \textbf{67\%} & 0.65 & \textbf{Not recommended} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{MLP: a cautionary tale.} An MLP Lambda estimator achieves the highest correlation with the oracle (0.997) yet produces catastrophically invalid standard errors (67\% coverage). The MLP overfits the individual Hessians, producing $\hat{\Lambda}(X)$ estimates that are too extreme. Since $\Lambda^{-1}$ appears in the IF formula, extreme Lambda values create extreme $\psi_i$ values, inflating the variance estimator. The lesson: \emph{high correlation with the oracle does not guarantee valid inference}. Coverage, not correlation, is the correct metric for evaluating Lambda estimators.
+\paragraph{A note on MLP estimation.} An MLP Lambda estimator achieves the highest correlation with the oracle (0.997) yet produces substantially undercovering standard errors (67\% coverage). The MLP overfits the individual Hessians, producing $\hat{\Lambda}(X)$ estimates that are too variable. Since $\Lambda^{-1}$ appears in the IF formula, extreme Lambda values create extreme $\psi_i$ values, inflating the variance estimator. In practice, coverage tends to be a more informative metric than correlation for evaluating Lambda estimators.
 
 \subsection{Network Architecture}
 
@@ -150,13 +150,13 @@ After running \texttt{inference()}, several diagnostic quantities should be chec
 \subsection{Common Pitfalls}\label{sec:pitfalls}
 
 \begin{enumerate}
-    \item \emph{Patience too low.} This is the number one cause of bad results. With three-way splitting, the validation set is small (about 7\% of data with $K=50$), making the validation loss noisy. Low patience triggers early stopping before the network has learned the structural relationship. Fix: set \texttt{patience=50} or higher for multinomial models.
+    \item \emph{Patience too low.} In our experience, low patience is a frequent source of poor results. With three-way splitting, the validation set is small (about 7\% of data with $K=50$), making the validation loss noisy. Low patience triggers early stopping before the network has learned the structural relationship. Fix: set \texttt{patience=50} or higher for multinomial models.
 
     \item \emph{MLP Lambda.} Using an MLP to estimate $\Lambda(X)$ produces high correlation with the oracle but invalid standard errors. Fix: use \texttt{ridge} (default) or \texttt{lgbm}.
 
     \item \emph{Sample size too small.} Three-way splitting with $K=50$ folds means each fold has $n/50$ observations, of which 60\% are used for training. At $n = 2{,}000$, that is 24 observations per fold for training, which is borderline for a neural network with $d_\theta = 6$. Fix: use $n \geq 5{,}000$ for multinomial models, $n \geq 8{,}000$ when three-way splitting is active.
 
-    \item \emph{Ignoring diagnostics.} The package prints warnings for suspicious Lambda eigenvalues and correction ratios. Do not suppress these warnings. They are the first sign that something is wrong.
+    \item \emph{Ignoring diagnostics.} The package prints warnings for suspicious Lambda eigenvalues and correction ratios. These warnings can indicate underlying issues worth investigating.
 
     \item \emph{Non-differentiable loss.} The IF correction requires computing the Hessian $\nabla_\theta^2 \ell$ via automatic differentiation. If the loss function contains non-differentiable operations (\texttt{int()}, \texttt{if/else} on tensors), the autodiff will fail. Fix: use \texttt{torch} operations throughout the loss function.
 
