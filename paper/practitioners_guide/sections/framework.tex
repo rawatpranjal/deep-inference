@@ -4,29 +4,17 @@ This section lays out the FLM framework as a practitioner would encounter it: we
 
 \subsection{Setup}\label{sec:setup}
 
-We observe $n$ i.i.d.\ observations $(Y_i, T_i, X_i)$ where:
-\begin{itemize}
-    \item $Y_i$ is the outcome (chosen product, sales quantity, duration, etc.)
-    \item $T_i$ is the treatment or ``action'' variable (price, product attributes, dosage)
-    \item $X_i \in \mathbb{R}^{d_x}$ are individual covariates that drive heterogeneity
-\end{itemize}
+Following \citet{farrell2021deep, farrell2025deep}, we observe $n$ i.i.d.\ observations $(Y_i, T_i, X_i)$ where $Y_i$ is the outcome (chosen product, sales quantity, duration), $T_i$ is the treatment or ``action'' variable (price, product attributes, dosage), and $X_i \in \mathbb{R}^{d_x}$ are individual covariates that drive heterogeneity.
 
 A \emph{structural model} specifies a loss function $\ell(y, t, \theta)$ parameterized by structural parameters $\theta \in \mathbb{R}^{d_\theta}$. The true parameters for individual $i$ solve:
 \begin{equation}\label{eq:theta_star}
     \theta^*(X_i) = \arg\min_\theta \; E[\ell(Y, T, \theta) \mid X = X_i]
 \end{equation}
 
-\paragraph{Concrete example.} In our H\&M application:
-\begin{itemize}
-    \item $Y_i \in \{0, 1, \ldots, J-1\}$ is the chosen product from a set of $J$ alternatives
-    \item $T_i \in \mathbb{R}^{J \times K}$ contains the attributes of each alternative (log-price, style embeddings)
-    \item $X_i \in \mathbb{R}^{64}$ is the consumer's learned embedding
-    \item $\theta^*(X_i) = (\beta_{\text{price}}(X_i), \beta_{\text{style},1}(X_i), \ldots, \beta_{\text{style},5}(X_i))$ are the consumer's taste parameters
-    \item The loss is the multinomial logit negative log-likelihood:
+\paragraph{Concrete example.} In our H\&M application, $Y_i \in \{0, 1, \ldots, J-1\}$ is the chosen product from a set of $J$ alternatives, $T_i \in \mathbb{R}^{J \times K}$ contains the attributes of each alternative (log-price, style embeddings), and $X_i \in \mathbb{R}^{64}$ is the consumer's learned embedding. The structural parameters $\theta^*(X_i) = (\beta_{\text{price}}(X_i), \beta_{\text{style},1}(X_i), \ldots, \beta_{\text{style},5}(X_i))$ are the consumer's taste parameters, and the loss is the multinomial logit negative log-likelihood:
 \begin{equation}
     \ell(y, t, \theta) = -V_{y} + \log \sum_{j=0}^{J-1} e^{V_j}, \quad V_j = x_j' \theta
 \end{equation}
-\end{itemize}
 
 The framework is \emph{not} limited to discrete choice. Table~\ref{tab:models} lists the structural models currently available in the \texttt{deep-inference} package, along with their loss functions and parameter dimensions.
 
@@ -46,7 +34,7 @@ Custom      & Any differentiable $\ell(y,t,\theta)$                     & Any   
 \bottomrule
 \end{tabular}
 \begin{tablenotes}\small
-\item Note: $\eta = \alpha + \beta t$, $\mu = g^{-1}(\eta)$. The package includes 13 families total (Weibull, Gumbel, Tobit, NegBin, Probit, Beta, ZIP). Custom losses can be supplied via the \texttt{loss=} argument.
+\item Note: $\eta = \alpha + \beta t$, $\mu = g^{-1}(\eta)$. The package includes over a dozen families (Weibull, Gumbel, Tobit, NegBin, Probit, Beta, ZIP, and others). Custom losses can be supplied via the \texttt{loss=} argument.
 \end{tablenotes}
 \end{table}
 
@@ -70,6 +58,7 @@ Average marginal effect & $g'(\alpha + \beta \tilde{t}) \cdot \beta$ & Mean marg
 Elasticity         & $\beta \cdot \tilde{t} \cdot (1-p)$    & Price elasticity of demand \\
 Dose-response      & $g(\alpha + \beta \tilde{t})$          & Predicted outcome at $\tilde{t}$ \\
 Profit             & $\tilde{t} \cdot g(\alpha + \beta \tilde{t})$ & Expected revenue \\
+DID / ATE          & $g(\theta'\tilde{t}_1) - g(\theta'\tilde{t}_0)$ & Treatment effect contrast \\
 Custom             & Any $H(x, \theta, \tilde{t})$          & User-specified \\
 \bottomrule
 \end{tabular}
@@ -83,34 +72,34 @@ To estimate $\mu^*$, we train a neural network $\hat{\theta}(X)$ by minimizing $
 
 The \emph{naive} standard error treats $\hat{\theta}$ as if it were the truth and computes $\text{SE}_{\text{naive}} = \text{sd}(H_i) / \sqrt{n}$. This is wrong because $\hat{\theta}$ is itself estimated with error, and neural network regularization introduces systematic bias.
 
-The problem is quantitatively severe. In our simulations (Section~\ref{sec:application} and Appendix~\ref{app:implementation}):
-\begin{itemize}
-    \item Naive 95\% CIs achieve only 0--20\% actual coverage
-    \item The naive SE is 3--10$\times$ too small
-    \item The bias is toward zero (regularization shrinks $\hat{\theta}$)
-\end{itemize}
+The problem is quantitatively severe. In our simulations (Section~\ref{sec:simulations}), naive 95\% CIs achieve only 0--20\% actual coverage, the naive SE is 3--10$\times$ too small, and the bias is toward zero because regularization shrinks $\hat{\theta}$.
 
 \noindent This is not a small-sample problem; it persists at $n = 50{,}000$. The regularization bias is a \emph{feature} of neural network training (it prevents overfitting) but becomes a \emph{bug} for inference.
 
-To see why formally, consider the decomposition of the naive estimator's error:
+In code, the difference is stark:
+
+\begin{lstlisting}
+# Naive SE (wrong): ignores estimation uncertainty
+se_naive = np.std(H_values) / np.sqrt(n)
+# IF SE (correct): accounts for neural network estimation
+se_if = result.se  # from influence function
+print(f"Naive: {se_naive:.4f}, IF: {se_if:.4f}, Ratio: {se_if/se_naive:.1f}x")
+# Typical output for logit: Naive=0.009, IF=0.026, Ratio=2.8x
+\end{lstlisting}
+
+\noindent To see why formally, consider the decomposition of the naive estimator's error:
 \begin{equation}\label{eq:bias_decomp}
     \sqrt{n}\!\left(\hat{\mu}_{\text{naive}} - \mu^*\right) = \underbrace{\frac{1}{\sqrt{n}}\sum_{i=1}^n \left[H_i - \mu^*\right]}_{\text{sampling noise}} + \underbrace{\frac{1}{\sqrt{n}}\sum_{i=1}^n H_{\theta,i}\!\left(\hat{\theta}_i - \theta^*_i\right)}_{\text{regularization bias}} + o_P(1)
 \end{equation}
-The first term is standard sampling variability and vanishes at rate $\sqrt{n}$. The second term captures the bias introduced by the neural network's regularization: because $\hat{\theta}$ is systematically shrunk toward zero (by weight decay, dropout, and early stopping), $\hat{\theta}_i - \theta^*_i$ is not mean-zero and this term does not vanish.\footnote{In our validation suite, naive 95\% CIs achieve 0--20\% coverage; IF-corrected CIs achieve 96\% ($M=50$, $n=5{,}000$, binary logit, eval\_06).} The IF correction in the next section is designed precisely to cancel this second term.
+The first term is standard sampling variability and vanishes at rate $\sqrt{n}$. The second term captures the bias introduced by the neural network's regularization: because $\hat{\theta}$ is systematically shrunk toward zero (by weight decay, dropout, and early stopping), $\hat{\theta}_i - \theta^*_i$ is not mean-zero and this term does not vanish. The IF correction in the next section is designed precisely to cancel this second term.
 
 \subsection{The Influence Function Correction}\label{sec:if_correction}
 
-The FLM influence function correction removes the regularization bias. For each observation $i$, define:
+The influence function correction of \citet{farrell2025deep} (Theorem 2) removes the regularization bias. For each observation $i$, define:
 \begin{equation}\label{eq:psi}
     \psi_i = H_i - H_{\theta,i} \cdot \Lambda_i^{-1} \cdot \ell_{\theta,i}
 \end{equation}
-where:
-\begin{itemize}
-    \item $H_i = H(X_i, \hat{\theta}(X_i), \tilde{t})$ is the target at estimated parameters
-    \item $H_{\theta,i} = \frac{\partial H}{\partial \theta}\big|_{\hat{\theta}(X_i)} \in \mathbb{R}^{1 \times d_\theta}$ is the target Jacobian
-    \item $\Lambda_i = E[\nabla_\theta^2 \ell(Y, T, \theta) \mid X = X_i]\big|_{\hat{\theta}(X_i)} \in \mathbb{R}^{d_\theta \times d_\theta}$ is the expected Hessian
-    \item $\ell_{\theta,i} = \nabla_\theta \ell(Y_i, T_i, \hat{\theta}(X_i)) \in \mathbb{R}^{d_\theta}$ is the score
-\end{itemize}
+where $H_i = H(X_i, \hat{\theta}(X_i), \tilde{t})$ is the target evaluated at the estimated parameters, $H_{\theta,i} = \partial H / \partial \theta |_{\hat{\theta}(X_i)} \in \mathbb{R}^{1 \times d_\theta}$ is the target Jacobian, $\Lambda_i = E[\nabla_\theta^2 \ell(Y, T, \theta) \mid X = X_i]|_{\hat{\theta}(X_i)} \in \mathbb{R}^{d_\theta \times d_\theta}$ is the expected Hessian of the loss conditional on covariates, and $\ell_{\theta,i} = \nabla_\theta \ell(Y_i, T_i, \hat{\theta}(X_i)) \in \mathbb{R}^{d_\theta}$ is the score (gradient of the loss at the observed data point).
 
 The debiased estimator and its standard error are:
 \begin{equation}\label{eq:mu_hat}
@@ -123,13 +112,13 @@ The debiased estimator and its standard error are:
 \begin{equation}\label{eq:neyman_orth}
     \frac{\partial}{\partial \theta} E[\psi(Y, T, \theta, \Lambda)] \bigg|_{\theta = \theta^*, \Lambda = \Lambda^*} = 0
 \end{equation}
-The correction term $H_\theta \Lambda^{-1} \ell_\theta$ is constructed precisely so that first-order perturbations in $\hat{\theta}$ around $\theta^*$ cancel. This is why the debiased estimator $\hat{\mu} = \bar{\psi}$ achieves $\sqrt{n}$-consistency despite the neural network's slow convergence rate: the estimation error in $\hat{\theta}$ enters only through a second-order remainder, which is negligible at the $\sqrt{n}$ scale.\footnote{Package autodiff matches closed-form oracle scores and Hessians to machine precision ($< 10^{-15}$) on the multinomial logit (eval\_02), ensuring that the Neyman orthogonality condition is satisfied numerically.}
+The correction term $H_\theta \Lambda^{-1} \ell_\theta$ is constructed precisely so that first-order perturbations in $\hat{\theta}$ around $\theta^*$ cancel. This is why the debiased estimator $\hat{\mu} = \bar{\psi}$ achieves $\sqrt{n}$-consistency despite the neural network's slow convergence rate: the estimation error in $\hat{\theta}$ enters only through a second-order remainder, which is negligible at the $\sqrt{n}$ scale.
 
-\paragraph{Connection to classical statistics.} Equation~\eqref{eq:psi} is a semiparametric influence function in the tradition of \citet{hampel1974influence} and \citet{newey1994large}. The specific form arises from the ``one-step correction'' or ``debiasing'' approach used widely in semiparametric econometrics \citep{chernozhukov2018double}. The contribution of FLM is showing that this correction remains valid when the first-stage nuisance (the structural parameters) is estimated by a deep neural network.
+\paragraph{Connection to classical statistics.} Equation~\eqref{eq:psi} is a semiparametric influence function in the tradition of \citet{hampel1974influence} and \citet{newey1994large}. The specific form arises from the ``one-step correction'' or ``debiasing'' approach used widely in semiparametric inference \citep{chernozhukov2018double}. The Neyman orthogonality property is central to the broader program of orthogonal statistical learning \citep{foster2023orthogonal}; related automatic debiasing approaches include RieszNet \citep{chernozhukov2022riesznet}. The contribution of \citet{farrell2021deep, farrell2025deep} is showing that this correction remains valid when the first-stage nuisance (the structural parameters) is estimated by a deep neural network.
 
 \subsection{Three Regimes for Lambda}\label{sec:regimes}
 
-The expected Hessian $\Lambda(X) = E[\nabla_\theta^2 \ell(Y, T, \theta) \mid X]$ depends on how the model and data are structured. Three cases arise:
+The expected Hessian $\Lambda(X) = E[\nabla_\theta^2 \ell(Y, T, \theta) \mid X]$ depends on how the model and data are structured. \citet{farrell2025deep} identify three cases:
 
 \begin{table}[ht]
 \centering
@@ -148,28 +137,45 @@ C & Obs.\ + nonlinear & Estimate (ridge)         & 3-way \\
 \paragraph{Regime A: Randomized experiment with known treatment distribution.}
 If $T$ is randomly assigned with known distribution $F_T$, and the Hessian does not depend on $Y$, then $\Lambda(X)$ can be computed via Monte Carlo integration:
 $\Lambda(X) = \int \nabla_\theta^2 \ell(y, t, \theta) \, dF_T(t)$.
-This is the simplest case. Examples: A/B tests, randomized pricing experiments.
+This is the simplest case and requires only two-way cross-fitting. Typical examples include A/B tests where treatment assignment probabilities are known by design, and randomized pricing experiments where the price distribution is controlled by the researcher. The \texttt{inference()} API accepts \texttt{is\_randomized=True} and a \texttt{treatment\_dist} argument to trigger this regime.
 
 \paragraph{Regime B: Linear model.}
-For linear models, the Hessian is constant ($\nabla_\theta^2 \ell = 2$), so $\Lambda(X) = 2E[T T' \mid X]$, which can be estimated analytically. This avoids the need for three-way splitting.
+For linear models, the Hessian is constant ($\nabla_\theta^2 \ell = 2$), so $\Lambda(X) = 2E[T T' \mid X]$, which can be estimated analytically from the data without a separate estimation step. This avoids the need for three-way splitting entirely, making the method fast and reliable even at moderate sample sizes. The package detects Regime B automatically when \texttt{model='linear'} is specified.
+
+In the \texttt{inference()} API, the regime is selected automatically based on the model and data:
+
+\begin{lstlisting}
+from deep_inference import inference
+from deep_inference.lambda_.compute import Normal
+
+# Regime A: randomized experiment with known F_T
+result = inference(Y, T, X, model='logit', target='beta',
+                   is_randomized=True, treatment_dist=Normal(0, 1))
+
+# Regime B: linear model (auto-detected)
+result = inference(Y, T, X, model='linear', target='beta')
+
+# Regime C: observational + nonlinear (auto-detected)
+result = inference(Y, T, X, model='logit', target='beta')
+\end{lstlisting}
 
 \paragraph{Regime C: Observational data with nonlinear model.}
-In most applied settings, including our H\&M application, the Hessian depends on $\theta$ (e.g., through $p(1-p)$ in logit or softmax probabilities in multinomial logit). Since $\theta$ is estimated, we cannot simply compute $\Lambda$; we must \emph{estimate} it. FLM propose regressing the individual Hessians on $X$ using a ridge regression. This requires a \emph{three-way} sample split: one part for estimating $\hat{\theta}$, one part for estimating $\hat{\Lambda}$, and one part for assembling the IF. The package handles this automatically.
+In most applied settings, including our H\&M application, the Hessian depends on $\theta$ (e.g., through $p(1-p)$ in logit or softmax probabilities in multinomial logit). Since $\theta$ is estimated, we must \emph{estimate} $\Lambda$ via ridge regression, which requires a three-way sample split. Section~\ref{sec:estimation} discusses the implementation details; the package handles the splitting automatically.
 
 \subsection{The Multinomial Choice Model}\label{sec:mnl}
 
-Our application uses a multinomial logit (conditional logit) model \citep{mcfadden1974conditional, train2009discrete}. Consumer $i$ chooses from $J$ alternatives, each described by $K$ attributes $x_{ij} \in \mathbb{R}^K$. Utilities are:
+Our application uses a multinomial logit (conditional logit) model \citep{mcfadden1974conditional, berry1995automobile, train2009discrete}. Consumer $i$ chooses from $J$ alternatives, each described by $K$ attributes $x_{ij} \in \mathbb{R}^K$. Utilities are:
 \begin{equation}
     V_{ij} = x_{ij}' \theta(X_i), \qquad P(Y_i = j \mid X_i) = \frac{e^{V_{ij}}}{\sum_{m=1}^J e^{V_{im}}}
 \end{equation}
 
-The FLM framework estimates $\theta(X_i)$ for each individual using individual-level data and neural networks, rather than assuming a parametric distribution for heterogeneity.
+The FLM framework estimates $\theta(X_i)$ for each individual using individual-level data and neural networks, rather than assuming a parametric distribution for heterogeneity; see also \citet{hetzenecker2024deep} for a related approach to heterogeneous discrete choice.
 
 The connection between two-tower embeddings and the FLM framework is natural: the consumer embedding $X_i$ captures the latent heterogeneity dimensions, and the neural network maps $X_i \to \theta(X_i)$. The item attributes $T_i$ include prices and (PCA-reduced) item embeddings.
 
 \subsection{Available Models and Targets}
 
-The \texttt{deep-inference} package provides 13 built-in model families (Table~\ref{tab:models}) and 10+ target functionals (Table~\ref{tab:targets}). For models not in the built-in library, users can supply a custom loss function:
+The \texttt{deep-inference} package provides a growing library of built-in model families (Table~\ref{tab:models}) and target functionals (Table~\ref{tab:targets}). For models not in the built-in library, users can supply a custom loss function:
 
 \begin{lstlisting}
 import torch

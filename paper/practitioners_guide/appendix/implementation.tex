@@ -136,17 +136,15 @@ for k, name in enumerate(param_names):
 
 \subsection{Diagnostics Interpretation Guide}
 
-\begin{enumerate}
-    \item \emph{Check the regime.} The output should say ``Regime C'' for our multinomial model. If it says Regime A or B, something is wrong with the Hessian detection. The regime is determined by the \texttt{hessian\_depends\_on\_theta} flag in the structural model protocol (\texttt{models/base.py}): when \texttt{True}, the package activates three-way splitting (Regime C).
+\paragraph{Check the regime.} The output should say ``Regime C'' for our multinomial model. If it says Regime A or B, something is wrong with the Hessian detection. The regime is determined by the \texttt{hessian\_depends\_on\_theta} flag in the structural model protocol (\texttt{models/base.py}): when \texttt{True}, the package activates three-way splitting (Regime C). For linear models, the package correctly detects Regime B and uses two-way splitting with analytic Lambda.
 
-    \item \emph{Check Lambda eigenvalues.} If a warning about small eigenvalues appears, the model may be poorly identified. Consider: (a) reducing $d_\theta$ (more PCA compression), (b) increasing $n$, or (c) using a different Lambda method.
+\paragraph{Check Lambda eigenvalues.} If a warning about small eigenvalues appears, the model may be poorly identified. The most common remedies are reducing $d_\theta$ (e.g., more aggressive PCA compression of product attributes), increasing the sample size $n$, or switching to a different Lambda estimation method. See Section~\ref{sec:diagnostics} for the full set of diagnostic thresholds.
 
-    \item \emph{Check the correction ratio.} For multinomial logit, values of 70--90 are normal. For binary logit, values of 2--3 are normal. Very large values ($> 200$) suggest Lambda estimation problems.
+\paragraph{Check the correction ratio.} The expected correction ratio depends on the model family: values of 2--3 are normal for binary logit, while values of 70--90 are normal for multinomial logit (Section~\ref{sec:diagnostics}). Very large values ($> 200$) suggest Lambda estimation problems that warrant further investigation.
 
-    \item \emph{Verify with simulation.} Before trusting results on real data, run the simulation study (\texttt{application/06\_simulation\_study.py}) with a DGP matching your application specification. If simulation coverage is near 95\%, you can be confident in the real-data results.
+\paragraph{Verify with simulation.} Before trusting results on real data, run a simulation study with a DGP matching the application specification (\texttt{application/06\_simulation\_study.py}). If simulation coverage is near 95\%, the same hyperparameters can be applied to the real data with confidence. Section~\ref{sec:eval_workflow} describes the recommended evaluation workflow in detail.
 
-    \item \emph{Compare IF to naive SE.} The IF SE should be larger than the naive SE. If it is smaller, something is wrong. The ratio depends on the model: 2--5$\times$ for binary logit, potentially larger for multinomial.
-\end{enumerate}
+\paragraph{Compare IF to naive SE.} The IF SE should be larger than the naive SE. If it is smaller, something is wrong --- this would indicate that the IF correction is reducing rather than increasing uncertainty, which contradicts the theoretical prediction. The expected ratio depends on the model: 2--5$\times$ for binary logit, potentially larger for multinomial models with higher-dimensional $\theta$.
 
 \subsection{Implementation-Theory Notes}
 
@@ -154,9 +152,9 @@ Several implementation details reflect specific theoretical requirements:
 
 \paragraph{Static indexing for \texttt{vmap}.} In the multinomial logit loss, we write \texttt{V[0]} (chosen alternative always at index 0) rather than \texttt{V[int(y)]}. This is because \texttt{torch.vmap}, used internally for batched Hessian computation, traces a single computation graph for all batch elements. Dynamic indexing via \texttt{int(y)} would produce a different graph per observation, which \texttt{vmap} cannot handle. The choice set is reordered during data preparation so that the chosen alternative is always first.
 
-\paragraph{Ridge $\alpha = 1000$.} The heavy ridge penalty in Lambda estimation biases $\hat{\Lambda}(X)$ toward the population mean Hessian. This is deliberate: $\Lambda$ is a nuisance parameter, and Neyman orthogonality (Equation~\ref{eq:neyman_orth}) ensures that first-order errors in $\hat{\Lambda}$ do not corrupt $\hat{\mu}$. The high $\alpha$ sacrifices heterogeneity in $\hat{\Lambda}$ (correlation with oracle: 0.508) in exchange for stability (96\% coverage vs.\ 67\% for MLP with correlation 0.997).
+\paragraph{Ridge $\alpha = 1000$.} The heavy ridge penalty deliberately biases $\hat{\Lambda}(X)$ toward the population mean Hessian. Section~\ref{sec:lambda_est} explains why this produces valid coverage despite low oracle correlation, and Table~\ref{tab:lambda_methods} compares alternative estimation methods.
 
-\paragraph{60/40 three-way split.} Within each cross-fitting fold, 60\% of the training data is allocated to $\hat{\theta}$ estimation and 40\% to $\hat{\Lambda}$ estimation. The asymmetry reflects that the neural network for $\hat{\theta}$ is more data-hungry than the ridge regression for $\hat{\Lambda}$. This fraction is configurable via \texttt{three\_way\_theta\_frac} in \texttt{engine/crossfit.py}.
+\paragraph{60/40 three-way split.} The three-way split allocates 60\% of each fold's training data to $\hat{\theta}$ and 40\% to $\hat{\Lambda}$; see Section~\ref{sec:estimation} for the rationale and configurability.
 
 \subsection{Companion Repository}
 
@@ -166,11 +164,4 @@ The complete code for the application is available at:
     \texttt{https://github.com/rawatpranjal/deep-inference/tree/main/application}
 \end{center}
 
-\noindent The repository includes:
-\begin{itemize}
-    \item Pre-trained embedding artifacts (via symlink)
-    \item Data preparation, inference, comparison, and counterfactual scripts
-    \item Simulation study with coverage validation
-    \item Figure generation for the paper
-    \item The \texttt{deep-inference} package source code
-\end{itemize}
+\noindent The repository includes pre-trained embedding artifacts (via symlink), data preparation, inference, comparison, and counterfactual scripts, a simulation study with coverage validation, figure generation for the paper, and the \texttt{deep-inference} package source code.

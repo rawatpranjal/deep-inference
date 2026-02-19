@@ -3,6 +3,8 @@
 ## 2026-02-20
 
 - Added QuantileModel (smoothed check function, τ-parameterized) to models/ with eval_12 coverage validation (94% coverage at n=8000, M=50). New files: `models/quantile.py`, `evals/dgp_quantile.py`, `evals/eval_12_quantile.py`. Registered in `inference()` API with `model='quantile'`, `target='qte'`.
+- Practitioner's guide surgical revision: removed 9 categories of repetition across sections, strengthened FLM citations (added \citet throughout framework/estimation/simulations/conclusion), replaced "econometrics" with "semiparametric inference", converted all bullet lists to prose (kept only diagnostics/pitfall checklists), added new Section 4 (Worked Examples) with linear/logit/custom Poisson examples, added Lambda diagnostics code snippet, added 4 bib entries (RieszNet, Foster/Syrgkanis, DragonNet, GDR-Learners), archived evaluations.tex. Semi-synthetic sims running in background.
+- Paper revision pass 2: converted 4 remaining bullet/enumerate blocks to paragraphs (framework.tex, estimation.tex x2, appendix), eliminated cross-section redundancy (deleted §7.5 Three Regimes Revisited, consolidated lessons, de-duplicated 60/40 split and ridge explanations), reframed introduction with Nevo citation and related work paragraph, added 5 new citations (berry1995automobile, hetzenecker2024deep, hornik1989multilayer, hoerl1970ridge, nevo2000practitioner), added MC evaluation tables to examples.tex (linear + logit), added code snippets (naive vs IF comparison, regime API, counterfactual elasticities, GRU encoder), expanded short paragraphs (Regimes A/B, application Output), populated Sim 1 GRU+Poisson results. Paper now 39 pages.
 
 ## 2026-02-19
 

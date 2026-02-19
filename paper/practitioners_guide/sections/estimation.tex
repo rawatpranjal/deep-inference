@@ -4,23 +4,9 @@ This section walks through every step of the estimation procedure, discusses the
 
 \subsection{Data Requirements}
 
-The method requires individual-level data in triplets $(Y_i, T_i, X_i)$:
+The method requires individual-level data in triplets $(Y_i, T_i, X_i)$. Outcomes $Y$ may be continuous (sales, duration), binary (purchase, click), count (visits), or discrete choice (chosen alternative index). Treatments or actions $T$ are the variables whose effect varies across individuals: for discrete choice, $T$ contains the attributes of all alternatives (prices, features); for treatment effects, $T$ is the treatment indicator or dose. Covariates $X$ are the individual characteristics that drive heterogeneity and serve as the neural network's inputs; higher-dimensional $X$ allows the network to capture richer heterogeneity patterns but requires more data.
 
-\begin{itemize}
-    \item \emph{Outcomes} $Y$: The variable being modeled. Can be continuous (sales, duration), binary (purchase, click), count (visits), or discrete choice (chosen alternative index).
-
-    \item \emph{Treatments/actions} $T$: The variable(s) whose effect varies across individuals. For discrete choice, $T$ contains the attributes of all alternatives (prices, features). For treatment effects, $T$ is the treatment indicator or dose.
-
-    \item \emph{Covariates} $X$: The individual characteristics that drive heterogeneity. These are the neural network's inputs. Higher-dimensional $X$ allows the network to capture richer heterogeneity patterns, but requires more data.
-\end{itemize}
-
-\paragraph{Sample size considerations.} Neural networks are data-hungry. As a rough guide:
-\begin{itemize}
-    \item $n \geq 2{,}000$ for binary logit with $d_\theta = 2$
-    \item $n \geq 5{,}000$ for multinomial logit with $d_\theta \leq 6$
-    \item $n \geq 8{,}000$ for multinomial logit with $d_\theta = 4$ and three-way split
-\end{itemize}
-The three-way split (Regime C) reduces effective training data to about 60\% of $n$, so more data is needed than for Regime A or B models.
+\paragraph{Sample size considerations.} Neural networks are data-hungry. As a rough guide, $n \geq 2{,}000$ suffices for binary logit with $d_\theta = 2$, while multinomial logit with $d_\theta \leq 6$ requires $n \geq 5{,}000$, and models using three-way splitting (Regime C) need $n \geq 8{,}000$ because the split reduces effective training data to about 60\% of $n$.
 
 \paragraph{Choice set construction.} For multinomial choice models, each observation requires a full choice set: the chosen item plus $J-1$ alternatives. When the full choice set is too large (e.g., 100,000 products), sample $J-1$ random alternatives per occasion. This is consistent with McFadden's sampling theorem and standard in the IO literature \citep{train2009discrete}. We use $J = 20$ in our application.
 
@@ -74,7 +60,7 @@ Cross-fitting is essential for valid inference. It prevents the neural network f
 
 \paragraph{Number of folds.} We recommend $K = 50$ folds. With fewer folds, each training set is smaller, potentially degrading $\hat{\theta}$. With more folds, computational cost increases linearly. In our experience, $K = 50$ provides a good balance for $n \geq 2{,}000$. At smaller sample sizes, $K = 20$ may be necessary.
 
-\paragraph{Two-way vs.\ three-way splitting.} When the Hessian depends on $\theta$ (Regime C), estimating $\Lambda$ on the same data used to estimate $\theta$ would introduce dependence. The three-way split resolves this: within each fold, the $K-1$ non-evaluation folds are further split so that $\hat{\theta}$ and $\hat{\Lambda}$ are estimated on independent subsets. Specifically, 60\% of the training data goes to $I_k^{(\theta)}$ and 40\% to $I_k^{(\lambda)}$.\footnote{The split fraction is configurable via \texttt{three\_way\_theta\_frac} in \texttt{engine/crossfit.py}, line 155. The 60/40 default reflects that $\hat{\theta}$ (a neural network) is more data-hungry than $\hat{\Lambda}$ (a ridge regression).} The effective training sample for $\hat{\theta}$ drops to about 60\% of $n$.\footnote{Multinomial logit validation: 88\% coverage at $n=5{,}000$, 98\% at $n=8{,}000$ ($M=50$ replications), confirming the finite-sample cost of three-way splitting (eval\_09).}
+\paragraph{Two-way vs.\ three-way splitting.} When the Hessian depends on $\theta$ (Regime C), estimating $\Lambda$ on the same data used to estimate $\theta$ would introduce dependence. The three-way split resolves this: within each fold, the $K-1$ non-evaluation folds are further split so that $\hat{\theta}$ and $\hat{\Lambda}$ are estimated on independent subsets. Specifically, 60\% of the training data goes to $I_k^{(\theta)}$ and 40\% to $I_k^{(\lambda)}$.\footnote{The split fraction is configurable via \texttt{three\_way\_theta\_frac} in \texttt{engine/crossfit.py}, line 155. The 60/40 default reflects that $\hat{\theta}$ (a neural network) is more data-hungry than $\hat{\Lambda}$ (a ridge regression).} The effective training sample for $\hat{\theta}$ drops to about 60\% of $n$; see Section~\ref{sec:sim_coverage} for the resulting coverage impact.
 
 \paragraph{Practical implication.} Three-way splitting is triggered automatically when the package detects that the Hessian depends on $\theta$. For the multinomial logit, this is always the case (softmax probabilities depend on $\theta$). The practitioner does not need to manage the splitting manually, but should be aware that more data is needed than for linear models.
 
@@ -82,15 +68,15 @@ Cross-fitting is essential for valid inference. It prevents the neural network f
 
 Lambda estimation is the most delicate step in the pipeline. An incorrect $\hat{\Lambda}$ directly corrupts the standard errors. This section describes the full pipeline from per-observation Hessians to the regularized, positive-semidefinite $\hat{\Lambda}(X)$ that enters the IF formula.
 
-\paragraph{Step 1: Per-observation Hessians.} For each observation in $I_k^{(\lambda)}$, the package computes the $d_\theta \times d_\theta$ Hessian of the loss with respect to $\theta$, evaluated at the cross-fitted $\hat{\theta}(X_i)$. The implementation first checks whether the structural model provides a closed-form \texttt{hessian()} method; if not, it falls back to automatic differentiation via nested reverse-mode calls: \texttt{torch.func.jacrev(jacrev(loss))} applied per observation through \texttt{vmap}.\footnote{See \texttt{lambda\_/estimate.py}, lines 87--154. Closed-form Hessians are available for the built-in logit ($p(1-p)$), Poisson ($\lambda$), and linear (constant) models. Custom losses always use autodiff. Package autodiff matches closed-form oracle Hessians to machine precision ($< 10^{-15}$) on the multinomial logit (eval\_02).}
+\paragraph{Step 1: Per-observation Hessians.} For each observation in $I_k^{(\lambda)}$, the package computes the $d_\theta \times d_\theta$ Hessian of the loss with respect to $\theta$, evaluated at the cross-fitted $\hat{\theta}(X_i)$. The implementation first checks whether the structural model provides a closed-form \texttt{hessian()} method; if not, it falls back to automatic differentiation via nested reverse-mode calls: \texttt{torch.func.jacrev(jacrev(loss))} applied per observation through \texttt{vmap}.\footnote{See \texttt{lambda\_/estimate.py}, lines 87--154. Closed-form Hessians are available for the built-in logit ($p(1-p)$), Poisson ($\lambda$), and linear (constant) models. Custom losses always use autodiff.}
 
 \paragraph{Step 2: Symmetry exploitation.} Each Hessian $H_i$ is symmetric, so only the $d_\theta(d_\theta + 1)/2$ unique upper-triangle elements need to be stored and regressed. The implementation extracts these via \texttt{hessians[:, triu\_idx[0], triu\_idx[1]]}, reducing memory and the number of regression targets. After prediction, the full symmetric matrix is reconstructed.
 
-\paragraph{Step 3: Ridge regression.} Each unique element of the upper triangle is treated as a separate regression target, and a single ridge regression fits all targets simultaneously:
+\paragraph{Step 3: Ridge regression.} Each unique element of the upper triangle is treated as a separate regression target, and a single ridge regression \citep{hoerl1970ridge} fits all targets simultaneously:
 \begin{equation}\label{eq:ridge_lambda}
     \hat{\beta} = \arg\min_\beta \sum_{i \in I_k^{(\lambda)}} \left\|\mathrm{vech}(H_i) - X_i'\beta\right\|^2 + \alpha \|\beta\|^2, \quad \alpha = 1000
 \end{equation}
-The strong regularization ($\alpha = 1000$) biases $\hat{\Lambda}(X)$ toward the population mean Hessian. This sacrifices accuracy in capturing heterogeneity in $\Lambda$ (correlation with oracle: 0.508) but produces reliable standard errors (96\% coverage). The high $\alpha$ may seem counterintuitive, but recall that $\Lambda$ is not the object of interest; it is a nuisance quantity in the IF formula. Neyman orthogonality (Section~\ref{sec:if_correction}) ensures that first-order errors in $\hat{\Lambda}$ do not corrupt $\hat{\mu}$. We only need $\hat{\Lambda}$ ``close enough'' for the second-order remainder to be negligible.
+The strong regularization ($\alpha = 1000$) biases $\hat{\Lambda}(X)$ toward the population mean Hessian. This sacrifices accuracy in capturing heterogeneity in $\Lambda$ (correlation with oracle: 0.508) but produces reliable standard errors (96\% coverage). The high $\alpha$ may seem counterintuitive, but recall that $\Lambda$ is not the object of interest; it is a nuisance quantity in the IF formula. The Neyman orthogonality property established in \citet{farrell2025deep} ensures that first-order errors in $\hat{\Lambda}$ do not corrupt $\hat{\mu}$. We only need $\hat{\Lambda}$ ``close enough'' for the second-order remainder to be negligible.
 
 \paragraph{Step 4: PSD projection.} Ridge predictions can produce non-positive-semidefinite matrices. Since $\Lambda^{-1}$ appears in the IF formula, we need $\hat{\Lambda}(X_i) \succ 0$. The package performs an eigendecomposition of each predicted $\hat{\Lambda}(X_i)$ and clamps eigenvalues:
 \begin{equation}\label{eq:psd_proj}
@@ -99,6 +85,20 @@ The strong regularization ($\alpha = 1000$) biases $\hat{\Lambda}(X)$ toward the
 where $V, D$ are from the eigendecomposition, $\lambda_{\max}$ is the largest eigenvalue, and $c_{\max} = 100$ is the maximum allowed condition number.\footnote{See \texttt{lambda\_/estimate.py}, lines 324--367 (\texttt{\_project\_to\_psd}). The condition number bound prevents extreme eigenvalue ratios that would amplify noise through $\Lambda^{-1}$.}
 
 \paragraph{Step 5: Regularized inversion.} Even after PSD projection, a small ridge ($10^{-4}$) is added to the diagonal before inversion: $\hat{\Lambda}_i^{-1} = (\hat{\Lambda}_i + 10^{-4} I)^{-1}$. This is a separate safeguard from the PSD projection, preventing numerical blow-up when eigenvalues are small but positive.\footnote{Minimum Lambda eigenvalue $> 10^{-4}$ is the diagnostic threshold in the validation suite (\texttt{evals/common/metrics.py}). Values below this trigger a warning.}
+
+\paragraph{Checking Lambda diagnostics.} After running inference, the key Lambda diagnostics can be inspected:
+
+\begin{lstlisting}
+# After inference: check Lambda diagnostics
+result = inference(Y, T, X, loss=my_loss, theta_dim=2, ...)
+
+print(f"Lambda min eigenvalue: {result.diagnostics['min_lambda_eig']:.6f}")
+print(f"Correction ratio:      {result.diagnostics['correction_ratio']:.1f}")
+# In simulation: compare IF SE to empirical SE
+# print(f"SE ratio: {result.se / empirical_se:.3f}")
+\end{lstlisting}
+
+\noindent A minimum eigenvalue above $10^{-4}$ and a correction ratio consistent with the model family (2--3 for binary logit, 70--90 for multinomial logit) indicate a healthy Lambda estimation.
 
 \begin{table}[ht]
 \centering
@@ -119,72 +119,34 @@ MLP                   & 0.997 & \textbf{67\%} & 0.65 & \textbf{Not recommended} 
 
 \subsection{Network Architecture}
 
-The structural network maps $X \to \theta(X)$ via a multi-layer perceptron. Key settings:
+The structural network maps $X \to \theta(X)$ via a multi-layer perceptron \citep{hornik1989multilayer}. The default architecture uses two hidden layers with decreasing width (\texttt{[64, 32]}), which rarely needs tuning; larger networks (\texttt{[128, 64, 32]}) may help with very rich heterogeneity patterns but require more data. The learning rate is 0.01, standard for the Adam optimizer with structural losses. Training runs for 200 epochs on binary models and 300 on multinomial models, with a fixed dropout rate of 0.1 for mild regularization.
 
-\begin{itemize}
-    \item \emph{Hidden dimensions}: \texttt{[64, 32]} default. Two layers with decreasing width. Rarely needs tuning. Larger networks (\texttt{[128, 64, 32]}) may help with very rich heterogeneity patterns but require more data.
-
-    \item \emph{Learning rate}: 0.01. Standard for Adam optimizer with structural losses.
-
-    \item \emph{Epochs}: 200 for binary models, 300 for multinomial. The network needs enough training to learn the structural relationship.
-
-    \item \emph{Patience}: At least 50 for multinomial models. This is the number of epochs to wait without improvement before early stopping. With three-way splitting, the validation set is small and noisy, causing premature stopping if patience is too low. With \texttt{patience=10} (a common default), the network stops at epoch 15--20 and severely underfits. This is the single most common pitfall we have encountered.\footnote{\texttt{patience=10} yields early stopping at epoch 15--20, producing 0\% coverage. \texttt{patience=50} allows convergence at epoch 150+, producing 98\% coverage ($M=50$, $n=8{,}000$, multinomial logit, eval\_09).}
-
-    \item \emph{Dropout}: 0.1 (fixed). Mild regularization to prevent overfitting.
-\end{itemize}
+The early stopping patience parameter deserves special emphasis. We recommend at least 50 for multinomial models. With three-way splitting, the validation set is small and noisy, causing premature stopping if patience is too low. With \texttt{patience=10} (a common default), the network stops at epoch 15--20 and severely underfits; with \texttt{patience=50}, convergence occurs at epoch 150+, producing valid coverage. This is the single most common pitfall we have encountered.
 
 \subsection{Diagnostics}\label{sec:diagnostics}
 
-After running \texttt{inference()}, several diagnostic quantities should be checked:
+After running \texttt{inference()}, several diagnostic quantities should be checked.
 
-\begin{enumerate}
-    \item \emph{Minimum Lambda eigenvalue} $> 10^{-4}$. If the smallest eigenvalue of $\hat{\Lambda}$ is too close to zero, the Hessian is nearly singular. This typically means the model is poorly identified or the sample size is too small. The package adds ridge regularization ($10^{-4}$) to prevent numerical issues, but prints a warning.
+\paragraph{Minimum Lambda eigenvalue.} The smallest eigenvalue of $\hat{\Lambda}$ should exceed $10^{-4}$. If the smallest eigenvalue is too close to zero, the Hessian is nearly singular, which typically means the model is poorly identified or the sample size is too small. The package adds ridge regularization ($10^{-4}$) to prevent numerical blow-up in the matrix inversion, but prints a warning when eigenvalues are suspiciously small. If this warning appears, consider reducing $d_\theta$ (e.g., via stronger PCA compression of attributes), increasing $n$, or switching to a different Lambda estimation method.
 
-    \item \emph{Correction ratio.} The ratio $\mathrm{Var}(\text{correction})/\mathrm{Var}(H_i)$ measures how much the IF correction contributes. For binary logit, values of 2--3 are normal. For multinomial logit, values of 70--90 are normal due to the higher-dimensional $\theta$.\footnote{Correction ratios of 70--90 for multinomial logit confirmed across $M=50$ replications in eval\_09. For binary logit, ratios of 2--3 are typical (eval\_06).} Do not be alarmed by large correction ratios for multinomial models.
+\paragraph{Correction ratio.} The ratio $\mathrm{Var}(\text{correction})/\mathrm{Var}(H_i)$ measures how much the IF correction contributes relative to the plug-in variability. For binary logit, values of 2--3 are normal. For multinomial logit, values of 70--90 are normal due to the higher-dimensional $\theta$.\footnote{Correction ratios of 70--90 for multinomial logit confirmed across $M=50$ replications in eval\_09. For binary logit, ratios of 2--3 are typical (eval\_06).} Large correction ratios for multinomial models are expected and should not be cause for concern; they simply reflect the fact that the IF correction is doing more work to account for the estimation uncertainty across a larger parameter vector.
 
-    \item \emph{SE ratio} $\in [0.7, 1.5]$. In simulation studies where the truth is known, the ratio of estimated SE to empirical SE should be near 1. Values below 0.7 suggest underestimated uncertainty; values above 1.5 suggest overestimation. On real data, this diagnostic is not directly available, but the other checks provide confidence.
+\paragraph{SE ratio.} In simulation studies where the truth is known, the ratio of estimated SE to empirical SE should lie in $[0.7, 1.5]$ and ideally be close to 1. Values below 0.7 suggest that the estimated standard errors understate uncertainty, while values above 1.5 suggest overestimation. On real data, this diagnostic is not directly available, but the other checks (eigenvalues, correction ratio, and simulation validation on a matched DGP) provide confidence that the standard errors are well-calibrated.
 
-    \item \emph{$z$-score distribution.} If running multiple targets or a simulation study, the $z$-scores $(\hat{\mu} - \mu^*)/\mathrm{SE}$ should have mean $\approx 0$ and standard deviation $\approx 1$. Departures indicate systematic bias or SE miscalibration.
-\end{enumerate}
+\paragraph{$z$-score distribution.} If running multiple targets or a simulation study, the $z$-scores $(\hat{\mu} - \mu^*)/\mathrm{SE}$ should have mean $\approx 0$ and standard deviation $\approx 1$. A mean significantly below zero indicates that the estimator is systematically biased downward (common when patience is too low), while a standard deviation much larger than 1 suggests that the standard errors are too small. Table~\ref{tab:thresholds} in Section~\ref{sec:simulations} lists the centralized pass/fail thresholds for all diagnostics.
 
 \subsection{Common Pitfalls}\label{sec:pitfalls}
 
-\begin{enumerate}
-    \item \emph{Patience too low.} In our experience, low patience is a frequent source of poor results. With three-way splitting, the validation set is small (about 7\% of data with $K=50$), making the validation loss noisy. Low patience triggers early stopping before the network has learned the structural relationship. Fix: set \texttt{patience=50} or higher for multinomial models.
+\paragraph{Patience too low.} In our experience, low patience is the single most common source of poor results. With three-way splitting, the validation set is small (about 7\% of data with $K=50$), making the validation loss noisy. A patience of 10 (a common default in deep learning) triggers early stopping at epoch 15--20, well before the network has learned the structural relationship. With \texttt{patience=50}, convergence typically occurs at epoch 150+, producing valid coverage. We recommend at least 50 for all nonlinear models using three-way splitting.
 
-    \item \emph{MLP Lambda.} Using an MLP to estimate $\Lambda(X)$ produces high correlation with the oracle but invalid standard errors. Fix: use \texttt{ridge} (default) or \texttt{lgbm}.
+\paragraph{MLP Lambda.} Using an MLP to estimate $\Lambda(X)$ produces the highest correlation with the oracle (0.997) but invalid standard errors (67\% coverage instead of 95\%). The MLP overfits the individual Hessians, producing $\hat{\Lambda}(X)$ estimates that are too variable; since $\Lambda^{-1}$ appears in the IF formula, this variability corrupts the influence function values. The default ridge estimator ($\alpha = 1000$) sacrifices correlation but delivers valid coverage (Section~\ref{sec:lambda_est}).
 
-    \item \emph{Sample size too small.} Three-way splitting with $K=50$ folds means each fold has $n/50$ observations, of which 60\% are used for training. At $n = 2{,}000$, that is 24 observations per fold for training, which is borderline for a neural network with $d_\theta = 6$. Fix: use $n \geq 5{,}000$ for multinomial models, $n \geq 8{,}000$ when three-way splitting is active.
+\paragraph{Sample size too small.} Three-way splitting with $K=50$ folds means each fold has $n/50$ observations, of which 60\% are used for $\hat{\theta}$ training. At $n = 2{,}000$, that is only 24 observations per fold for training, which is borderline for a neural network with $d_\theta = 6$. Our simulation results confirm that coverage degrades at small $n$: for multinomial logit, coverage is 88\% at $n = 5{,}000$ but rises to 98\% at $n = 8{,}000$. As a rule of thumb, use $n \geq 5{,}000$ for binary models and $n \geq 8{,}000$ when three-way splitting is active.
 
-    \item \emph{Ignoring diagnostics.} The package prints warnings for suspicious Lambda eigenvalues and correction ratios. These warnings can indicate underlying issues worth investigating.
+\paragraph{Ignoring diagnostics.} The package prints warnings for suspicious Lambda eigenvalues and correction ratios. These warnings should not be dismissed: a minimum eigenvalue below $10^{-4}$ may indicate poor model identification, and a correction ratio far outside the expected range for the model family (Section~\ref{sec:diagnostics}) suggests Lambda estimation problems that will propagate into the standard errors.
 
-    \item \emph{Non-differentiable loss.} The IF correction requires computing the Hessian $\nabla_\theta^2 \ell$ via automatic differentiation. If the loss function contains non-differentiable operations (\texttt{int()}, \texttt{if/else} on tensors), the autodiff will fail. Fix: use \texttt{torch} operations throughout the loss function.
+\paragraph{Non-differentiable loss.} The IF correction requires computing the Hessian $\nabla_\theta^2 \ell$ via automatic differentiation. If the loss function contains non-differentiable operations (\texttt{int()}, \texttt{if/else} on tensor values, floor division, or other discrete operations), the autodiff computation will fail or produce incorrect gradients. All operations in the loss function must use \texttt{torch} tensor operations that support gradient tracking.
 
-    \item \emph{Data-dependent indexing.} For multinomial logit with reordered choice sets (chosen alternative always at index 0), use \texttt{V[0]} instead of \texttt{V[int(y)]}. The \texttt{int()} call breaks \texttt{torch.vmap}, which is used internally for batched Hessian computation.\footnote{This is a subtle issue: \texttt{vmap} requires static indexing because it traces a single computation graph for all batch elements. Dynamic indexing via \texttt{int(y)} produces a different graph per observation, which \texttt{vmap} cannot handle.}
-\end{enumerate}
+\paragraph{Data-dependent indexing.} For multinomial logit with reordered choice sets (chosen alternative always at index 0), use \texttt{V[0]} instead of \texttt{V[int(y)]}. The \texttt{int()} call breaks \texttt{torch.vmap}, which is used internally for batched Hessian computation.\footnote{This is a subtle issue: \texttt{vmap} requires static indexing because it traces a single computation graph for all batch elements. Dynamic indexing via \texttt{int(y)} produces a different graph per observation, which \texttt{vmap} cannot handle.} The solution is to reorder the choice set during data preparation so that the chosen alternative is always at position 0, then use the constant index \texttt{V[0]} in the loss.
 
-\subsection{Quick Start: Binary Logit}
-
-For readers who want to try the method before diving into the multinomial application, here is a minimal binary logit example:
-
-\begin{lstlisting}
-import numpy as np
-from deep_inference import inference
-
-# Simulated data
-np.random.seed(42)
-n = 5000
-X = np.random.randn(n, 5)          # Covariates
-T = np.random.randn(n)             # Treatment
-beta_true = 0.5 + 0.3 * X[:, 0]   # Heterogeneous effect
-p = 1 / (1 + np.exp(-(1.0 + beta_true * T)))
-Y = np.random.binomial(1, p).astype(float)
-
-# Run inference
-result = inference(Y, T, X, model='logit', target='beta')
-print(f"E[beta] = {result.mu_hat:.3f} +/- {result.se:.3f}")
-print(f"95% CI: [{result.ci_lower:.3f}, {result.ci_upper:.3f}]")
-# Expected: E[beta] ~ 0.5 with valid coverage
-\end{lstlisting}
-
-\noindent The entire IF pipeline runs in about 2 minutes on a laptop CPU for $n = 5{,}000$.
+For readers who want to try the method before diving into the full application, Section~\ref{sec:examples} provides three progressively richer worked examples: linear (Regime B), binary logit (Regime C), and custom Poisson loss.
