@@ -1,0 +1,161 @@
+\section{Worked Examples}\label{sec:examples}
+
+Before presenting the full H\&M application, we walk through three progressively richer examples that illustrate the key features of the framework. Each example is self-contained and can be run directly.
+
+\subsection{Example 1: Linear Model (Regime B)}
+
+The simplest case is a linear model with heterogeneous treatment effects. Here the Hessian is constant, so Lambda has a closed form (Regime B), only two-way splitting is needed, and the method is fast.
+
+\begin{lstlisting}
+import numpy as np
+from deep_inference import inference
+
+# DGP: Y = alpha(X) + beta(X) * T + eps
+np.random.seed(42)
+n = 3000
+X = np.random.randn(n, 5)
+T = np.random.randn(n)
+alpha_true = 1.0 + 0.3 * X[:, 0]
+beta_true = 0.5 + 0.2 * X[:, 1]    # Heterogeneous effect
+Y = alpha_true + beta_true * T + np.random.randn(n)
+
+# Run inference: target is E[beta] = 0.5
+result = inference(Y, T, X, model='linear', target='beta')
+print(f"E[beta] = {result.mu_hat:.3f} +/- {result.se:.3f}")
+print(f"95% CI: [{result.ci_lower:.3f}, {result.ci_upper:.3f}]")
+# Expected: E[beta] ~ 0.5, Regime B (analytic Lambda, 2-way split)
+\end{lstlisting}
+
+Because the Hessian is constant ($\nabla_\theta^2 \ell = 2$ for the squared loss), the package detects Regime B automatically: Lambda is computed in closed form, only two-way cross-fitting is used, and the entire pipeline finishes in under a minute. The IF correction here adjusts for the regularization bias in $\hat{\beta}(X)$, and the resulting confidence interval covers the true $E[\beta] = 0.5$ at the nominal rate.
+
+\paragraph{Monte Carlo validation.} To verify coverage, we repeat this example $M = 50$ times with fresh data seeds. At each replication, we record whether the 95\% CI covers the true $\mu^* = 0.5$:
+
+\begin{lstlisting}
+# MC validation loop (M=50 replications)
+coverages = []
+for seed in range(1, 51):
+    np.random.seed(seed)
+    X = np.random.randn(3000, 5)
+    T = np.random.randn(3000)
+    Y = (1.0 + 0.3*X[:,0]) + (0.5 + 0.2*X[:,1])*T + np.random.randn(3000)
+    r = inference(Y, T, X, model='linear', target='beta')
+    coverages.append(r.ci_lower <= 0.5 <= r.ci_upper)
+print(f"Coverage: {np.mean(coverages):.0%}")  # Expected: ~94-96%
+\end{lstlisting}
+
+\noindent Table~\ref{tab:linear_mc} reports the results. All diagnostics pass, confirming that the linear model with Regime B delivers valid inference even at modest sample sizes.
+
+\begin{table}[ht]
+\centering
+\caption{Linear model Monte Carlo validation ($M=50$, $n=3{,}000$, Regime B).}\label{tab:linear_mc}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metric} & \textbf{Value} & \textbf{Threshold} & \textbf{Status} \\
+\midrule
+Coverage (95\% CI) & 94\% & $[90\%, 99\%]$ & PASS \\
+SE ratio            & 1.02  & $[0.7, 1.5]$   & PASS \\
+$|$Bias$|$          & 0.003 & $< 0.05$        & PASS \\
+$z$-mean            & 0.05  & $(-0.3, 0.3)$   & PASS \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}\small
+\item Note: Results from \texttt{evals/eval\_linear\_logit\_examples.py}. Regime B uses two-way splitting with analytic Lambda; no Lambda estimation errors can occur.
+\end{tablenotes}
+\end{table}
+
+\subsection{Example 2: Binary Logit (Regime C)}
+
+The binary logit introduces the key complication: the Hessian depends on $\theta$ through $p(1-p)$, so the package switches to Regime C with three-way splitting. This example also demonstrates diagnostics.
+
+\begin{lstlisting}
+import numpy as np
+from deep_inference import inference
+
+# DGP: logit model with heterogeneous beta
+np.random.seed(42)
+n = 5000
+X = np.random.randn(n, 5)
+T = np.random.randn(n)
+beta_true = 0.5 + 0.3 * X[:, 0]
+p = 1 / (1 + np.exp(-(1.0 + beta_true * T)))
+Y = np.random.binomial(1, p).astype(float)
+
+# Run inference
+result = inference(Y, T, X, model='logit', target='beta',
+                   n_folds=20, epochs=200, patience=50)
+print(f"E[beta] = {result.mu_hat:.3f} +/- {result.se:.3f}")
+print(f"95% CI: [{result.ci_lower:.3f}, {result.ci_upper:.3f}]")
+
+# Check diagnostics
+diag = result.diagnostics
+print(f"Lambda min eigenvalue: {diag['min_lambda_eig']:.6f}")
+print(f"Correction ratio:      {diag['correction_ratio']:.1f}")
+\end{lstlisting}
+
+Two things to notice. First, the IF standard error is larger than the naive SE (typically by a factor of 2--3$\times$ for binary logit), reflecting the additional uncertainty from neural network estimation. Second, the correction ratio of 2--3 is normal for binary logit and indicates that the IF correction is contributing meaningfully.
+
+\paragraph{Monte Carlo validation.} Running $M = 50$ replications at $n = 5{,}000$ shows the contrast between naive and IF inference:
+
+\begin{table}[ht]
+\centering
+\caption{Binary logit Monte Carlo validation ($M=50$, $n=5{,}000$, Regime C).}\label{tab:logit_mc}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{Coverage} & \textbf{SE Ratio} & $|\textbf{Bias}|$ & $z$-\textbf{mean} \\
+\midrule
+IF (corrected)  & 96\%  & 0.91 & 0.006 & $-0.06$ \\
+Naive           & 18\%  & ---  & 0.006 & --- \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}\small
+\item Note: Results from \texttt{evals/eval\_linear\_logit\_examples.py}. IF SE is 2.5--3$\times$ larger than naive SE.
+\end{tablenotes}
+\end{table}
+
+\noindent The naive method achieves only 18\% coverage --- its confidence intervals are roughly half as wide as they should be. The IF correction restores valid coverage by accounting for the estimation uncertainty in $\hat{\theta}$. This is the central result: for nonlinear models, the IF correction is not optional. The following code computes both SEs for comparison:
+
+\begin{lstlisting}
+# Naive vs IF SE comparison
+beta_hats = result.theta_hat[:, 1]  # Individual beta estimates
+se_naive = np.std(beta_hats) / np.sqrt(n)
+se_if = result.se
+
+print(f"Naive SE: {se_naive:.4f}")
+print(f"IF SE:    {se_if:.4f}")
+print(f"Ratio:    {se_if / se_naive:.1f}x")
+# Typical output: Naive SE=0.009, IF SE=0.026, Ratio=2.8x
+\end{lstlisting}
+
+\subsection{Example 3: Custom Poisson Loss}
+
+The custom loss interface allows any differentiable model to be used without writing new model code. Here we define a Poisson regression in three lines and run the full IF pipeline.
+
+\begin{lstlisting}
+import torch
+import numpy as np
+from deep_inference import inference
+
+# DGP: Poisson with log-link
+np.random.seed(42)
+n = 5000
+X = np.random.randn(n, 5)
+T = np.random.randn(n)
+alpha_true = 0.5 + 0.2 * X[:, 0]
+beta_true = -0.3 + 0.1 * X[:, 1]
+lam = np.exp(alpha_true + beta_true * T)
+Y = np.random.poisson(lam).astype(float)
+
+# Custom Poisson loss (3 lines)
+def poisson_loss(y, t, theta):
+    mu = torch.exp(theta[0] + theta[1] * t)
+    return mu - y * torch.log(mu)
+
+# Run inference: E[beta] = -0.3
+result = inference(Y, T, X, loss=poisson_loss, theta_dim=2,
+                   target_fn=lambda x, th, tt: th[1],
+                   n_folds=20, epochs=200, patience=50)
+print(f"E[beta] = {result.mu_hat:.3f} +/- {result.se:.3f}")
+print(f"95% CI: [{result.ci_lower:.3f}, {result.ci_upper:.3f}]")
+\end{lstlisting}
+
+The package automatically determines that the Hessian depends on $\theta$ (through $\lambda = e^\eta$ in the Poisson), triggers three-way splitting, computes all required derivatives via automatic differentiation, and delivers IF-corrected confidence intervals. No additional model-specific code is needed beyond the three-line loss function.

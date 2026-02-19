@@ -1,75 +1,25 @@
 \section{Concluding Remarks}\label{sec:conclusion}
 
-We have presented a step-by-step guide to the FLM framework for deep learning with individual heterogeneity. Using an H\&M fashion demand application, we demonstrated the full pipeline: from representation learning through contrastive embeddings, to choice model estimation with a custom neural network loss, to influence-function-corrected inference on economic objects like average price sensitivity and counterfactual revenue impacts.
+We have presented a step-by-step guide to the framework of \citet{farrell2021deep, farrell2025deep} for deep learning with individual heterogeneity. Using an H\&M fashion demand application, we demonstrated the full pipeline: from representation learning through contrastive embeddings, to choice model estimation with a custom neural network loss, to influence-function-corrected inference on economic objects like average price sensitivity and counterfactual revenue impacts.
 
-Three lessons stand out for practitioners:
-
-\begin{enumerate}
-    \item \emph{Influence function correction is important for valid inference.} Naive neural network standard errors are systematically too small, often by a factor of 3--10$\times$. The resulting confidence intervals can have 0--20\% actual coverage when the nominal level is 95\%. The IF correction is the difference between ``suggestive evidence'' and valid statistical inference.
-
-    \item \emph{Lambda estimation requires restraint.} While MLP estimators achieve high correlation with the oracle, ridge regression ($\alpha = 1000$) tends to produce more reliable standard errors in practice. Coverage tends to be a more informative metric than correlation for evaluating Lambda estimators.
-
-    \item \emph{Patience matters.} For nonlinear models with three-way cross-fitting, the early stopping patience parameter is critical. Too-low patience causes premature stopping and underfitting. We recommend \texttt{patience=50} as a minimum for multinomial models.
-\end{enumerate}
+Three lessons stand out for practitioners. First, the influence function correction is essential: naive neural network standard errors are systematically too small, and the IF correction is the difference between suggestive evidence and valid statistical inference (Section~\ref{sec:naive_fails}). Second, Lambda estimation requires restraint --- heavy ridge regularization outperforms more accurate but overfit estimators (Section~\ref{sec:lambda_est}). Third, the early stopping patience parameter is critical for nonlinear models with three-way cross-fitting and should be set to at least 50 (Section~\ref{sec:pitfalls}).
 
 \subsection{Other Structural Models}
 
-The framework extends directly to other structural models. The \texttt{deep-inference} package includes:
-
-\begin{itemize}
-    \item \emph{Poisson}: Count data (visits, clicks). Log-link: $\lambda = \exp(\alpha + \beta t)$.
-    \item \emph{Weibull/Gumbel}: Duration and survival data. Heterogeneous hazard rates.
-    \item \emph{Gamma}: Positive continuous data (expenditures). Log-link.
-    \item \emph{Tobit}: Censored data. Threshold effects with heterogeneous sensitivity.
-    \item \emph{Negative binomial}: Overdispersed counts. Allows for unobserved heterogeneity in rates.
-    \item \emph{Zero-inflated Poisson}: Count data with excess zeros (e.g., purchase frequency).
-    \item \emph{Combinatorial}: Multi-treatment experiments with multiple interaction effects \citep{ye2025combinatorial}.
-\end{itemize}
+The framework extends directly to other structural models. The \texttt{deep-inference} package includes Poisson models for count data (visits, clicks) with a log-link, Weibull and Gumbel models for duration and survival data with heterogeneous hazard rates, Gamma models for positive continuous outcomes (expenditures), Tobit models for censored data with heterogeneous threshold effects, negative binomial models for overdispersed counts, zero-inflated Poisson models for count data with excess zeros (e.g., purchase frequency), and combinatorial models for multi-treatment experiments \citep{ye2025combinatorial}.
 
 For any model not in the built-in library, the custom loss interface (\texttt{loss=}) allows practitioners to define their own structural model and get valid inference with no additional implementation effort.
 
 \subsection{Other Targets}
 
-Beyond average parameters, the package supports:
-
-\begin{itemize}
-    \item \emph{Average marginal effects}: $E[g'(\theta' t) \cdot \beta]$ at an evaluation point.
-    \item \emph{Dose-response}: $E[g(\theta' \tilde{t})]$, average predicted outcome at a counterfactual treatment level \citep{colangelo2026continuous}.
-    \item \emph{Profit/Revenue}: $E[\tilde{t} \cdot g(\theta' \tilde{t})]$, expected revenue at a counterfactual price \citep{dube2023personalized}.
-    \item \emph{Tail probability}: $E[P(Y > c \mid \theta, \tilde{t})]$, exceedance probability.
-    \item \emph{Conditional variance}: $E[\mathrm{Var}(Y \mid \theta, \tilde{t})]$, model uncertainty.
-    \item \emph{Custom targets}: Any differentiable function $H(x, \theta, \tilde{t})$ via the \texttt{target\_fn=} argument.
-\end{itemize}
+Beyond average parameters, the package supports average marginal effects $E[g'(\theta' t) \cdot \beta]$ at an evaluation point, dose-response curves $E[g(\theta' \tilde{t})]$ for average predicted outcomes at counterfactual treatment levels \citep{colangelo2026continuous}, profit and revenue calculations $E[\tilde{t} \cdot g(\theta' \tilde{t})]$ at counterfactual prices \citep{dube2023personalized}, tail probabilities $E[P(Y > c \mid \theta, \tilde{t})]$, conditional variance $E[\mathrm{Var}(Y \mid \theta, \tilde{t})]$, and custom targets via any differentiable function $H(x, \theta, \tilde{t})$ through the \texttt{target\_fn=} argument.
 
 \subsection{Custom Models via \texttt{model\_from\_loss()}}
 
-For researchers working with non-standard structural models, the custom loss interface is the most important feature. The key requirements are:
-
-\begin{enumerate}
-    \item The loss function must be written in PyTorch and be twice-differentiable.
-    \item Avoid \texttt{int()}, \texttt{if/else} on tensor values, or other non-differentiable operations.
-    \item Specify \texttt{theta\_dim} explicitly.
-    \item If the Hessian depends on $\theta$ (nonlinear models), set \texttt{hessian\_depends\_on\_theta=True} to ensure three-way splitting.
-\end{enumerate}
+For researchers working with non-standard structural models, the custom loss interface is the most important feature. Four requirements apply: the loss function must be written in PyTorch and be twice-differentiable; the user must avoid \texttt{int()}, \texttt{if/else} on tensor values, or other non-differentiable operations; \texttt{theta\_dim} must be specified explicitly; and if the Hessian depends on $\theta$ (nonlinear models), \texttt{hessian\_depends\_on\_theta=True} must be set to ensure three-way splitting.
 
 \subsection{Computational Considerations}
 
-\begin{itemize}
-    \item \emph{Runtime}: For $n = 50{,}000$ with $K = 50$ folds, approximately 10--30 minutes on CPU, 2--5 minutes on GPU.
-    \item \emph{Memory}: The main bottleneck is storing $n \times d_\theta \times d_\theta$ Hessians for Lambda estimation. At $n = 50{,}000$ and $d_\theta = 6$, this is about 7 MB, negligible.
-    \item \emph{Parallelism}: Cross-fitting folds are independent and can be parallelized. The current implementation is sequential but GPU-accelerated within each fold.
-\end{itemize}
+For $n = 50{,}000$ with $K = 50$ folds, the full pipeline takes approximately 10--30 minutes on CPU or 2--5 minutes on GPU. The main memory bottleneck is storing $n \times d_\theta \times d_\theta$ Hessians for Lambda estimation, which at $n = 50{,}000$ and $d_\theta = 6$ is about 7 MB --- negligible. Cross-fitting folds are independent and can be parallelized; the current implementation is sequential but GPU-accelerated within each fold.
 
-\subsection{Three Regimes Revisited}
-
-We close by noting that the choice of regime (A, B, or C) has practical implications beyond Lambda estimation:
-
-\begin{itemize}
-    \item \emph{Regime A} (RCTs with known $F_T$): The simplest case. Lambda can be computed analytically. Two-way splitting suffices. If you have a randomized experiment, use it.
-
-    \item \emph{Regime B} (linear models): Lambda has a closed form. Two-way splitting suffices. Fast and reliable.
-
-    \item \emph{Regime C} (the general case): Most applied settings fall here. Three-way splitting is required, patience must be high, and sample size requirements are larger. But the method works; our simulation confirms valid coverage for the multinomial logit with $n = 8{,}000$ and $d_\theta = 4$ (98\% coverage, $M=50$).
-\end{itemize}
-
-The \texttt{deep-inference} package detects the regime automatically and handles all the implementation details. The practitioner's job is to specify the model, prepare the data, and check the diagnostics.
+The \texttt{deep-inference} package detects the regime automatically and handles all the implementation details --- cross-fitting, Lambda estimation, influence function assembly, and standard error computation. The practitioner's job is to specify the model, prepare the data, and check the diagnostics (Section~\ref{sec:diagnostics}).

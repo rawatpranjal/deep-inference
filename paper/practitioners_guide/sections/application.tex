@@ -12,7 +12,7 @@ Each transaction records the consumer ID, item ID, purchase date, and price. Ite
 
 The first step is representation learning. We need dense embeddings for consumers and products that capture relevant variation in preferences and attributes.
 
-\paragraph{Two-tower architecture.} We use a two-tower contrastive learning approach \citep{oord2018representation, yi2019sampling}. The \emph{user tower} maps consumer features (ID embedding, purchase history, demographics) to a 64-dimensional embedding $u_i \in \mathbb{R}^{64}$. The \emph{item tower} maps product features (CLIP visual embedding \citep{radford2021learning}, categorical features) to a 64-dimensional embedding $v_j \in \mathbb{R}^{64}$.
+We use a two-tower contrastive learning approach \citep{oord2018representation, yi2019sampling}. The \emph{user tower} maps consumer features (ID embedding, purchase history, demographics) to a 64-dimensional embedding $u_i \in \mathbb{R}^{64}$. The \emph{item tower} maps product features (CLIP visual embedding \citep{radford2021learning}, categorical features) to a 64-dimensional embedding $v_j \in \mathbb{R}^{64}$.
 
 \paragraph{InfoNCE training.} The towers are trained jointly using the InfoNCE loss:
 \begin{equation}
@@ -20,27 +20,11 @@ The first step is representation learning. We need dense embeddings for consumer
 \end{equation}
 where $j^+$ is the purchased item, $\mathcal{B}$ is a mini-batch of items (serving as negatives), and $\tau = 0.1$ is the temperature. Training runs for 50 epochs with batch size 1024.
 
-\paragraph{Output.} The trained towers produce:
-\begin{itemize}
-    \item \texttt{user\_embeddings.npy}: $(4{,}833 \times 64)$ consumer embeddings
-    \item \texttt{item\_embeddings.npy}: $(83 \times 64)$ item embeddings
-\end{itemize}
-
-These embeddings are trained on a separate data period (T1) from the choice model estimation period (T2), so they can be treated as fixed covariates, a key assumption for the IF correction to be valid.
+The trained towers produce a $(4{,}833 \times 64)$ consumer embedding matrix and a $(83 \times 64)$ item embedding matrix. Critically, these embeddings are trained on a separate data period (T1) from the choice model estimation period (T2), so they can be treated as fixed covariates --- a key assumption for the IF correction to be valid.
 
 \subsection{Mapping to the FLM Framework}\label{sec:mapping}
 
-The mapping from the two-tower output to the FLM framework is:
-
-\begin{itemize}
-    \item $X_i$: Consumer embedding (64D). This determines heterogeneity in structural parameters.
-
-    \item $T_i$: Packed alternative attributes. For each choice occasion, we sample $J = 20$ alternatives (1 chosen + 19 random). Each alternative has $K = 6$ attributes: log-price and 5 PCA dimensions of the item embedding (64D $\to$ 5D via PCA, capturing 34\% of variance; modest, but the five components capture the major axes of aesthetic variation across dresses). The packed array is $T_i \in \mathbb{R}^{120}$ (reshaped to $20 \times 6$ inside the loss).
-
-    \item $Y_i = 0$: The chosen alternative is always reordered to position 0.
-
-    \item $\theta(X_i) = (\beta_{\text{price}}, \beta_{\text{pca}_1}, \ldots, \beta_{\text{pca}_5}) \in \mathbb{R}^6$: Consumer $i$'s taste parameters.
-\end{itemize}
+The mapping from the two-tower output to the \citet{farrell2025deep} framework is as follows. $X_i$ is the 64-dimensional consumer embedding, which determines heterogeneity in structural parameters. $T_i$ packs the alternative attributes: for each choice occasion, we sample $J = 20$ alternatives (1 chosen + 19 random), each described by $K = 6$ attributes (log-price and 5 PCA dimensions of the item embedding, where 64D $\to$ 5D via PCA captures 34\% of variance --- modest, but the five components capture the major axes of aesthetic variation across dresses). The packed array is $T_i \in \mathbb{R}^{120}$, reshaped to $20 \times 6$ inside the loss. The outcome $Y_i = 0$ reflects that the chosen alternative is always reordered to position 0. The structural parameters $\theta(X_i) = (\beta_{\text{price}}, \beta_{\text{pca}_1}, \ldots, \beta_{\text{pca}_5}) \in \mathbb{R}^6$ are consumer $i$'s taste parameters.
 
 \paragraph{Why PCA?} The raw item embedding is 64-dimensional, which would require $d_\theta = 65$ (including price). This is too many parameters for stable Lambda estimation with the sample sizes available. PCA reduces to 5 dimensions while retaining the major axes of product variation. The resulting $d_\theta = 6$ is small enough for stable estimation.
 
@@ -136,17 +120,29 @@ The price coefficient $E[\beta_{\text{price}}] = -0.359$ is negative and highly 
 
 The neural network estimates individual-level $\hat{\beta}_{\text{price}}(X_i)$ for each consumer. The distribution of these estimates reveals substantial heterogeneity in price sensitivity across the consumer population.
 
-% Figure placeholder
-% \begin{figure}[ht]
-%     \centering
-%     \includegraphics[width=0.8\textwidth]{figures/beta_price_distribution.pdf}
-%     \caption{Distribution of estimated price sensitivity $\hat{\beta}_{\text{price}}(X_i)$ across consumers.}
-%     \label{fig:beta_dist}
-% \end{figure}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/beta_price_distribution.pdf}
+    \caption{Kernel density estimate of $\hat{\beta}_{\text{price}}(X_i)$ across consumers. The vertical line marks the IF-corrected population mean $\hat{\mu} = -0.359$; the shaded band is the 95\% IF confidence interval. Substantial heterogeneity is evident: the most price-sensitive consumers are roughly three times as responsive as the least sensitive.}
+    \label{fig:beta_dist}
+\end{figure}
 
 \subsection{Counterfactuals}
 
 With valid confidence intervals on the structural parameters, we can construct counterfactuals with properly quantified uncertainty.
+
+The following code computes the counterfactual objects with IF uncertainty:
+
+\begin{lstlisting}
+# Own-price elasticities with IF uncertainty
+theta_hat = result.theta_hat  # (n, 6)
+beta_price = theta_hat[:, 0]
+P_chosen = np.exp(V_chosen) / np.sum(np.exp(V), axis=1)
+elasticities = beta_price * (1 - P_chosen)
+
+print(f"Mean elasticity: {np.mean(elasticities):.3f}")
+print(f"IF 95% CI: [{result.ci_lower:.3f}, {result.ci_upper:.3f}]")
+\end{lstlisting}
 
 \paragraph{Own-price elasticities.} For each consumer, the own-price elasticity of the chosen item is:
 \begin{equation}
