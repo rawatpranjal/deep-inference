@@ -1,7 +1,22 @@
 # Changelog
 
+## 2026-02-20
+
+- Added QuantileModel (smoothed check function, τ-parameterized) to models/ with eval_12 coverage validation (94% coverage at n=8000, M=50). New files: `models/quantile.py`, `evals/dgp_quantile.py`, `evals/eval_12_quantile.py`. Registered in `inference()` API with `model='quantile'`, `target='qte'`.
+
 ## 2026-02-19
 
+- Replaced Evaluations section with Simulations section: coverage validation, component diagnostics, semi-synthetic simulations (GRU+Poisson, CNN+Logit, SBERT+Logit).
+- Added `network_factory` parameter to `structural_dml_core()`, `run_crossfit()`, `inference()` for custom encoder architectures.
+- Created `simulations/` directory with three semi-synthetic simulation scripts using FashionMNIST and IMDB datasets.
+- Softened definitive counts ("13 families" → "over a dozen", "10+ targets" → "a growing library").
+- Added DID/ATE as target example in framework.tex targets table and introduction.tex.
+- Converted bullets to prose in framework.tex Section 2.1 Setup.
+- Added IF explanation paragraph (Neyman orthogonality, sqrt(n) rate) to "The Idea in Brief".
+- Added KDE plot generation from real theta_hat in application figures; uncommented figure in application.tex.
+- Updated cross-references from sec:evaluation to sec:simulations.
+- Archived evaluations.tex to archive/.
+- Saved 10-model causal inference expansion roadmap to `new_content.md`: ATE/CATE, FLM, PLR, LATE/IV, MTE, mediation, QTE, Cox, Heckman, OPE/RL — each with structural loss, IF formulas, FOC/Hessians, and paper/package links.
 - Added new Evaluation section (Section 5) to practitioner's guide: parameter recovery, autodiff, lambda estimation, IF assembly, frequentist coverage, recommended workflow, centralized thresholds table. Created `sections/evaluations.tex`.
 - Tone softening throughout: removed "cautionary tale", "catastrophically invalid", "Never use", "is not optional", "must be resisted". Replaced with gentler observations.
 - Removed all BLP/Nevo references from .tex files (framework.tex BLP comparison block, introduction.tex Nevo parallel paragraph, Berry/Nevo citations).

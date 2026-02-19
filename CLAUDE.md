@@ -62,6 +62,7 @@ src/deep_inference/
 │   ├── linear.py, logit.py  # Built-in models
 │   ├── multinomial.py       # Conditional logit (McFadden) J alternatives
 │   ├── combinatorial.py     # Multi-treatment model (DeDL2025, 4 link functions)
+│   ├── quantile.py          # Quantile regression (smoothed check function)
 │   ├── structural_net.py    # Neural network θ(x)
 │   └── custom.py            # CustomModel, model_from_loss()
 ├── targets/                  # NEW: Target functionals
@@ -252,7 +253,9 @@ evals/
 ├── eval_09_multinomial.py # Multinomial logit: recovery + autodiff + lambda + coverage
 ├── eval_10_new_targets.py # New targets: DoseResponse, Profit, ConditionalVariance Jacobians + coverage
 ├── eval_11_combinatorial.py # Combinatorial model: link functions, ATEs, Jacobians, Lambda integral
+├── eval_12_quantile.py     # Quantile model: recovery, autodiff, lambda, coverage (M=50)
 ├── dgp_multinomial.py  # Multinomial logit DGP with oracle formulas
+├── dgp_quantile.py     # Quantile DGP: location-shift model with oracle formulas
 ├── common/
 │   └── metrics.py      # Standardized thresholds + validation functions
 └── run_all.py          # Run all evals, produce full report
@@ -426,6 +429,7 @@ Full benchmark: `tutorials/02_logit_oracle.ipynb`
 | **Beta** | Logit | `lgamma(μφ) + lgamma((1-μ)φ) - ...` | Digamma terms | Autodiff | 2 |
 | **ZIP** | Mixed | Mixture: π + (1-π)·Poisson | Autodiff | Autodiff | 4 |
 | **MultinomialLogit** | Softmax | `-log softmax(V)[y]` | `(p_j - 1{Y=j})·[1,x]` | `p_j(δ_{jm}-p_m)` blocks | (J-1)+K |
+| **Quantile** | Identity | `τ·u + ε·log(1+exp(-u/ε))` | `(1-τ-σ(u/ε))·[1,t]` | `σ(u/ε)(1-σ(u/ε))/ε` | 2 |
 
 Where: `η = α + β·t`, `μ = g⁻¹(η)`, `z = (y/λ)^k` (Weibull) or `(y-μ)/σ` (Gumbel), `r = 1/overdispersion`, `Φ` = normal CDF
 
