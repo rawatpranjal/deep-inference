@@ -102,6 +102,7 @@ def structural_dml_core(
     ridge_alpha: float = 1000.0,
     patience: int = 10,
     verbose: bool = False,
+    network_factory: Optional[Callable] = None,
 ) -> DMLResult:
     """
     Core structural DML algorithm with proper cross-fitting.
@@ -247,11 +248,14 @@ def structural_dml_core(
             Y_lambda = Y_train
 
         # Train structural network
-        model = StructuralNet(
-            input_dim=d_x,
-            theta_dim=theta_dim,
-            hidden_dims=hidden_dims,
-        )
+        if network_factory is not None:
+            model = network_factory(d_x, theta_dim)
+        else:
+            model = StructuralNet(
+                input_dim=d_x,
+                theta_dim=theta_dim,
+                hidden_dims=hidden_dims,
+            )
 
         history = train_structural_net(
             model=model,

@@ -83,42 +83,65 @@ def fig2_coverage_vs_n():
 
 
 def fig3_beta_distribution():
-    """Figure 3: Distribution of beta_price with confidence bands.
+    """Figure 3: KDE of beta_price distribution with IF confidence band.
 
     Uses theta_hat from inference results if available,
     otherwise generates synthetic data.
     """
+    from scipy.stats import gaussian_kde
+
     # Try to load real results
     theta_file = RESULTS_DIR / "theta_hat.npy" if RESULTS_DIR.exists() else None
+    results_file = RESULTS_DIR / "inference_results.json" if RESULTS_DIR.exists() else None
 
     if theta_file and theta_file.exists():
         theta_hat = np.load(theta_file)
         beta_price = theta_hat[:, 0]
+        data_source = "real"
     else:
-        # Synthetic: beta_price ~ N(-1.5, 0.3)
+        # Synthetic: beta_price ~ N(-0.36, 0.15)
         np.random.seed(42)
-        beta_price = np.random.normal(-1.5, 0.3, 5000)
+        beta_price = np.random.normal(-0.36, 0.15, 5000)
+        data_source = "synthetic"
+
+    # Load IF SE from results if available
+    se = 0.040  # Default from Table 4 results
+    mu_hat = beta_price.mean()
+    if results_file and results_file.exists():
+        with open(results_file) as f:
+            res = json.load(f)
+        if "log_price" in res:
+            se = res["log_price"].get("se", se)
+            mu_hat = res["log_price"].get("mu_hat", mu_hat)
+
+    # KDE
+    kde = gaussian_kde(beta_price, bw_method="scott")
+    x_grid = np.linspace(beta_price.min() - 0.1, beta_price.max() + 0.1, 300)
+    density = kde(x_grid)
 
     fig, ax = plt.subplots()
-    ax.hist(beta_price, bins=50, density=True, alpha=0.7, color=COLORS["if"],
-            edgecolor="white", label="$\\hat{\\beta}_{\\mathrm{price}}(X_i)$")
+    ax.fill_between(x_grid, density, alpha=0.3, color=COLORS["if"])
+    ax.plot(x_grid, density, color=COLORS["if"], linewidth=2,
+            label="$\\hat{\\beta}_{\\mathrm{price}}(X_i)$")
 
-    mean = beta_price.mean()
-    se = 0.05  # Placeholder IF SE
-    ax.axvline(mean, color="black", linewidth=2, label=f"Mean = {mean:.3f}")
-    ax.axvspan(mean - 1.96 * se, mean + 1.96 * se, alpha=0.2, color="gray",
+    ax.axvline(mu_hat, color="black", linewidth=2, label=f"$\\hat{{\\mu}}$ = {mu_hat:.3f}")
+    ax.axvspan(mu_hat - 1.96 * se, mu_hat + 1.96 * se, alpha=0.15, color="gray",
                label=f"95\\% IF CI")
 
     ax.set_xlabel("$\\beta_{\\mathrm{price}}(X_i)$")
     ax.set_ylabel("Density")
-    ax.set_title("Distribution of Price Sensitivity")
+    ax.set_title("Distribution of Price Sensitivity Across Consumers")
     ax.legend(frameon=True)
     ax.grid(True, alpha=0.3)
 
-    path = os.path.join(FIGURES_DIR, "fig3_beta_distribution.pdf")
+    if data_source == "synthetic":
+        ax.annotate("(synthetic data)", xy=(0.98, 0.02), xycoords="axes fraction",
+                    ha="right", va="bottom", fontsize=8, color="gray", style="italic")
+
+    path = os.path.join(FIGURES_DIR, "beta_price_distribution.pdf")
     fig.savefig(path)
     plt.close(fig)
-    print(f"  Saved: {path}")
+    print(f"  Saved: {path} ({data_source} data)")
 
 
 def fig4_se_comparison():
