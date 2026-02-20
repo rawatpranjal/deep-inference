@@ -192,6 +192,7 @@ def run_crossfit(
     hidden_dims: List[int] = [64, 32],
     ridge: float = 1e-4,
     verbose: bool = False,
+    network_factory: Optional["Callable"] = None,
 ) -> CrossFitResult:
     """
     Run cross-fitting procedure.
@@ -272,11 +273,14 @@ def run_crossfit(
         Y_eval = Y[eval_fold]
 
         # 1. Train theta network
-        theta_net = StructuralNet(
-            input_dim=d_x,
-            theta_dim=d_theta,
-            hidden_dims=hidden_dims,
-        )
+        if network_factory is not None:
+            theta_net = network_factory(d_x, d_theta)
+        else:
+            theta_net = StructuralNet(
+                input_dim=d_x,
+                theta_dim=d_theta,
+                hidden_dims=hidden_dims,
+            )
 
         def loss_fn_batched(y, t, theta):
             """Batched loss for training."""

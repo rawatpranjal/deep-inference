@@ -248,6 +248,16 @@ def main():
                                      for k, v in r.diagnostics.items()}
         results_dict[name] = entry
 
+    # Save theta_hat for KDE plots
+    for idx, r in results.items():
+        if hasattr(r, 'theta_hat') and r.theta_hat is not None:
+            theta_hat = r.theta_hat
+            if isinstance(theta_hat, torch.Tensor):
+                theta_hat = theta_hat.numpy()
+            np.save(RESULTS_DIR / "theta_hat.npy", theta_hat)
+            print(f"\n  theta_hat saved to: {(RESULTS_DIR / 'theta_hat.npy').resolve()}")
+            break  # Only need to save once (same theta_hat for all targets)
+
     import json
     with open(RESULTS_DIR / "inference_results.json", "w") as f:
         json.dump(results_dict, f, indent=2)
