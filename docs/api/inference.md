@@ -225,6 +225,62 @@ print(f"Regime: {result.diagnostics['regime']}")  # 'A'
 
 ---
 
+## `did_2x2()` - Closed-form 2×2 Difference-in-Differences
+
+A lightweight, design-based estimator for the canonical **2×2 repeated cross-section**
+DiD. It does *not* use the neural `inference()` path — there is no neural network and
+no cross-fitting — but it follows the same `ψ → mean → SE` convention and returns the
+standard `InferenceResult`. The estimand is the group × post interaction
+
+```
+β = μ₁₁ − μ₁₀ − μ₀₁ + μ₀₀,   μ_gt = E[Y | G=g, T=t]
+```
+
+For the saturated cell-mean loss the expected Hessian is
+`Λ = diag(p₀₀, p₀₁, p₁₀, p₁₁)`, so the influence function reduces to a known
+closed form, and `SE = sqrt(Var(ψ)/n)` equals the **HC0 robust OLS standard error**
+of the saturated regression `Y = α + γG + λT + β(G·T) + u` to machine precision.
+
+### Signature
+
+```python
+from deep_inference import did_2x2
+
+result = did_2x2(
+    Y,                  # (n,) outcomes
+    group,              # (n,) binary treatment-group indicator G in {0, 1}
+    post,               # (n,) binary post-period indicator T in {0, 1}
+    alpha=0.05,         # CI level (0.05 -> 95% CI)
+    use_bessel=False,   # False: n denominator (matches HC0). True: (n-1) correction
+)
+print(result.summary())
+```
+
+### Example
+
+```python
+import numpy as np
+from deep_inference import did_2x2
+
+rng = np.random.default_rng(0)
+n = 2000
+G = (rng.random(n) < 0.5).astype(float)   # group
+P = (rng.random(n) < 0.5).astype(float)   # post
+Y = 1.0 + 0.5*G + 0.4*P + 0.6*(G*P) + rng.standard_normal(n)
+
+result = did_2x2(Y, G, P)
+print(result.mu_hat, result.se)           # β̂ and HC0-equivalent SE
+print(result.ci_lower, result.ci_upper)
+```
+
+The returned `se` matches `statsmodels` saturated OLS with `cov_type='HC0'` to ~1e-12.
+Use `use_bessel=False` (the default) for the exact HC0 match; `use_bessel=True` applies
+a finite-sample `(n−1)` correction. Scope is the homogeneous 2×2 design only —
+covariate-adjusted, heterogeneous, and staggered DiD have different influence functions
+and are not covered here.
+
+---
+
 ## Configuration Guidelines
 
 ### Network Architecture

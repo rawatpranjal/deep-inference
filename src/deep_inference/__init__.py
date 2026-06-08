@@ -621,6 +621,60 @@ def inference(
     return inf_result
 
 
+def did_2x2(
+    Y,
+    group,
+    post,
+    *,
+    alpha: float = 0.05,
+    use_bessel: bool = False,
+) -> InferenceResult:
+    """
+    Closed-form 2x2 repeated-cross-section difference-in-differences with
+    influence-function inference.
+
+    Estimand: the group x post interaction beta = mu_11 - mu_10 - mu_01 + mu_00.
+    This is a design-based closed-form estimator (no neural net / cross-fitting),
+    but it follows the package's psi -> mean -> SE convention, so the returned
+    standard error equals the saturated-OLS HC0 robust SE to machine precision.
+
+    Args:
+        Y: Outcome, 1-D array of length n.
+        group: Binary treatment-group indicator G in {0, 1}, length n.
+        post: Binary post-period indicator T in {0, 1}, length n.
+        alpha: CI level (default 0.05 -> 95% CI).
+        use_bessel: If False (default), use the n denominator (matches HC0). If True,
+            apply the (n-1) finite-sample correction (will NOT equal HC0 exactly).
+
+    Returns:
+        InferenceResult with mu_hat (beta), se, ci_lower, ci_upper, psi_values,
+        theta_hat (cell means), and diagnostics.
+    """
+    from .did import did_2x2_arrays
+
+    out = did_2x2_arrays(
+        Y=Y,
+        group=group,
+        post=post,
+        alpha=alpha,
+        use_bessel=use_bessel,
+    )
+
+    return InferenceResult(
+        mu_hat=out["mu_hat"],
+        se=out["se"],
+        ci_lower=out["ci_lower"],
+        ci_upper=out["ci_upper"],
+        psi_values=out["psi_values"],
+        theta_hat=out["theta_hat"],
+        diagnostics=out["diagnostics"],
+        _model="did_2x2",
+        _target="DID",
+        _n_obs=out["n"],
+        _n_folds=1,
+    )
+
+
 # Re-export key classes
 from .core import DMLResult, compute_coverage, compute_se_ratio
 from .families import (
@@ -645,6 +699,7 @@ __all__ = [
     # New API
     'inference',
     'InferenceResult',
+    'did_2x2',
     # Legacy API
     'structural_dml',
     # Result class
