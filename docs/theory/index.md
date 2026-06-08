@@ -2,16 +2,27 @@
 
 Mathematical foundations of the Farrell-Liang-Misra framework for deep learning with valid inference.
 
-```{toctree}
-:maxdepth: 2
-:caption: Theory
+This section is a **linear walkthrough** — the seven phase pages below build on
+each other, so read them top to bottom. The final page collects the formal
+theorems and convergence rates.
 
+```{toctree}
+:maxdepth: 1
+:caption: Theory (read in order)
+
+01_setup
+02_targets
+03_why_naive_fails
+04_influence_function
+05_three_regimes
+06_multinomial
+07_models_and_targets
 influence_functions
 ```
 
 ## Overview
 
-This section explains the theoretical foundations of `deep-inference`, specifically the enriched structural model approach from Farrell, Liang, and Misra.
+This section explains the theoretical foundations of `deep-inference`, specifically the enriched structural model approach from Farrell, Liang, and Misra. It walks from the structural setup, through the failure of naive inference, to the influence function correction that restores valid confidence intervals, and closes with the formal guarantees.
 
 ## Key References
 
