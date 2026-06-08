@@ -2,6 +2,7 @@
 
 ## 2026-06-08
 
+- Added closed-form 2×2 difference-in-differences estimator `did_2x2(Y, group, post)` (`src/deep_inference/did.py`) returning the standard `InferenceResult` via the package's ψ→mean→SE convention. SE matches saturated-OLS HC0 to machine precision (`use_bessel=False` default). New firewall test `tests/test_did.py` (6 tests, exact HC0 match) and Monte Carlo coverage eval `evals/eval_13_did.py` (96.4% coverage, SE ratio 0.97, M=500). Documented in `docs/api/inference.md`. Scope: homogeneous 2×2 repeated cross-section only.
 - Migrated Sphinx docs from `pydata_sphinx_theme` to `sphinx_rtd_theme` (Read the Docs theme): updated `docs/conf.py` (theme, RTD theme_options, GitHub `html_context`), `docs/requirements.txt`, `pyproject.toml` docs extra, and RTD content-width/table tweaks in `docs/_static/custom.css`.
 - Rebuilt `docs/theory/` as a dedicated linearly-phased section: 7 new sequential pages (01 Setup → 02 Targets → 03 Why Naive Fails → 04 IF Correction → 05 Three Regimes → 06 Multinomial → 07 Models & Targets) ported from `paper/practitioners_guide/sections/framework.tex`; repurposed `influence_functions.md` as the final formal page (Theorems 1–2, convergence rates, applications); updated `theory/index.md` toctree to the ordered walkthrough with prev/next navigation. Build clean (no new warnings).
 
