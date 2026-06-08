@@ -86,7 +86,7 @@ html_theme_options = {
 html_context = {
     "display_github": True,
     "github_user": "rawatpranjal",
-    "github_repo": "deepest",
+    "github_repo": "deep-inference",
     "github_version": "main",
     "conf_py_path": "/docs/",
 }
