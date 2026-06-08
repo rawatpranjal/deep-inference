@@ -23,6 +23,7 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
     "sphinxcontrib.mermaid",
+    "sphinx_rtd_theme",
 ]
 
 # MyST configuration for Markdown support
@@ -59,18 +60,35 @@ intersphinx_mapping = {
 }
 
 # -- Options for HTML output -------------------------------------------------
-html_theme = "pydata_sphinx_theme"
+html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 html_logo = "_static/logo.svg"
 html_favicon = "_static/logo.svg"
 html_title = "deep-inference"
 
+# Read the Docs theme options. prev/next buttons reinforce the linearly-phased
+# reading flow of the theory section; nav is left expanded so the phase order is
+# always visible in the sidebar.
 html_theme_options = {
-    "github_url": "https://github.com/rawatpranjal/deep-inference",
-    "show_toc_level": 1,
-    "navigation_with_keys": True,
-    "show_prev_next": False,
+    "logo_only": False,
+    "prev_next_buttons_location": "bottom",
+    "style_external_links": True,
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "navigation_depth": 3,
+    "includehidden": True,
+    "titles_only": False,
+}
+
+# RTD theme has no github_url option; the "Edit on GitHub" ribbon is driven by
+# html_context instead.
+html_context = {
+    "display_github": True,
+    "github_user": "rawatpranjal",
+    "github_repo": "deep-inference",
+    "github_version": "main",
+    "conf_py_path": "/docs/",
 }
 
 # -- Source settings ---------------------------------------------------------
