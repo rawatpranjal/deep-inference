@@ -4,7 +4,7 @@
 
 [![GitHub](https://img.shields.io/badge/GitHub-rawatpranjal%2Fdeep--inference-blue?logo=github)](https://github.com/rawatpranjal/deep-inference)
 [![PyPI](https://img.shields.io/pypi/v/deep-inference?color=blue)](https://pypi.org/project/deep-inference/)
-[![Documentation](https://img.shields.io/badge/docs-rawatpranjal.github.io-blue)](https://rawatpranjal.github.io/deep-inference/)
+[![Documentation](https://readthedocs.org/projects/deep-inference/badge/?version=latest)](https://deep-inference.readthedocs.io/en/latest/)
 
 **References:**
 - Farrell, Liang, Misra (2021) ["Deep Neural Networks for Estimation and Inference"](https://doi.org/10.3982/ECTA16901) *Econometrica*
@@ -141,7 +141,7 @@ Where $\Lambda(x) = \mathbb{E}[\nabla^2 \ell \mid X=x]$ is the conditional Hessi
 
 ## Validation
 
-Comprehensive eval suite validates every mathematical component. [Full results →](https://deep-inference.readthedocs.io/validation/)
+Comprehensive eval suite validates every mathematical component. [Full results →](https://deep-inference.readthedocs.io/en/latest/validation/)
 
 | Eval | Component | Result |
 |------|-----------|--------|
