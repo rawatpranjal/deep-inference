@@ -9,7 +9,7 @@ The engine orchestrates:
 
 from .crossfit import CrossFitter, run_crossfit
 from .assembler import assemble_influence, compute_psi
-from .variance import estimate_variance, compute_se
+from .variance import estimate_variance, compute_se, compute_se_ci, compute_inference_results
 
 __all__ = [
     "CrossFitter",
@@ -18,4 +18,6 @@ __all__ = [
     "compute_psi",
     "estimate_variance",
     "compute_se",
+    "compute_se_ci",
+    "compute_inference_results",
 ]

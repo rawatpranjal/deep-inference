@@ -128,6 +128,7 @@ def structural_dml(
     epochs: int = 200,
     lr: float = 0.01,
     patience: Optional[int] = None,
+    variance: str = 'pooled',
     verbose: bool = False,
     store_data: bool = True,
     **kwargs,
@@ -190,6 +191,11 @@ def structural_dml(
             families except 'multinomial_logit', which auto-bumps to 50 (the
             3-way split makes patience=10 fatal — see MEMORY). Pass an explicit
             int to override.
+        variance: Variance estimator for the SE/CI. 'pooled' (default) is the
+            FLM influence-function variance (Bessel sample variance of psi,
+            centered at the global mean). 'within_fold' is the legacy
+            per-fold-centered variant (mean of per-fold variances); it omits the
+            between-fold component, so its SE is always <= pooled.
         verbose: Print progress
         store_data: Store X for prediction methods (default=True)
         **kwargs: Additional arguments to structural_dml_core
@@ -332,6 +338,7 @@ def structural_dml(
         epochs=epochs,
         lr=lr,
         patience=patience,
+        variance=variance,
         three_way=three_way,
         gradient_fn=gradient_fn,
         hessian_fn=hessian_fn,
@@ -454,7 +461,8 @@ def inference(
     # Custom network architecture
     network_factory: Optional[Callable] = None,
     # Other
-    ridge: float = 1e-4,
+    tikhonov_scale: float = 0.01,
+    variance: str = 'pooled',
     verbose: bool = False,
     store_data: bool = True,
     # Model-specific kwargs (e.g., tau, smooth_eps for quantile)
@@ -505,7 +513,12 @@ def inference(
         epochs: Training epochs
         lr: Learning rate
 
-        ridge: Regularization for Lambda inversion
+        tikhonov_scale: Scale ε for the Tikhonov Lambda inversion (Λ + εI)⁻¹
+            with ε = tikhonov_scale·trace(Λ)/d (default 0.01).
+        variance: Variance estimator for the SE/CI. 'pooled' (default) is the
+            FLM influence-function variance (Bessel sample variance of psi,
+            centered at the global mean). 'within_fold' is the legacy
+            per-fold-centered variant (always <= pooled).
         verbose: Print progress
         store_data: Store X for prediction methods (default=True)
 
@@ -656,7 +669,8 @@ def inference(
         lr=lr,
         patience=patience,
         hidden_dims=hidden_dims,
-        ridge=ridge,
+        tikhonov_scale=tikhonov_scale,
+        variance=variance,
         verbose=verbose,
         network_factory=network_factory,
     )

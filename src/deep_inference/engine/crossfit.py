@@ -190,7 +190,8 @@ def run_crossfit(
     lr: float = 0.01,
     patience: int = 50,
     hidden_dims: List[int] = [64, 32],
-    ridge: float = 1e-4,
+    tikhonov_scale: float = 0.01,
+    variance: str = "pooled",
     verbose: bool = False,
     network_factory: Optional["Callable"] = None,
 ) -> CrossFitResult:
@@ -209,7 +210,10 @@ def run_crossfit(
         epochs: Training epochs per fold
         lr: Learning rate
         hidden_dims: Hidden layer sizes
-        ridge: Regularization for Lambda inversion
+        tikhonov_scale: Scale ε for the Tikhonov Lambda inversion
+            (Λ + εI)⁻¹ with ε = tikhonov_scale·trace(Λ)/d (default 0.01).
+        variance: Variance estimator, 'pooled' (default, FLM) or 'within_fold'
+            (legacy per-fold-centered). See engine.variance.compute_se_ci.
         verbose: Print progress
 
     Returns:
@@ -337,7 +341,7 @@ def run_crossfit(
             lambda_matrices=lambda_eval,
             model=model,
             target=target,
-            ridge=ridge,
+            tikhonov_scale=tikhonov_scale,
         )
 
         # Store results
@@ -354,8 +358,15 @@ def run_crossfit(
             )
         )
 
-    # Compute final inference results
-    results = compute_inference_results(all_psi)
+    # Compute final inference results.
+    # Build a (n,) fold-assignment vector for the within_fold variant.
+    fold_indices = np.zeros(n, dtype=np.int64)
+    for k, eval_fold in enumerate(folds):
+        fold_indices[eval_fold] = k
+
+    results = compute_inference_results(
+        all_psi, method=variance, fold_indices=fold_indices
+    )
 
     return CrossFitResult(
         psi_values=all_psi,
