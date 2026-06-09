@@ -44,8 +44,6 @@ def test_linear_model_beta():
     assert abs(result.mu_hat - beta_true) < 3 * result.se, "Estimate too far from truth"
     print("PASS: Linear model beta test")
 
-    return result
-
 
 def test_custom_loss_target():
     """Test with custom loss and target functions."""
@@ -99,8 +97,6 @@ def test_custom_loss_target():
     # Check reasonableness
     assert abs(result.mu_hat - beta_true) < 1.0, "Estimate unreasonably far from truth"
     print("PASS: Custom loss/target test")
-
-    return result
 
 
 def test_regime_detection():
