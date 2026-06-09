@@ -47,7 +47,8 @@ Target: μ* = E[β(X)] with valid 95% confidence intervals.
 
 ```
 src/deep_inference/
-├── __init__.py              # Main APIs: structural_dml(), inference()
+├── __init__.py              # Main APIs: structural_dml(), inference(), did()
+├── _did_closed.py           # Closed-form 2x2 DiD (did(method='exact'))
 ├── core/
 │   ├── algorithm.py         # Legacy DML algorithm
 │   ├── autodiff.py          # Gradient/Hessian computation
@@ -58,24 +59,27 @@ src/deep_inference/
 │   ├── gumbel.py, tobit.py, negbin.py, weibull.py
 │   ├── multinomial.py       # Conditional logit (McFadden)
 ├── models/                   # NEW: Structural models
-│   ├── base.py              # StructuralModel protocol
+│   ├── base.py              # StructuralModel protocol, CustomModel, model_from_loss()
 │   ├── linear.py, logit.py  # Built-in models
 │   ├── multinomial.py       # Conditional logit (McFadden) J alternatives
 │   ├── combinatorial.py     # Multi-treatment model (DeDL2025, 4 link functions)
 │   ├── quantile.py          # Quantile regression (smoothed check function)
-│   ├── structural_net.py    # Neural network θ(x)
-│   └── custom.py            # CustomModel, model_from_loss()
+│   ├── did.py               # Saturated 2x2 DiD model, DiDModel (did(method='neural'))
+│   ├── panel_fe.py          # Two-way FE panel DiD, FEPanelDiDModel (did(method='panel_fe'))
+│   └── structural_net.py    # Neural network θ(x)
 ├── targets/                  # NEW: Target functionals
-│   ├── base.py              # Target protocol, BaseTarget
-│   ├── average_parameter.py # E[θ_j] target
+│   ├── base.py              # Target protocol, BaseTarget, CustomTarget, target_from_fn()
+│   ├── average_param.py     # E[θ_j] target (AverageParameter, AverageBeta)
 │   ├── marginal_effect.py   # AME target
+│   ├── elasticity.py        # Price elasticity of demand (DM2023)
+│   ├── wtp.py               # Willingness to pay -β_attr/β_price (DM2023)
+│   ├── welfare.py           # Consumer surplus / logsum (Small-Rosen 1981, DM2023)
 │   ├── dose_response.py     # E[G(θ, t̃)] average predicted outcome (CL2026)
 │   ├── profit.py            # E[t̃·G(θ, t̃)] expected revenue (DM2023)
 │   ├── tail_probability.py  # E[P(Y > c | θ, t̃)] exceedance prob (GDR2026)
 │   ├── conditional_variance.py # E[Var(Y | θ, t̃)] model variance (GDR2026)
 │   ├── multi_treatment.py   # E[G(θ,t) - G(θ,t₀)] combinatorial ATE (DeDL2025)
-│   ├── choice_probability.py # Multinomial choice probability + AME
-│   └── custom.py            # CustomTarget with autodiff Jacobian
+│   └── choice_probability.py # Multinomial choice probability + AME
 ├── lambda_/                  # NEW: Lambda strategies
 │   ├── base.py              # LambdaStrategy protocol
 │   ├── compute.py           # ComputeLambda (Regime A: randomized)
@@ -87,9 +91,14 @@ src/deep_inference/
 │   ├── assembler.py         # compute_psi() - influence function assembly
 │   └── variance.py          # SE and CI computation
 ├── autodiff/                 # NEW: Autodiff utilities
-│   └── jacobian.py          # vmap Jacobians for targets
+│   ├── jacobian.py          # vmap Jacobians for targets
+│   ├── hessian.py           # Hessian computation via autodiff
+│   └── score.py             # Score (gradient) computation via autodiff
 └── utils/
-    └── linalg.py
+    ├── linalg.py            # Linear algebra helpers (PSD projection, inversion)
+    ├── fe.py                # Two-way FE within-transform for panel DiD
+    ├── formatting.py        # statsmodels-style summary formatting
+    └── result_mixin.py      # Shared predict/plot methods for result objects
 
 archive/deep_inference_v1/    # Old implementation (MC tools, DGPs, etc.)
 ```

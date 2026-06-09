@@ -16,17 +16,18 @@ metrics
 
 ## Quick Reference
 
-### Two APIs
+### Three Entry Points
 
 | API | Use Case |
 |-----|----------|
-| `structural_dml()` | Production, 13 families, fixed target E[β] |
+| `structural_dml()` | Production, 13 GLM families, fixed target E[β] |
 | `inference()` | Flexible targets, regime detection, RCT support |
+| `did()` | Difference-in-differences (exact / neural / panel_fe) |
 
 ### Main Entry Points
 
 ```python
-from deep_inference import structural_dml, inference
+from deep_inference import structural_dml, inference, did
 
 # Legacy API (production-ready)
 result = structural_dml(
@@ -47,6 +48,11 @@ result = inference(
     is_randomized=True,        # Regime A
     treatment_dist=Normal(0, 1)
 )
+
+# Difference-in-differences (method auto-selected from arguments)
+result = did(Y, group, post)                              # exact 2x2
+result = did(Y, group, post, X=X)                         # neural, E[tau(X)]
+result = did(Y, group, post, X=X, unit=unit, time=time)   # panel two-way FE
 ```
 
 ### Available Families
@@ -116,7 +122,11 @@ Statistical families defining loss functions, gradients, Hessians, and influence
 
 ### targets
 
-Target functionals for inference: `AverageParameter`, `AME`, `CustomTarget`.
+Target functionals for inference. Built-in: `AverageParameter`/`AverageBeta`, `AME`.
+Economic: `Elasticity`, `WTP`, `ConsumerWelfare`. Counterfactual: `DoseResponse`,
+`Profit`, `TailProbability`, `ConditionalVariance`. Combinatorial: `MultiTreatmentATE`.
+Multinomial: `ChoiceProbabilityTarget`, `MultinomialAME`. Plus `CustomTarget` /
+`target_from_fn` for arbitrary differentiable functionals.
 
 ### lambda
 
@@ -124,7 +134,11 @@ Lambda estimation strategies: `ComputeLambda` (Regime A), `AnalyticLambda` (B), 
 
 ### models
 
-Neural network architectures: `StructuralNet` for parameter estimation.
+Structural models mapping covariates to parameters: `StructuralNet` (the network
+backbone) plus `LinearModel`, `LogitModel`, `MultinomialLogitModel`,
+`CombinatorialModel`, `QuantileModel`, `DiDModel` (saturated 2x2 DiD), and
+`FEPanelDiDModel` (two-way fixed-effects panel DiD). `CustomModel` /
+`model_from_loss` build a model from any loss function.
 
 ### metrics
 
