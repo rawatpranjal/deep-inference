@@ -8,6 +8,9 @@ The `targets` module defines what quantity you want to estimate. A **target** is
 |--------|---------|----------|
 | `AverageParameter` | E[θ_j] | Average treatment effect |
 | `AME` | E[p(1-p)·β] | Marginal effect on probability |
+| `Elasticity` | E[(1-p)·β·t̃] (logit) | Price elasticity of demand |
+| `WTP` | E[-θ_attr / θ_price] | Willingness to pay |
+| `ConsumerWelfare` | E[log(1+e^V)/\|β_price\|] | Expected consumer surplus |
 | `DoseResponse` | E[G(θ, t̃)] | Average predicted outcome at treatment level |
 | `Profit` | E[t̃ · G(θ, t̃)] | Expected revenue at price level |
 | `TailProbability` | E[P(Y > c \| θ, t̃)] | Exceedance/risk probability |
@@ -66,6 +69,99 @@ Where p_i = σ(α_i + β_i·t̃).
 ∂H/∂α = p(1-p)(1-2p)·β / n
 ∂H/∂β = p(1-p)[1 + (1-2p)·β·t̃] / n
 ```
+
+### Elasticity
+
+Price elasticity of demand — the key object in personalized pricing.
+
+```python
+from deep_inference.targets import Elasticity
+
+# logit (default); also 'poisson', 'gamma', 'negbin'
+target = Elasticity(model_type='logit')
+```
+
+**Formula (logit):**
+```
+H(θ, t̃) = (1 - p)·β·t̃    where p = σ(α + β·t̃)
+```
+
+**Formula (log-link: poisson/gamma/negbin):**
+```
+H(θ, t̃) = β·t̃
+```
+
+**Jacobian (closed-form):**
+```
+# logit
+∂H/∂α = -p(1-p)·β·t̃
+∂H/∂β = (1-p)·t̃ - p(1-p)·β·t̃²
+# log-link
+∂H/∂α = 0
+∂H/∂β = t̃
+```
+
+**Usage:**
+```python
+result = inference(Y, T, X, model='logit', target='elasticity', t_tilde=1.0)
+```
+
+*Reference: Dubé & Misra (2022, JPE)*
+
+### WTP (Willingness To Pay)
+
+The marginal rate of substitution between an attribute and price: how much a consumer would pay for a one-unit improvement in the attribute.
+
+```python
+from deep_inference.targets import WTP
+
+# Ratio of two coefficients in theta
+target = WTP(attribute_index=1, price_index=2)
+```
+
+**Formula:**
+```
+H(θ) = -θ_attribute / θ_price
+```
+
+**Jacobian (closed-form delta method):**
+```
+∂H/∂θ_attr  = -1 / θ_price
+∂H/∂θ_price =  θ_attr / θ_price²
+```
+
+Returns `NaN` (and falls back to `None` Jacobian) when the price coefficient is within `1e-8` of zero. `t_tilde` is not used.
+
+**Usage:**
+```python
+result = inference(Y, T, X, model='logit', target='wtp')
+```
+
+*Reference: Dubé & Misra (2022, JPE)*
+
+### ConsumerWelfare
+
+Expected consumer surplus from logit demand (Small & Rosen 1981 logsum), scaled by the marginal utility of income.
+
+```python
+from deep_inference.targets import ConsumerWelfare
+
+target = ConsumerWelfare(price_coef_index=1)
+```
+
+**Formula (binary logit):**
+```
+H(θ, t̃) = log(1 + exp(V)) / |β_price|    where V = α + β_price·t̃
+```
+
+Implemented with `softplus(V)` for numerical stability. The Jacobian is left to autodiff (`jacobian()` returns `None`) because it involves derivatives of `softplus` and `|β_price|`.
+
+**Usage:**
+```python
+result = inference(Y, T, X, model='logit', target='welfare', t_tilde=0.0)
+```
+
+*Reference: Small & Rosen (1981); Dubé & Misra (2022, JPE)*
 
 ### DoseResponse
 
@@ -374,7 +470,16 @@ result = inference(Y, T, X, model='logit', target='beta')
 
 # Average marginal effect
 result = inference(Y, T, X, model='logit', target='ame', t_tilde=0.0)
+
+# Economic targets
+result = inference(Y, T, X, model='logit', target='elasticity', t_tilde=1.0)
+result = inference(Y, T, X, model='logit', target='wtp')
+result = inference(Y, T, X, model='logit', target='welfare', t_tilde=0.0)
 ```
+
+Recognized `target=` strings include: `beta`, `average_slope`, `ame`, `elasticity`,
+`wtp`, `welfare`, `dose_response`, `profit`, `tail_probability`,
+`conditional_variance`, `qte`, `tau`, `att`, `fe_effect`.
 
 ### Custom Target Functions
 

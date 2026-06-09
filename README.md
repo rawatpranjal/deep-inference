@@ -101,6 +101,42 @@ result = inference(Y, T, X, model='logit', target='beta',
 | **B** | Linear structural model | Closed-form analytic | 2-way |
 | **C** | Observational, nonlinear | Neural network estimation | 3-way |
 
+## Which entry point?
+
+The package exposes three entry points. Pick by what you are estimating:
+
+| Entry point | Use it when | What it gives you |
+|-------------|-------------|-------------------|
+| `structural_dml()` | You have a GLM outcome family (linear, logit, Poisson, ...) and want E[β(X)] | Fixed target, 13 families, production-ready |
+| `inference()` | You need a flexible target (AME, dose-response, profit, elasticity, WTP, welfare, quantile, combinatorial ATE) or want explicit regime control | Flexible targets and Lambda regimes |
+| `did()` | You have a difference-in-differences design | DiD estimators (exact / neural / panel fixed-effects) |
+
+Beyond the GLM families above, `inference()` also covers **quantile regression** (`model='quantile'`, smoothed check loss) and **combinatorial multi-treatment** designs (`model='combinatorial'`, the DeDL 2025 multi-arm link functions).
+
+## Difference-in-Differences
+
+`did()` is a single entry point for DiD with influence-function inference. The estimator is auto-selected from the arguments, or forced with `method=`:
+
+```python
+from deep_inference import did
+
+# Exact: closed-form 2x2 repeated cross-section (no covariates).
+# Estimand beta = mu11 - mu10 - mu01 + mu00; SE equals saturated-OLS HC0.
+result = did(Y, group, post, method='exact')
+
+# Neural: heterogeneous saturated 2x2. A network learns alpha/gamma/lambda/tau(X);
+# target is E[tau(X)]. Regime B, two-way cross-fitting.
+result = did(Y, group, post, X=X, method='neural')
+
+# Panel FE: two-way (unit + time) fixed-effects DiD. Y and D = group*post are
+# residualized on unit+time effects, then a network learns tau(X); target E[tau(X)].
+result = did(Y, group, post, X=X, unit=unit, time=time, method='panel_fe')
+
+print(result.summary())
+```
+
+Auto-selection (`method='auto'`, the default): `unit` and `time` given → `panel_fe`; else `X` given → `neural`; else → `exact`.
+
 ## Supported Structural Families
 
 The package abstracts the math of influence functions. You simply select the family that matches your outcome variable.

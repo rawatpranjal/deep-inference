@@ -2,7 +2,7 @@
 deep_inference: Structural Deep Learning with Valid Inference
 
 Usage:
-    # Legacy API (13 GLM families)
+    # Legacy API (GLM families)
     from deep_inference import structural_dml
     result = structural_dml(Y, T, X, family='logit')
 
@@ -10,8 +10,30 @@ Usage:
     from deep_inference import inference
     result = inference(Y, T, X, model='logit', target='ame', t_tilde=0.0)
 
+    # Difference-in-differences convenience wrapper
+    from deep_inference import did
+    result = did(Y, group, post)              # closed-form 2x2
+    result = did(Y, group, post, X=X)         # heterogeneous neural DiD
+
     # Results
     print(result.summary())
+
+Which entry point?
+    structural_dml(...)  -- classic GLM families. Pick a `family`
+        ('linear', 'logit', 'poisson', 'gamma', 'negbin', ...) and get
+        E[beta(X)] (or a family-specific target). The familiar, batteries-
+        included path for standard structural GLMs.
+
+    inference(...)       -- flexible targets & regimes. Use when you need a
+        custom loss, a custom or economic target (AME, elasticity, WTP,
+        dose-response, profit, tail probability, conditional variance), an
+        explicit randomization regime, or a DiD model. Built-in models:
+        linear, logit, multinomial_logit, quantile, did, did_fe.
+
+    did(...)             -- difference-in-differences convenience wrapper.
+        Auto-selects the closed-form 2x2 ('exact'), heterogeneous neural
+        DiD ('neural'), or two-way fixed-effects panel DiD ('panel_fe')
+        from the arguments. A thin, friendly front-end over inference().
 """
 
 import numpy as np
@@ -105,7 +127,7 @@ def structural_dml(
     hidden_dims: List[int] = [64, 32],
     epochs: int = 200,
     lr: float = 0.01,
-    patience: int = 10,
+    patience: Optional[int] = None,
     verbose: bool = False,
     store_data: bool = True,
     **kwargs,
@@ -164,7 +186,10 @@ def structural_dml(
         hidden_dims: Neural network hidden layer sizes
         epochs: Training epochs per fold
         lr: Learning rate
-        patience: Early stopping patience (default=10; use 50 for complex models)
+        patience: Early stopping patience. Default None resolves to 10 for all
+            families except 'multinomial_logit', which auto-bumps to 50 (the
+            3-way split makes patience=10 fatal — see MEMORY). Pass an explicit
+            int to override.
         verbose: Print progress
         store_data: Store X for prediction methods (default=True)
         **kwargs: Additional arguments to structural_dml_core
@@ -232,6 +257,12 @@ def structural_dml(
         raise ValueError(f"n_folds must be positive, got {n_folds}")
     if lr <= 0:
         raise ValueError(f"lr must be positive, got {lr}")
+
+    # Resolve patience. Default stays 10 for every family except multinomial_logit,
+    # whose 3-way split yields noisy val loss that triggers early stopping ~15 epochs
+    # at patience=10 (fatal); bump to 50 unless the caller set patience explicitly.
+    if patience is None:
+        patience = 50 if family == 'multinomial_logit' else 10
 
     # Get family or use custom functions
     if family is not None:
@@ -441,11 +472,18 @@ def inference(
         X: (n, d_x) covariates
 
         # Model specification (choose one):
-        model: Built-in model name ("linear", "logit", etc.)
+        model: Built-in model name. One of:
+            "linear", "logit", "multinomial_logit", "quantile", "did", "did_fe".
+            (Most users reach "did"/"did_fe" via the did() wrapper.)
         loss: Custom loss function: loss(y, t, theta) -> scalar
 
         # Target specification (choose one):
-        target: Built-in target name ("beta", "ame", etc.)
+        target: Built-in target name. One of:
+            "beta" (E[beta_1], default), "average_slope", "ame",
+            "elasticity", "wtp", "welfare", "dose_response", "profit",
+            "tail_probability", "conditional_variance", "qte",
+            "tau"/"att" (saturated DiD interaction, theta[3]),
+            "fe_effect" (FE panel DiD effect, theta[0]).
         target_fn: Custom target: h(x, theta, t_tilde) -> scalar
 
         theta_dim: Parameter dimension (required for custom loss)
@@ -489,7 +527,7 @@ def inference(
 
         result = inference(Y, T, X, loss=my_loss, target_fn=my_target, theta_dim=2)
     """
-    from .models import Linear, Logit, MultinomialLogit, CombinatorialModel, Quantile, CustomModel, model_from_loss
+    from .models import Linear, Logit, MultinomialLogit, CombinatorialModel, Quantile, DiDModel, FEPanelDiDModel, CustomModel, model_from_loss
     from .targets import AverageParameter, AME, CustomTarget, ChoiceProbabilityTarget, MultinomialAME, Elasticity, WTP, ConsumerWelfare, DoseResponse, Profit, TailProbability, ConditionalVariance, MultiTreatmentATE
     from .lambda_ import select_lambda_strategy, Regime, detect_regime
     from .engine import run_crossfit
@@ -995,6 +1033,9 @@ __all__ = [
     'MultinomialLogit',
     'MultinomialLogitFamily',
     'Quantile',
+    'CombinatorialModel',
+    'DiDModel',
+    'FEPanelDiDModel',
     'Target',
     'CustomTarget',
     'AverageParameter',
@@ -1004,6 +1045,11 @@ __all__ = [
     'Elasticity',
     'WTP',
     'ConsumerWelfare',
+    'DoseResponse',
+    'Profit',
+    'TailProbability',
+    'ConditionalVariance',
+    'MultiTreatmentATE',
     'Regime',
     'detect_regime',
     'select_lambda_strategy',
