@@ -186,3 +186,95 @@ def test_analytic_lambda_scalar_path_unchanged():
     T_aug = torch.stack([torch.ones(n), T], dim=1)
     expected = torch.einsum("bi,bj->bij", T_aug, T_aug).mean(0)
     assert float((L[0] - expected).abs().max()) < 1e-5
+
+
+# ── Two-way fixed-effects panel DiD ──
+
+
+def test_residualize_fixed_effects_kills_additive_fe():
+    """Two-way demean must remove additive unit+time effects (balanced: exact)."""
+    from deep_inference.utils import residualize_fixed_effects
+
+    rng = np.random.default_rng(0)
+    N, T = 40, 5
+    unit = np.repeat(np.arange(N), T)
+    time = np.tile(np.arange(T), N)
+    additive = 3.0 + rng.standard_normal(N)[unit] + rng.standard_normal(T)[time]
+    r = residualize_fixed_effects(additive, unit, time)
+    assert np.abs(r).max() < 1e-9  # pure additive FE -> demeaned to ~0
+
+    # idempotent: residualizing again changes nothing
+    base = additive + rng.standard_normal(N * T)
+    r1 = residualize_fixed_effects(base, unit, time)
+    r2 = residualize_fixed_effects(r1, unit, time)
+    assert np.abs(r1 - r2).max() < 1e-9
+
+
+def test_fe_panel_model_score_hessian_match_autodiff():
+    """FEPanelDiDModel closed-form score/Hessian vs torch autodiff."""
+    import torch
+    from deep_inference.models import FEPanelDiDModel
+
+    model = FEPanelDiDModel()
+    assert model.theta_dim == 1
+    assert model.hessian_depends_on_theta is False
+    assert model.analytic_intercept is False
+
+    rng = np.random.default_rng(0)
+    max_g, max_h = 0.0, 0.0
+    for _ in range(100):
+        y = torch.tensor(float(rng.standard_normal()), dtype=torch.float64)
+        t = torch.tensor(float(rng.standard_normal()), dtype=torch.float64)  # Dtilde scalar
+        theta = torch.tensor(rng.standard_normal(1), dtype=torch.float64, requires_grad=True)
+        loss = model.loss(y, t, theta)
+        (g_ad,) = torch.autograd.grad(loss, theta, create_graph=True)
+        (h_ad,) = torch.autograd.grad(g_ad[0], theta)
+        max_g = max(max_g, float((model.score(y, t, theta.detach()) - g_ad.detach()).abs().max()))
+        max_h = max(max_h, float((model.hessian(y, t, theta.detach())[0, 0] - h_ad[0]).abs().max()))
+    assert max_g < 1e-6
+    assert max_h < 1e-6
+
+
+def test_analytic_lambda_intercept_free_scalar():
+    """AnalyticLambda(intercept=False) on scalar T -> (n,1,1) = E[Dtilde^2]."""
+    import torch
+    from deep_inference.lambda_.analytic import AnalyticLambda
+    from deep_inference.models import FEPanelDiDModel
+
+    rng = np.random.default_rng(1)
+    n = 3000
+    X = torch.tensor(rng.standard_normal((n, 2)), dtype=torch.float32)
+    T = torch.tensor(rng.standard_normal(n), dtype=torch.float32)  # Dtilde
+
+    lam = AnalyticLambda(method="aggregate", intercept=False)
+    lam.fit(X, T, torch.zeros(n), None, FEPanelDiDModel())
+    L = lam.predict(X)
+    assert L.shape == (n, 1, 1)
+    assert abs(float(L[0, 0, 0]) - float((T ** 2).mean())) < 1e-4
+
+
+def test_did_panel_fe_matches_within_ols_homogeneous():
+    """Homogeneous tau: neural FE DiD point estimate ~ within-OLS slope."""
+    import deep_inference as di
+    from deep_inference.utils import residualize_fixed_effects
+
+    rng = np.random.default_rng(3)
+    N, T = 200, 4
+    unit = np.repeat(np.arange(N), T)
+    time = np.tile(np.arange(T), N)
+    n = N * T
+    G = (rng.random(N) < 0.5).astype(float)[unit]
+    Post = (time >= 2).astype(float)
+    D = G * Post
+    X = rng.standard_normal((n, 3))
+    tau = 0.5
+    Y = rng.standard_normal(N)[unit] + np.array([0, .3, .6, .9])[time] + tau * D + rng.standard_normal(n)
+
+    res = di.did_panel_fe(Y, D, X, unit, time, n_folds=3, epochs=40, patience=15, hidden_dims=[16])
+    Yt = residualize_fixed_effects(Y, unit, time)
+    Dt = residualize_fixed_effects(D, unit, time)
+    beta_ols = float((Dt @ Yt) / (Dt @ Dt))
+    assert res.diagnostics.get("regime") == "B"
+    assert res.theta_hat.shape == (n, 1)
+    # neural homogeneous estimate close to the within-OLS slope
+    assert abs(res.mu_hat - beta_ols) < 0.1

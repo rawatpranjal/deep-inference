@@ -120,6 +120,10 @@ class BaseModel:
     theta_dim: int = 2
     hessian_depends_on_theta: bool = True  # Conservative default
     hessian_depends_on_y: bool = False  # True for most GLMs
+    # Whether Regime-B analytic Lambda should prepend an intercept to T (i.e. the
+    # model's design is W = [1, T]). False for intercept-free models such as the
+    # within-transformed fixed-effects panel DiD, where the design is just T.
+    analytic_intercept: bool = True
 
     def loss(self, y: Tensor, t: Tensor, theta: Tensor) -> Tensor:
         """Must be implemented by subclasses."""

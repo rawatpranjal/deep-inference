@@ -102,7 +102,11 @@ def select_lambda_strategy(
     if regime == Regime.A:
         return ComputeLambda(treatment_dist=treatment_dist, model=model, **kwargs)
     elif regime == Regime.B:
-        return AnalyticLambda(**kwargs)
+        # Intercept-free models (e.g. within-transformed FE panel DiD) declare
+        # analytic_intercept=False so Lambda = E[TT'|X] is built without a constant.
+        return AnalyticLambda(
+            intercept=getattr(model, "analytic_intercept", True), **kwargs
+        )
     else:  # Regime C
         return EstimateLambda(**kwargs)
 

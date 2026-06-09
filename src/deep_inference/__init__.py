@@ -521,6 +521,7 @@ def inference(
             "multinomial_logit": MultinomialLogit(),
             "quantile": Quantile(tau=tau, smooth_eps=smooth_eps),
             "did": DiDModel(),
+            "did_fe": FEPanelDiDModel(),
         }
         if model not in model_map:
             raise ValueError(f"Unknown model: {model}. Available: {list(model_map.keys())}")
@@ -555,6 +556,8 @@ def inference(
             # Saturated DiD interaction tau = theta[3] (E[tau(X)] DiD effect)
             "tau": AverageParameter(param_index=3, theta_dim=struct_model.theta_dim),
             "att": AverageParameter(param_index=3, theta_dim=struct_model.theta_dim),
+            # FE panel DiD effect tau = theta[0] (theta_dim=1, intercept-free)
+            "fe_effect": AverageParameter(param_index=0, theta_dim=struct_model.theta_dim),
         }
         if target not in target_map:
             raise ValueError(f"Unknown target: {target}. Available: {list(target_map.keys())}")
@@ -752,6 +755,82 @@ def did_2x2_nn(
     return result
 
 
+def did_panel_fe(
+    Y,
+    D,
+    X,
+    unit,
+    time,
+    *,
+    hidden_dims: Optional[List[int]] = None,
+    n_folds: int = 50,
+    epochs: int = 200,
+    lr: float = 0.01,
+    patience: int = 50,
+    lambda_method: Optional[str] = None,
+    verbose: bool = False,
+) -> InferenceResult:
+    """
+    Heterogeneous two-way fixed-effects panel difference-in-differences.
+
+    Fits the within-transformed FE DiD model: after residualizing the outcome Y and
+    treatment D by unit and time fixed effects, Ytilde_it = Dtilde_it * tau(X_it) + eps,
+    and returns the influence-function estimate of the average effect E[tau(X)] with a
+    valid standard error. Runs in Regime B (analytic Lambda = E[Dtilde^2 | X], two-way
+    cross-fitting).
+
+    Works for both continuous and binary outcomes. For a binary Y this is a
+    fixed-effects LINEAR PROBABILITY model; the IF standard error is
+    heteroskedasticity-robust, so the binary variance is handled correctly.
+
+    Args:
+        Y: Outcome, 1-D array of length n = (#units x #periods, stacked any order).
+        D: Treatment indicator (e.g. D = G * Post for the canonical 2x2), length n.
+        X: Covariates (n, d_x) driving effect heterogeneity (NOT demeaned).
+        unit: Unit identifiers (n,). time: Period identifiers (n,).
+        hidden_dims, n_folds, epochs, lr, patience: training / cross-fitting settings.
+        lambda_method: Override Lambda estimation (default: intercept-free analytic, Regime B).
+        verbose: Print regime/progress.
+
+    Returns:
+        InferenceResult for E[tau(X)] (mu_hat, se, ci, psi_values, theta_hat, diagnostics).
+        theta_hat is (n, 1) = tau(X); use result.predict_theta(X_new)[:, 0] for tau(X_new).
+
+    Note:
+        The standard error assumes errors are independent across observations. Serial /
+        within-unit correlation would require cluster-robust SEs (not implemented here).
+    """
+    from .utils import residualize_fixed_effects
+
+    Y = np.asarray(Y, dtype=np.float64)
+    D = np.asarray(D, dtype=np.float64)
+    X = np.asarray(X, dtype=np.float64)
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+
+    Y_tilde = residualize_fixed_effects(Y, unit, time)
+    D_tilde = residualize_fixed_effects(D, unit, time)
+
+    result = inference(
+        Y=Y_tilde,
+        T=D_tilde,
+        X=X,
+        model="did_fe",
+        target="fe_effect",
+        t_tilde=0.0,  # target ignores t_tilde
+        n_folds=n_folds,
+        epochs=epochs,
+        lr=lr,
+        patience=patience,
+        hidden_dims=hidden_dims if hidden_dims is not None else [64, 32],
+        lambda_method=lambda_method,
+        verbose=verbose,
+    )
+    result._model = "did_panel_fe"
+    result._target = "E[tau(X)]"
+    return result
+
+
 # Re-export key classes
 from .core import DMLResult, compute_coverage, compute_se_ratio
 from .families import (
@@ -767,7 +846,7 @@ from .families import (
 )
 
 # New architecture exports
-from .models import StructuralModel, CustomModel, Linear, Logit, MultinomialLogit, CombinatorialModel, Quantile, DiDModel
+from .models import StructuralModel, CustomModel, Linear, Logit, MultinomialLogit, CombinatorialModel, Quantile, DiDModel, FEPanelDiDModel
 from .targets import Target, CustomTarget, AverageParameter, AME, ChoiceProbabilityTarget, MultinomialAME, Elasticity, WTP, ConsumerWelfare, DoseResponse, Profit, TailProbability, ConditionalVariance, MultiTreatmentATE
 from .families import MultinomialLogitFamily
 from .lambda_ import Regime, detect_regime, select_lambda_strategy
@@ -778,6 +857,7 @@ __all__ = [
     'InferenceResult',
     'did_2x2',
     'did_2x2_nn',
+    'did_panel_fe',
     # Legacy API
     'structural_dml',
     # Result class

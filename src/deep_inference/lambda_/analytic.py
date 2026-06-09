@@ -36,6 +36,7 @@ class AnalyticLambda(BaseLambdaStrategy):
         self,
         method: Literal["mlp", "rf", "ridge", "aggregate"] = "aggregate",
         ridge_alpha: float = 1.0,
+        intercept: bool = True,
     ):
         """
         Initialize AnalyticLambda strategy.
@@ -43,9 +44,14 @@ class AnalyticLambda(BaseLambdaStrategy):
         Args:
             method: Regression method for E[TT'|X]
             ridge_alpha: Regularization for ridge regression
+            intercept: If True (default), the design is W = [1, T] (a constant is
+                prepended), matching models whose theta includes an intercept. If
+                False, the design is T as-is (no intercept), for intercept-free
+                models such as the within-transformed fixed-effects panel DiD.
         """
         self.method = method
         self.ridge_alpha = ridge_alpha
+        self.intercept = intercept
         self._model = None
         self._mean_outer = None
         self._d_theta = None
@@ -74,15 +80,20 @@ class AnalyticLambda(BaseLambdaStrategy):
         device = X.device
         dtype = X.dtype
 
-        # Augment T with an intercept: T_aug = [1, T]. Handle both scalar T (n,) ->
-        # (n, 2) and multi-column designs T (n, d_t) -> (n, 1 + d_t), e.g. the
-        # saturated DiD design [G, P, G*P] -> W = [1, G, P, G*P] = (n, 4).
-        if T.dim() == 1:
-            ones = torch.ones(n, dtype=dtype, device=device)
-            T_aug = torch.stack([ones, T], dim=1)  # (n, 2)
+        # Build the design. With intercept=True (default), augment T with a constant:
+        # W = [1, T]. Handles scalar T (n,) -> (n, 2) and multi-column T (n, d_t) ->
+        # (n, 1 + d_t), e.g. the saturated DiD design [G, P, G*P] -> [1, G, P, G*P].
+        # With intercept=False, the design is T as-is (no constant), e.g. the
+        # within-transformed FE panel DiD where T = Dtilde -> (n, 1).
+        if self.intercept:
+            if T.dim() == 1:
+                ones = torch.ones(n, dtype=dtype, device=device)
+                T_aug = torch.stack([ones, T], dim=1)  # (n, 2)
+            else:
+                ones = torch.ones(n, 1, dtype=dtype, device=device)
+                T_aug = torch.cat([ones, T], dim=1)  # (n, 1 + d_t)
         else:
-            ones = torch.ones(n, 1, dtype=dtype, device=device)
-            T_aug = torch.cat([ones, T], dim=1)  # (n, 1 + d_t)
+            T_aug = T.unsqueeze(1) if T.dim() == 1 else T  # (n, d_t), no intercept
         self._d_theta = T_aug.shape[1]
 
         # Compute outer products: TT' for each observation
