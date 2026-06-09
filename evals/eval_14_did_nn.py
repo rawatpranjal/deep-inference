@@ -22,7 +22,7 @@ import numpy as np
 
 sys.path.insert(0, "/Users/pranjal/deepest/src")
 
-from deep_inference import inference, did_2x2, did_2x2_nn  # noqa: E402
+from deep_inference import inference, did  # noqa: E402
 from deep_inference.models import DiDModel  # noqa: E402
 from deep_inference.lambda_.analytic import AnalyticLambda  # noqa: E402
 from evals.dgp_did_nn import DiDNNDGP  # noqa: E402
@@ -53,7 +53,7 @@ MU_TRUE = DGP.mu_true()
 def _fit_once(seed: int):
     """One coverage replication: fit neural DiD, return (beta_hat, se, covered, z)."""
     Y, G, P, X = DGP.generate(N, seed=seed)
-    r = did_2x2_nn(
+    r = did(
         Y, G, P, X,
         hidden_dims=HIDDEN, n_folds=N_FOLDS, epochs=EPOCHS,
         lr=LR, patience=PATIENCE,
@@ -65,7 +65,7 @@ def _fit_once(seed: int):
 def test_recovery():
     print("\n[Test 1] Parameter recovery: theta_hat(X) vs theta*(X)")
     Y, G, P, X = DGP.generate(N, seed=12345)
-    r = did_2x2_nn(Y, G, P, X, hidden_dims=HIDDEN, n_folds=N_FOLDS, epochs=EPOCHS,
+    r = did(Y, G, P, X, hidden_dims=HIDDEN, n_folds=N_FOLDS, epochs=EPOCHS,
                    lr=LR, patience=PATIENCE)
     theta_hat = r.theta_hat.numpy()
     theta_star = DGP.theta_star(X)
@@ -168,11 +168,11 @@ def benchmark_homogeneous():
     print("\n[Benchmark] homogeneous DGP: neural E[tau(X)] vs closed-form did_2x2()")
     hom = DiDNNDGP(A1=0.0, G1=0.0, L1=0.0, T1=0.0)  # tau constant = T0
     Y, G, P, X = hom.generate(N, seed=2024)
-    cf = did_2x2(Y, G, P)
-    nn = did_2x2_nn(Y, G, P, X, hidden_dims=HIDDEN, n_folds=N_FOLDS, epochs=EPOCHS,
+    cf = did(Y, G, P)
+    nn = did(Y, G, P, X, hidden_dims=HIDDEN, n_folds=N_FOLDS, epochs=EPOCHS,
                     lr=LR, patience=PATIENCE)
     print(f"  closed-form did_2x2 : beta={cf.mu_hat:.4f}  se={cf.se:.4f}")
-    print(f"  neural   did_2x2_nn : beta={nn.mu_hat:.4f}  se={nn.se:.4f}")
+    print(f"  neural   did(X=..) : beta={nn.mu_hat:.4f}  se={nn.se:.4f}")
     print(f"  true tau            : {hom.T0:.4f}")
     diff = abs(cf.mu_hat - nn.mu_hat)
     se = max(cf.se, nn.se)

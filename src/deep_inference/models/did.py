@@ -19,7 +19,7 @@ linear regime (Regime B): Lambda(x) = E[W W' | X = x] is estimated analytically 
 two-way cross-fitting suffices.
 
 This is the StructuralModel used by inference(model='did', target='tau') and by the
-top-level convenience wrapper deep_inference.did_2x2_nn(). It is distinct from the
+top-level entry point deep_inference.did(..., X=...). It is distinct from the
 closed-form estimator in deep_inference/did.py (did_2x2), which handles the exact
 homogeneous case.
 """

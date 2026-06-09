@@ -23,7 +23,7 @@ import numpy as np
 
 sys.path.insert(0, "/Users/pranjal/deepest/src")
 
-from deep_inference import did_2x2_nn, did_panel_fe  # noqa: E402
+from deep_inference import did  # noqa: E402
 from evals.dgp_did_nn import DiDNNDGP  # noqa: E402
 from evals.dgp_panel_fe import PanelFEDGP  # noqa: E402
 from simulations.common import compute_coverage_metrics, print_coverage_report  # noqa: E402
@@ -47,7 +47,7 @@ def block_neural_2x2():
 
     def one(seed):
         Y, G, P, X = dgp.generate(n, seed=seed)
-        r = did_2x2_nn(Y, G, P, X, n_folds=folds, epochs=epochs, hidden_dims=[32, 16], patience=30)
+        r = did(Y, G, P, X, n_folds=folds, epochs=epochs, hidden_dims=[32, 16], patience=30)
         tau_hat = r.theta_hat.numpy()[:, 3]
         tau_star = dgp.theta_star(X)[:, 3]
         return r.mu_hat, r.se, _recovery(tau_hat, tau_star)
@@ -64,8 +64,8 @@ def block_fe(label, binary):
 
     def one(seed):
         Y, D, X, unit, time_, tau_star = gen(seed)
-        r = did_panel_fe(Y, D, X, unit, time_, n_folds=folds, epochs=epochs,
-                         hidden_dims=[32, 16], patience=30)
+        r = did(Y, D=D, X=X, unit=unit, time=time_, n_folds=folds, epochs=epochs,
+                hidden_dims=[32, 16], patience=30)
         tau_hat = r.theta_hat.numpy()[:, 0]
         return r.mu_hat, r.se, _recovery(tau_hat, tau_star)
 

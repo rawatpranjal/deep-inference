@@ -628,7 +628,7 @@ def inference(
     return inf_result
 
 
-def did_2x2(
+def _did_exact(
     Y,
     group,
     post,
@@ -638,7 +638,7 @@ def did_2x2(
 ) -> InferenceResult:
     """
     Closed-form 2x2 repeated-cross-section difference-in-differences with
-    influence-function inference.
+    influence-function inference. Internal helper for did(method='exact').
 
     Estimand: the group x post interaction beta = mu_11 - mu_10 - mu_01 + mu_00.
     This is a design-based closed-form estimator (no neural net / cross-fitting),
@@ -657,7 +657,7 @@ def did_2x2(
         InferenceResult with mu_hat (beta), se, ci_lower, ci_upper, psi_values,
         theta_hat (cell means), and diagnostics.
     """
-    from .did import did_2x2_arrays
+    from ._did_closed import did_2x2_arrays
 
     out = did_2x2_arrays(
         Y=Y,
@@ -675,14 +675,14 @@ def did_2x2(
         psi_values=out["psi_values"],
         theta_hat=out["theta_hat"],
         diagnostics=out["diagnostics"],
-        _model="did_2x2",
+        _model="did(exact)",
         _target="DID",
         _n_obs=out["n"],
         _n_folds=1,
     )
 
 
-def did_2x2_nn(
+def _did_neural(
     Y,
     group,
     post,
@@ -697,7 +697,8 @@ def did_2x2_nn(
     verbose: bool = False,
 ) -> InferenceResult:
     """
-    Heterogeneous neural 2x2 difference-in-differences.
+    Heterogeneous neural 2x2 difference-in-differences. Internal helper for
+    did(method='neural').
 
     Fits the saturated DiD regression with covariate-varying coefficients via a neural
     network, Y = alpha(X) + gamma(X) G + lambda(X) P + tau(X) (G P) + eps, and returns
@@ -724,7 +725,7 @@ def did_2x2_nn(
         theta_hat columns are [alpha, gamma, lambda, tau]; use
         result.predict_theta(X_new)[:, 3] for the conditional DiD effect tau(X_new).
     """
-    from .did import _as_binary_1d
+    from ._did_closed import _as_binary_1d
 
     Y = np.asarray(Y, dtype=np.float64)
     G = _as_binary_1d(group, "group").astype(np.float64)
@@ -750,12 +751,12 @@ def did_2x2_nn(
         lambda_method=lambda_method,
         verbose=verbose,
     )
-    result._model = "did_2x2_nn"
+    result._model = "did(neural)"
     result._target = "E[tau(X)]"
     return result
 
 
-def did_panel_fe(
+def _did_panel_fe(
     Y,
     D,
     X,
@@ -771,7 +772,8 @@ def did_panel_fe(
     verbose: bool = False,
 ) -> InferenceResult:
     """
-    Heterogeneous two-way fixed-effects panel difference-in-differences.
+    Heterogeneous two-way fixed-effects panel difference-in-differences. Internal
+    helper for did(method='panel_fe').
 
     Fits the within-transformed FE DiD model: after residualizing the outcome Y and
     treatment D by unit and time fixed effects, Ytilde_it = Dtilde_it * tau(X_it) + eps,
@@ -826,9 +828,102 @@ def did_panel_fe(
         lambda_method=lambda_method,
         verbose=verbose,
     )
-    result._model = "did_panel_fe"
+    result._model = "did(panel_fe)"
     result._target = "E[tau(X)]"
     return result
+
+
+def did(
+    Y,
+    group=None,
+    post=None,
+    X=None,
+    *,
+    D=None,
+    unit=None,
+    time=None,
+    method: str = "auto",
+    alpha: float = 0.05,
+    use_bessel: bool = False,
+    hidden_dims: Optional[List[int]] = None,
+    n_folds: int = 50,
+    epochs: int = 200,
+    lr: float = 0.01,
+    patience: int = 50,
+    lambda_method: Optional[str] = None,
+    verbose: bool = False,
+) -> InferenceResult:
+    """
+    Difference-in-differences with influence-function inference — single entry point.
+
+    Three estimators, auto-selected from the arguments (override with ``method=``):
+
+    - ``method='exact'``   — ``did(Y, group, post)``
+        Closed-form 2x2 repeated cross-section. Estimand beta = mu11-mu10-mu01+mu00;
+        SE equals saturated-OLS HC0 to machine precision. No covariates, no network.
+    - ``method='neural'``  — ``did(Y, group, post, X=X)``
+        Heterogeneous saturated 2x2: a network learns alpha/gamma/lambda/tau(X);
+        target E[tau(X)]. Regime B, two-way cross-fitting.
+    - ``method='panel_fe'`` — ``did(Y, group, post, X=X, unit=u, time=t)`` (or ``D=...``)
+        Two-way fixed-effects panel DiD. Y and D = group*post (or an explicit D) are
+        residualized by unit+time fixed effects, then a network learns tau(X); target
+        E[tau(X)]. Works for continuous and binary (linear probability model) outcomes.
+
+    Auto-selection (``method='auto'``): ``unit`` and ``time`` given -> 'panel_fe';
+    else ``X`` given -> 'neural'; else -> 'exact'.
+
+    Args:
+        Y: Outcome (n,).
+        group, post: Binary indicators (n,). For panel_fe, D = group*post unless D given.
+        X: Covariates (n, d_x). Required for 'neural' and 'panel_fe'.
+        D: Panel treatment indicator (n,), used by 'panel_fe' instead of group*post.
+        unit, time: Panel identifiers (n,), required for 'panel_fe'.
+        method: 'auto' | 'exact' | 'neural' | 'panel_fe'.
+        alpha, use_bessel: closed-form ('exact') options.
+        hidden_dims, n_folds, epochs, lr, patience, lambda_method, verbose: neural/panel options.
+
+    Returns:
+        InferenceResult (mu_hat, se, ci_lower, ci_upper, psi_values, theta_hat, diagnostics).
+        For 'neural', theta_hat columns are [alpha, gamma, lambda, tau] (tau at index 3);
+        for 'panel_fe', theta_hat is (n, 1) = tau(X).
+    """
+    if method == "auto":
+        if unit is not None and time is not None:
+            method = "panel_fe"
+        elif X is not None:
+            method = "neural"
+        else:
+            method = "exact"
+
+    if method == "exact":
+        if group is None or post is None:
+            raise ValueError("did(method='exact') requires `group` and `post`.")
+        return _did_exact(Y, group, post, alpha=alpha, use_bessel=use_bessel)
+
+    if method == "neural":
+        if group is None or post is None or X is None:
+            raise ValueError("did(method='neural') requires `group`, `post`, and `X`.")
+        return _did_neural(
+            Y, group, post, X, hidden_dims=hidden_dims, n_folds=n_folds, epochs=epochs,
+            lr=lr, patience=patience, lambda_method=lambda_method, verbose=verbose,
+        )
+
+    if method == "panel_fe":
+        if unit is None or time is None or X is None:
+            raise ValueError("did(method='panel_fe') requires `X`, `unit`, and `time`.")
+        if D is None:
+            if group is None or post is None:
+                raise ValueError(
+                    "did(method='panel_fe') requires `D` (or `group` and `post` to form "
+                    "D=group*post)."
+                )
+            D = np.asarray(group, dtype=np.float64) * np.asarray(post, dtype=np.float64)
+        return _did_panel_fe(
+            Y, D, X, unit, time, hidden_dims=hidden_dims, n_folds=n_folds, epochs=epochs,
+            lr=lr, patience=patience, lambda_method=lambda_method, verbose=verbose,
+        )
+
+    raise ValueError(f"Unknown method: {method!r}. Use 'auto', 'exact', 'neural', or 'panel_fe'.")
 
 
 # Re-export key classes
@@ -855,9 +950,7 @@ __all__ = [
     # New API
     'inference',
     'InferenceResult',
-    'did_2x2',
-    'did_2x2_nn',
-    'did_panel_fe',
+    'did',
     # Legacy API
     'structural_dml',
     # Result class

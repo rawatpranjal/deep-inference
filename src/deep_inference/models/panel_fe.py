@@ -18,7 +18,8 @@ analytic_intercept = False.
 Squared-error loss => Hessian = Dtilde^2 is constant in theta and Y (Regime B,
 two-way cross-fitting). The influence-function standard error is heteroskedasticity
 -robust, which also covers the binary (linear probability model) case. Used by
-inference(model='did_fe', target='fe_effect') and the wrapper did_panel_fe().
+inference(model='did_fe', target='fe_effect') and the entry point
+did(..., unit=..., time=...).
 """
 
 import torch
