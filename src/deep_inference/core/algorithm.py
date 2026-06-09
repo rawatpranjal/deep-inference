@@ -101,6 +101,7 @@ def structural_dml_core(
     lambda_method: str = 'ridge',
     ridge_alpha: float = 1000.0,
     patience: int = 10,
+    variance: str = 'pooled',
     verbose: bool = False,
     network_factory: Optional[Callable] = None,
 ) -> DMLResult:
@@ -115,7 +116,8 @@ def structural_dml_core(
        c. Fit Lambda_k(x) nonparametrically (or aggregate for 2-way)
        d. For held-out i in I_k:
           - Compute psi_i = H - H_theta @ Lambda_k(x_i)^{-1} @ l_theta
-    3. Aggregate: mu_hat = mean(psi), SE via within-fold formula
+    3. Aggregate: mu_hat = mean(psi), SE via compute_se_ci (pooled FLM variance
+       by default; 'within_fold' legacy variant available via variance=)
 
     Args:
         Y: (n,) outcomes
@@ -138,6 +140,11 @@ def structural_dml_core(
             Default 'ridge' is recommended for validated coverage.
         ridge_alpha: Regularization strength for Ridge Lambda (default 1000.0)
         patience: Early stopping patience for StructuralNet training (default 10)
+        variance: Variance estimator. 'pooled' (default) is the FLM influence-
+            function variance (Bessel sample variance of psi centered at the
+            global mean). 'within_fold' is the legacy per-fold-centered variant
+            (mean of per-fold variances); it drops the between-fold component so
+            it is always <= pooled.
         verbose: Print progress
 
     Returns:
@@ -364,20 +371,14 @@ def structural_dml_core(
     # Aggregate results
     mu_hat = psi_values.mean()
 
-    # Within-fold variance (paper formula)
-    variance_sum = 0.0
-    for k in range(n_folds):
-        psi_k = psi_values[fold_indices == k]
-        mu_k = psi_k.mean()
-        variance_k = ((psi_k - mu_k) ** 2).mean()
-        variance_sum += variance_k
+    # SE + 95% CI via the shared estimator (single source of truth).
+    # method='pooled' (default) = FLM influence-function variance; 'within_fold'
+    # = legacy per-fold-centered variant. z = norm.ppf(0.975) (no hardcoded 1.96).
+    from ..engine.variance import compute_se_ci
 
-    psi_variance = variance_sum / n_folds
-    se = np.sqrt(psi_variance / n)
-
-    # 95% CI
-    ci_lower = mu_hat - 1.96 * se
-    ci_upper = mu_hat + 1.96 * se
+    se, ci_lower, ci_upper, psi_variance = compute_se_ci(
+        psi_values, fold_indices=fold_indices, n=n, method=variance, alpha=0.05
+    )
 
     # Naive estimate for comparison
     mu_naive = theta_hat_all[:, 1].mean()  # Just average beta

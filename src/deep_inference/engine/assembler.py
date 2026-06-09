@@ -94,7 +94,7 @@ def compute_psi(
     lambda_matrices: Tensor,
     model: "StructuralModel",
     target: "Target",
-    ridge: float = 1e-4,
+    tikhonov_scale: float = 0.01,
 ) -> Tensor:
     """
     Compute influence function values for a set of observations.
@@ -115,7 +115,8 @@ def compute_psi(
         lambda_matrices: (n, d_theta, d_theta) Lambda matrices
         model: Structural model
         target: Target functional
-        ridge: Regularization for matrix inversion
+        tikhonov_scale: Scale ε for the Tikhonov Lambda inversion (Λ + εI)⁻¹
+            with ε = tikhonov_scale·trace(Λ)/d (default 0.01).
 
     Returns:
         (n,) influence function values
@@ -162,8 +163,8 @@ def compute_psi(
             grad_i = torch.autograd.grad(loss_i, theta_i)[0]
             score[i] = grad_i
 
-    # 4. Invert Lambda matrices
-    lambda_inv = batch_inverse(lambda_matrices, ridge=ridge)
+    # 4. Invert Lambda matrices (scale-aware Tikhonov, the batch_inverse default)
+    lambda_inv = batch_inverse(lambda_matrices, tikhonov_scale=tikhonov_scale)
 
     # 5. Assemble influence function
     psi = assemble_influence_batched(h, h_jacobian, lambda_inv, score)
