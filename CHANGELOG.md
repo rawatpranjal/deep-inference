@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-06-09
+
+- Added heterogeneous neural 2×2 DiD: `DiDModel` (`models/did.py`, saturated design W=[1,G,P,G·P], closed-form score/Hessian, Regime B) registered as `model='did'` with targets `tau`/`att` (θ₃); top-level `did_2x2_nn(Y, group, post, X)` estimates the average DiD effect E[τ(X)] with IF-based SE. Generalized the shared `AnalyticLambda` to multi-column designs (backward-compatible). Eval `evals/eval_14_did_nn.py` (M=25, n=5000): recovery/autodiff/lambda/benchmark PASS, **coverage 96%** (SE ratio 0.85, bias +0.026; z_mean +0.51 a mild finite-sample off-centering). Tests in `tests/test_did.py` (now 9). Documented in `docs/api/inference.md`.
+
 ## 2026-06-08
 
 - Added closed-form 2×2 difference-in-differences estimator `did_2x2(Y, group, post)` (`src/deep_inference/did.py`) returning the standard `InferenceResult` via the package's ψ→mean→SE convention. SE matches saturated-OLS HC0 to machine precision (`use_bessel=False` default). New firewall test `tests/test_did.py` (6 tests, exact HC0 match) and Monte Carlo coverage eval `evals/eval_13_did.py` (96.4% coverage, SE ratio 0.97, M=500). Documented in `docs/api/inference.md`. Scope: homogeneous 2×2 repeated cross-section only.

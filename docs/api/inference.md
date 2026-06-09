@@ -275,9 +275,52 @@ print(result.ci_lower, result.ci_upper)
 
 The returned `se` matches `statsmodels` saturated OLS with `cov_type='HC0'` to ~1e-12.
 Use `use_bessel=False` (the default) for the exact HC0 match; `use_bessel=True` applies
-a finite-sample `(n−1)` correction. Scope is the homogeneous 2×2 design only —
-covariate-adjusted, heterogeneous, and staggered DiD have different influence functions
-and are not covered here.
+a finite-sample `(n−1)` correction. Scope is the homogeneous 2×2 design only.
+
+---
+
+## `did_2x2_nn()` - Heterogeneous neural DiD
+
+The neural counterpart of `did_2x2`. A network learns covariate-varying coefficients
+for the saturated DiD regression
+
+```
+Y = α(X) + γ(X)·G + λ(X)·P + τ(X)·(G·P) + ε
+```
+
+and the influence-function machinery returns the **average heterogeneous DiD effect**
+`E[τ(X)]` with a valid standard error. The squared-loss Hessian is `W W'` (constant in
+θ), so this runs in **Regime B** — analytic `Λ = E[W W' | X]`, two-way cross-fitting.
+Group/period assignment is assumed independent of `X` (the canonical repeated cross
+section); if cell shares depend on `X`, pass `lambda_method='estimate'` (Regime C).
+
+This is also available through the general API as a registered model:
+`inference(Y, T_did, X, model='did', target='tau')` where `T_did = column_stack([G, P, G*P])`.
+
+### Signature
+
+```python
+from deep_inference import did_2x2_nn
+
+result = did_2x2_nn(
+    Y,                    # (n,) outcomes
+    group,                # (n,) binary G
+    post,                 # (n,) binary P
+    X,                    # (n, d_x) covariates driving heterogeneity
+    hidden_dims=[64, 32],
+    n_folds=50,
+    epochs=200,
+    lr=0.01,
+    patience=50,
+    lambda_method=None,   # default: analytic aggregate (Regime B)
+)
+
+print(result.mu_hat, result.se)             # E[τ(X)] and IF standard error
+tau_x = result.predict_theta(X_new)[:, 3]   # conditional DiD effect τ(X_new)
+```
+
+`theta_hat` columns are `[α, γ, λ, τ]`; index 3 is the DiD effect. Use `did_2x2` for the
+exact homogeneous case and `did_2x2_nn` when the effect varies with covariates.
 
 ---
 

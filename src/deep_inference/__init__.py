@@ -520,6 +520,7 @@ def inference(
             "logit": Logit(),
             "multinomial_logit": MultinomialLogit(),
             "quantile": Quantile(tau=tau, smooth_eps=smooth_eps),
+            "did": DiDModel(),
         }
         if model not in model_map:
             raise ValueError(f"Unknown model: {model}. Available: {list(model_map.keys())}")
@@ -551,6 +552,9 @@ def inference(
             "tail_probability": TailProbability(model_type=model if model in ("logit", "poisson", "linear") else "logit"),
             "conditional_variance": ConditionalVariance(model_type=model if model in ("logit", "poisson") else "logit"),
             "qte": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
+            # Saturated DiD interaction tau = theta[3] (E[tau(X)] DiD effect)
+            "tau": AverageParameter(param_index=3, theta_dim=struct_model.theta_dim),
+            "att": AverageParameter(param_index=3, theta_dim=struct_model.theta_dim),
         }
         if target not in target_map:
             raise ValueError(f"Unknown target: {target}. Available: {list(target_map.keys())}")
@@ -675,6 +679,79 @@ def did_2x2(
     )
 
 
+def did_2x2_nn(
+    Y,
+    group,
+    post,
+    X,
+    *,
+    hidden_dims: Optional[List[int]] = None,
+    n_folds: int = 50,
+    epochs: int = 200,
+    lr: float = 0.01,
+    patience: int = 50,
+    lambda_method: Optional[str] = None,
+    verbose: bool = False,
+) -> InferenceResult:
+    """
+    Heterogeneous neural 2x2 difference-in-differences.
+
+    Fits the saturated DiD regression with covariate-varying coefficients via a neural
+    network, Y = alpha(X) + gamma(X) G + lambda(X) P + tau(X) (G P) + eps, and returns
+    the influence-function estimate of the average DiD effect E[tau(X)] with a valid
+    standard error.
+
+    This is the heterogeneous counterpart of did_2x2(): it uses the structural network +
+    cross-fitting + IF machinery (Regime B, analytic Lambda = E[W W' | X], two-way split).
+    Group and period assignment is assumed independent of X (the canonical repeated
+    cross-section design); if cell shares depend on X, pass lambda_method='estimate'.
+
+    Args:
+        Y: Outcome, 1-D array of length n.
+        group: Binary treatment-group indicator G in {0, 1}, length n.
+        post: Binary post-period indicator T in {0, 1}, length n.
+        X: Covariates (n, d_x) driving heterogeneity.
+        hidden_dims: Network architecture (default [64, 32]).
+        n_folds, epochs, lr, patience: Cross-fitting / training settings.
+        lambda_method: Override Lambda estimation (default: analytic aggregate, Regime B).
+        verbose: Print regime/progress.
+
+    Returns:
+        InferenceResult for E[tau(X)] (mu_hat, se, ci, psi_values, theta_hat, diagnostics).
+        theta_hat columns are [alpha, gamma, lambda, tau]; use
+        result.predict_theta(X_new)[:, 3] for the conditional DiD effect tau(X_new).
+    """
+    from .did import _as_binary_1d
+
+    Y = np.asarray(Y, dtype=np.float64)
+    G = _as_binary_1d(group, "group").astype(np.float64)
+    P = _as_binary_1d(post, "post").astype(np.float64)
+    X = np.asarray(X, dtype=np.float64)
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+
+    T_did = np.column_stack([G, P, G * P])
+
+    result = inference(
+        Y=Y,
+        T=T_did,
+        X=X,
+        model="did",
+        target="tau",
+        t_tilde=0.0,  # target ignores t_tilde; avoids the multi-col default
+        n_folds=n_folds,
+        epochs=epochs,
+        lr=lr,
+        patience=patience,
+        hidden_dims=hidden_dims if hidden_dims is not None else [64, 32],
+        lambda_method=lambda_method,
+        verbose=verbose,
+    )
+    result._model = "did_2x2_nn"
+    result._target = "E[tau(X)]"
+    return result
+
+
 # Re-export key classes
 from .core import DMLResult, compute_coverage, compute_se_ratio
 from .families import (
@@ -690,7 +767,7 @@ from .families import (
 )
 
 # New architecture exports
-from .models import StructuralModel, CustomModel, Linear, Logit, MultinomialLogit, CombinatorialModel, Quantile
+from .models import StructuralModel, CustomModel, Linear, Logit, MultinomialLogit, CombinatorialModel, Quantile, DiDModel
 from .targets import Target, CustomTarget, AverageParameter, AME, ChoiceProbabilityTarget, MultinomialAME, Elasticity, WTP, ConsumerWelfare, DoseResponse, Profit, TailProbability, ConditionalVariance, MultiTreatmentATE
 from .families import MultinomialLogitFamily
 from .lambda_ import Regime, detect_regime, select_lambda_strategy
@@ -700,6 +777,7 @@ __all__ = [
     'inference',
     'InferenceResult',
     'did_2x2',
+    'did_2x2_nn',
     # Legacy API
     'structural_dml',
     # Result class
