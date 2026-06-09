@@ -124,10 +124,14 @@ def structural_dml(
     target_fn: Optional[Callable] = None,
     theta_dim: Optional[int] = None,
     n_folds: int = 50,
+    n_repeats: int = 1,
+    three_way_theta_frac: float = 0.6,
     hidden_dims: List[int] = [64, 32],
     epochs: int = 200,
     lr: float = 0.01,
     patience: Optional[int] = None,
+    dropout: float = 0.1,
+    weight_decay: float = 0.0,
     variance: str = 'pooled',
     verbose: bool = False,
     store_data: bool = True,
@@ -184,9 +188,17 @@ def structural_dml(
         target_fn: Custom target function (x, theta) -> scalar
         theta_dim: Dimension of parameter vector (required if custom loss)
         n_folds: Number of cross-fitting folds (default=50, minimum recommended)
+        n_repeats: Repeated cross-fitting splits (default 1 == single split,
+            byte-identical to before). n_repeats > 1 aggregates with the
+            Chernozhukov et al. (2018) median DML rule, widening the SE by the
+            across-split variation (the under-coverage fix).
+        three_way_theta_frac: Fraction of training data used to fit theta in the
+            3-way split (default 0.6 == previous hardcoded value).
         hidden_dims: Neural network hidden layer sizes
         epochs: Training epochs per fold
         lr: Learning rate
+        dropout: StructuralNet dropout (default 0.1 == previous hardcoded value).
+        weight_decay: Adam L2 penalty (default 0.0 == no penalty, unchanged).
         patience: Early stopping patience. Default None resolves to 10 for all
             families except 'multinomial_logit', which auto-bumps to 50 (the
             3-way split makes patience=10 fatal — see MEMORY). Pass an explicit
@@ -334,10 +346,14 @@ def structural_dml(
         target_fn=target_fn,
         theta_dim=theta_dim,
         n_folds=n_folds,
+        n_repeats=n_repeats,
+        three_way_theta_frac=three_way_theta_frac,
         hidden_dims=hidden_dims,
         epochs=epochs,
         lr=lr,
         patience=patience,
+        dropout=dropout,
+        weight_decay=weight_decay,
         variance=variance,
         three_way=three_way,
         gradient_fn=gradient_fn,
@@ -453,11 +469,15 @@ def inference(
     lambda_method: Optional[str] = None,
     # Cross-fitting settings
     n_folds: int = 50,
+    n_repeats: int = 1,
+    three_way_theta_frac: float = 0.6,
     # Network settings
     hidden_dims: List[int] = [64, 32],
     epochs: int = 200,
     lr: float = 0.01,
     patience: int = 50,
+    dropout: float = 0.1,
+    weight_decay: float = 0.0,
     # Custom network architecture
     network_factory: Optional[Callable] = None,
     # Other
@@ -507,11 +527,23 @@ def inference(
 
         # Cross-fitting:
         n_folds: Number of folds (default: 50)
+        n_repeats: Number of repeated cross-fitting splits (default 1 == single
+            split, byte-identical to before). For n_repeats > 1 the estimate/SE
+            are aggregated with the Chernozhukov et al. (2018) median DML rule
+            (mu_hat = median_r(mu_r), se^2 = median_r(se_r^2 + (mu_r-mu_hat)^2)),
+            which widens the SE by the across-split variation — the under-coverage
+            fix. psi/theta are kept from the first repeat.
+        three_way_theta_frac: Fraction of training data used to fit theta in the
+            3-way (Regime C) split (default 0.6 == previous hardcoded value); an
+            undersmoothing knob.
 
         # Network:
         hidden_dims: Hidden layer sizes
         epochs: Training epochs
         lr: Learning rate
+        dropout: StructuralNet dropout (default 0.1 == previous hardcoded value;
+            ignored when network_factory is supplied). An undersmoothing knob.
+        weight_decay: Adam L2 penalty (default 0.0 == no penalty, unchanged).
 
         tikhonov_scale: Scale ε for the Tikhonov Lambda inversion (Λ + εI)⁻¹
             with ε = tikhonov_scale·trace(Λ)/d (default 0.01).
@@ -673,6 +705,10 @@ def inference(
         variance=variance,
         verbose=verbose,
         network_factory=network_factory,
+        n_repeats=n_repeats,
+        three_way_theta_frac=three_way_theta_frac,
+        dropout=dropout,
+        weight_decay=weight_decay,
     )
 
     inf_result = InferenceResult(

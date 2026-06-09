@@ -136,6 +136,7 @@ def train_structural_net(
     val_frac: float = 0.1,
     patience: int = 10,
     batch_size: Optional[int] = None,
+    weight_decay: float = 0.0,
     verbose: bool = False,
 ) -> TrainingHistory:
     """
@@ -152,6 +153,9 @@ def train_structural_net(
         val_frac: Fraction for validation
         patience: Early stopping patience
         batch_size: Mini-batch size (None for full batch)
+        weight_decay: L2 penalty passed to Adam (default 0.0 == no penalty,
+            identical to the previous unregularized optimizer). An undersmoothing
+            knob: a small positive value shrinks the network weights.
         verbose: Print progress
 
     Returns:
@@ -169,8 +173,8 @@ def train_structural_net(
     X_train, T_train, Y_train = X[train_idx], T[train_idx], Y[train_idx]
     X_val, T_val, Y_val = X[val_idx], T[val_idx], Y[val_idx]
 
-    # Optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    # Optimizer (weight_decay=0.0 default reproduces the previous Adam exactly)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
     # For early stopping
     best_val_loss = float('inf')

@@ -209,6 +209,48 @@ def compute_se_ci(
     return se, ci_lower, ci_upper, variance
 
 
+def median_dml_aggregate(
+    mu_list,
+    se_list,
+    alpha: float = 0.05,
+) -> Tuple[float, float, float, float]:
+    """
+    Aggregate repeated cross-fitting estimates with the median DML rule.
+
+    Chernozhukov et al. (2018) "median method" (FLM: results are "reduced with
+    repeated splitting and median aggregation"). Given R repeats, each producing
+    a point estimate mu_r and an IF standard error se_r = sqrt(Psi_r / n):
+
+        mu_hat = median_r( mu_r )
+        se^2   = median_r( se_r^2 + (mu_r - mu_hat)^2 )
+        CI     = mu_hat +/- z * se,   z = norm.ppf(1 - alpha/2)
+
+    The (mu_r - mu_hat)^2 term folds the across-split variation INTO the SE: the
+    SE only widens, it is never averaged away (this is the under-coverage fix).
+    Because each aggregated term se_r^2 + (mu_r - mu_hat)^2 >= se_r^2, the result
+    satisfies se >= sqrt(median_r(se_r^2)) = median_r(se_r). With a single repeat
+    it reduces to (mu_1, se_1): median([mu_1]) = mu_1 and the spread term is 0.
+
+    Args:
+        mu_list: per-repeat point estimates (length R).
+        se_list: per-repeat standard errors (length R).
+        alpha: CI level (default 0.05 -> 95% CI).
+
+    Returns:
+        (mu_hat, se, ci_lower, ci_upper) as Python floats.
+    """
+    import numpy as np
+    from scipy.stats import norm
+
+    mu_arr = np.asarray(mu_list, dtype=np.float64).reshape(-1)
+    se_arr = np.asarray(se_list, dtype=np.float64).reshape(-1)
+
+    mu_hat = float(np.median(mu_arr))
+    se = float(np.sqrt(np.median(se_arr ** 2 + (mu_arr - mu_hat) ** 2)))
+    z = norm.ppf(1 - alpha / 2)
+    return mu_hat, se, mu_hat - z * se, mu_hat + z * se
+
+
 def compute_inference_results(
     psi: Tensor,
     alpha: float = 0.05,

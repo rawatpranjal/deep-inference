@@ -100,7 +100,7 @@ def generate_data(X_pool, z_pool, n, seed):
 
 
 def run_simulation(M=20, n=10000, n_folds=20, epochs=150, patience=30,
-                    verbose=True):
+                    n_repeats=1, lambda_method=None, verbose=True):
     """Run M replications of CNN + Logit simulation."""
     from deep_inference import inference
 
@@ -108,6 +108,7 @@ def run_simulation(M=20, n=10000, n_folds=20, epochs=150, patience=30,
     print(f"  SIMULATION 2: IMAGE DATA (CNN + LOGIT)")
     print(f"{'='*60}")
     print(f"  M={M}, n={n}, n_folds={n_folds}, epochs={epochs}")
+    print(f"  n_repeats={n_repeats}, lambda_method={lambda_method}")
     print(f"  True mu* = E[beta*] = {MU_TRUE}")
     print(f"  DGP: beta* = {B0} + {B1}*z1 + {B2}*z2")
     print(f"  Encoder: CNN (Conv->Pool->Conv->Pool->Linear)")
@@ -142,6 +143,8 @@ def run_simulation(M=20, n=10000, n_folds=20, epochs=150, patience=30,
             hessian_depends_on_theta=True,
             target_fn=beta_target,
             n_folds=n_folds,
+            n_repeats=n_repeats,
+            lambda_method=lambda_method,
             epochs=epochs,
             patience=patience,
             hidden_dims=[64, 32],
@@ -172,6 +175,10 @@ def main():
     parser.add_argument("--n-folds", type=int, default=20)
     parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--patience", type=int, default=30)
+    parser.add_argument("--n-repeats", type=int, default=1,
+                        help="Repeated cross-fitting splits (median DML)")
+    parser.add_argument("--lambda-method", type=str, default=None,
+                        help="Lambda strategy override (e.g. ridge, lgbm, aggregate)")
     parser.add_argument("--quick", action="store_true",
                         help="Quick mode: M=5, n=5000")
     args = parser.parse_args()
@@ -205,6 +212,7 @@ def main():
     metrics, report = run_simulation(
         M=args.M, n=args.n, n_folds=args.n_folds,
         epochs=args.epochs, patience=args.patience,
+        n_repeats=args.n_repeats, lambda_method=args.lambda_method,
     )
 
     fh.close()
