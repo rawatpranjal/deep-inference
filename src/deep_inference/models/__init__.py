@@ -13,6 +13,7 @@ from .logit import LogitModel, Logit
 from .multinomial import MultinomialLogitModel, MultinomialLogit
 from .combinatorial import CombinatorialModel, Combinatorial
 from .quantile import QuantileModel, Quantile
+from .did import DiDModel, DiD
 
 __all__ = [
     # Neural network
@@ -38,4 +39,7 @@ __all__ = [
     # Quantile models
     "QuantileModel",
     "Quantile",
+    # Difference-in-differences (saturated 2x2, heterogeneous)
+    "DiDModel",
+    "DiD",
 ]

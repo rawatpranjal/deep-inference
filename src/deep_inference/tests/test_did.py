@@ -104,3 +104,85 @@ def test_did_2x2_non_binary_raises():
     G_bad[0] = 2.0
     with pytest.raises(ValueError, match="binary"):
         did_2x2(Y, G_bad, P)
+
+
+# ── Heterogeneous neural DiD: DiDModel + AnalyticLambda (NN-free checks) ──
+
+
+def test_did_model_score_hessian_match_autodiff():
+    """DiDModel closed-form score/Hessian must match torch autodiff of the loss."""
+    import torch
+    from deep_inference.models import DiDModel
+
+    model = DiDModel()
+    assert model.theta_dim == 4
+    assert model.hessian_depends_on_theta is False
+    assert model.hessian_depends_on_y is False
+
+    rng = np.random.default_rng(0)
+    max_g_err = 0.0
+    max_h_err = 0.0
+    for _ in range(100):
+        y = torch.tensor(float(rng.standard_normal()), dtype=torch.float64)
+        G, P = float(rng.integers(0, 2)), float(rng.integers(0, 2))
+        t = torch.tensor([G, P, G * P], dtype=torch.float64)
+        theta = torch.tensor(rng.standard_normal(4), dtype=torch.float64, requires_grad=True)
+
+        loss = model.loss(y, t, theta)
+        (grad_ad,) = torch.autograd.grad(loss, theta, create_graph=True)
+        hess_ad = torch.zeros(4, 4, dtype=torch.float64)
+        for j in range(4):
+            (row,) = torch.autograd.grad(grad_ad[j], theta, retain_graph=True)
+            hess_ad[j] = row
+
+        score_cf = model.score(y, t, theta.detach())
+        hess_cf = model.hessian(y, t, theta.detach())
+        max_g_err = max(max_g_err, float((score_cf - grad_ad.detach()).abs().max()))
+        max_h_err = max(max_h_err, float((hess_cf - hess_ad).abs().max()))
+
+    assert max_g_err < 1e-6, f"score autodiff mismatch: {max_g_err}"
+    assert max_h_err < 1e-6, f"hessian autodiff mismatch: {max_h_err}"
+
+
+def test_analytic_lambda_supports_multicolumn_design():
+    """AnalyticLambda must build (n,4,4) Lambda = E[WW'] for the DiD design [1,G,P,GP]."""
+    import torch
+    from deep_inference.lambda_.analytic import AnalyticLambda
+    from deep_inference.models import DiDModel
+
+    rng = np.random.default_rng(1)
+    n = 3000
+    X = torch.tensor(rng.standard_normal((n, 3)), dtype=torch.float32)
+    G = (torch.rand(n) < 0.5).float()
+    P = (torch.rand(n) < 0.5).float()
+    T = torch.stack([G, P, G * P], dim=1)  # (n, 3)
+
+    lam = AnalyticLambda(method="aggregate")
+    lam.fit(X, T, torch.zeros(n), None, DiDModel())
+    L = lam.predict(X)
+    assert L.shape == (n, 4, 4)
+
+    W = torch.cat([torch.ones(n, 1), T], dim=1)  # [1, G, P, GP]
+    expected = torch.einsum("bi,bj->bij", W, W).mean(0)
+    assert float((L[0] - expected).abs().max()) < 1e-5
+    assert float(torch.linalg.eigvalsh(L[0]).min()) > 1e-4  # PSD / stable
+
+
+def test_analytic_lambda_scalar_path_unchanged():
+    """Regression: scalar T still yields the original (n,2,2) Lambda."""
+    import torch
+    from deep_inference.lambda_.analytic import AnalyticLambda
+    from deep_inference.models import Linear
+
+    rng = np.random.default_rng(2)
+    n = 2000
+    X = torch.tensor(rng.standard_normal((n, 2)), dtype=torch.float32)
+    T = torch.tensor(rng.standard_normal(n), dtype=torch.float32)  # (n,)
+
+    lam = AnalyticLambda(method="aggregate")
+    lam.fit(X, T, torch.zeros(n), None, Linear())
+    L = lam.predict(X)
+    assert L.shape == (n, 2, 2)
+    T_aug = torch.stack([torch.ones(n), T], dim=1)
+    expected = torch.einsum("bi,bj->bij", T_aug, T_aug).mean(0)
+    assert float((L[0] - expected).abs().max()) < 1e-5

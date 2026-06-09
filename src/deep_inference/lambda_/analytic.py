@@ -74,10 +74,16 @@ class AnalyticLambda(BaseLambdaStrategy):
         device = X.device
         dtype = X.dtype
 
-        # Augment T with intercept: t_aug = [1, T]
-        ones = torch.ones(n, dtype=dtype, device=device)
-        T_aug = torch.stack([ones, T], dim=1)  # (n, 2)
-        self._d_theta = 2
+        # Augment T with an intercept: T_aug = [1, T]. Handle both scalar T (n,) ->
+        # (n, 2) and multi-column designs T (n, d_t) -> (n, 1 + d_t), e.g. the
+        # saturated DiD design [G, P, G*P] -> W = [1, G, P, G*P] = (n, 4).
+        if T.dim() == 1:
+            ones = torch.ones(n, dtype=dtype, device=device)
+            T_aug = torch.stack([ones, T], dim=1)  # (n, 2)
+        else:
+            ones = torch.ones(n, 1, dtype=dtype, device=device)
+            T_aug = torch.cat([ones, T], dim=1)  # (n, 1 + d_t)
+        self._d_theta = T_aug.shape[1]
 
         # Compute outer products: TT' for each observation
         # Shape: (n, 2, 2)
