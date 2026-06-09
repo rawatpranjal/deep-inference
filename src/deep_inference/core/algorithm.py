@@ -102,6 +102,10 @@ def structural_dml_core(
     ridge_alpha: float = 1000.0,
     patience: int = 10,
     variance: str = 'pooled',
+    n_repeats: int = 1,
+    three_way_theta_frac: float = 0.6,
+    dropout: float = 0.1,
+    weight_decay: float = 0.0,
     verbose: bool = False,
     network_factory: Optional[Callable] = None,
 ) -> DMLResult:
@@ -145,6 +149,19 @@ def structural_dml_core(
             global mean). 'within_fold' is the legacy per-fold-centered variant
             (mean of per-fold variances); it drops the between-fold component so
             it is always <= pooled.
+        n_repeats: Number of repeated cross-fitting splits (default 1 == the
+            original single split; reduces EXACTLY to it). For n_repeats > 1 the
+            estimate/SE are aggregated with the Chernozhukov et al. (2018) median
+            DML rule: mu_hat = median_r(mu_r), se^2 = median_r(se_r^2 +
+            (mu_r - mu_hat)^2). The across-split term widens the SE (the fix for
+            under-coverage). psi/theta/diagnostics are kept from the first repeat.
+        three_way_theta_frac: Fraction of training data used to fit theta in the
+            3-way split (default 0.6 == previous hardcoded value). An
+            undersmoothing knob.
+        dropout: Dropout probability for the StructuralNet (default 0.1 ==
+            previous hardcoded value). Ignored when network_factory is supplied.
+        weight_decay: L2 penalty for Adam (default 0.0 == no penalty, identical
+            to the previous optimizer).
         verbose: Print progress
 
     Returns:
@@ -170,28 +187,6 @@ def structural_dml_core(
         if verbose:
             print(f"Auto-detected three_way={three_way}")
 
-    # Create fold indices
-    fold_indices = np.zeros(n, dtype=np.int32)
-    perm = np.random.permutation(n)
-    fold_size = n // n_folds
-
-    for k in range(n_folds):
-        start = k * fold_size
-        if k == n_folds - 1:
-            end = n
-        else:
-            end = (k + 1) * fold_size
-        fold_indices[perm[start:end]] = k
-
-    # Storage for results
-    psi_values = np.zeros(n)
-    theta_hat_all = np.zeros((n, theta_dim))
-    corrections = np.zeros(n)
-    lambda_cond_numbers = []
-    lambda_min_eigenvalues = []
-    n_regularized = 0  # Count of observations needing extra regularization
-    histories = []
-
     # Default per-obs target: h(theta, t) = beta (ignores t)
     if per_obs_target_fn is None:
         def per_obs_target_fn(theta, t):
@@ -205,180 +200,247 @@ def structural_dml_core(
             grad[:, 1] = 1.0
             return grad
 
-    # Cross-fitting loop
-    fold_iterator = range(n_folds)
-    if verbose and HAS_TQDM:
-        fold_iterator = tqdm(fold_iterator, desc="Cross-fitting", ncols=80)
+    def _single_split():
+        """One full cross-fitting pass over a fresh fold partition. Behaviorally
+        identical to the original single-split body. Consumes the global RNG, so
+        repeated calls (n_repeats > 1) naturally produce distinct splits while a
+        single call (n_repeats == 1) reproduces the original code path exactly."""
+        # Create fold indices
+        fold_indices = np.zeros(n, dtype=np.int32)
+        perm = np.random.permutation(n)
+        fold_size = n // n_folds
 
-    for k in fold_iterator:
-        if verbose and not HAS_TQDM:
-            print(f"Processing fold {k+1}/{n_folds}")
+        for k in range(n_folds):
+            start = k * fold_size
+            if k == n_folds - 1:
+                end = n
+            else:
+                end = (k + 1) * fold_size
+            fold_indices[perm[start:end]] = k
 
-        # Get fold indices
-        eval_mask = fold_indices == k
-        train_mask = ~eval_mask
+        # Storage for results
+        psi_values = np.zeros(n)
+        theta_hat_all = np.zeros((n, theta_dim))
+        corrections = np.zeros(n)
+        lambda_cond_numbers = []
+        lambda_min_eigenvalues = []
+        n_regularized = 0  # Count of observations needing extra regularization
+        histories = []
 
-        eval_idx = np.where(eval_mask)[0]
-        train_idx = np.where(train_mask)[0]
+        # Cross-fitting loop
+        fold_iterator = range(n_folds)
+        if verbose and HAS_TQDM:
+            fold_iterator = tqdm(fold_iterator, desc="Cross-fitting", ncols=80)
 
-        X_eval = X_t[eval_idx]
-        T_eval = T_t[eval_idx]
-        Y_eval = Y_t[eval_idx]
+        for k in fold_iterator:
+            if verbose and not HAS_TQDM:
+                print(f"Processing fold {k+1}/{n_folds}")
 
-        X_train = X_t[train_idx]
-        T_train = T_t[train_idx]
-        Y_train = Y_t[train_idx]
+            # Get fold indices
+            eval_mask = fold_indices == k
+            train_mask = ~eval_mask
 
-        # Three-way splitting: split train into theta-train and lambda-train
-        if three_way:
-            n_train = len(train_idx)
-            n_theta = int(0.6 * n_train)
-            perm_train = np.random.permutation(n_train)
-            theta_idx_local = perm_train[:n_theta]
-            lambda_idx_local = perm_train[n_theta:]
+            eval_idx = np.where(eval_mask)[0]
+            train_idx = np.where(train_mask)[0]
 
-            X_theta = X_train[theta_idx_local]
-            T_theta = T_train[theta_idx_local]
-            Y_theta = Y_train[theta_idx_local]
+            X_eval = X_t[eval_idx]
+            T_eval = T_t[eval_idx]
+            Y_eval = Y_t[eval_idx]
 
-            X_lambda = X_train[lambda_idx_local]
-            T_lambda = T_train[lambda_idx_local]
-            Y_lambda = Y_train[lambda_idx_local]
-        else:
-            # Two-way: use all training data for both
-            X_theta = X_train
-            T_theta = T_train
-            Y_theta = Y_train
+            X_train = X_t[train_idx]
+            T_train = T_t[train_idx]
+            Y_train = Y_t[train_idx]
 
-            X_lambda = X_train
-            T_lambda = T_train
-            Y_lambda = Y_train
+            # Three-way splitting: split train into theta-train and lambda-train
+            if three_way:
+                n_train = len(train_idx)
+                n_theta = int(three_way_theta_frac * n_train)
+                perm_train = np.random.permutation(n_train)
+                theta_idx_local = perm_train[:n_theta]
+                lambda_idx_local = perm_train[n_theta:]
 
-        # Train structural network
-        if network_factory is not None:
-            model = network_factory(d_x, theta_dim)
-        else:
-            model = StructuralNet(
-                input_dim=d_x,
-                theta_dim=theta_dim,
-                hidden_dims=hidden_dims,
+                X_theta = X_train[theta_idx_local]
+                T_theta = T_train[theta_idx_local]
+                Y_theta = Y_train[theta_idx_local]
+
+                X_lambda = X_train[lambda_idx_local]
+                T_lambda = T_train[lambda_idx_local]
+                Y_lambda = Y_train[lambda_idx_local]
+            else:
+                # Two-way: use all training data for both
+                X_theta = X_train
+                T_theta = T_train
+                Y_theta = Y_train
+
+                X_lambda = X_train
+                T_lambda = T_train
+                Y_lambda = Y_train
+
+            # Train structural network
+            if network_factory is not None:
+                model = network_factory(d_x, theta_dim)
+            else:
+                model = StructuralNet(
+                    input_dim=d_x,
+                    theta_dim=theta_dim,
+                    hidden_dims=hidden_dims,
+                    dropout=dropout,
+                )
+
+            history = train_structural_net(
+                model=model,
+                X=X_theta,
+                T=T_theta,
+                Y=Y_theta,
+                loss_fn=loss_fn,
+                epochs=epochs,
+                lr=lr,
+                patience=patience,
+                weight_decay=weight_decay,
+                verbose=False,
             )
+            histories.append(history)
 
-        history = train_structural_net(
-            model=model,
-            X=X_theta,
-            T=T_theta,
-            Y=Y_theta,
-            loss_fn=loss_fn,
-            epochs=epochs,
-            lr=lr,
-            patience=patience,
-            verbose=False,
-        )
-        histories.append(history)
+            # Get theta predictions on lambda data and eval data
+            model.eval()
+            with torch.no_grad():
+                theta_lambda = model(X_lambda)
+                theta_eval = model(X_eval)
 
-        # Get theta predictions on lambda data and eval data
-        model.eval()
-        with torch.no_grad():
-            theta_lambda = model(X_lambda)
-            theta_eval = model(X_eval)
+            # Compute Hessians on lambda data
+            if hessian_fn is not None:
+                hessians_lambda = hessian_fn(Y_lambda, T_lambda, theta_lambda)
+            else:
+                hessians_lambda = compute_hessian(loss_fn, Y_lambda, T_lambda, theta_lambda)
 
-        # Compute Hessians on lambda data
-        if hessian_fn is not None:
-            hessians_lambda = hessian_fn(Y_lambda, T_lambda, theta_lambda)
-        else:
-            hessians_lambda = compute_hessian(loss_fn, Y_lambda, T_lambda, theta_lambda)
-
-        # Fit Lambda estimator
-        if three_way:
-            if lambda_method == 'aggregate':
-                # Use aggregate even for three-way (ensures full-rank for binary T)
+            # Fit Lambda estimator
+            if three_way:
+                if lambda_method == 'aggregate':
+                    # Use aggregate even for three-way (ensures full-rank for binary T)
+                    lambda_est = AggregateLambdaEstimator(theta_dim=theta_dim)
+                    lambda_est.fit(X_lambda, hessians_lambda)
+                else:
+                    # Nonparametric Lambda(x)
+                    lambda_est = LambdaEstimator(
+                        method=lambda_method,
+                        theta_dim=theta_dim,
+                        ridge_alpha=ridge_alpha,
+                    )
+                    lambda_est.fit(X_lambda, hessians_lambda)
+                Lambda_eval = lambda_est.predict(X_eval)  # (n_eval, d, d)
+            else:
+                # Aggregate Lambda (same for all x)
                 lambda_est = AggregateLambdaEstimator(theta_dim=theta_dim)
                 lambda_est.fit(X_lambda, hessians_lambda)
-            else:
-                # Nonparametric Lambda(x)
-                lambda_est = LambdaEstimator(
-                    method=lambda_method,
-                    theta_dim=theta_dim,
-                    ridge_alpha=ridge_alpha,
-                )
-                lambda_est.fit(X_lambda, hessians_lambda)
-            Lambda_eval = lambda_est.predict(X_eval)  # (n_eval, d, d)
-        else:
-            # Aggregate Lambda (same for all x)
-            lambda_est = AggregateLambdaEstimator(theta_dim=theta_dim)
-            lambda_est.fit(X_lambda, hessians_lambda)
-            Lambda_eval = lambda_est.predict(X_eval)  # (n_eval, d, d)
+                Lambda_eval = lambda_est.predict(X_eval)  # (n_eval, d, d)
 
-        # Invert Lambda matrices
-        Lambda_inv_eval = batch_inverse(Lambda_eval, ridge=ridge)
+            # Invert Lambda matrices
+            Lambda_inv_eval = batch_inverse(Lambda_eval, ridge=ridge)
 
-        # Track condition numbers and min eigenvalues
-        for i in range(len(Lambda_eval)):
-            s = torch.linalg.svdvals(Lambda_eval[i])
-            if s.min() > 1e-10:
-                cond = (s.max() / s.min()).item()
-            else:
-                cond = float('inf')
-            lambda_cond_numbers.append(cond)
+            # Track condition numbers and min eigenvalues
+            for i in range(len(Lambda_eval)):
+                s = torch.linalg.svdvals(Lambda_eval[i])
+                if s.min() > 1e-10:
+                    cond = (s.max() / s.min()).item()
+                else:
+                    cond = float('inf')
+                lambda_cond_numbers.append(cond)
 
-            # Track minimum eigenvalue
-            try:
-                eigvals = torch.linalg.eigvalsh(Lambda_eval[i])
-                min_eig = eigvals.min().item()
-                lambda_min_eigenvalues.append(min_eig)
-                if min_eig < 1e-6:
+                # Track minimum eigenvalue
+                try:
+                    eigvals = torch.linalg.eigvalsh(Lambda_eval[i])
+                    min_eig = eigvals.min().item()
+                    lambda_min_eigenvalues.append(min_eig)
+                    if min_eig < 1e-6:
+                        n_regularized += 1
+                except RuntimeError:
+                    lambda_min_eigenvalues.append(0.0)
                     n_regularized += 1
-            except RuntimeError:
-                lambda_min_eigenvalues.append(0.0)
-                n_regularized += 1
 
-        # Compute gradients on eval data
-        # Need theta with grad for autodiff
-        theta_eval_grad = theta_eval.clone().requires_grad_(True)
+            # Compute gradients on eval data
+            # Need theta with grad for autodiff
+            theta_eval_grad = theta_eval.clone().requires_grad_(True)
 
-        if gradient_fn is not None:
-            l_theta_eval = gradient_fn(Y_eval, T_eval, theta_eval)
-        else:
-            l_theta_eval = compute_gradient(loss_fn, Y_eval, T_eval, theta_eval)
+            if gradient_fn is not None:
+                l_theta_eval = gradient_fn(Y_eval, T_eval, theta_eval)
+            else:
+                l_theta_eval = compute_gradient(loss_fn, Y_eval, T_eval, theta_eval)
 
-        # Compute per-observation target and gradient (pass T for T-dependent targets like AME)
-        h_eval = per_obs_target_fn(theta_eval, T_eval)  # (n_eval,)
-        h_grad_eval = per_obs_target_grad_fn(theta_eval, T_eval)  # (n_eval, d) or (d,)
+            # Compute per-observation target and gradient (pass T for T-dependent targets like AME)
+            h_eval = per_obs_target_fn(theta_eval, T_eval)  # (n_eval,)
+            h_grad_eval = per_obs_target_grad_fn(theta_eval, T_eval)  # (n_eval, d) or (d,)
 
-        # Handle both per-obs and constant target gradient
-        if h_grad_eval.dim() == 1:
-            h_grad_eval = h_grad_eval.unsqueeze(0).expand(len(eval_idx), -1)
+            # Handle both per-obs and constant target gradient
+            if h_grad_eval.dim() == 1:
+                h_grad_eval = h_grad_eval.unsqueeze(0).expand(len(eval_idx), -1)
 
-        # Compute influence function: psi = h - h_grad @ Lambda_inv @ l_theta
-        for i in range(len(eval_idx)):
-            global_idx = eval_idx[i]
+            # Compute influence function: psi = h - h_grad @ Lambda_inv @ l_theta
+            for i in range(len(eval_idx)):
+                global_idx = eval_idx[i]
 
-            h_i = h_eval[i].item()
-            h_grad_i = h_grad_eval[i]  # (d,)
-            Lambda_inv_i = Lambda_inv_eval[i]  # (d, d)
-            l_theta_i = l_theta_eval[i]  # (d,)
+                h_i = h_eval[i].item()
+                h_grad_i = h_grad_eval[i]  # (d,)
+                Lambda_inv_i = Lambda_inv_eval[i]  # (d, d)
+                l_theta_i = l_theta_eval[i]  # (d,)
 
-            # Correction term: h_grad @ Lambda_inv @ l_theta
-            correction_i = (h_grad_i @ Lambda_inv_i @ l_theta_i).item()
+                # Correction term: h_grad @ Lambda_inv @ l_theta
+                correction_i = (h_grad_i @ Lambda_inv_i @ l_theta_i).item()
 
-            psi_i = h_i - correction_i
+                psi_i = h_i - correction_i
 
-            psi_values[global_idx] = psi_i
-            theta_hat_all[global_idx] = theta_eval[i].detach().numpy()
-            corrections[global_idx] = correction_i
+                psi_values[global_idx] = psi_i
+                theta_hat_all[global_idx] = theta_eval[i].detach().numpy()
+                corrections[global_idx] = correction_i
 
-    # Aggregate results
-    mu_hat = psi_values.mean()
+        return {
+            "psi_values": psi_values,
+            "theta_hat_all": theta_hat_all,
+            "corrections": corrections,
+            "fold_indices": fold_indices,
+            "lambda_cond_numbers": lambda_cond_numbers,
+            "lambda_min_eigenvalues": lambda_min_eigenvalues,
+            "n_regularized": n_regularized,
+            "histories": histories,
+        }
 
     # SE + 95% CI via the shared estimator (single source of truth).
     # method='pooled' (default) = FLM influence-function variance; 'within_fold'
     # = legacy per-fold-centered variant. z = norm.ppf(0.975) (no hardcoded 1.96).
-    from ..engine.variance import compute_se_ci
+    from ..engine.variance import compute_se_ci, median_dml_aggregate
 
-    se, ci_lower, ci_upper, psi_variance = compute_se_ci(
-        psi_values, fold_indices=fold_indices, n=n, method=variance, alpha=0.05
-    )
+    # Repeated splitting + median DML aggregation. n_repeats == 1 reproduces the
+    # original single split exactly (one call, verbatim compute_se_ci output).
+    repeat_stats = []  # (mu_r, se_r, ci_lo_r, ci_hi_r) per repeat
+    keep = None
+    for r in range(n_repeats):
+        out = _single_split()
+        psi_r = out["psi_values"]
+        se_r, ci_lo_r, ci_hi_r, _var_r = compute_se_ci(
+            psi_r, fold_indices=out["fold_indices"], n=n, method=variance, alpha=0.05
+        )
+        repeat_stats.append((psi_r.mean(), se_r, ci_lo_r, ci_hi_r))
+        if r == 0:
+            keep = out
+
+    if n_repeats == 1:
+        mu_hat, se, ci_lower, ci_upper = repeat_stats[0]
+    else:
+        # Chernozhukov et al. (2018) median DML rule (single source of truth).
+        mu_hat, se, ci_lower, ci_upper = median_dml_aggregate(
+            [s[0] for s in repeat_stats],
+            [s[1] for s in repeat_stats],
+            alpha=0.05,
+        )
+
+    # Unpack the kept (first) repeat for psi, theta, and diagnostics.
+    psi_values = keep["psi_values"]
+    theta_hat_all = keep["theta_hat_all"]
+    corrections = keep["corrections"]
+    fold_indices = keep["fold_indices"]
+    lambda_cond_numbers = keep["lambda_cond_numbers"]
+    lambda_min_eigenvalues = keep["lambda_min_eigenvalues"]
+    n_regularized = keep["n_regularized"]
+    histories = keep["histories"]
 
     # Naive estimate for comparison
     mu_naive = theta_hat_all[:, 1].mean()  # Just average beta

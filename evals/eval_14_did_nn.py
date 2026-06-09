@@ -15,6 +15,7 @@ Run:
     python3 -m evals.eval_14_did_nn --quick   # fast smoke (small M)
 """
 
+import argparse
 import sys
 import time
 
@@ -34,14 +35,28 @@ from evals.common.metrics import (  # noqa: E402
     format_validation_table,
 )
 
-QUICK = "--quick" in sys.argv
+# CLI config. --quick sets the lean defaults; --M/--N/--epochs/--patience override
+# (parse_known_args keeps the script importable / robust to extra harness args).
+_parser = argparse.ArgumentParser(description="eval_14: heterogeneous neural 2x2 DiD")
+_parser.add_argument("--quick", action="store_true", help="fast smoke (small M)")
+_parser.add_argument("--M", type=int, default=None, help="MC replications")
+_parser.add_argument("--N", type=int, default=None, help="sample size")
+_parser.add_argument("--epochs", type=int, default=None, help="training epochs")
+_parser.add_argument("--patience", type=int, default=None, help="early-stopping patience")
+_args, _ = _parser.parse_known_args()
+
+QUICK = _args.quick
 
 # Regime B (linear, 2-way split). Coverage needs adequate n/epochs (cf. eval_06 linear:
 # n=5000, epochs=200 -> 96%); --quick uses a lean config only to smoke-test the pipeline.
 if QUICK:
-    M, N, N_FOLDS, EPOCHS, PATIENCE = 8, 2000, 5, 50, 15
+    _M, _N, N_FOLDS, _EPOCHS, _PATIENCE = 8, 2000, 5, 50, 15
 else:
-    M, N, N_FOLDS, EPOCHS, PATIENCE = 25, 5000, 5, 150, 40
+    _M, _N, N_FOLDS, _EPOCHS, _PATIENCE = 25, 5000, 5, 150, 40
+M = _args.M if _args.M is not None else _M
+N = _args.N if _args.N is not None else _N
+EPOCHS = _args.epochs if _args.epochs is not None else _EPOCHS
+PATIENCE = _args.patience if _args.patience is not None else _PATIENCE
 HIDDEN = [32, 16]
 LR = 0.01
 N_JOBS = 4
