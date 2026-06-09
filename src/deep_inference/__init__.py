@@ -508,17 +508,28 @@ def inference(
     else:
         t_tilde = torch.tensor(t_tilde, dtype=torch.float32)
 
+    # Index of the slope coefficient beta_1 within theta (default [alpha, beta]).
+    # Overridden below for multinomial logit, whose layout is
+    # [alpha_1, ..., alpha_{J-1}, beta_1, ..., beta_K].
+    beta_index = 1
+
     # Resolve model
     if model is not None:
         # Built-in model
-        # Extract quantile-specific kwargs before building model map
+        # Extract model-specific kwargs before building model map
         tau = kwargs.pop("tau", 0.5)
         smooth_eps = kwargs.pop("smooth_eps", 0.01)
+        # Multinomial logit dimensions (ignored by the other models)
+        n_alternatives = kwargs.pop("n_alternatives", 3)
+        n_attributes = kwargs.pop("n_attributes", 2)
+        target_idx = kwargs.pop("target_idx", 0)
 
         model_map = {
             "linear": Linear(),
             "logit": Logit(),
-            "multinomial_logit": MultinomialLogit(),
+            "multinomial_logit": MultinomialLogit(
+                n_alternatives=n_alternatives, n_attributes=n_attributes
+            ),
             "quantile": Quantile(tau=tau, smooth_eps=smooth_eps),
             "did": DiDModel(),
             "did_fe": FEPanelDiDModel(),
@@ -526,6 +537,11 @@ def inference(
         if model not in model_map:
             raise ValueError(f"Unknown model: {model}. Available: {list(model_map.keys())}")
         struct_model = model_map[model]
+
+        # Multinomial theta is [alpha_1..alpha_{J-1}, beta_1..beta_K]; the first
+        # attribute coefficient beta_1 lives at index (J-1), NOT index 1.
+        if model == "multinomial_logit":
+            beta_index = (n_alternatives - 1) + target_idx
     elif loss is not None:
         # Custom loss
         if theta_dim is None:
@@ -538,20 +554,24 @@ def inference(
     else:
         raise ValueError("Must provide 'model' or 'loss'")
 
+    # Fail loudly on silently-dropped arguments (nothing downstream consumes kwargs).
+    if kwargs:
+        raise ValueError(f"inference() got unexpected keyword arguments: {list(kwargs)}")
+
     # Resolve target
     if target is not None:
         # Built-in target
         target_map = {
-            "beta": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
+            "beta": AverageParameter(param_index=beta_index, theta_dim=struct_model.theta_dim),
             "average_slope": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
             "ame": AME(param_index=1, model_type="logit" if model == "logit" else "linear"),
-            "elasticity": Elasticity(model_type=model if model in ("logit", "poisson", "gamma", "negbin") else "logit"),
+            "elasticity": Elasticity(model_type="logit"),
             "wtp": WTP(attribute_index=1, price_index=2),
             "welfare": ConsumerWelfare(price_coef_index=1),
-            "dose_response": DoseResponse(model_type=model if model in ("logit", "linear", "poisson") else "logit"),
-            "profit": Profit(model_type=model if model in ("logit", "linear", "poisson") else "logit"),
-            "tail_probability": TailProbability(model_type=model if model in ("logit", "poisson", "linear") else "logit"),
-            "conditional_variance": ConditionalVariance(model_type=model if model in ("logit", "poisson") else "logit"),
+            "dose_response": DoseResponse(model_type=model if model in ("logit", "linear") else "logit"),
+            "profit": Profit(model_type=model if model in ("logit", "linear") else "logit"),
+            "tail_probability": TailProbability(model_type=model if model in ("logit", "linear") else "logit"),
+            "conditional_variance": ConditionalVariance(model_type="logit"),
             "qte": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
             # Saturated DiD interaction tau = theta[3] (E[tau(X)] DiD effect)
             "tau": AverageParameter(param_index=3, theta_dim=struct_model.theta_dim),
@@ -567,7 +587,7 @@ def inference(
         struct_target = CustomTarget(h_fn=target_fn)
     else:
         # Default: average beta
-        struct_target = AverageParameter(param_index=1, theta_dim=struct_model.theta_dim)
+        struct_target = AverageParameter(param_index=beta_index, theta_dim=struct_model.theta_dim)
 
     # Select Lambda strategy
     lambda_strategy = select_lambda_strategy(

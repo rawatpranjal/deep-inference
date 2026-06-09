@@ -20,8 +20,8 @@ two-way cross-fitting suffices.
 
 This is the StructuralModel used by inference(model='did', target='tau') and by the
 top-level entry point deep_inference.did(..., X=...). It is distinct from the
-closed-form estimator in deep_inference/did.py (did_2x2), which handles the exact
-homogeneous case.
+closed-form estimator in deep_inference/_did_closed.py (did_2x2_arrays), exposed as
+did(method='exact'), which handles the exact homogeneous 2x2 case.
 """
 
 import torch

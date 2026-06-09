@@ -100,6 +100,13 @@ def select_lambda_strategy(
 
     # Create strategy based on regime
     if regime == Regime.A:
+        # Regime A / lambda_method='compute' evaluates the Hessian at y=0, valid only
+        # for models whose Hessian does not depend on y. Fail loudly on misuse.
+        assert not model.hessian_depends_on_y, (
+            "Regime A (lambda_method='compute') evaluates the Hessian at y=0, which "
+            "is only valid when hessian_depends_on_y is False. This model has "
+            "hessian_depends_on_y=True; use lambda_method='estimate' instead."
+        )
         return ComputeLambda(treatment_dist=treatment_dist, model=model, **kwargs)
     elif regime == Regime.B:
         # Intercept-free models (e.g. within-transformed FE panel DiD) declare

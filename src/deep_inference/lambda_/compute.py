@@ -108,6 +108,14 @@ class ComputeLambda(BaseLambdaStrategy):
 
         We just store the model and sample t values.
         """
+        # Regime A evaluates the Hessian at y=0 (see predict); this is only valid
+        # when the Hessian does not depend on y. For y-dependent models (e.g. the
+        # quantile model) this would silently return garbage, so fail loudly.
+        assert not model.hessian_depends_on_y, (
+            "ComputeLambda (Regime A) evaluates the Hessian at y=0, which is only "
+            "valid when hessian_depends_on_y is False. This model has "
+            "hessian_depends_on_y=True; use lambda_method='estimate' instead."
+        )
         self.model = model
 
         # Pre-sample treatment values for consistency
