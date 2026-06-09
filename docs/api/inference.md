@@ -324,6 +324,51 @@ exact homogeneous case and `did_2x2_nn` when the effect varies with covariates.
 
 ---
 
+## `did_panel_fe()` - Two-way fixed-effects panel DiD
+
+Panel DiD with **unit and time fixed effects** and a heterogeneous treatment effect. The
+outcome `Y` and treatment `D` (e.g. `D = G·Post`) are residualized by unit + time fixed
+effects (two-way within transformation), then a network learns `τ(X)` in
+
+```
+Ỹ_it = D̃_it · τ(X_it) + ε_it
+```
+
+The target is the average effect `E[τ(X)]`. Because the squared-loss Hessian `D̃²` is
+constant in θ, this runs in **Regime B** (analytic `Λ = E[D̃²|X]`, two-way cross-fitting).
+Also available as `model='did_fe'` (with `target='fe_effect'`) on residualized inputs.
+
+Works for **continuous and binary** outcomes. For a binary `Y` this is a fixed-effects
+**linear probability model**; the IF standard error is heteroskedasticity-robust, so the
+Bernoulli variance is handled correctly.
+
+### Signature
+
+```python
+from deep_inference import did_panel_fe
+
+result = did_panel_fe(
+    Y,                    # (n,) outcomes (units × periods, any stacking order)
+    D,                    # (n,) treatment indicator, e.g. D = G * Post
+    X,                    # (n, d_x) covariates driving effect heterogeneity
+    unit,                 # (n,) unit ids
+    time,                 # (n,) period ids
+    hidden_dims=[64, 32],
+    n_folds=50,
+    epochs=200,
+)
+
+print(result.mu_hat, result.se)             # E[τ(X)] and IF standard error
+tau_x = result.predict_theta(X_new)[:, 0]   # conditional effect τ(X_new)
+```
+
+```{note}
+The standard error assumes errors are independent across observations. Serial or
+within-unit correlation would require cluster-robust SEs (not implemented here).
+```
+
+---
+
 ## Configuration Guidelines
 
 ### Network Architecture
