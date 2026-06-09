@@ -20,7 +20,7 @@ import numpy as np
 
 sys.path.insert(0, "/Users/pranjal/deepest/src")
 
-from deep_inference import did_panel_fe  # noqa: E402
+from deep_inference import did  # noqa: E402
 from deep_inference.models import FEPanelDiDModel  # noqa: E402
 from deep_inference.lambda_.analytic import AnalyticLambda  # noqa: E402
 from deep_inference.utils import residualize_fixed_effects  # noqa: E402
@@ -49,7 +49,7 @@ MU_TRUE_B = DGP.mu_true_binary()
 
 def _fit(gen, mu_true, seed):
     Y, D, X, unit, time_, tau = gen(seed)
-    r = did_panel_fe(Y, D, X, unit, time_, hidden_dims=HIDDEN, n_folds=N_FOLDS,
+    r = did(Y, D=D, X=X, unit=unit, time=time_, hidden_dims=HIDDEN, n_folds=N_FOLDS,
                      epochs=EPOCHS, lr=LR, patience=PATIENCE)
     covered = (r.ci_lower <= mu_true) and (mu_true <= r.ci_upper)
     return r.mu_hat, r.se, bool(covered), (r.mu_hat - mu_true) / r.se
@@ -58,7 +58,7 @@ def _fit(gen, mu_true, seed):
 def test_recovery():
     print("\n[Test 1] Recovery: tau_hat(X) vs tau*(X) (continuous)")
     Y, D, X, unit, time_, tau = DGP.generate_continuous(seed=777)
-    r = did_panel_fe(Y, D, X, unit, time_, hidden_dims=HIDDEN, n_folds=N_FOLDS,
+    r = did(Y, D=D, X=X, unit=unit, time=time_, hidden_dims=HIDDEN, n_folds=N_FOLDS,
                      epochs=EPOCHS, lr=LR, patience=PATIENCE)
     tau_hat = r.theta_hat.numpy()[:, 0]
     rmse = float(np.sqrt(np.mean((tau_hat - tau) ** 2)))

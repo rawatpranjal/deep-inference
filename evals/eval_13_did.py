@@ -22,7 +22,7 @@ import numpy as np
 
 sys.path.insert(0, "/Users/pranjal/deepest/src")
 
-from deep_inference import did_2x2  # noqa: E402
+from deep_inference import did  # noqa: E402
 from evals.common.metrics import validate_coverage_run, format_validation_table  # noqa: E402
 
 
@@ -75,7 +75,7 @@ def main():
     for m in range(M):
         rng = np.random.default_rng(m + 1)
         Y, G, P = simulate(N, rng)
-        r = did_2x2(Y, G, P)
+        r = did(Y, G, P)
         betas[m] = r.mu_hat
         ses[m] = r.se
         covered[m] = (r.ci_lower <= BETA_STAR) and (BETA_STAR <= r.ci_upper)

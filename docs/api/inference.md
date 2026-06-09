@@ -225,147 +225,78 @@ print(f"Regime: {result.diagnostics['regime']}")  # 'A'
 
 ---
 
-## `did_2x2()` - Closed-form 2×2 Difference-in-Differences
+## `did()` - Difference-in-differences
 
-A lightweight, design-based estimator for the canonical **2×2 repeated cross-section**
-DiD. It does *not* use the neural `inference()` path — there is no neural network and
-no cross-fitting — but it follows the same `ψ → mean → SE` convention and returns the
-standard `InferenceResult`. The estimand is the group × post interaction
+A single entry point for difference-in-differences with influence-function inference.
+It auto-selects one of three estimators from the arguments (override with `method=`),
+and always returns the standard `InferenceResult`.
 
-```
-β = μ₁₁ − μ₁₀ − μ₀₁ + μ₀₀,   μ_gt = E[Y | G=g, T=t]
-```
+| `method` | Call | What it does |
+|----------|------|--------------|
+| `'exact'` | `did(Y, group, post)` | Closed-form 2×2, β = μ₁₁−μ₁₀−μ₀₁+μ₀₀; SE = HC0 (machine precision). No network. |
+| `'neural'` | `did(Y, group, post, X=X)` | Heterogeneous saturated 2×2; network learns τ(X); target E[τ(X)]. |
+| `'panel_fe'` | `did(Y, group, post, X=X, unit=u, time=t)` | Two-way fixed-effects panel DiD; target E[τ(X)]. |
 
-For the saturated cell-mean loss the expected Hessian is
-`Λ = diag(p₀₀, p₀₁, p₁₀, p₁₁)`, so the influence function reduces to a known
-closed form, and `SE = sqrt(Var(ψ)/n)` equals the **HC0 robust OLS standard error**
-of the saturated regression `Y = α + γG + λT + β(G·T) + u` to machine precision.
+Auto-selection (`method='auto'`, the default): `unit` and `time` given → `'panel_fe'`;
+else `X` given → `'neural'`; else → `'exact'`.
 
-### Signature
+### Closed-form 2×2 (`method='exact'`)
 
-```python
-from deep_inference import did_2x2
-
-result = did_2x2(
-    Y,                  # (n,) outcomes
-    group,              # (n,) binary treatment-group indicator G in {0, 1}
-    post,               # (n,) binary post-period indicator T in {0, 1}
-    alpha=0.05,         # CI level (0.05 -> 95% CI)
-    use_bessel=False,   # False: n denominator (matches HC0). True: (n-1) correction
-)
-print(result.summary())
-```
-
-### Example
+The estimand is the group × post interaction `β = μ₁₁ − μ₁₀ − μ₀₁ + μ₀₀`. For the
+saturated cell-mean loss the expected Hessian is `Λ = diag(p₀₀, p₀₁, p₁₀, p₁₁)`, so the
+influence function is closed-form and `SE = sqrt(Var(ψ)/n)` equals the **HC0 robust OLS
+SE** of `Y = α + γG + λT + β(G·T) + u` to machine precision (use `use_bessel=False`,
+the default; `use_bessel=True` applies an `(n−1)` correction).
 
 ```python
 import numpy as np
-from deep_inference import did_2x2
+from deep_inference import did
 
-rng = np.random.default_rng(0)
-n = 2000
-G = (rng.random(n) < 0.5).astype(float)   # group
-P = (rng.random(n) < 0.5).astype(float)   # post
+rng = np.random.default_rng(0); n = 2000
+G = (rng.random(n) < 0.5).astype(float)
+P = (rng.random(n) < 0.5).astype(float)
 Y = 1.0 + 0.5*G + 0.4*P + 0.6*(G*P) + rng.standard_normal(n)
 
-result = did_2x2(Y, G, P)
-print(result.mu_hat, result.se)           # β̂ and HC0-equivalent SE
-print(result.ci_lower, result.ci_upper)
+r = did(Y, G, P)                 # method auto-selects 'exact' (no X)
+print(r.mu_hat, r.se)            # β̂ and HC0-equivalent SE
 ```
 
-The returned `se` matches `statsmodels` saturated OLS with `cov_type='HC0'` to ~1e-12.
-Use `use_bessel=False` (the default) for the exact HC0 match; `use_bessel=True` applies
-a finite-sample `(n−1)` correction. Scope is the homogeneous 2×2 design only.
+### Heterogeneous 2×2 (`method='neural'`)
 
----
-
-## `did_2x2_nn()` - Heterogeneous neural DiD
-
-The neural counterpart of `did_2x2`. A network learns covariate-varying coefficients
-for the saturated DiD regression
-
-```
-Y = α(X) + γ(X)·G + λ(X)·P + τ(X)·(G·P) + ε
-```
-
-and the influence-function machinery returns the **average heterogeneous DiD effect**
-`E[τ(X)]` with a valid standard error. The squared-loss Hessian is `W W'` (constant in
-θ), so this runs in **Regime B** — analytic `Λ = E[W W' | X]`, two-way cross-fitting.
-Group/period assignment is assumed independent of `X` (the canonical repeated cross
-section); if cell shares depend on `X`, pass `lambda_method='estimate'` (Regime C).
-
-This is also available through the general API as a registered model:
-`inference(Y, T_did, X, model='did', target='tau')` where `T_did = column_stack([G, P, G*P])`.
-
-### Signature
+Pass covariates `X` and a network learns the covariate-varying coefficients of
+`Y = α(X) + γ(X)G + λ(X)P + τ(X)(G·P) + ε`; the IF machinery returns the **average
+effect E[τ(X)]**. Regime B (analytic `Λ = E[WW'|X]`, two-way cross-fitting). Group/period
+assignment is assumed independent of `X`; if cell shares depend on `X`, pass
+`lambda_method='estimate'`.
 
 ```python
-from deep_inference import did_2x2_nn
-
-result = did_2x2_nn(
-    Y,                    # (n,) outcomes
-    group,                # (n,) binary G
-    post,                 # (n,) binary P
-    X,                    # (n, d_x) covariates driving heterogeneity
-    hidden_dims=[64, 32],
-    n_folds=50,
-    epochs=200,
-    lr=0.01,
-    patience=50,
-    lambda_method=None,   # default: analytic aggregate (Regime B)
-)
-
-print(result.mu_hat, result.se)             # E[τ(X)] and IF standard error
-tau_x = result.predict_theta(X_new)[:, 3]   # conditional DiD effect τ(X_new)
+r = did(Y, G, P, X=X, n_folds=50, epochs=200)   # auto-selects 'neural'
+print(r.mu_hat, r.se)                            # E[τ(X)] and IF SE
+tau_x = r.predict_theta(X_new)[:, 3]             # conditional effect τ(X_new)
 ```
 
-`theta_hat` columns are `[α, γ, λ, τ]`; index 3 is the DiD effect. Use `did_2x2` for the
-exact homogeneous case and `did_2x2_nn` when the effect varies with covariates.
+### Two-way fixed-effects panel (`method='panel_fe'`)
 
----
-
-## `did_panel_fe()` - Two-way fixed-effects panel DiD
-
-Panel DiD with **unit and time fixed effects** and a heterogeneous treatment effect. The
-outcome `Y` and treatment `D` (e.g. `D = G·Post`) are residualized by unit + time fixed
-effects (two-way within transformation), then a network learns `τ(X)` in
-
-```
-Ỹ_it = D̃_it · τ(X_it) + ε_it
-```
-
-The target is the average effect `E[τ(X)]`. Because the squared-loss Hessian `D̃²` is
-constant in θ, this runs in **Regime B** (analytic `Λ = E[D̃²|X]`, two-way cross-fitting).
-Also available as `model='did_fe'` (with `target='fe_effect'`) on residualized inputs.
-
-Works for **continuous and binary** outcomes. For a binary `Y` this is a fixed-effects
-**linear probability model**; the IF standard error is heteroskedasticity-robust, so the
-Bernoulli variance is handled correctly.
-
-### Signature
+For panel data, `Y` and the treatment `D = group*post` (or an explicit `D=`) are
+residualized by unit + time fixed effects, then a network learns `τ(X)` in
+`Ỹ_it = D̃_it·τ(X_it) + ε_it`; target **E[τ(X)]**, Regime B (`Λ = E[D̃²|X]`). Works for
+**continuous and binary** outcomes — for binary `Y` this is a fixed-effects **linear
+probability model** and the IF SE is heteroskedasticity-robust.
 
 ```python
-from deep_inference import did_panel_fe
-
-result = did_panel_fe(
-    Y,                    # (n,) outcomes (units × periods, any stacking order)
-    D,                    # (n,) treatment indicator, e.g. D = G * Post
-    X,                    # (n, d_x) covariates driving effect heterogeneity
-    unit,                 # (n,) unit ids
-    time,                 # (n,) period ids
-    hidden_dims=[64, 32],
-    n_folds=50,
-    epochs=200,
-)
-
-print(result.mu_hat, result.se)             # E[τ(X)] and IF standard error
-tau_x = result.predict_theta(X_new)[:, 0]   # conditional effect τ(X_new)
+r = did(Y, D=D, X=X, unit=unit, time=time)   # auto-selects 'panel_fe'
+print(r.mu_hat, r.se)                         # E[τ(X)] and IF SE
+tau_x = r.predict_theta(X_new)[:, 0]          # conditional effect τ(X_new)
 ```
 
 ```{note}
-The standard error assumes errors are independent across observations. Serial or
-within-unit correlation would require cluster-robust SEs (not implemented here).
+For `panel_fe`, the standard error assumes errors are independent across observations;
+serial / within-unit correlation would require cluster-robust SEs (not implemented).
 ```
+
+The neural methods are also reachable through the general API as registered models:
+`inference(..., model='did', target='tau')` and `inference(..., model='did_fe',
+target='fe_effect')` (on appropriately prepared / residualized inputs).
 
 ---
 

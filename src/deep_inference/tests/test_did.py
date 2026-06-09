@@ -13,7 +13,7 @@ Carlo coverage test. We verify:
 import numpy as np
 import pytest
 
-from deep_inference import did_2x2
+from deep_inference import did
 
 
 def _saturated_ols_hc0(Y, G, P):
@@ -50,7 +50,7 @@ def _make_unbalanced_2x2(seed=123):
 def test_did_2x2_matches_saturated_ols_machine_precision():
     Y, G, P = _make_unbalanced_2x2()
 
-    result = did_2x2(Y, G, P, use_bessel=False)
+    result = did(Y, G, P, use_bessel=False)
     beta_ols, var_hc0 = _saturated_ols_hc0(Y, G, P)
 
     assert abs(result.mu_hat - beta_ols) < 1e-12
@@ -68,13 +68,13 @@ def test_did_2x2_equals_four_cell_contrast():
         return Y[(G == g) & (P == t)].mean()
 
     four_cell = cell_mean(1, 1) - cell_mean(1, 0) - cell_mean(0, 1) + cell_mean(0, 0)
-    result = did_2x2(Y, G, P)
+    result = did(Y, G, P)
     assert abs(result.mu_hat - four_cell) < 1e-12
 
 
 def test_did_2x2_ci_is_normal_approx():
     Y, G, P = _make_unbalanced_2x2(seed=11)
-    result = did_2x2(Y, G, P, alpha=0.05)
+    result = did(Y, G, P, alpha=0.05)
     z = 1.959963984540054  # norm.ppf(0.975)
     assert abs(result.ci_lower - (result.mu_hat - z * result.se)) < 1e-12
     assert abs(result.ci_upper - (result.mu_hat + z * result.se)) < 1e-12
@@ -83,8 +83,8 @@ def test_did_2x2_ci_is_normal_approx():
 def test_did_2x2_bessel_differs_from_hc0_by_known_factor():
     Y, G, P = _make_unbalanced_2x2(seed=5)
     n = len(Y)
-    hc0 = did_2x2(Y, G, P, use_bessel=False).se ** 2
-    bessel = did_2x2(Y, G, P, use_bessel=True).se ** 2
+    hc0 = did(Y, G, P, use_bessel=False).se ** 2
+    bessel = did(Y, G, P, use_bessel=True).se ** 2
     # var_psi scales by n/(n-1) under Bessel; se^2 = var_psi/n carries the same factor.
     assert abs(bessel - hc0 * n / (n - 1)) < 1e-14
 
@@ -95,7 +95,7 @@ def test_did_2x2_empty_cell_raises():
     P = np.array([0.0, 0.0, 0.0, 1.0])
     Y = np.array([1.0, 2.0, 3.0, 4.0])
     with pytest.raises(ValueError, match="Empty DiD cell"):
-        did_2x2(Y, G, P)
+        did(Y, G, P)
 
 
 def test_did_2x2_non_binary_raises():
@@ -103,7 +103,7 @@ def test_did_2x2_non_binary_raises():
     G_bad = G.copy()
     G_bad[0] = 2.0
     with pytest.raises(ValueError, match="binary"):
-        did_2x2(Y, G_bad, P)
+        did(Y, G_bad, P)
 
 
 # ── Heterogeneous neural DiD: DiDModel + AnalyticLambda (NN-free checks) ──
@@ -270,7 +270,7 @@ def test_did_panel_fe_matches_within_ols_homogeneous():
     tau = 0.5
     Y = rng.standard_normal(N)[unit] + np.array([0, .3, .6, .9])[time] + tau * D + rng.standard_normal(n)
 
-    res = di.did_panel_fe(Y, D, X, unit, time, n_folds=3, epochs=40, patience=15, hidden_dims=[16])
+    res = di.did(Y, D=D, X=X, unit=unit, time=time, n_folds=3, epochs=40, patience=15, hidden_dims=[16])
     Yt = residualize_fixed_effects(Y, unit, time)
     Dt = residualize_fixed_effects(D, unit, time)
     beta_ols = float((Dt @ Yt) / (Dt @ Dt))
