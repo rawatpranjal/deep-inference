@@ -14,6 +14,7 @@ from .multinomial import MultinomialLogitModel, MultinomialLogit
 from .combinatorial import CombinatorialModel, Combinatorial
 from .quantile import QuantileModel, Quantile
 from .did import DiDModel, DiD
+from .panel_fe import FEPanelDiDModel, FEPanelDiD
 
 __all__ = [
     # Neural network
@@ -42,4 +43,7 @@ __all__ = [
     # Difference-in-differences (saturated 2x2, heterogeneous)
     "DiDModel",
     "DiD",
+    # Two-way fixed-effects panel DiD (within-transformed)
+    "FEPanelDiDModel",
+    "FEPanelDiD",
 ]
