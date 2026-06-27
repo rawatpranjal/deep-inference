@@ -1,0 +1,259 @@
+\section{Results}
+We now report the performance of \model on synthetic, semi-synthetic and real-world datasets. We focus on answering the following research questions by our experimental results:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Q1: How precise is \model on ITE estimation?}
+    \item \textbf{Q2: How accurate is \model on factual prediction task (i.e., outcome prediction)?}
+    \item \textbf{Q3: How can \model be used for personalized medicine?}
+\end{itemize}
+
+\subsection{How precise is \model on ITE estimation?}
+We conduct comprehensive comparison experiments on synthetic and  semi-synthetic datasets and report $\sqrt{\text{PEHE}}$ and ATE on each dataset. By varying the parameter $\gamma_{h}$ that controls the influence of hidden confounders, we evaluate the how precise is \model on ITE estimation under different value of $\gamma_{h}$. 
+
+\noindent\textbf{Results on Synthetic Dataset}
+Table \ref{tab:main_results_syn} shows the performance of our method and baselines on fully-synthetic dataset evaluated by $\sqrt{\text{PEHE}}$ and ATE. The values shown in the table are averaged on 10 realizations. We observe that \model outperforms all other baselines with different value of $\gamma_{h}$, which confirms that our designed framework can better capture the characteristics of longitudinal data and generate accurate estimation of ITE. 
+
+Generally speaking, the representation learning based approaches achieve better performance compared with base methods, matching based methods and tree based methods. Since those linear approaches are not designed for causal effect estimation, they may not able to control the influence of confounding variables. The matching based methods consider the similarity information among treated and control groups to alleviate the selection biases. However, their estimation becomes inaccurate when dealing with high-dimensional and complex data. Tree and forest based method achieve comparable performance with basic random forest method since these two methods are established upon the random forest.
+
+The representation learning based methods use the deep neural network to model the representations of confounding variables. Their methods achieve the best performance among all baselines. CFR MMD, CFR WASS, BNN and TARNet share the similar design of neural network, with exception that they adopt different strategies to minimize the distance between treated and control groups. Specifically, CFR MMD and CFR WASS have the same outcome prediction networks, but the former uses Maximum Mean Discrepancy (MMD) and the latter uses Wasserstein (WASS) to balance the distributions. BNN regards the treatment as additional feature and minimize the distances between treated and control group in latent space. TARNet is a vanilla version without balancing property. Among all these four representation learning based methods, we observe that CFR MMD and CFR WASS generally achieve better performance than other two methods. Although representation learning based models outperform the other baselines, they ignore the time-varying confounders and lose lots of temporal information, which are crucial and common in healthcare data. Our proposed \model successfully captures the temporal information and thus outperform the baselines.
+
+Note that, four variants of simulated datasets ($\gamma_{h}\in\{0.1,0.3,0.5,0.7\}$) are not comparable, since the distribution of simulated outcomes are not same. With the increasing of $\gamma_h$, less portion of observed confounders are included, which results in smaller values of outcomes. Instead, we focus on the performance of methods within each dataset. 
+
+% \model outperforms other baselines in different parameter setting. Additionally, to demonstrate the functionality of main components, we compare two variants of our model by removing each component respectively. For one variant \modelnospace-Weighting, it removes the time-varying weights that used for balancing selection bias in observational data. Thus, the performance of \modelnospace-Weighting decreases when compared to the complete model, which demonstrates the weighting operation is beneficial to the causal effect estimation by removing bias. \modelnospace-MaxPool directly max-pooling layer from the model and therefore the model use the last time stamp output for further prediction task. In this situation, the earlier information may be threw away from the learned representations due to long-term dependency. The results show that max pooling operation helps to incorporate the long sequential information. 
+
+
+\begin{table*}[t]
+% \small
+\centering
+\caption{Performance comparison on synthetic datasets. We construct four variants of datasets by varying the value of $\gamma_h\in\{0.1,0.3,0.5,0.7\}$. Here, we report the estimated $\sqrt{\text{PEHE}}$ and ATE of each method among four datasets.}
+\label{tab:main_results_syn}
+{\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lllllllllll}
+\hline
+ & &
+  \multicolumn{2}{c}{$\gamma_{h}=0.1$} &
+  \multicolumn{2}{c}{$\gamma_{h}=0.3$} &
+  \multicolumn{2}{c}{$\gamma_{h}=0.5$} &
+  \multicolumn{2}{c}{$\gamma_{h}=0.7$} \\ \cline{3-10} 
+& Method &
+  \multicolumn{1}{c}{$\sqrt{\text{PEHE}}$} &
+  \multicolumn{1}{c}{ATE} &
+  \multicolumn{1}{c}{$\sqrt{\text{PEHE}}$} &
+  \multicolumn{1}{c}{ATE} &
+  \multicolumn{1}{c}{$\sqrt{\text{PEHE}}$} &
+  \multicolumn{1}{c}{ATE} &
+  \multicolumn{1}{c}{$\sqrt{\text{PEHE}}$} &
+  \multicolumn{1}{c}{ATE} \\ \hline
+\multirow{2}{*}{Base model} &    LR            & 0.640 & 0.551 & 0.648 & 0.558 & 0.656 & 0.566 & 0.663 & 0.574 \\
+& Random Forest & 0.656 & 0.552 & 0.658 & 0.553 & 0.660 & 0.555 & 0.663 & 0.557 \\ \hline
+\multirow{2}{*}{Matching based} & KNN \cite{crump2008nonparametric}           & 0.713 & 0.604 & 0.718 & 0.608 & 0.724 & 0.611 & 0.729 & 0.615 \\
+& PSM \cite{rosenbaum1983central}           & 0.699 & 0.591 & 0.708 & 0.602 & 0.714 & 0.607 & 0.720 & 0.611 \\ \hline
+  & CFR MMD \cite{shalit2017estimating}       & 0.587 & 0.485 & 0.594 & 0.491 & 0.597 & 0.492 & 0.600 & 0.495 \\
+Representation & CFR WASS \cite{shalit2017estimating}      & 0.571 & 0.470 & 0.574 & 0.473 & 0.576 & 0.474 & 0.580 & 0.476 \\
+learning based & BNN \cite{johansson2016learning}          & 0.586 & 0.488 & 0.593 & 0.495 & 0.595 & 0.496 & 0.597 & 0.498 \\
+& TARNet \cite{shalit2017estimating}       & 0.606 & 0.512 & 0.610 &0.516 & 0.615 & 0.520 & 0.619 & 0.523 \\ \hline
+\multirow{2}{*}{Forest based}   
+&  Causal Forest \cite{wager2018estimation} & 0.604 & 0.511 & 0.612 & 0.517 & 0.615 & 0.521 & 0.618 & 0.523 \\
+& BART \cite{hill2011bayesian}   & 0.608 & 0.520 & 0.614 & 0.525 & 0.621 & 0.530 & 0.619 & 0.528 \\ \hline
+Ours & \textbf{\model} &
+  \textbf{0.491} & \textbf{0.391} & \textbf{0.469} & \textbf{0.372} & \textbf{0.485} & \textbf{0.384} & \textbf{0.515} & \textbf{0.397} \\ 
+%   \model-Weighting   & \textbf{14.432} & 8.314 & 11.650 & 6.697 & 8.520 & 4.993 & 5.590 & 3.445 \\
+%   \model-MaxPool    & 21.709 & 19.407 & 11.407 &  6.640 & 8.444 & 4.947 & 5.498 & 3.368 \\
+  \hline
+\end{tabular}}
+\vspace{-10pt}
+\end{table*}
+
+
+\noindent\textbf{Results on Semi-synthetic Dataset}
+We demonstrate the performance of the proposed model and baselines on a semi-synthetic dataset based on MIMIC-III. As shown in Table \ref{tab:main_results_mimic_syn}, \model achieves the best performance among other baseline methods in terms of $\sqrt{\text{PEHE}}$ and ATE. We vary the value of $\gamma_h$ to control the influence of hidden confounders and conduct comparison experiments under each value of $\gamma_h$. 
+
+We observe that representation learning based methods in general outperform most causal inference methods which demonstrate that deep learning architecture with distribution balancing is beneficial to the ITE estimation. Base models (LR and Random Forest) cannot perform very well since they ignore the selection bias and confounding factors. As for matching based methods, they consider the similarity information among individuals to alleviate selection bias. Among all the baselines, \model considers the temporal information in the time-varying data, and thus generate unbiased and accurate treatment effect estimation.
+
+
+
+
+\begin{table*}[t]
+\centering
+% \small
+\caption{Performance comparison on semi-synthetic MIMIC-III datasets. We construct four variants of datasets by varying the value of $\gamma_h\in\{0.1,0.3,0.5,0.7\}$. Here, we report the estimated $\sqrt{\text{PEHE}}$ and ATE of each method among four datasets.}
+\label{tab:main_results_mimic_syn}
+{\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{llllllllll}
+\hline
+&               & \multicolumn{2}{c}{$\gamma_{h}=0.1$} & \multicolumn{2}{c}{$\gamma_{h}=0.3$} & \multicolumn{2}{c}{$\gamma_{h}=0.5$} & \multicolumn{2}{c}{$\gamma_{h}=0.7$} \\ \cline{3-10} 
+ &
+  Method &
+  \multicolumn{1}{c}{$\sqrt{\text{PEHE}}$} &
+  \multicolumn{1}{c}{ATE} &
+  \multicolumn{1}{c}{$\sqrt{\text{PEHE}}$} &
+  \multicolumn{1}{c}{ATE} &
+  \multicolumn{1}{c}{$\sqrt{\text{PEHE}}$} &
+  \multicolumn{1}{c}{ATE} &
+  \multicolumn{1}{c}{$\sqrt{\text{PEHE}}$} &
+  \multicolumn{1}{c}{ATE} \\ \hline
+\multirow{2}{*}{Base model}     & LR            & 0.823    & 0.660     & 1.414      & 1.134    & 1.474     & 1.233    & 1.542     & 1.336     \\
+& Random Forest & 0.837    & 0.671     & 1.422      & 1.143    & 1.484     & 1.245     & 1.553     & 1.349     \\ \hline
+\multirow{2}{*}{Matching based} & KNN \cite{crump2008nonparametric}           & 0.818    & 0.650     & 1.408      & 1.137    & 1.472     & 1.237     & 1.543     & 1.337     \\
+& PSM \cite{rosenbaum1983central}          & 0.767    & 0.607    & 1.417     & 1.143   & 1.477     & 1.240    & 1.548     & 1.340     \\ \hline
+\multirow{4}{*}{\begin{tabular}[c]{@{}l@{}}
+Representation \\ learning based\end{tabular}} &
+  CFR MMD \cite{shalit2017estimating} & 0.803  &
+  0.643 & 1.257 & 0.972 &  1.356 & 1.099 &
+  1.527 & 1.318 \\
+& CFR WASS \cite{shalit2017estimating}    & 0.800    & 0.641    & 1.256      & 0.972    & 1.370     & 1.118     & 1.556     & 1.352     \\
+& BNN \cite{johansson2016learning}           & 0.802    & 0.643     & 1.287      & 1.006    & 1.337     & 1.080    & 1.515     & 1.305     \\
+& TARNet \cite{shalit2017estimating}        & 0.829    & 0.664     & 1.256      & 0.972    & 1.373     & 1.120     & 1.527     & 1.318     \\ \hline
+\multirow{2}{*}{Forest based}   
+& Causal Forest \cite{wager2018estimation} & 0.796    & 0.639     & 1.413      & 1.134    & 1.473     & 1.233    & 1.540     & 1.335     \\
+& BART \cite{hill2011bayesian}        & 0.785    & 0.631    & 1.413     & 1.135    & 1.472   & 1.234     & 1.538     & 1.336     \\ \hline
+Ours &
+  \textbf{\model} &
+  \textbf{0.522} &
+  \textbf{0.432} &
+  \textbf{0.604} &
+  \textbf{0.523} &
+  \textbf{0.672} &
+  \textbf{0.601} &
+  \textbf{0.722} &
+  \textbf{0.652} \\ \hline
+\end{tabular}}
+\vspace{-10pt}
+\end{table*}
+
+
+\begin{table}[t]
+\centering
+% \small
+\caption{Factual Prediction on the MIMIC-III dataset. We select two treatment-outcome pairs:  Vasopressor-Meanbp and Ventilator-SpO2, and report RMSE between estimated factual outcome and ground truth. }
+\label{tab:factual_prediction}
+{\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lcc}
+\hline
+              & \multicolumn{2}{c}{MIMIC Dataset (RMSE)} \\ \cline{2-3} 
+Method        &Vent-SpO2           & Vaso-Meanbp         \\ \hline
+LR & 0.909 &0.973             \\
+KNN \cite{crump2008nonparametric}  & 0.901  & 1.030             \\
+CFR WASS \cite{shalit2017estimating}  & 0.870  & 1.011          \\
+BART \cite{hill2011bayesian}  & 0.873  & 0.966           \\ \hline
+\textbf{\modelnospace} & \textbf{0.814} & \textbf{0.814} \\ \hline
+\end{tabular}}
+\vspace{-20pt}
+\end{table}
+
+
+% \begin{figure}[t]
+% \centering
+% \includegraphics[width=\linewidth]{figures/RMSE.pdf}
+% \caption{Performance of factual prediction on synthetic and semi-synthetic dataset. RMSE are estimated among different value of parameter $\gamma_{}h$ that controls the influence of hidden confounders.}
+% \label{fig:factual-prediction}
+% \end{figure}
+
+\vspace{-3pt}
+\subsection{How accurate is \model on factual prediction?}
+In real-world data, we have no access to counterfactual outcomes for calculating the true treatment effect, and thus we cannot compute the $\sqrt{\text{PEHE}}$ and ATE. Instead, we evaluate the performance of our model through a factual prediction task. We measure the RMSE between observed (factual) outcomes and estimated outcomes on two treatment-outcome pairs: vasopressor-meanBP and ventilator-SpO2.
+
+% \textcolor{gray}{Additionally, we make factual prediction on synthetic and semi-synthetic dataset as well.}
+
+Table \ref{tab:factual_prediction} shows the estimated RMSE of two selected pairs. Since causal effect methods are not initially designed for factual prediction, we adopt four baselines from each category that can be adapted for factual prediction task: LR, KNN, CFR (WASS) and BART. Matching based methods aim to estimate the counterfactual and cannot be directly used for factual inference. We adapt the KNN matching for factual prediction by combining the treatments as additional features to predict factual outcomes. Among four representation learning based methods, they achieve relative comparative performance in two datasets, so we use CFR WASS as a representative for this kind of method. In two forest based methods, CF directly outputs the estimated ITE without any inference of factual outcomes, so we use BART as our baseline. 
+
+% \textcolor{gray}{This paragraph is not well organized. I rewrote it in next paragraph.  We observe that our method outperforms baselines in terms of RMSE. Among the baselines, we find that representation learning based method (CFR WASS) and forest based method (BART) perform better than linear regression method (LR) and matching based method (KNN). Results demonstrate that our model can yield accurate estimation on factual data. Moreover, we show the performance of our model and selected baselines on both synthetic dataset and semi-synthetic dataset. As shown in Fig. \ref{fig:factual-prediction}, our model achieves the best performance compared to baselines under different value of $\gamma_h$. We also observe that CFR WASS and BART perform better among other baselines. } 
+
+As shown in TABLE \ref{tab:factual_prediction}, \model outperforms all the baselines, which demonstrates that our model yields accurate estimation on factual data. Among the baselines, we find that representation learning based method (CFR WASS) performs better than the linear regression method (LR) and matching based method (KNN), which is consistent with TABLE \ref{tab:main_results_syn} and \ref{tab:main_results_mimic_syn}. 
+
+% \textcolor{blue}{Figure \ref{fig:factual-prediction} and TABLE \ref{tab:factual_prediction} are not consistent. Facture prediction is not important for synthetic datasets. I recommend to delete the Figure \ref{fig:factual-prediction} and accordingly remove the sentence "Additionally, we make factual prediction on synthetic and semi-synthetic dataset as well" in this section.}
+
+
+\subsection{How can \model be used for personalized medicine?}
+Based on observational data, we are going to show that our model can adjust time-varying confounders, and generate unbiased and accurate estimation of treatment effect.
+% \textcolor{blue}{(It cannot be proved with Fig. 4.) If I want to demonstrate it, I will display another biased and inaccurate model's results, then compare two models' results.} 
+In this case, our model could potentially help physicians determine whether to apply a specific treatment to a patient. We examine the usages of \textit{Vasopressor} and \textit{Ventilator} in the analysis, which are commonly used treatments for septic patients. 
+
+
+\begin{figure*}[t]
+\centering
+\subfigure[]{\label{fig:vaso-below}
+\includegraphics[width=0.34\textwidth]{figures/case_study_vaso_below.png}}
+\subfigure[]{\label{fig:vaso-above}
+\includegraphics[width=0.34\textwidth]{figures/case_study_vaso_above.png}}
+\vspace{-4pt}
+\subfigure[]{\label{fig:vent-below}
+\includegraphics[width=0.34\textwidth]{figures/case_study_vent_below.png}}
+\subfigure[]{\label{fig:vent-above}
+\includegraphics[width=0.34\textwidth]{figures/case_study_vent_above.png}}
+\caption{Distribution of ground truth MeanBP and predicted MeanBP given vasopressor as treatment. Fig. \ref{fig:vaso-below} displays the distribution of patients with observed MeanBP below than 70 mmHg. Fig. \ref{fig:vaso-above} displays the distribution of patients with observed MeanBP above 70 mmHg. Fig. \ref{fig:vent-below} displays the distribution of patients with observed SpO2 below than 95\%. Fig. \ref{fig:vent-above} displays the distribution of patients with observed SpO2 above 95\%.}
+\vspace{-10pt}
+\label{fig:case-study}
+\end{figure*}
+
+% \begin{figure*}[t]
+% \centering
+% \subfigure[]{\label{fig:vent-below}
+% \includegraphics[width=0.35\textwidth]{figures/case_study_vent_below.png}}
+% \subfigure[]{\label{fig:vent-above}
+% \includegraphics[width=0.35\textwidth]{figures/case_study_vent_above.png}}
+% \caption{Distribution of ground truth SpO2 and predicted SpO2 given ventilator as treatment. Figure \ref{fig:vent-below} displays the distribution of patients with observed SpO2 below normal level. Figure \ref{fig:vent-above} displays the distribution of patients with observed SpO2 above normal level.}
+% \label{fig:vent-distribution}
+% \end{figure*}
+
+\vspace{3pt}
+\noindent\textbf{Vasopressor-Meanbp pair}
+Vasopressor (a.k.a., antihypotensive agent) is a group of medications that tend to raise low blood pressure. The patients are expected to have normal blood pressure after receiving a vasopressor. To demonstrate that our model can adjust time-varying confounders, we plot the distribution of ground truth (observed) and predicted Meanbp values after the patients have received vasopressor in Fig. \ref{fig:case-study}. According to the threshold of the normal range of Meanbp (70-100 mmHg), we separate the patients into two groups: one is the patients with observed MeanBP values below 70 mmHg, the other is the patients with observed Meanbp values above 70 mmHg. Figure. \ref{fig:vaso-below} shows the distribution of patients with Meanbp below 70 mmHg. We observe this group of patients remains low blood pressure even after receiving vasopressor and the average value is far lower than 70 mmHg. If mainly based on the observed data, we may conclude that vasopressor has no effect on raising blood pressure and are unnecessary to be assigned to patients with low blood pressure. However, the predicted values given by our model are higher than the observed values and the average Meanbp belongs to the normal range, which indicates that vasopressor should have a beneficial effect on the blood pressure. Figure \ref{fig:vaso-above} shows the distribution of patients with Meanbp above 70 mmHg. For these patients whose Meanbp remains in the normal range after receiving vasopressor, the predicted values are still within the normal range, which indicates that vasopressor should be assigned to this group of patients to maintain normal blood pressure. If not, their situation may become worse.    
+
+\vspace{3pt}
+\noindent\textbf{Ventilator-SpO2 pair}
+A ventilator is a machine that delivers breaths to a patient who is physically unable to breathe, or breathing insufficiently to maintain blood oxygen. We monitor the value of oxygen saturation (SpO2) to estimate the treatment effect. 
+
+Similarly, we show the distribution of ground truth and predicted SpO2 values of patients who have received a ventilator during the observational window in Fig. \ref{fig:case-study}. As the normal range of SpO2 is 95-100\%, we separately plot the distribution of patients with observed SpO2 values below 95\% in Fig. \ref{fig:vent-below}, and the distribution of patients with observed SpO2 values above 95\% in Fig. \ref{fig:vaso-above}. We observe that, for patients with observed SpO2 lower than normal value, the distribution of predicted SpO2 values lies in normal range with an average of 96.57\%. And for patients with observed SpO2 in the normal range, our predicted values still belong to the normal range. 
+
+% Results from above experiments demonstrate the effectiveness of our model on estimating ITE in real world dataset. \textcolor{orange}{More specially, our model can assist physicians to determine whether to introduce a treatment to a patient or population. For example, in Fig. \ref{fig:case-study}, our model suggests that vaso should be introduced to patients with Meanbp lower than 70 mmHg to maintain a normal Meanbp.} By conditioning on both time-varying observed confounders and hidden confounders, our model generates unbiased and accurate treatment effect on important outcome signals. We envision that our model would be leveraged as a real-time treatment decision support tool for sepsis management, which can make full use of rich, high-dimensional, and continuous ICU patient monitoring data to guide individualized critical-care interventions, adapting to the evolving dynamics of patient states. 
+Results show that our model adjusts time-varying confounders and is able to generate unbiased and accurate ITE on important outcome signals (vasopressor's effect on blood pressure and ventilator's effect on blood oxygen in our analysis). Thus, it could potentially assist physicians to determine whether to introduce a treatment to a specific patient, paving the way for personalized medicine.
+
+% \textcolor{green}{After reading the experimental results, I think we may not be able to oversell the significance. How's this? Pls make sure my specific patient claim is valid before using my sentence. "Results show that our model adjusts both time-varying observed confounders and hidden confounders. \model is able to generate unbiased and accurate ITE on important outcome signals (vasopressor's effect on blood pressure and ventilator's effect on blood oxygen in our analysis). Thus, it could potentially assist physicians to determine whether to introduce a treatment to a specific patient, paving the way for personalized medicine."}
+% or specific population
+
+% \textcolor{blue}{I am a little confused about the section when reading it first time. After reading it twice, I think I understand this experiment's purpose, but am not very sure. Our model predicts outcomes if a treatment is assigned. Based on the prediction, we suggest physicians whether a treatment should be assigned. We divide patients into two group. The first is that patients have low meanbp \textbf{before a treatment} have high. The other are patients with high meanbp. Our model's prediction results (the figures) show that only the first group patient will have a much higher meanbp after a treatment is given. Hence, we suggest physicians that only if patients have low meanbp, a treatment is needed.}
+
+% \textcolor{blue}{If my understanding is correct, I have several suggestions: (1) we should specify the observed values are observed before treatment, but not after treatment. Thus, we shouldn't use words like ground truth there. (2) The logic should also be specified. (3) If the observed values are not ground truths, reviewers may think whether the predicted values are accurate, especially for patients with low observed values.}
+
+% \textcolor{blue}{If the ground truth outcome are obtained during the prediction window, I don't understand how the model can be used in real world clinical setting.}
+
+
+
+% \subsection{Ablation Study}
+% We further evaluate the effectiveness of each component of the proposed method by implementing two variants of \model as follows,
+% \begin{itemize}
+%     \item \textbf{\model-GRU}. \model-M removes the GRU layer and attention operation and linearly concatenate the time-varying covariates with treatments. In this way, the model will not take advantage of historical information. 
+%     \item \textbf{\model-MaxPool}. To evaluate the impact of max-poolin operation, \model-MaxPool removes the max-pooling layer and directly leverage the last time stamp output from GRU for outcome prediction. 
+% \end{itemize}
+
+% \begin{figure*}[t]
+% \centering
+% \subfigure[]{\label{fig:case1}
+% \includegraphics[width=0.3\textwidth]{vaso:variants-pehe/ate.png}}
+% \subfigure[]{\label{fig:case2}
+% \includegraphics[width=0.3\textwidth]{abx:variants-pehe/ate.png}}
+% \subfigure[]{\label{fig:case2}
+% \includegraphics[width=0.3\textwidth]{mv:variants-pehe/ate.png}}
+% \caption{Ablation study for different variants of our proposed framework.}
+% \label{fig:case}
+% \end{figure*}
+
+% \begin{table*}[!h]
+% \centering
+% \caption{Main results (vaso)}
+% \label{tab:main_results}
+% {\renewcommand{\arraystretch}{1.3}
+% \begin{tabular}{ccccc}
+% \hline
+%           & Mean blood pressure & Oxygen saturation   & White Blood cell count    & Mortality \\ \hline
+% LR        & 0.2884 & 0.1954 & 0.3346 & 0.4562    \\
+% RF        & 0.2939 & 0.1947 & 0.3359 & 0.4640    \\\hline
+% CFR MMD   & 0.2901 & 0.1955 & 0.3347 & 0.4568    \\
+% CFR WASS  & 0.2900 & 0.1955 & 0.3347 & 0.4568    \\
+% BNN       & 0.2903 & 0.1955 & 0.3346 & 0.4568    \\
+% TARNet    & 0.2870 & 0.1955 & 0.3346 & 0.4554    \\\hline
+% Causal Forest & 0.2878 & 0.1929 & 0.3342 & 0.4545    \\
+% BART      & 0.2915 & 0.1967 & 0.3342 & 0.4557    \\ \hline
+% \textbf{Mymodel} & \textbf{0.2126} & \textbf{0.1671} & \textbf{0.3314} & \textbf{0.4111} \\ \hline
+% \end{tabular}}
+% \end{table*}

@@ -1,0 +1,69 @@
+\vspace{-3mm}
+\section{Notations}\label{sec:notations}
+\vspace{-3mm}
+
+For a function $f: \Xcal \times \Ycal \times \Zcal \rightarrow \RR$, 
+we denote its population expectation by $\E[f(X,Y,Z)]$. We denote the empirical mean of $f$ by $\E_n[f(X,Y,Z)]:= \frac{1}{n}\sum_{i=1}^n f(X_i, Y_i, Z_i)$. We denote the set of all probability distributions defined on set $\Omega$ by $\Delta(\Omega)$. We denote the $L_p$ norm of $f$ by $\|f\|_p := \E[|f|^p]^{1/p}$. Throughout the paper, whenever we use a generic norm of a function $\|f\|$, we will be referring to the $L_2$-norm. For two density function $p(x)$ and $q(x)$, we denote their Hellinger distance by $H(p(\cdot)\mid q(\cdot)) = \int_\Xcal (\sqrt{p(x)} - \sqrt{q(x)})^2 d\mu(x)$. For a functional operator $\Tcal: L_2(X) \rightarrow L_2(Z)$, we denote the range space of $\Tcal$ by $\Rcal(\Tcal )$, i.e., $\Rcal(\Tcal) = \{\Tcal h: h \in L_2(X)\}.$ Moreover, we use $\Tcal^*: L_2(Z) \rightarrow L_2(X)$ to denote the adjoint operator of $\Tcal$, i.e.,$\langle g, \Tcal h\rangle_{L_2(Z)} = \langle \Tcal^* g, h\rangle_{L_2(X)}$ 
+for any $h \in L_2(X), g \in L_2(Z)$, where $\langle\cdot,\cdot\rangle_{L_2(X)}$ and
+$\langle\cdot,\cdot\rangle_{L_2(Z)}$ are inner products over $L_2(X)$ and $L_2(Z)$, respectively. For $\theta\in\Theta = \{\theta | \sum_j \theta_j = 1, \theta_j\geq 0,\forall j\} $, we denote $h_{\theta} = \sum_j \theta_j h_j$. We use $e_j$ to denote the one-hot vector where that is zero except for the $j^{th}$ component, which equals to $1$. For a function class $\Fcal$, we define the localized Rademacher complexity by $
+\bar{R}_n (\delta; \Fcal) := \E\big[ \E_\epsilon\big[\sup_{f\in \Fcal, \|f\|_2 \leq \delta} \big|\frac{1}{n}\sum_{i=1}^n \epsilon_i f(x_i, z_i)\big|\big]\big],$
+where $\epsilon_i$ are i.i.d. Rademacher random variables. For a function class $\Fcal$ over $\Xcal$ and $\Zcal$, we define its star hull by $\operatorname{star}(\Fcal) = \{\gamma f, \gamma \in [0,1], f\in \Fcal \}$. For a function class $\Fcal$, we denote $\bar{\Fcal} := \operatorname{star}(\Fcal - \Fcal)$ to define its symmetrized star hull. We define the critical radius $\delta_{n,\Fcal}$ of a function class $\Fcal$ as any solution to the inequality $\delta^2 \geq \bar{R}_n(\operatorname{star}(\Fcal - \Fcal),\delta)$.  We use $\mu$ to denote the Lebesgue measure. 
+
+% In our work, note all of the proofs are deferred to the Appendix unless otherwise noted.  
+\vspace{-2mm}
+\section{Problem Statement and Preliminaries}
+\vspace{-2mm}
+
+
+As mentioned in \pref{sec:intro}, we aim to solve the following inverse problem with respect to $h$, known as the nonparametric IV regression:
+\begin{align}\label{eq:cond-mom-condi} \textstyle 
+   \Tcal h = r_0 ,\quad r_0:= \E[Y|Z].  
+\end{align}
+While $\Tcal$ and $r_0$ are unknown a priori, using i.i.d.  observations $\{X_i, Y_i, Z_i\}_{i\in[n]}$, we aim to solve this equation. We denote its associated distributions by $g_0$, e.g., denote the conditional density of $X\in\Xcal$ given $Z\in\Zcal$ by $g_0(x|z) \in \{\Xcal \times \Zcal \rightarrow \RR\}$. 
+Throughout this work, we assume a solution to Equation \eqref{eq:cond-mom-condi} exists.
+\begin{assumption}[Existence of Solutions]\label{ass: sol-exist}
+    We have $r_0 \in \Rcal(\Tcal)$, i.e.  $\Ncal_{r_0}(\Tcal):=\{h\in \Hcal: \Tcal h = r_0\} \neq \varnothing.$
+\end{assumption}
+Crucially, even though a solution to \eqref{eq:cond-mom-condi} exists, it might not be unique. Hence, we propose to target a specific solution that achieves the least norm, defined as:
+\begin{align}\label{eq:def-ls}\textstyle 
+    h_0 := \argmin_{h\in \Ncal_{r_0}(\Tcal)} \|h\|_2.
+\end{align}
+Note this least norm solution is well-defined, as it is defined by the projection of the origin onto a closed affine space
+$\Ncal_{r_0}(\Tcal) \subset L_2(X)$. Indeed, with Assumption \ref{ass: sol-exist}, it is easy to prove that $h_0$ in \eqref{eq:def-ls} always exists \citep[Lemma 1]{bennett2023minimax}. 
+
+As we emphasize the challenges in \pref{sec:intro}, although there have been a lot of method  that use minimax optimization for estimating $h_0$, when using general function approximation such as neural networks, the minimax optimization tends to be computationally hard \citep{lin2020near,jin2020local,lin2020gradient,diakonikolas2021efficient,razaviyayn2020nonconvex}.  Moreover, it remains unclear how to perform model selection for those methods. Hence, in this paper, we aim to propose a new method that can incorporate any function approximation for estimating the least square norm solution $h_0$ in \eqref{eq:def-ls} with a strong convergence guarantee in $L_2(X)$ under mild assumptions (i.e., such as without the uniqueness of $h_0$) while allowing for model selection. 
+
+
+\iffalse 
+\begin{remark}
+Note that $\Tcal$ is a bounded operator since its norm is upper-bounded by $1$ via Jensen’s inequality. Notably, we do not assume the compactness of $\Tcal$, because compactness is violated whenever $X, Z$ includes common variables, as in  \citet{deaner2018proxy,cui2020semiparametric}.
+\end{remark}
+\fi 
+
+\iffalse 
+As mentioned in We aim to solve the following inverse problem concerning $h$, known as the nonparametric IV regression:
+\begin{align}\label{eq:cond-mom-condi}
+   \Tcal h = r_0 ,\quad r_0:= \E[Y|Z], 
+\end{align}
+where $\Tcal: L_2(X) \rightarrow L_2(Z)$ is an unknown conditional expectation operator that maps any $h\in L_2 (X)$ to $\E[h(X)|Z]$ in $L_2(Z)$.
+
+We are given access to a set of independent and identically distributed observations $\{X_i, Y_i, Z_i\}_{i\in[n]}$ drawn
+from the ground truth distribution of the random variables $X\in \RR^x, Y \in \RR,Z\in \RR^z$, i.e. $Z_i\sim g_0(z), X_i\sim g_0(x|Z_i)$. We assume that $X,Y,Z$ take values in three compact sets $\Xcal, \Ycal, \Zcal$  respectively.  Note that $\Tcal$ is a bounded operator since its norm is upper-bounded by $1$ via Jensen’s inequality. Notably,  we do not assume the compactness of $\Tcal$, because compactness is violated whenever $X, Z$ includes common variables, as is the case in many applications \citep{deaner2018proxy,cui2020semiparametric}. Throughout this work, we assume a solution to Equation \eqref{eq:cond-mom-condi} exists.
+\begin{assumption}[Existence of Solutions]\label{ass: sol-exist}
+    We have $r_0 \in \Rcal(\Tcal)$, i.e.  $\Ncal_{r_0}(\Tcal):=\{h\in \Hcal: \Tcal h = r_0\} \neq \varnothing$.
+\end{assumption}
+Note that even though a solution to \eqref{eq:cond-mom-condi} exists, it might not be unique. Given that there may be (infinitely) many solutions in $\Ncal_{r_0}(\Tcal)$, propose to target a specific solution that achieves the least norm, defined as:
+\begin{align}\label{eq:def-ls}
+    h_0 := \argmin_{h\in \Ncal_{r_0}(\Tcal)} \|h\|_2.
+\end{align}
+This least norm solution is well-defined, as it is defined by the projection of the origin onto a closed affine space
+$\Ncal_{r_0}(\Tcal) \subset L_2(X)$. With Assumption \ref{ass: sol-exist}, it is easy to prove that the solution of \eqref{eq:def-ls} always exists \citep[Lemma 1]{bennett2023minimax}. 
+Although there have been a lot of methods and analyses that use minimax optimization for estimating $h_0$ \citep{DikkalaNishanth2020MEoC,lewis2018adversarial,bennett2023source}, when using general function approximation such as neural network, the minimax optimization tend to be computationally hard \citep{lin2020near,jin2020local,lin2020gradient,diakonikolas2021efficient,razaviyayn2020nonconvex}.  Moreover, it is unclear how to perform model selection for those methods despite its importance. In this paper, we propose a new method that can incorporate any function approximation for estimating the least square norm solution $h_0$ in \eqref{eq:def-ls} with a strong convergence guarantee in $L_2(X)$ while allowing for model selection via convex aggregation. 
+\fi 
+
+% \masa{I commented out: ``Previous methods such as DeepIV \cite{hartford2017deep} or Deep Feature IV \cite{xu2021deep} aim to circumvent minimax oracle by a two-stage regression, however, their methods lack rigorous proof-based analysis.''. This stuff should be talked about in a related section. } 
+
+
+
+%%%Importantly, we also show how to perform model selection based on our methods by convex aggregation. 
+

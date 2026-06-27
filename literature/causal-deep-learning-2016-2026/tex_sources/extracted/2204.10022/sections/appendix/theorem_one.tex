@@ -1,0 +1,52 @@
+\section{Theorem 1}
+\label{app:sharpness}
+Assume that 
+\begin{enumerate}
+    \item $m \to \infty$, \label{ass:m}
+    \item $n \to \infty$, \label{ass:n}
+    \item $(\X=\x, \Tf=\tf) \in \D_n$, \label{ass:data}
+    \item $p(\y \mid \tf, \x, \params)$ converges in measure to $p(\y \mid \tf, \x)$, \label{ass:measure}
+    \item $\widetilde{\mu}(\x, \tf; \params)$ is a consistent estimator of $\widetilde{\mu}(\x, \tf)$, \label{ass:prob}
+    \item $p(\tf \mid \yt, \x) > 0, \forall \yt \in \Ycal$. \label{ass:pos}
+\end{enumerate}
+Then, $\underline{\mu}(\x, \tf; \Lambda, \params) \overset{p}{\to} \underline{\mu}(\x, \tf; \Lambda)$ and $\overline{\mu}(\x, \tf; \Lambda, \params) \overset{p}{\to} \overline{\mu}(\x, \tf; \Lambda)$.
+\begin{proof}
+We prove that $\underline{\mu}(\x, \tf; \Lambda, \params) \overset{p}{\to} \underline{\mu}(\x, \tf; \Lambda)$, from which $\overline{\mu}(\x, \tf; \Lambda, \params) \overset{p}{\to} \overline{\mu}(\x, \tf; \Lambda)$ can be proved analogously. 
+Note that $\overset{p}{\to}$ denotes ``convergence in probability''.
+We need to show that $\lim_{n}P(| \underline{\mu}(\x, \tf; \Lambda, \params_n) - \underline{\mu}(\x, \tf; \Lambda) | \geq \epsilon)$ = 0, for all $\epsilon > 0$. 
+Where $\params_n$ are the model parameters corresponding to a dataset $\D_n$ of $n$ observations.
+Recall that,
+\[
+    \underline{\mu}(\x, \tf; \Lambda) \coloneqq \mut(\x, \tf) + \inf_{w \in \WniH} \frac{\int_\Ycal w(\y) (\y - \mut(\x, \tf)) p(\y \mid \tf, \x)d\y}{(\Lambda^2 - 1)^{-1} + \int_\Ycal w(\y)p(\y \mid \tf, \x)d\y},
+\]
+and
+\[
+    \underline{\mu}(\x, \tf; \Lambda, \params_n) \coloneqq \mut(\x, \tf; \params_n) + \inf_{w \in \WniH} \frac{I_m\left( w(\y) (\y - \mut(\x, \tf; \params_n)) \right)}{(\Lambda^2 - 1)^{-1} + I_m\left( w(\y) \right)},
+\]
+where 
+\[
+    I_m\left( w(\y) (\y - \mut(\x, \tf; \params_n)) \right) = \frac{1}{m}\sum_{i=1}^{m} w(\y_i) (\y_i - \mut(\x, \tf; \params_n)),
+\] 
+and 
+\[
+    I_m\left( w(\y) \right) = \frac{1}{m}\sum_{i=1}^{m} w(\y_i),
+\]
+with $\y_i \sim p(\y \mid \tf, \x, \params_n)$.
+
+First, by \Cref{ass:m} and the law of large numbers, both
+\[
+    \lim_{m \to \infty} I_m\left( w(\y) (\y - \mut(\x, \tf; \params_n)) \right) = \int_\Ycal w(\y)(\y - \mut(\x, \tf; \params_n))p(\y \mid \tf, \x; \params_n)d\y,
+\]
+and
+\[
+    \lim_{m \to \infty} I_m\left( w(\y) \right) = \int_\Ycal w(\y)p(\y \mid \tf, \x; \params_n)d\y.
+\]
+Therefore, 
+\[
+    \lim_{m \to \infty} \underline{\mu}(\x, \tf; \Lambda, \params_n) = \mut(\x, \tf; \params_n) + \inf_{w \in \WniH} \frac{\int_\Ycal w(\y)(\y - \mut(\x, \tf; \params_n))p(\y \mid \tf, \x; \params_n)d\y}{(\Lambda^2 - 1)^{-1} + \int_\Ycal w(\y)p(\y \mid \tf, \x; \params_n)d\y}.
+\]
+Note that this step was missed by \cite{jesson2021quantifying}.
+
+From here, the proof for Theorem 1 from \cite{jesson2021quantifying} can be followed, substituting in $(\Lambda^2 - 1)^{-1}$ where they write $\alpha^`_{\bm{\omega}}$ and $\alpha^`$.
+
+\end{proof}

@@ -1,0 +1,25 @@
+%\section{Preliminaries\label{sec:problem}}
+
+\section{Semi-supervised ITE estimation problem\label{sec:problem}}
+We start with the problem setting of the semi-supervised treatment effect estimation problem. 
+Suppose we have $N$ labeled instances and $M$ unlabeled instances. (We usually assume $N \ll M$.)
+The set of labeled instances is denoted by $\{(\x_i, t_i, y^{t_i}_i)\}_{i=1}^{N}$, where $x_i \in \mathbb{R}^D$ is the covariates of the $i$-th instance, $t_i \in \{0,1\}$ is the treatment applied to instance $i$, and $y^{t_i}_i$ is its outcome.
+Note that for each instance $i$, either  
+$t_i=0$ or $t_i=1$ is realized; accordingly, either $y^{0}_i$ or $y^{1}_i$ is available. The unobserved outcome is called a counterfactual outcome.
+%
+The set of unlabeled instances is denoted by $\{(\x_i)\}_{i=N+1}^{N+M}$, where only the covariates are available.
+
+Our goal is to estimate the ITE for each instance.
+Following the Rubin-Neyman potential outcomes framework~\cite{rubin1974estimating,splawa1990application}, the ITE for instance $i$ is defined as   $\tau_i=y^1_{i}-y^0_{i}$
+exploiting both the labeled and unlabeled sets. 
+Note that $\tau_i$ is not known even for the labeled instances, and we want to estimate the ITEs for both the labeled and unlabeled instances.
+
+%We focus on a binary treatment case for simplicity, but our proposed method  can be extended to multiple treatment setting. 
+
+% \subsection{Motivation}
+% Inspired by counterfactual problem, we are interested in what will happen
+% under situations when available labeled instances are strictly limited  stated in Section~\ref{sec:introduction}. Figure~\ref{fig:toy}~describes experimental results using toy data based on two moon. Red and blue are instances which have no treatmen effect~(${\rm ITE}=0$)~and positive treatment effect~(${\rm ITE}=1$), respectively. For simplicity, we set the all positive treatment effects to $1$. If we train widely employed models in just supervised manner, we observe these models showed significantly poor performances for some instances~(Figure~\ref{fig:toy}a, \ref{fig:toy}b, \ref{fig:toy}c, \ref{fig:toy}d). In contrast, our proposed model showed moderate performance for almost all instances. We assume similar phenomena could be possible in the real-world and are highly motivated to build a model which can maintain robustness in such a severe situation.
+
+%\subsection{Assumptions}
+We make typical assumptions in ITE estimation in this study. i.e.,~({\rm i})~stable unit treatment value: the outcome of each instance is not affected by the treatment assigned to other instances;~({\rm ii})~unconfoundedness: the treatment assignment to an instance is independent of the outcome given covariates (confounder variables); ~({\rm iii})~overlap: each instance has a positive probability of treatment assignment.
+

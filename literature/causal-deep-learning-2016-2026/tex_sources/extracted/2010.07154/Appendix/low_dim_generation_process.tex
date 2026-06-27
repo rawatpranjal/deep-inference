@@ -1,0 +1,26 @@
+Here, we introduce the details of demand design experiments. We follow the procedure in \citet{Singh2019}.
+The observations are generated from the IV model,
+\begin{align*}
+    Y = f_\mathrm{struct}(P, T, S)+ \varepsilon, \quad \expect{\varepsilon |C, T, S} = 0,
+\end{align*}
+where $Y$ is sales, $P$ is the treatment variable (price) instrumented by supply cost-shifter $C$. $T,S$ are the observable confounder, interpretable as time of year and customer sentiment. The true structural function is 
+\begin{align*}
+    &f_\mathrm{struct}(P,T,S) = 100 + (10+P) S h(T) - 2P,\\
+    &h(t) = 2\left(\frac{(t-5)^4}{600} + \exp(-4(t-5)^2) + \frac{t}{10} -2 \right).
+\end{align*}
+
+Data is sampled as 
+\begin{align*}
+    &S \sim \mathrm{Unif}\{1,\dots,7\}\\
+    &T \sim \mathrm{Unif}[0,10]\\ 
+    &C \sim \mathcal{N}(0,1)\\
+    &V \sim \mathcal{N}(0,1)\\
+    &\varepsilon \sim \mathcal{N}(\rho V, 1-\rho^2)\\
+    &P =    25+(C+3)h(T) + V
+\end{align*}
+
+From observations of $(Y, P, T, S, C)$, we estimate $\hat{f}_\mathrm{struct}$ by several methods. For each estimated $\hat{f}_\mathrm{struct}$, we
+measure out-of-sample error as the mean square error of $\hat{f}$ versus true $f_\mathrm{struct}$ applied to 2800 values of
+$(p, t, s)$. Specifically, we consider 20 evenly spaced values of $p \in [10, 25]$, 20 evenly spaced values
+of $t \in [0, 10]$, and all 7 values $s \in \{1, \dots, 7\}$.
+

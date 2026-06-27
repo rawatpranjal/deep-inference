@@ -1,0 +1,217 @@
+\begin{center}
+{\large\bf APPENDIX}
+\end{center}
+\vspace*{.1in}
+\setcounter{page}{1}
+
+\section{Proofs}
+
+\textbf{Extra notation.} First, we introduce some extra notation used throughout in the proofs. We let $\langle M_1, M_2 \rangle \coloneqq tr\left(M_1^\top M_2\right)/k$ for $k\times k$ matrices $M_1, M_2$ (so $\Vert M_1 \Vert_F = \sqrt{\langle M_1, M_1 \rangle}$). We let $\mathbb{B}_{\delta}(\bar{z})$ denote the open ball with radius $\delta > 0$ around the point $\bar{z}$ with  $\Vert \cdot \Vert_2$ (unless otherwise mentioned), i.e., $\mathbb{B}_{\delta}(\bar{z})= \{z \mid \Vert z - \bar{z} \Vert_2 < \delta \}$. We use $C^r(\mathbb{S})$ to denote a set of functions that are $r$ times continuously differentiable on $\mathbb{S}$. Further, we let $o_{x \rightarrow \alpha}(1)$ denote some function of $x$ that converges to $0$ when $x \rightarrow \alpha$, i.e., a function $\mathsf{h}_{\alpha}(x)$ such that $\underset{x \rightarrow \alpha}{\lim} \Vert{\mathsf{h}}_{\alpha}(x)\Vert = 0$. This is to distinguish from typical little-o ($o$) asymptotic notation with respect to $n$ in our proofs. Finally, for $\theta \in \R^{p}$ and any vector-valued function $H : \R^{p} \rightarrow \R^{q}$ whose first-order partial derivatives exist, we denote its Jacobian matrix with respect to $\theta$ by $\bm{J}_\theta H \in \R^{q \times p}$. 
+% Lastly, for convenience, we use $\Vert\cdot\Vert$ to denote the $L_2(\Pb)$ norm.
+
+
+
+
+\subsection{Proof of Theorem \ref{thm:rates}} \label{proof:rates}
+First, we discuss the notion of Lipschitz stability of local minimizers in general nonlinear parametric optimization. Let $\Xi \subset \R^q$ be some finite-dimensional open parameter set. For $\theta \in \Xi$, consider a parametric program
+\begin{equation}
+\label{eqn:parametric-program}
+\begin{aligned}
+    & \underset{x}{\text{minimize}} \quad f(x, \theta) \\
+    & \text{subject to} \quad x \in \mathcal{S}_{g}(\theta) = \{x \mid g_j(x,\theta) \leq 0, j \in J\},
+\end{aligned}     \tag{$\mathsf{P}(\theta)$}  
+\end{equation}
+where $f,g_j \in C^2(\R^k \times \Xi)$. Let $x^*(\theta) \in \sol(\text{\ref{eqn:parametric-program}})$, a local minimizer of \ref{eqn:parametric-program} with the corresponding parameter $\theta$. Next, we define the Lipschitz stability property of local minimizers.
+
+\begin{definition}[Lipschitz stability of local minimizer]
+$x_0 \equiv x^*(\theta_0)$ is called Lipschitz stable if there exist some constants $L, \epsilon > 0$ and a local minimizer $x(\theta)$ of $\mathsf{P}(\theta)$ such that
+\[
+\Vert x(\theta) - {x_0} \Vert_2 \leq L \Vert \theta_0 - {\theta} \Vert_2 \quad \forall \theta \in \mathbb{B}_{\delta}({\theta_0}). 
+\]
+\end{definition}
+
+See, for example, \cite{still2018lectures}, Chapter 6 for more details for Lipschitz and other types of stability result of local minimizers in smooth ($C^2$) nonlinear parametric optimization.
+
+Assume that the parameter $\theta$ unknown and is to be estimated from data with an estimator $\widehat{\theta}$. The next lemma show that if the Lipschitz stability result holds for each local minimizer of \ref{eqn:parametric-program} then the estimation error of the solutions is bounded by that of the parameters.
+
+\begin{lemma} \label{lem:asymp-local-stability}
+Suppose a local minimizer $x^* \equiv x^*(\theta)$ of $\mathsf{P}({\theta})$ is Lipschitz stable. Provided that $\widehat{\theta}$ converges in probability to $\theta$, we have
+\[
+\dist(x^*, \sol(\mathsf{P}(\widehat{\theta}))) = O_{\Pb}\left(\left\Vert \widehat{\theta} - \theta \right\Vert_2\right).
+\]
+\end{lemma}
+\begin{proof}
+
+By definition of Lipschitz stability, there exist constants $L, \epsilon > 0$ and a local solution $x(\widehat{\theta})$ of $\mathsf{P}(\widehat{\theta})$ such that \[
+\Vert x(\widehat{\theta}) - {x^*} \Vert_2 \leq L \Vert \theta - \widehat{\theta} \Vert_2, \quad \forall \widehat{\theta} \in \mathbb{B}_{\delta}({\theta}).
+\]
+Given that $\widehat{\theta} \xrightarrow[]{p} \theta$, we have 
+\begin{align*}
+\Vert \widehat{x} - {x^*} \Vert_2 &=   \Vert \widehat{x} - {x^*} \Vert_2\mathbbm{1}\left\{\widehat{\theta} \in \mathbb{B}_{\delta}(\theta)\right\} + \Vert \widehat{x} - {x^*} \Vert_2\mathbbm{1}\left\{\widehat{\theta} \notin \mathbb{B}_{\delta}(\theta)\right\}  \\
+& = \Vert \widehat{x} - {x^*} \Vert_2 + \left(\mathbbm{1}\left\{\widehat{\theta} \in \mathbb{B}_{\delta}(\theta)\right\} - 1\right)\Vert \widehat{x} - {x^*} \Vert_2 + \Vert \widehat{x} - {x^*} \Vert_2\mathbbm{1}\left\{\widehat{\theta} \notin \mathbb{B}_{\delta}(\theta)\right\} \\
+&= O\left( \Vert \theta - \widehat{\theta} \Vert_2 \right) + o_{\Pb}\left(\Vert \widehat{x} - {x^*} \Vert_2 \right),
+\end{align*}
+where the last equality follows by $\mathbbm{1}\left\{\widehat{\theta} \notin \mathbb{B}_{\delta}(\theta)\right\} = o_{\Pb}(1)$ and $\mathbbm{1}\left\{\widehat{\theta} \in \mathbb{B}_{\delta}(\theta)\right\} - 1 = o_{\Pb}(1)$. Hence we have
+\[
+\frac{\Vert\widehat{x} - x^* \Vert_2}{\left\Vert \widehat{\theta} - \theta \right\Vert_2} = O_{\Pb}\left(1\right),
+\]
+and the result follows by the fact that  $\dist(x^*, \sol(\mathsf{P}(\widehat{\theta}))) \leq \Vert \widehat{x} - x^* \Vert_2$.
+\end{proof}
+
+The proof of Theorem \ref{thm:rates} follows directly from the following argument.
+
+\begin{proof}
+\ref{eqn:general-separable-case-true} can be viewed as a special case of the parametric program \ref{eqn:parametric-program}, where the parameter $\theta$ includes all the varying components $(T,C,d)$.
+Owing to the linearity of the constraints, the strong second-order condition \citep[Definition 6.1]{still2018lectures} is satisfied for each optimal solution under Assumption~\ref{assumption:quadratic-growth}. Hence, by Theorem 6.4 of \citet{still2018lectures}, $\beta^* \in \sol(\text{\ref{eqn:general-separable-case-true}})$ is Lipschitz stable. The remainder of the proof follows directly from Lemma \ref{lem:asymp-local-stability}.
+\end{proof}
+
+
+\subsection{Proof of Theorem \ref{thm:asymptotics}} \label{proof:asymptotics}
+
+\begin{proof}
+For notational simplicity, we write $h(\beta,T) \equiv h(\beta)$, $h(\beta,\widehat{T}) \equiv \widehat{h}(\beta)$.
+Let $\gamma^*$ and $\widehat{\gamma}$ be the Lagrange multipliers associated with the optimal
+solutions of \ref{eqn:general-separable-case-true} and \ref{eqn:general-separable-case-approx}, respectively. First, we aim to show that
+\begin{align} \label{eqn:proof-2-1}
+    \Vert \widehat{\gamma}-\gamma \Vert_2 = O_{\Pb} \left( \Vert \widehat{\beta} - \beta^* \Vert_2  + n^{-1/2} \right).
+\end{align}
+
+Since the feasible sets of \ref{eqn:general-separable-case-true} and \ref{eqn:general-separable-case-approx} are defined solely by linear inequalities, the KKT optimality conditions hold for both problems \citep[][Theorem 5.4]{faigle2013algorithmic}. Then, by the complementary slackness, for each $j \in \{1,...,r\}$, we have $\gamma^*_j (C_j\beta^*-d_j) =0$ and $\widehat{\gamma}_j (C_j\widehat{\beta}-\widehat{d}_j) =0$. Consequently,
+\begin{align*}
+    \gamma^*_j (C_j\beta^*-d_j) - \widehat{\gamma}_j (\widehat{C}_j\widehat{\beta}-\widehat{d}_j) &= (\gamma^*_j - \widehat{\gamma}_j)(C_j\beta^*-d_j) + \widehat{\gamma}_j\left\{(C_j\beta^*-d_j) - (\widehat{C}_j\widehat{\beta}-\widehat{d}_j)\right\} \\
+    &= (\gamma^*_j - \widehat{\gamma}_j)(C_j\beta^*-d_j) + \widehat{\gamma}_jC_j(\beta^* -\widehat{\beta}) 
+    + \widehat{\gamma}_j\left\{ (C_j - \widehat{C}_j)\widehat{\beta} +\widehat{d}_j - d_j\right\} \\
+    & = 0.
+\end{align*}
+Recall that $J_0(\beta^*)$ is the active index set for \ref{eqn:general-separable-case-true}. Then, from the above 
+\begin{align} \label{eqn:app-proof-thm3-1}
+    j \notin J_0(\beta^*) \, \Rightarrow \, \widehat{\gamma}_j - \gamma^*_j  = O\left( \Vert \widehat{\beta}- \beta^* \Vert_2 + \Vert \widehat{C}_j- C_j \Vert_2 + \vert \widehat{d}_j- d_j \vert \right).    
+\end{align}
+
+On the other hand, by combining the stationarity conditions (or dual conditions) from both \ref{eqn:general-separable-case-true} and \ref{eqn:general-separable-case-approx}, and subsequently adding and subtracting terms, it follows that:
+\begin{align*}
+ 0 &= \nabla_\beta\widehat{h}(\widehat{\beta}) - \nabla_\beta h(\beta^*) + \sum_{j \in J_0(\beta^*)}\left\{ \widehat{\gamma}_j\widehat{C}_j^\top - \gamma^*_jC_j^\top \right\} \\
+ &= \nabla_\beta\widehat{h}(\widehat{\beta}) - \nabla_\beta\widehat{h}(\beta^*) + \nabla_\beta\widehat{h}(\beta^*) - \nabla_\beta h(\beta^*) 
+ + \sum_{j \in J_0(\beta^*)}\left\{(\widehat{\gamma}_j-\gamma^*_j){C}_j^\top + \widehat{\gamma}_j(\widehat{C}_j^\top- C_j^\top)\right\} \\
+ & = (\widehat{\beta} - \beta^*)^\top \nabla_\beta^2 \widehat{h}(\beta^*) + (\widehat{\beta} - \beta^*) o_{\widehat{\beta} \rightarrow \beta^*}(1) + \nabla_\beta\widehat{h}(\beta^*) - \nabla_\beta h(\beta^*) \\
+ & \quad + \sum_{j \in J_0(\beta^*)}\left\{(\widehat{\gamma}_j-\gamma^*_j){C}_j^\top + \widehat{\gamma}_j(\widehat{C}_j^\top- C_j^\top)\right\},
+\end{align*}
+where the last equality follows by Taylor's theorem. Since we have assumed non-zero rows in $C$, by the Cauchy–Schwarz and triangle inequalities we obtain
+\begin{align} \label{eqn:app-proof-thm3-2}
+    j \in J_0(\beta^*) \, \Rightarrow \, \vert \widehat{\gamma}_j-\gamma^*_j \vert =O\left( \Vert \widehat{\beta} - \beta^* \Vert_2  + \Vert \nabla_\beta\widehat{h}(\beta^*) - \nabla_\beta h(\beta^*) \Vert_2  + \Vert \widehat{C}_j - C_j \Vert_2 \right). 
+\end{align}
+
+Combining the results from \ref{eqn:app-proof-thm3-1} and \ref{eqn:app-proof-thm3-2}, we obtain:
+\begin{align*} 
+     \Vert \widehat{\gamma}-\gamma \Vert_2 &= O\left( \Vert \widehat{\beta} - \beta^* \Vert_2  + \Vert \nabla_\beta\widehat{h}(\beta^*) - \nabla_\beta h(\beta^*) \Vert_2  + \sum_{j=1}^{r}\Vert \widehat{C}_j - C_j \Vert_2 +  \sum_{j=1}^{r}\vert \widehat{d}_j - d_j \vert \right) \nonumber\\
+     &= O\left( \Vert \widehat{\beta} - \beta^* \Vert_2  + \Vert \nabla_\beta\widehat{h}(\beta^*) - \nabla_\beta h(\beta^*) \Vert_2  + \Vert \widehat{C} - C \Vert_F +  \Vert \widehat{d} - d \Vert_2 \right),
+\end{align*}
+and thus under Assumption \ref{assumption:root-n-rates}, we obtain \eqref{eqn:proof-2-1}.
+
+
+Next, consider the following perturbed parametrized program \ref{eqn:aux-opt-problem-parametric}:
+\begin{equation}
+\label{eqn:aux-opt-problem-parametric}
+    \begin{aligned}
+        &\underset{\beta \in \R^k}{\text{minimize}} \quad h(\beta) + \beta^\top\xi_1 \\
+        & \text{subject to} \quad C\beta - d - \xi_2 \leq 0,
+    \end{aligned} \tag{$\mathsf{P}_\xi$}  
+\end{equation} 
+for a parameter $\xi = (\xi_1, \xi_2) \in \R^k \times \R^{r}$. \eqref{eqn:aux-opt-problem-parametric} can be viewed as a perturbed program of \eqref{eqn:general-separable-case-true}; for $\xi=0$, \eqref{eqn:aux-opt-problem-parametric} coincides with the program \eqref{eqn:general-separable-case-true}. Let $\bar{\beta}(\xi)$ denote the solution of the program \ref{eqn:aux-opt-problem-parametric}. Clearly, we get $\bar{\beta}(0) = \beta^*$.
+% Here, the parameter $\xi$ will play a role of medium that contain all relevant stochastic information in \eqref{eqn:general-separable-case-true} \citep{shapiro1993asymptotic}
+
+By Theorem \ref{thm:rates} and Assumption \ref{assumption:root-n-rates}, we obtain $\widehat{\beta} \xrightarrow[]{p} \beta^*$. Furthermore, from \eqref{eqn:proof-2-1}, it follows that $\widehat{\gamma} \xrightarrow[]{p} \gamma^*$, thereby ensuring that the consistency conditions Assumption \ref{assumption:a-priori-consistency} are satisfied. Also, by the positive definiteness of $\nabla_\beta^2f(\beta^*)$ and the fact that we have only linear constraints, the uniform version of the quadratic growth condition also holds at $\bar{\beta}(\xi)$ (see \citet[][Assumption A3]{shapiro1993asymptotic}). Hence, given that the SC condition holds (Assumption \ref{assumption:LICQ-SC}), by \citet[][Theorem 3.1]{shapiro1993asymptotic}, we have
+\begin{align} \label{eqn:proof-2-2}
+    \widehat{\beta} = \bar{\beta}(\zeta) + o_{\Pb}(n^{-1/2}),
+\end{align}
+where 
+\begin{align*}
+    \zeta = \begin{bmatrix}
+    \nabla_\beta\widehat{h}(\beta^*) - \nabla_\beta h(\beta^*) - \sum_{j \in J_0(\beta^*)}\gamma^*_j\left\{ \widehat{C}_j^\top - C_j^\top \right\} \\
+    -(\widehat{\mathsf{C}}_{ac} - \mathsf{C}_{ac})\beta^*
+    \end{bmatrix} \equiv \begin{bmatrix}
+    \zeta_1 \\
+    \zeta_2
+    \end{bmatrix}.
+\end{align*}
+
+If $\bar{\beta}(\xi)$ is differentiable at $\xi=0$ in the sense of Frechet, we have
+\begin{align*}
+    \bar{\beta}(\xi) - \beta^* = D_0\bar{\beta}(\xi) + o(\Vert\xi\Vert),
+\end{align*}
+where the mapping $D_0\bar{\beta}(\cdot): \R^k \rightarrow \R^k$ is the directional derivative of $\bar{\beta}(\cdot)$ at $\xi=0$. Thus in this case, letting $\xi = \zeta$ yields
+\begin{align*}
+    n^{1/2}\left(\widehat{\beta} - \beta^* \right) = D_0\bar{\beta}(n^{1/2}\zeta) + o_{\Pb}(1),
+\end{align*}
+which follows by \eqref{eqn:proof-2-2} and that $\bar{\beta}(0) = \beta^*$.
+
+Now we show that such mapping $D_0\bar{\beta}(\cdot)$ exists and is indeed linear. To this end, we will show that $\bar{\beta}(\xi)$ is locally totally differentiable at $\xi = 0$, followed by the implicit function theorem. Define a vector-valued function $H \in \R^{k+\vert J_0(\beta^*) \vert}$ by 
+\[
+H(x, \xi, \gamma) = \begin{pmatrix}
+\nabla_\beta h(\beta) + C^\top\gamma + \xi_1 \\
+\diag(\gamma)(C\beta - d - \xi_2)
+\end{pmatrix}.
+\] 
+
+Let the solution of $H(x, \xi, \gamma)=0$ be $\bar{\beta}(\xi), \bar{\gamma}(\xi)$.
+By virtue of the SC condition, $\bar{\beta}(\xi), \bar{\gamma}(\xi)$ satisfies the KKT conditions for \eqref{eqn:aux-opt-problem-parametric}. Then by the classical implicit function theorem \citep[e.g.,][Theorem 1B.1]{dontchev2009implicit}, there exists a neighborhood $\mathbb{B}_{\bar{r}}(0)$, for some $\bar{r}>0$, of $\xi = 0$ such that $\bar{\beta}(\xi)$ and its total derivative exist for $\forall \xi \in \mathbb{B}_{\bar{r}}(0)$. In particular, the derivative at $\xi=0$ is computed by
+\[
+\nabla_\xi \bar{\beta}(0) = - \begin{matrix}
+\bm{J}_{\beta,\gamma} H(\bar{\beta}(0), 0, \bar{\gamma}(0))
+\end{matrix}^{-1}
+\begin{bmatrix}
+\bm{J}_{\xi} H(\bar{\beta}(0), 0, \bar{\gamma}(0))
+\end{bmatrix},
+\]
+where in our case $\bar{\beta}(0) = \beta^*, \bar{\gamma}(0) = \gamma^*$, and thus
+\[
+\bm{J}_{\beta,\gamma} H(\bar{\beta}(0), 0, \bar{\gamma}(0)) = \begin{bmatrix}
+        \nabla^2_{\beta}h(\beta^*) & \mathsf{C}_{ac} \\
+        \mathsf{C}^\top_{ac} & \bm{0}
+        \end{bmatrix},
+\]
+and
+\[
+\bm{J}_{\xi} H(\bar{\beta}(0), 0, \bar{\gamma}(0)) = \begin{bmatrix}
+        \bm{1} \\
+        -\diag(\gamma)\bm{1}
+        \end{bmatrix}.
+\]
+
+Here the inverse of $\begin{matrix}
+\bm{J}_{\beta,\gamma} H(\bar{\beta}(0), 0, \bar{\gamma}(0))
+\end{matrix}$ always exists under the LICQ condition (Assumption \ref{assumption:LICQ-SC}). Therefore we obtain that
+\begin{align*}
+    D_0\bar{\beta}(n^{1/2}\zeta) = \begin{bmatrix}
+        \nabla^2_{\beta}h(\beta^*) & \mathsf{C}_{ac} \\
+        \mathsf{C}^\top_{ac} & \bm{0}
+        \end{bmatrix}^{-1} \begin{bmatrix}
+        \bm{1} \\
+        -\diag(\gamma^*_j)\bm{1}
+        \end{bmatrix} n^{1/2}\zeta.
+\end{align*}
+
+
+Since we assume that
+\begin{align*}
+    n^{1/2}\zeta = n^{1/2}\begin{bmatrix}
+    \nabla_\beta\widehat{h}(\beta^*) - \nabla_\beta h(\beta^*) - \sum_{j \in J_0(\beta^*)}\gamma^*_j\left\{ \widehat{C}_j^\top - C_j^\top \right\} \\
+    -(\widehat{\mathsf{C}}_{ac} - \mathsf{C}_{ac})\beta^*
+    \end{bmatrix} \xrightarrow{d} \Upsilon_{\beta^*},
+\end{align*}
+for any random variable $\Upsilon$, by Slutsky's theorem we finally get the desired result
+\begin{align*}
+    n^{1/2}\left(\widehat{\beta} - \beta^* \right) \xrightarrow{d} \begin{bmatrix}
+        \nabla^2_{\beta}h(\beta^*) & \mathsf{C}_{ac} \\
+        \mathsf{C}^\top_{ac} & \bm{0}
+        \end{bmatrix}^{-1} \begin{bmatrix}
+        \bm{1} \\
+        -\diag(\gamma^*_j)\bm{1}
+        \end{bmatrix} \Upsilon_{\beta^*}.
+\end{align*}
+
+
+\end{proof}
+
+
+

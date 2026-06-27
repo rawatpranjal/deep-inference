@@ -1,0 +1,1410 @@
+\documentclass[dvipsnames]{article} % For LaTeX2e
+\usepackage{iclr2026_conference,times}
+
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+% \input{math_commands.tex}
+% \usepackage[dvipsnames]{xcolor}
+\usepackage{hyperref}
+\usepackage{url}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+\usepackage{enumitem}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{multirow}
+\PassOptionsToPackage{dvipsnames}{xcolor}
+\usepackage{placeins}
+\usepackage{bbm}
+\usepackage{array}
+\usepackage{stackrel}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+\usepackage{colortbl}
+\usepackage{tabu}
+\usepackage{enumitem}
+% \usepackage{showframe}
+\usepackage{caption}
+\usepackage{wrapfig}
+\usepackage{fancybox}
+\usepackage{makecell}
+
+\usepackage{xspace}
+\newcommand\ie{i.\,e.\xspace}
+\newcommand\eg{e.\,g.\xspace}
+\newcommand\Eg{E.\,g.\xspace}
+\newcommand\NB{N.\,B.\xspace}
+\newcommand\BSc{B.\,Sc.\xspace}
+\newcommand\MSc{M.\,Sc.\xspace}
+\newcommand\PhD{Ph.\,D.\xspace}
+\newcommand\etc{etc.\xspace}
+\newcommand\resp{resp.\xspace}
+\newcommand\cf{cf.\xspace}
+\newcommand\Cf{Cf.\xspace}
+\newcommand\cp{cp.\xspace}
+\newcommand\etal{et\,al.\xspace}
+\newcommand\page[1]{p.\,#1}
+\newcommand\pages[1]{pp.\,#1}
+\newcommand\pa{p.\,a.\xspace}
+\newcommand\ham{a.\,m.\xspace}
+\newcommand\hpm{p.\,m.\xspace}
+\newcommand\UK{U.\,K.\xspace}
+\newcommand\US{U.\,S.\xspace}
+\newcommand\wlogenerality{w.\,l.\,o.\,g.\xspace}
+
+% Attempt to make hyperref and algorithmic work together better:
+% \newcommand{\theHalgorithm}{\arabic{algorithm}}
+\newcommand{\ind}{\perp\!\!\!\perp} 
+\newcommand{\notind}{\not\!\perp\!\!\!\perp} 
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand*\diff{\mathop{}\!\mathrm{d}}
+
+\newcommand{\mathup}[1]{\mathrm{#1}}
+\newcommand{\lagop}{\mathbf{\mathup{L}}}
+\newcommand{\vecval}[1]{\mathbf{#1}}
+\newcommand{\concatvec}[1]{\left[#1\right]}
+\newcommand\transpose{^T} %{^\top}
+\newcommand{\e}[1]{\mathup{e}^{#1}}
+
+\newcommand{\sspace}{\quad}
+\newcommand{\wspace}{\qquad}	
+\newcommand{\sand}{\sspace\text{and}\sspace}
+\newcommand{\wand}{\wspace\text{and}\wspace}
+\newcommand{\for}{\text{for }}
+\newcommand\op[1]{\mathrm{#1}}  % Operator	
+%  \newcommand\define{:=} % :=,
+\newcommand\define{\ensuremath{\mathrel{\stackrel{\mathrm{def}}{=}}}}
+\newcommand{\abs}[1]{\left\lvert #1 \right\rvert}
+\newcommand\set[1]{\left\{#1\right\}}
+\newcommand\Var{\op{Var}}
+%  \newcommand{\upDelta}{\mathrm{\upDelta}}
+\newcommand{\var}[1]{\mathrm{#1}}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\vecsize}[1]{\mathbb{R}^{#1}}
+\newcommand{\dd}{\mathop{}\!\mathrm{d}}
+
+\usepackage{scalerel,stackengine,amsmath}
+\newcommand\equalhat{\mathrel{\stackon[1.5pt]{=}{\stretchto{%
+    \scalerel*[\widthof{=}]{\wedge}{\rule{1ex}{3ex}}}{0.5ex}}}}
+
+\usepackage{pifont}
+\newcommand{\cmark}{\textcolor{ForestGreen}{\ding{51}}}%
+\newcommand{\xmark}{\textcolor{BrickRed}{\ding{55}}}%
+
+\newcommand\underrel[2]{\mathrel{\mathop{#2}\limits_{#1}}}
+
+\newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+\newcommand\TODO[1]{\textcolor{red}{#1}}
+\newcommand{\REBUTTAL}[1]{{\leavevmode\color{blue}{#1}}}
+\newcommand{\REBUTTALnew}[1]{{\leavevmode\color{red}{#1}}}
+
+\interfootnotelinepenalty=10000 
+
+\usepackage{times,tcolorbox}
+
+
+\usepackage{pifont}
+\usepackage{tikz}
+\usepackage{graphicx}
+\newcommand{\greencheck}{\textcolor{ForestGreen}{\checkmark}}
+\newcommand{\redcross}{\textcolor{BrickRed}{\ding{55}}}
+\newcommand*\circledgreen[1]{%
+\tikz[baseline=(char.base)]{
+  \node[shape=circle, draw=ForestGreen!60, fill=ForestGreen!10, thick, inner sep=1pt] (char) {\scriptsize\textsf{#1}};
+}}
+\newcommand*\circledred[1]{%
+\tikz[baseline=(char.base)]{
+  \node[shape=circle, draw=BrickRed!60, fill=BrickRed!10, thick, inner sep=1pt] (char) {\scriptsize\textsf{#1}};
+}}
+\newcommand*\circled[1]{%
+\tikz[baseline=(char.base)]{
+  \node[shape=circle, draw=NavyBlue!60, fill=NavyBlue!10, thick, inner sep=1pt] (char) {\scriptsize\textsf{#1}};
+}}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{prop}{Proposition}
+\newtheorem{rem}{Remark}
+\newtheorem{cor}{Corollary}
+
+\newtheorem{innercustomprop}{Proposition}
+\newenvironment{numprop}[1]
+  {\renewcommand\theinnercustomprop{#1}\innercustomprop}
+  {\endinnercustomprop}
+
+\newtheorem{innercustomtheorem}{Theorem}
+\newenvironment{numtheorem}[1]
+  {\renewcommand\theinnercustomtheorem{#1}\innercustomtheorem}
+  {\endinnercustomtheorem}
+
+
+\definecolor{tabblue}{HTML}{2077B4}
+\definecolor{tabred}{HTML}{FF0000}
+\definecolor{yellow}{HTML}{FFFF88}
+\definecolor{orange}{HTML}{FFCC99}
+
+\newtcbox{\myovalbox}{colback=yellow,boxrule=0.1pt,arc=3pt,
+  boxsep=0pt,left=0.5pt,right=0.5pt,top=0.5pt,bottom=0.5pt,}
+
+\title{GDR-learners: Orthogonal Learning of Generative Models for Potential Outcomes}
+
+
+\author{Valentyn Melnychuk \& Stefan Feuerriegel \\
+    LMU Munich \& Munich Center for Machine Learning \\
+    Munich, Germany\\
+    \texttt{melnychuk@lmu.de} \\
+}
+
+\newcommand{\GDRlearners}{\emph{GDR-learners}\xspace}
+\newcommand{\CDPOs}{CDPOs\xspace}
+
+\iclrfinalcopy
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Various deep generative models have been proposed to estimate potential outcomes distributions from observational data. However, none of them have the favorable theoretical property of general Neyman-orthogonality and, associated with it, quasi-oracle efficiency and double robustness. In this paper, we introduce a general suite of generative Neyman-orthogonal (doubly-robust) learners that estimate the conditional distributions of potential outcomes. Our proposed generative doubly-robust learners (GDR-learners) are flexible and can be instantiated with many state-of-the-art deep generative models. In particular, we develop GDR-learners based on (a)~conditional normalizing flows (which we call \emph{GDR-CNFs}), (b)~conditional generative adversarial networks (\emph{GDR-CGANs}), (c)~conditional variational autoencoders (\emph{GDR-CVAEs}), and (d)~conditional diffusion models (\emph{GDR-CDMs}). Unlike the existing methods, our GDR-learners possess the properties of quasi-oracle efficiency and rate double robustness, and are thus asymptotically optimal. In a series of \mbox{(semi-)synthetic} experiments, we demonstrate that our GDR-learners are very effective and outperform the existing methods in estimating the conditional distributions of potential outcomes.  
+
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \vspace{-0.1cm}
+\section{Introduction} 
+% \vspace{-0.1cm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Causal ML importance 
+Causal machine learning (ML) is widely used to predict potential outcomes (POs), namely, the outcome after an intervention. In medicine, for example, an accurate prediction of POs can guide the choice of the optimal treatment from several available treatment options \citep{feuerriegel2024causal}). The POs have a central role in the causal ML as they define various causal quantities, such as treatment effects \citep{curth2021nonparametric} or a policy value \citep{qian2011performance,frauen2025treatment}. 
+
+% CAPOs vs Potential outcomes distribution 
+Recently, many works have suggested departing from estimating simple \emph{conditional averages} of the POs (CAPOs) 
+and rather aim at the \emph{whole conditional distributions} 
+\citep{louizos2017causal,yoon2018ganite,zhang2021treatment,vanderschueren2023noflite,ma2024diffpo,wu2025po}
+In this way, one can capture the inherent randomness of the PO (see Fig.~\ref{fig:motivation}), namely, its \emph{aleatoric uncertainty}. The aleatoric uncertainty is particularly important for reliable decision-making \citep{spiegelhalter2017risk,van2019communicating}: by knowing the whole distribution of the PO, decision-makers such as clinicians may be able to evaluate the probabilities of unwanted outcomes. In this work, we thus focus on learning the \textbf{conditional distributions of potential outcomes (\CDPOs)}. 
+
+
+
+
+% Various models, but no Neyman-orthogonal
+Various state-of-the-art generative models have been developed (or can be adapted) to model the \CDPOs \citep{louizos2017causal,kocaoglu2018causalgan,yoon2018ganite,pawlowski2020deep,sauer2021counterfactual,zhang2021treatment,sanchez2022diffusion,ribeiro2023high,vanderschueren2023noflite,ma2024diffpo,wu2025po}. These works mainly differ in \textbf{(a)}~the underlying probabilistic models (\eg, variational autoencoders \citep{louizos2017causal,zhang2021treatment,ribeiro2023high}, diffusion models \citep{sanchez2022diffusion,ma2024diffpo,wu2025po}, etc.); and in \textbf{(b)}~their learning objectives (\eg, plug-in \citep{vanderschueren2023noflite} and inverse propensity of treatment weighted (IPTW) losses \citep{ma2024diffpo}). 
+
+However, these works rarely focus on the optimality of the overall learning procedure. In fact, to the best of our knowledge, \textbf{none} of the methods fulfill \emph{general Neyman-orthogonality}\footnote{\citet{ma2024diffpo} suggested a Neyman-orthogonal learner for the \CDPOs, yet under the condition that the class of generative models includes the ground-truth \CDPOs.} \citep{foster2023orthogonal}. Nevertheless, Neyman-orthogonality is a desirable asymptotic optimality of the loss, and often comes with several favorable related properties such as \emph{quasi-oracle efficiency} and \emph{rate double robustness}.   
+
+\begin{figure}[t]
+    \centering
+    \vspace{-0.5cm}
+    \includegraphics[width=0.92\linewidth]{figures/orth-gen-motivation.pdf}
+    \vspace{-0.3cm}
+    \caption{\textbf{Capturing the uncertainty in POs helps make reliable treatment decisions}. Unlike conditional average potential outcomes (CAPOs, \textit{left}), conditional distributions of potential outcomes (\CDPOs, \textit{right}) allow for quantifying the aleatoric uncertainty of the POs. As a result, they capture more information about the potential outcomes, such as heavy tails or multi-modalities. }
+    \label{fig:motivation}
+    \vspace{-0.4cm}
+\end{figure}
+ 
+
+% GDR-learners
+In this paper, we \textit{introduce a novel suite of Neyman-orthogonal doubly-robust learners that learn the \CDPOs}. We refer to our learners as \textbf{\GDRlearners}. Our \GDRlearners proceed in two stages: in the first stage, the nuisance functions are estimated (i.e., a conditional outcome distribution and the propensity score); and, in the second stage, the target generative models are fitted with a doubly-robust target objective. In this way, the target generative model class can be chosen \emph{arbitrarily}. For example, one can even make restrictions due to the fairness or interpretability constraints.  
+
+% Theoretic properties 
+Furthermore, we show that, due to the Neyman-orthogonality and under some mild conditions, 
+our \GDRlearners also have favorable asymptotic properties: \emph{quasi-oracle efficiency} and the \emph{rate double robustness}. Here, \emph{quasi-oracle efficiency} \citep{nie2021quasi} allows for learning of the target generative model as if the ground-truth nuisance functions are known (even when the nuisance functions are converging slowly). Further, \emph{rate double robustness} \citep{kang2007demystifying} compensates for a slow convergence speed of one of the nuisance functions with a fast convergence of another.  Hence, our \GDRlearners are in (some sense) asymptotically optimal. 
+
+% Instantiations 
+
+Our \GDRlearners can be instantiated with many state-of-the-art generative models. In this work, we introduce four variants of our \GDRlearners: 
+(a)~conditional normalizing flows (\emph{GDR-CNFs}); (b)~conditional generative adversarial networks (\emph{GDR-CGANs}), (c)~conditional variational autoencoders (\emph{GDR-CVAEs}), and (d)~conditional diffusion models (\emph{GDR-CDMs}).
+
+% Our contribution is a follows..
+Altogether, our \textbf{contributions} are as follows:\footnote{Code is available at \url{https://github.com/Valentyn1997/gdr-learners}.} \textbf{(1)}~We introduce a novel framework of Neyman-orthogonal doubly-robust learners, called \GDRlearners, that aim at estimating the conditional distributions of potential outcomes (\CDPOs). Our \GDRlearners are thus both quasi-oracle efficient and doubly-robust. \textbf{(2)}~We instantiate our \GDRlearners on top of four generative models, namely, CNFs, CGANs, CVAEs, and CDMs. \textbf{(3)}~In several numerical experiments, we demonstrate the effectiveness of our Neyman-orthogonal learners in comparison with the existing methods. 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \vspace{-0.1cm}
+\section{Related Work} \label{sec:related-work}
+% \vspace{-0.1cm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Here, we discuss the most relevant existing works that deal with learning the \CDPOs. We provide further relevant works in Appendix~\ref{app:extended-rw}.
+
+\textbf{Meta-learners for CAPOs.} A wide range of meta-learners \citep{kunzel2019metalearners} were proposed for predicting the CAPO (see the overview in \citet{vansteelandt2025orthogonal}). They include different plug-in approaches \citep{johansson2016learning, shalit2017estimating,johansson2022generalization}, IPTW learners \citep{hassanpour2019counterfactual,assaad2021counterfactual}, and Neyman-orthogonal learners (\eg, DR-learner \citep{kennedy2023towards} and i-learner \citep{vansteelandt2025orthogonal}). Yet, our paper focuses on a different, much more challenging causal target: the whole \emph{conditional distribution of the POs (=\CDPOs)}.
+
+
+\textbf{Distributional treatment effects.} Distributional treatment effects are related to the \CDPOs: They also go ``beyond the mean'' and target either (i)~some distributional aspects of the \CDPOs or (ii)~distributional distances between the \CDPOs. In~(i), for example, plug-in and doubly-robust learners were proposed for \emph{point-wise} cumulative distribution functions (CDFs) / quantiles \citep{zhou2022estimating,kallus2023robust,balakrishnan2025conservative,wu2023dnet,ham2024doubly}, and other general statistics \citep{kallus2023robust} of the \CDPOs. In~(ii), doubly-robust learning were implemented in \citep{park2021conditional,chikahara2022feature,naf2026causaldrf}.
+Yet, both (i) and (ii) are not applicable in our setting. Specifically, methods in (i)~learn the \CDPOs only at \emph{specific grid points of the outcome space} and, therefore, do \emph{not generalize well} to the high-dimensional outcomes; and methods in (ii)~target at the entirely \emph{different} causal quantities (distributional distances between the \CDPOs). Conversely, in our work, we aim to learn the best projection of the ground-truth \CDPOs on some predefined generative model class without using any grid of points.
+
+\textbf{Learning the \CDPOs with generative models.} Methods that estimate the \CDPOs from the observational data can be split into two major categories based on the main \emph{learning target}. Methods in category \textbf{(1)} learn the whole causal data-generating process (DGP) (and the \CDPOs along the way), while the methods in category \textbf{(2)} specifically target the \CDPOs. We review both in the following. $\Rightarrow$~\textit{Our contribution is located in category (2).}
+
+\textbf{(1)~Generative modeling of the whole causal DGP.} Numerous methods were proposed to model the whole causal DGP (see the overview in \citet{komanduri2024from}). They differ in the generative models they employ (see Table~\ref{tab:methods-comparison}) and in the underlying causal assumptions. For example, \citet{louizos2017causal,zhang2021treatment} rely on the potential outcomes framework (= our setting); while \citet{kocaoglu2018causalgan,pawlowski2020deep,sauer2021counterfactual,sanchez2022diffusion,chao2023interventional,ribeiro2023high} assume a specific \emph{unconfounded} casual diagram or structural causal model. In principle, the latter methods can also be adapted to the potential outcomes framework (\eg, by clustering variables together \citep{anand2023causal}), yet all of the methods in this category are in fact \emph{plug-in learners}. More importantly, as we will show later, modeling the whole causal DGP is \emph{inefficient} if we are only interested in learning the \CDPOs.
+
+\textbf{(2)~Generative modeling of the \CDPOs.} Works in this category are relevant to our method as they rely on the potential outcomes framework.\footnote{The potential outcomes framework makes minimal necessary assumptions for the \CDPOs identification but not for the whole causal DGP \citep{bareinboim2025structural}.} Here, the existing methods \citep{yoon2018ganite,vanderschueren2023noflite,ma2024diffpo,wu2025po} vary in the underlying generative (probabilistic) models and in the type of meta-learners (see Table~\ref{tab:methods-comparison}). \citet{ma2024diffpo} suggested an IPTW-learner based on conditional diffusion models that can be Neyman-orthogonal, but only under special conditions that the target model class includes the ground-truth \CDPOs, which we will clarify later (hence, we refer to it as ``partial'' Neyman-orthogonality).      
+
+
+
+\textbf{Research gap.} To the best of our knowledge, there is no general Neyman-orthogonal (doubly-robust) learner that (i)~targets the \CDPOs and (ii)~can be instantiated with any state-of-the-art generative model\footnote{Here, we consider deep parametric models that model the density or the generative process of the \CDPOs.} In particular, a method that has the favorable theoretical property of general Neyman-orthogonality and, associated with it,  quasi-oracle efficiency and rate double robustness is missing.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \vspace{-0.1cm}
+\section{Conditional distributions of potential outcomes (CDPOs)} \label{sec:cdpos}
+% \vspace{-0.1cm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\textbf{Notation.} Let capital letters $X, A, Y$ denote random variables and lowercase letters $x, a, y$ their realizations from the domains $\mathcal{X}, \mathcal{A}, \mathcal{Y}$. Let $\mathbb{P}(Z)$ represent the distribution of a random variable $Z$, and let $\mathbb{P}(Z = z)$ denote its density or probability mass function. We denote the $L_p$-norm of a random variable $f(Z)$ as $\norm{f}_{L_p} = (\mathbb{E}\abs{f(Z)}^p)^{1/p}$. The empirical average of the random $f(Z)$ is written as $\mathbb{P}_n\{{f(Z)}\} = n^{-1}\sum_{i=1}^n f(z_i)$, where $n$ is the sample size. The propensity score is defined as $\pi_a(x) = \mathbb{P}(A = a \mid X = x)$. Conditional densities of the outcome are denoted by $\xi_a(y \mid x) = \mathbb{P}(Y = y \mid X = x, A = a)$. For other conditional distributions and expectations, we often use shorter forms, for example, $\mathbb{E}(Y \mid x) = \mathbb{E}(Y \mid X = x)$. Throughout this work, we utilize the Neyman–Rubin potential outcomes framework \citep{rubin1974estimating}. Specifically, $Y[a]$ denotes the \emph{potential outcome} under the intervention $\mathrm{do}(A = a)$.
+
+\textbf{Problem setup and causal estimand.} To estimate the \CDPOs, we use an observational sample $\mathcal{D}=\{(x_i, a_i, y_i)\}_{i=1}^n$ sampled i.i.d. from $\mathbb{P}(X, A, Y)$. Here, $X \in \mathcal{X}\subseteq\mathbb{R}^{d_x}$ are high‑dimensional pre-treatment covariates, $A\in\{0,1\}$ is a binary treatment, and $Y \in \mathcal{Y}\subseteq\mathbb{R}^{d_y}$ is a continuous outcome. For example, in cancer therapies, $Y$ can be a tumor size, $A$ indicates whether radiotherapy is administered, and $X$ contains patient covariates such as age and sex. We are then interested in estimating \emph{the conditional distribution of potential outcomes} \CDPOs, namely $\mathbb{P}(Y[a] \mid V = v)$ (here $V \subseteq X$), with any generative model of choice. Sub-setting the covariates ($V \subset X$) allows for imposing fairness or interpretability constraints.
+
+\begin{table*}[t]
+    \vspace{-0.5cm}
+    \caption{\textbf{Overview of existing generative methods for the estimation of the \CDPOs.}}
+    \label{tab:methods-comparison}
+    \begin{center}
+        \vspace{-0.4cm}
+        \scalebox{0.98}{
+            \scriptsize
+            \begin{tabular}{p{0.1cm}|p{6.5cm}|p{1.1cm}|p{1.1cm}|P{1.1cm}|P{1.1cm}}
+                \toprule
+                \multirow{3}{*}{\rotatebox[origin=b]{90}{Target}} & \multirow{3}{*}{Work}  & \multirow{3}{*}{\hspace{-0.2cm}\begin{tabular}{l} Generative \\ model \end{tabular} } & \multirow{3}{*}{\hspace{-0.2cm}\begin{tabular}{l} Learner \\ type \end{tabular} } & \multicolumn{2}{c}{\multirow{2}{*}{Neyman-orthogonality}} \\
+                 & &  &  \\
+                &&&&Partial & General\\
+                \midrule
+                \multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{\textcolor{BrickRed}{\xmark~(1) DGP}}}} & CEVAE \citep{louizos2017causal}; TEDVAE \citep{zhang2021treatment} & VAE & Plug-in & \xmark & \xmark \\
+                & CausalGAN \citep{kocaoglu2018causalgan}; CGN \citep{sauer2021counterfactual} & GAN & Plug-in & \xmark & \xmark  \\
+                 & DSCM \citep{pawlowski2020deep} & VAE/NF  &  Plug-in & \xmark & \xmark \\
+                & Diff-SCM \citep{sanchez2022diffusion}; DCM \citep{chao2023interventional} & DM &  Plug-in & \xmark & \xmark \\
+                & CausalHVAE \citep{ribeiro2023high} & VAE  &  Plug-in & \xmark & \xmark \\ 
+                \midrule
+                \multirow{5}{*}{\rotatebox[origin=c]{90}{\textbf{\textcolor{ForestGreen}{\cmark~(2) \CDPOs}}}} & GANITE \citep{yoon2018ganite} & GAN  & RA & \xmark & \xmark\\
+                & NOFLITE \citep{vanderschueren2023noflite} & NF & Plug-in & \xmark & \xmark \\
+                & DiffPO \citep{ma2024diffpo} & DM & IPTW & \cmark & \xmark \\
+                & PO-Flow \citep{wu2025po} & NF/DM  & Plug-in & \xmark & \xmark \\
+                \cmidrule{2-6}
+                & \textbf{\GDRlearners} (\textbf{our paper}) & \textbf{any}  & \textbf{DR} & \cmark & \cmark \\
+                \bottomrule
+                \multicolumn{6}{p{13cm}}{Generative model: VAE: variational autoencoder; GAN: generative adversarial network; NF: normalizing flow; DM: diffusion model.} \\
+                \multicolumn{6}{p{13cm}}{Learner type: RA: regression-adjusted; IPTW: inverse propensity of
+treatment weighted; DR: doubly-robust. }
+            \end{tabular}}
+    \end{center}
+    \vspace{-0.3cm}
+\end{table*}
+
+\textbf{Causal assumptions and identification.} To consistently estimate the \CDPOs, we rely on assumptions of the potential outcomes framework \citep{rubin1974estimating}, {that are standard for causal ML \citep{curth2021nonparametric,kennedy2023towards,morzywolek2023general,vansteelandt2025orthogonal,melnychuk2023normalizing}}. Specifically, we assume (i)~\emph{consistency}: $Y[A] = Y$; (ii)~\emph{strong overlap}: $\mathbb{P}(\varepsilon < \pi(X) < 1 - \varepsilon) = 1$ for some $\varepsilon > 0$, and (iii)~\emph{unconfoundedness}: $(Y[0],Y[1]) \ind A \mid X$. Then, under the assumptions (i)--(iii), the density of the \CDPOs is identifiable as follows:
+\begin{equation} \label{eq:cdpos:id}
+    \mathbb{P}(Y[a] = y\mid V = v) = \mathbb{E}\big[\mathbb{P}(Y = y \mid X, A = a) \mid V = v \big] = \mathbb{E} [\xi_a(y | X) \mid V = v],
+\end{equation}
+and, in the case of $V = X$, we have $\mathbb{P}(Y[a] = y\mid X = x) = \xi_a(y \mid x)$.
+
+In this work, we aim to learn the \CDPOs with some generative model that takes the covariates $V \subseteq X$ as an input and models the distribution of $Y[a]$ with either (i)~an explicit density or (ii)~implicitly, as a data-generating process. 
+
+{\textbf{Outlook.} In the following, we develop a theory of Neyman-orthogonal learning for the \CDPOs. More, specifically, we aim to derive a \emph{target risk} $\mathcal{L}$ for a generative model of choice $g_a$ with the following key property of a \emph{Neyman-orthogonality}:  
+\begin{equation}
+    \mathcal{D}_\eta \mathcal{D}_g\mathcal{L}(g_a^*, \eta)[g_a - g_a^*, \hat{\eta} - \eta] = 0 \quad \text{ for all $g_a \in \mathcal{G}$ and $\hat{\eta} \in \mathcal{H}$},
+\end{equation}
+where $\mathcal{D}_{\cdot} \mathcal{L}(\cdot)[\cdot]$ are path-wise derivatives, $g_a^*$ is the best approximating model in a model class $\mathcal{G}$, and $\eta, \hat{\eta} \in \mathcal{H}$ are the ground-truth and estimated nuisance functions, respectively. Thus, informally, Neyman-orthogonality means first-order insensitivity of the gradient of the target risk wrt. the misspecification of the nuisance functions. We will further show that for Neyman-orthogonal risks of the \CDPOs, two important properties hold: (a)~\emph{quasi-oracle efficiency} and (b)~\emph{double robustness}. Specifically, (a) the $L_2$ error of the fitted model, $\norm{g_a^* - \hat{g}_a}_{\mathcal{G}}$, only depends on the higher-order errors of the nuisance functions, $\norm{\eta - \hat{\eta}}_{\mathcal{H}}^2$; and (b) this higher-order error consists of both the errors of the propensity score and the conditional densities of the outcome: $\norm{\eta - \hat{\eta}}_{\mathcal{H}}^2 = \lVert\xi_a - \hat{\xi}_a \rVert_{L_4} \cdot \norm{\pi_a - \hat{\pi}_a}_{L_4}$.
+We refer to Appendix~\ref{app:background-orth-learning} for exact definitions and further details.
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \vspace{-0.1cm}
+\section{Na\"ive learning of CDPOs} 
+% \vspace{-0.1cm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\textbf{Target risk.} To learn the \CDPOs for the treatment $a$ with a generative model of choice, we want to find the \emph{best projection} (wrt. a distributional distance) of the ground-truth \CDPOs on the predefined generative model class $\mathcal{G} = \{g_a(y, z \mid v): \mathcal{Y} \times \mathcal{Z} \times \mathcal{V} \to \mathbb{R}^{+}\}$. 
+Here, $g_a(\cdot)$ explicitly or implicitly contains an estimated conditional density of $Y[a]$, and $Z$ is an auxiliary latent variable with assumed density $\mathbb{P}(Z = z) = h_a(z)$.
+Then, the best projection $g^*_a$ can be found by minimizing/maximizing the following target generative risk $\mathcal{L}$ wrt. $g_a$:  
+\begin{equation}  \label{eq:target-risk-def}
+    g_a^* = \argmin_{g_a \in \mathcal{G}}/\argmax_{g_a \in \mathcal{G}} \mathcal{L}(g_a), \quad \mathcal{L}(g_a)=  \mathbb{E} \big[ \underset{Z \sim \varepsilon_z }{\mathbb{E}}\log g_a(Y[a], Z \mid V) \big],
+\end{equation}
+where $\varepsilon_z$ is some sampling distribution defined on $\mathcal{Z}$ (can be $h_a(z)$ or other part of $g_a$). This target risk, due to the identifiability assumptions (i)-(iii), is equivalent to the following:
+\begingroup\makeatletter\def\f@size{9}\check@mathfonts
+\begin{equation} \label{eq:target-risk-id}
+    \mathcal{L}(g_a)= \mathbb{E} \bigg[ \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \xi_a(y | X) \diff{y} \bigg] = \mathbb{E}\left[\frac{\mathbbm{1}\{A = a\}}{\pi_a(X)} \, \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(Y, Z \mid V)\right].
+\end{equation}
+\endgroup
+We refer to Lemma~\ref{lemma:target-risks-id} in Appendix~\ref{app:proofs} for a proof of the equality above. The target risks in Eq.~\eqref{eq:target-risk-def}-\eqref{eq:target-risk-id} are general in the sense that they characterize many state-of-the-art generative models. For example, by varying $g_a$, $Z$, and $\varepsilon_z$, we can define (a)~conditional normalizing flows (CNFs) \citep{rezende2015variational,trippe2018conditional}; (b) conditional generative adversarial networks (CGANs) \citep{goodfellow2014generative, laria2022transferring}; (c) conditional variational autoencoders (CVAEs) \citep{kingma2014auto,oh2022cvae}; and  (d) conditional diffusion models (CDMs) \citep{ho2020denoising,lutati2023ocd}. We provide short descriptions of all the models and their risks in Table~\ref{tab:gen-models} and full definitions in Appendix~\ref{app:background-gm}.
+
+\begin{table}[t]
+    \centering
+    \vspace{-0.5cm}
+    \setlength{\fboxsep}{1pt}
+    \caption{\textbf{Base generative models for our \GDRlearners.} Here, we consider the following $v$-conditional generative models $\mathcal{G}$ for estimating \CDPOs, i.e., $\mathbb{P}(Y[a]\mid v)$. We highlight the parts of the models $g_a$ that generate the estimated potential outcomes with \colorbox{orange}{orange}. We refer to Appendix~\ref{app:background-gm} for the details regarding the correspondence of different target risks to the minimization of certain distributional distances (last column). }
+    \vspace{-0.3cm}
+    \scalebox{0.85}{
+    \begin{tabular}{l|l|l|l|l}
+        \toprule
+        Generative & \multirow{2}{*}{$g_a(y, z \mid  v)$}  & \multirow{2}{*}{$Z$} & \multirow{2}{*}{$\varepsilon_z$} &  Optimization of  $\mathcal{L} \Leftrightarrow $  \\
+        model & & & & Projection of $\mathbb{P}(Y[a]\mid v)$ wrt. \\
+        \midrule
+        (a) CNF & \colorbox{orange}{$p_a(y \mid v)$} & $Z \in \mathbb{R}^{d_y}$ & $\emptyset$ &  $\max_{p_a} \mathcal{L} \Leftrightarrow$  KLD \\
+        (b) CGAN & $d_a(y \mid v) \cdot \big(1 - d_a($\colorbox{orange}{$f_a(z \mid v)$}$ \mid v)\big)$ & $Z \in \mathbb{R}^{d_z}$ & $h_a(z)$ & $\min_{f_a} \max_{d_a} \mathcal{L} \Leftrightarrow$  JSD \\
+        (c) CVAE & \colorbox{orange}{${p_a(y, z \mid  v)}$} $ /{q_a(z \mid y, v)}$ & $Z \in \mathbb{R}^{d_z}$ & $q_a(z \mid y, v)$ & $\max_{p_a,q_a} \mathcal{L} \Leftrightarrow $ KLD + IG\\
+        (d) CDM &  \colorbox{orange}{${p_a(y, z \mid v)}$} $ /{q_a(z \mid y)}$ & $Z_{1:T} \in \mathbb{R}^{T \times d_y}$ & $q_a(z \mid y)$ & $\max_{p_a} \mathcal{L} \Leftrightarrow$ KLD + IG \\
+        \bottomrule
+        \multicolumn{5}{p{13cm}}{$p_a, q_a$: conditional densities; $d_a$: conditional discriminator; $f_a$: conditional generator} \\
+        \multicolumn{5}{p{13cm}}{KLD: Kullback–Leibler divergence; JSD: Jensen–Shannon divergence; IG: inference gap} \\
+    \end{tabular}}
+    \vspace{-0.3cm}
+    \label{tab:gen-models}
+\end{table}
+
+\textbf{Plug-in learners.} When $V = X$, our causal estimand coincides with the conditional outcome distribution $\xi_a(y\mid x)$, see Eq.~\eqref{eq:cdpos:id}. Hence, one might be tempted to na\"ively learn $\xi_a(y\mid x)$ with a following plug-in loss:
+\begin{equation}
+    \hat{\mathcal{L}}_\text{PI}(g_a)=  \mathbb{P}_n \big\{ \mathbbm{1}\{A = a\}\, \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(Y, Z \mid X) \big\}.
+\end{equation}
+In treatment effect estimation literature, this approach is known as a \emph{plug-in learner} \citep{kunzel2019metalearners,morzywolek2023general,vansteelandt2025orthogonal}. Yet, the plug-in risk differs from our main target risk from Eq.~\eqref{eq:target-risk-def}. Although the minimization of two risks is asymptotically equivalent when the model class $\mathcal{G}$ includes the ground-truth $\xi_a$; they might differ drastically when \emph{the risks are regularized} or \emph{model class $\mathcal{G}$ is constrained}. In this case, the plug-in learner yields the best projection of $\xi_a$ only treated/untreated sub-populations (\ie, when $A = a$) \citep{vansteelandt2025orthogonal}; while our main target risk \emph{aims to project it well for the whole population}. Thus, the main target risk from Eq.~\eqref{eq:target-risk-def} is a better learning objective to learn $\mathbb{P}(Y[a] \mid x)$. 
+
+\textbf{RA- and IPTW-learners.} Alternatively, we can employ the identification formulas in Eq.~\eqref{eq:target-risk-id}, which yield well-known two-stage regression-adjusted (RA) and inverse propensity of treatment weighted (IPTW) learners with the following losses:
+\begingroup\makeatletter\def\f@size{9}\check@mathfonts
+\begin{align}
+    \hat{\mathcal{L}}_\text{RA}(g_a, \hat{\eta} =\hat{\xi}_a) &= \mathbb{P}_n \bigg\{\mathbbm{1}\{A = a\} \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(Y, Z \mid V) +  \mathbbm{1}\{A \neq a\}\int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \hat{\xi}_a(y | X) \diff{y} \bigg\},\\
+    \hat{\mathcal{L}}_\text{IPTW}(g_a, \hat{\eta} = \hat{\pi}_a) & = \mathbb{P}_n\left\{\frac{\mathbbm{1}\{A = a\}}{\hat{\pi}_a(X)} \, \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(Y, Z \mid V)\right\},
+\end{align}
+\endgroup
+where $\hat{\xi}_a$ and $\hat{\pi}_a$ are at the first stage nuisance functions $\hat{\eta}$: the conditional distribution of the outcome and the propensity score, respectively. Both the RA- and IPTW-learners offer better estimates of the target risk than the plug-in learner. However, they both depend on the nuisance functions, and the error of those propagates with the same order to the final target risk \citep{vansteelandt2025orthogonal}. This motivates our main method, which estimates the target risk so that it is \emph{first-order insensitive to the nuisance functions errors (= Neyman-orthogonality)}.
+
+
+% \vspace{-0.1cm}
+\section{Generative doubly-robust learners (GDR-learners)} \label{sec:gdr-learners}
+% \vspace{-0.1cm}
+
+\textbf{GDR-learners.} Here, we present a novel class of Neyman-orthogonal learners, namely generative doubly-robust learners (\GDRlearners) that are given by the following loss   
+\begingroup\makeatletter\def\f@size{9}\check@mathfonts
+\begin{align} \label{eq:gdr-learner}
+    % \begin{split}
+        & \hat{\mathcal{L}}_\text{GDR}(g_a, \hat{\eta} = (\hat{\xi}_a, \hat{\pi}_a)) \\ & = \mathbb{P}_n\Bigg\{\frac{\mathbbm{1}\{A = a\}}{\hat{\pi}_a(X)} \, \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(Y, Z \mid V) \,  + \, \left(1 - \frac{\mathbbm{1}\{A = a\}}{\hat{\pi}_a(X)} \right)\, \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \hat{\xi}_a(y | X) \diff{y} \Bigg\}. \nonumber
+    % \end{split}
+\end{align}
+\endgroup
+We derived Eq.~\eqref{eq:gdr-learner} by using a one-step bias correction\footnote{{The core idea of the one-step bias correction is to use the efficient influence function of the target risk to correct any plug-in estimator (RA-learner can be seen as a plug-in estimator of the target risk). The efficient influence function describes how the infinitesimal perturbation of the data generation mechanism changes the target parameter. Thus, by using it in the bias correction, we yield an efficient estimator as we use the information from \emph{all the nuisance functions}, also those that are overlooked in the plug-in estimator (\eg, the propensity score is not used in the RA-learner).}} of the RA-learner (\ie, by following \citep{kennedy2024semiparametric, kennedy2023semiparametric,melnychuk2023normalizing}); see Lemma~\ref{lemma:bias-correction} in Appendix~\ref{app:proofs}. 
+
+Our \GDRlearners then proceed in two-stages: first, the nuisance functions $\eta = ({\xi}_a, {\pi}_a) \in \mathcal{H}$ are estimated (\eg, with a generative model of choice); and second, the target generative model is fitted with the loss in Eq.~\eqref{eq:gdr-learner}.  
+
+\subsection{Theoretical properties}
+
+Our \GDRlearners, unlike the plug-in learner, estimate the desired target risk from Eq.~\eqref{eq:target-risk-def}, which is easy to see by putting the ground-truth nuisance functions. Unlike existing RA- and IPTW-learners, our \GDRlearners have several favorable asymptotical theoretical properties. \textbf{(1)}~First, they are first-order insensitive to the errors in the nuisance functions, namely, Neyman-orthogonal. This can be formalized with the following theorem.
+
+\begin{numtheorem}{1}[Neyman-orthogonality]\label{theor:no}
+    The risk given by our GDR-learners is Neyman-orthogonal (\ie, first-order insensitive to the nuisance function errors), namely:
+    \begin{equation}
+        \mathcal{D}_\eta \mathcal{D}_g\mathcal{L}_\text{\emph{GDR}}(g_a^*, \eta)[g_a - g_a^*, \hat{\eta} - \eta] = 0 \quad \text{ for all $g_a \in \mathcal{G}$ and $\hat{\eta} \in \mathcal{H}$},
+    \end{equation}
+    where $\mathcal{D}_{\cdot} \mathcal{L}(\cdot)[\cdot]$ are path-wise derivatives (see Appendix~\ref{app:background-orth-learning} for definitions).
+\end{numtheorem}
+\vspace{-0.5cm}
+\begin{proof}
+    See Appendix~\ref{app:proofs}.
+\end{proof}
+% \proof{}
+% \endproof
+
+Furthermore, as a consequence of the Neyman-orthogonality, we can show that: \textbf{(2)} our \GDRlearners offer important properties of (a)~\emph{quasi-oracle efficiency} and (b)~\emph{double robustness} \citep{chernozhukov2018double,nie2021quasi,foster2023orthogonal,morzywolek2023general} (see definitions in Appendix~\ref{app:background-orth-learning}). That is, the following holds (see Appendix~\ref{app:proofs} for the full version). 
+
+\begin{figure}
+    \centering
+    \vspace{-0.5cm}
+    \includegraphics[width=\linewidth]{figures/dr-iptw.pdf}
+    \vspace{-1.1cm}
+    \caption{\textbf{Difference to the IPTW-learner.} Comparison of the IPTW-learners (= a variant of our \GDRlearners with the target model class $\xi_a^* \in \mathit{\Xi}$) and our original \GDRlearners (with the target model class $g_a^* \in \mathcal{G}$) when $V = X$ and $\mathcal{G} \subset \mathit{\Xi}$. Here, we show three scenarios depending on whether the ground-truth \CDPOs, $\textcolor{red}{\bigstar} = \mathbb{P}(Y[a] \mid x)$, belong to both $\mathcal{G}$ and $\mathit{\Xi}$, only $\mathit{\Xi}$, or neither of both. In \textbf{Scenarios 1} and \textbf{2}, both the IPTW-learner and our \GDRlearners are Neyman-orthogonal and, therefore, quasi-oracle efficient. In \textbf{Scenarios 3}, on the other hand, none of the learners are Neyman-orthogonal, as $\textcolor{red}{\bigstar} = \xi_a \notin \mathit{\Xi}$. However, in \textbf{Scenario 1}, our \GDRlearners have a smaller empirical error as $\mathcal{G} \subset \mathit{\Xi}$. Thus, we should prefer the IPTW-learners in \textbf{Scenario 2} and our \GDRlearners in \textbf{Scenario 1}. Note that the real scenario is unknown in practice. 
+    }
+    \vspace{-0.3cm}
+    \label{fig:iptw-vs-dr}
+\end{figure}
+
+\begin{numtheorem}{2}[Quasi-oracle efficiency and double robustness] \label{theorem:qo-dr}
+    Under mild model-dependent convexity conditions, the squared distance between the optimizer $g_a^*=\argmin_{g_a \in \mathcal{G}}/\argmax_{g_a \in \mathcal{G}} \mathcal{L}_\text{\emph{GDR}}(g_a, \eta) $ and the optimizer $\hat{g}_a=\argmin_{g_a \in \mathcal{G}}/\argmax_{g_a \in \mathcal{G}} \mathcal{L}_\text{\emph{GDR}}(g_a, \hat{\eta}) $ can be upper-bounded by the following:    
+    \begin{align}
+        \norm{g_a^* - \hat{g}_a}_{\mathcal{G}}^2 \lesssim \underbrace{{\mathcal{L}}_\text{\emph{GDR}}(\hat{g}_a, \hat{\eta}) - {\mathcal{L}}_\text{\emph{GDR}}(g_a^*, \hat{\eta})}_{(I)} + \underbrace{\lVert\xi_a - \hat{\xi}_a \rVert_{L_4}^2  \cdot \norm{\pi_a - \hat{\pi}_a}_{L_4}^2}_{(II)},
+    \end{align}
+    where $\norm{g_a}$ is a model-specific norm, (I)~is a standard optimization error term, and (II)~is a higher-order nuisance error term. This inequality implies that our GDR-learners are (a)~\textbf{quasi-oracle efficient} and (b)~\textbf{doubly-robust}.
+\end{numtheorem}
+\vspace{-0.5cm}
+\begin{proof}
+    See Appendix~\ref{app:proofs}.
+\end{proof}
+
+{\textbf{Note on the mildness of assumptions.} Theorem~\ref{theorem:qo-dr} relies on the mild model-dependent convexity conditions (see a more detailed formulation of Theorem~\ref{theorem:qo-dr-app} in Appendix~\ref{app:proofs}). For those to hold, we require (i)~all the densities of target models in $\mathcal{G}$ and the conditional densities of the outcome $\xi_a$ to be finite. Then, we assume that (ii)~the nuisance functions $\eta$ are H\"older smooth (standard estimability assumption \citep{kennedy2023towards}). Given (i) and (ii), we then show in Remark~\ref{rem:mildness} of Appendix~\ref{app:proofs} that the model-dependent convexity conditions hold asymptotically. Thus, they can be considered mild.}
+
+\textbf{Interpretation.} Theorem~\ref{theorem:qo-dr} provides a foundation for the asymptotic optimality of our \GDRlearners: Without assuming any additional structure in the data-generating process (DGP) $\mathbb{P}(X, Y, A)$, our \GDRlearners are optimal in a min-max sense \citep{balakrishnan2023fundamental,jin2025structure}. Therefore, for example, it is not necessary to model parts of the DGP other than the nuisance functions $\xi_a$ and $\pi_a$. In practice, both properties (a) and (b) lend to the following interpretation. (a)~\emph{Quasi-oracle efficiency} ensures that, even when slow nuisance functions are converging slowly (namely, at least $o_\mathbb{P}(n^{-1/4})$), the minimization of the \GDRlearners loss is asymptotically equivalent to a minimization of the target risks with the ground-truth nuisance functions (\ie, from Eq.~\eqref{eq:target-risk-id}). On top of that, (b)~\emph{double robustness} allows for compensating for a slow convergence of one of the nuisance components with a faster convergence of another.
+
+{\textbf{Are the $o_\mathbb{P}(n^{-1/4})$ rates achievable?} An important practical question arises on whether the rates required by Theorem~\ref{theorem:qo-dr}, can be achieved by state-of-the-art generative models.  As recently discovered by \citet{schulte2025adjustment}, deep neural networks can substantially improve the estimation of the nuisance functions for the ATE. This happens, as the neural networks can effectively address a low-dimensional manifold hypothesis and, thus, significantly improve the non-parametric convergence rates of \citet{stone1982optimal}. In our case of the \CDPOs, we need to learn the conditional distributions of the outcomes as one of the nuisance functions, which is arguably more complicated than learning the conditional expectations. Specifically, the conditional densities can be seen as functions from $\mathcal{X} \times \mathcal{Y}$ to $\mathbb{R}^+$ \citep{efromovich2007conditional}, and the non-parametric convergence rates of \citet{stone1982optimal} are now $O_{\mathbb{P}}(n^{-s/(2s + d_x + d_y)})$, where $s$ is the smoothness of the conditional densities of the outcome. However, again, we again might use low-dimensional manifold hypothesis and deep generative models to improve these rates, analogously to \citet{schulte2025adjustment}. The convergence rates of the state-of-the-art generative models for estimating conditional distributions are an active area of research \citep{kumar2025likelihood}.
+
+}
+
+\subsection{Partial and general Neyman-orthogonality}
+
+\textbf{Remark on IPTW-learners.} As noted in \citep{vansteelandt2025orthogonal,ma2024diffpo}, when $V = X$, the IPTW-learners for the \CDPOs can also become Neyman-orthogonal if the model class $\mathcal{G}$ includes the ground-truth $\xi_a$. Yet, in this case, the IPTW-learners can be shown to be a  \emph{special case} of our \GDRlearners, where we set target model equal to one of the nuisance functions $\hat{g}_a = \hat{\xi}_a \in \mathit{\Xi}$, where $\mathit{\Xi}$ is a nuisance model class (see Remark~\ref{rem:iptw-vs-dr} in Appendix~\ref{app:proofs}). To see when this variant of our \GDRlearners (= IPTW-learners) outperform the original \GDRlearners,  we refer to Fig.~\ref{fig:iptw-vs-dr}. Therein, we compare the IPTW-learners (= \GDRlearners with a target model class $\mathit{\Xi}$) and comparable original \GDRlearners (= with a separate nuisance model class $\mathit{\Xi}$ for $\hat{\xi}_a$ and a target model class $\mathit{G} \subset \mathit{\Xi}$). Then, when $\mathcal{G} = \mathit{\Xi}$, both learners are asymptotically equivalent. Also, we see that our original \GDRlearners are guaranteed to have lower error in a scenario when both $\mathcal{G}$ and  $\mathit{\Xi}$ contain the ground-truth. 
+
+\textbf{Restrictions of $\mathcal{G}$.} When $V = X$, our original \GDRlearners should also be preferred when the model class $\mathcal{G}$ has to be specifically \emph{restricted} (e.g., for interpretability or fairness reasons). Then, the IPTW-learners might lose their Neyman-orthogonality, but our \GDRlearners always preserve it. That is,  our \GDRlearners use more expressive $\mathit{\Xi}$ as a nuisance model class for $\hat{\xi}_a$ while the IPTW-learners have to restrict themselves to only $\hat{g}_a \in \mathcal{G}$. We later validate this in semi-synthetic experiments.
+
+\begin{figure}
+    \vspace{-0.5cm}
+    \centering
+    \includegraphics[width=\linewidth]{figures/architecture.pdf}
+    \vspace{-0.6cm}
+    \caption{\textbf{Overview of our \GDRlearners.} Our \GDRlearners proceed in two stages. In the first stage, nuisance conditional generative models are trained to estimate the nuisance functions $\hat{\eta} = (\hat{\xi}_a, \hat{\pi}_a)$ jointly for $a \in \{0, 1\}$. In the second stage, target conditional generative models use the outputs of the nuisance conditional generative models to optimize the $\hat{\mathcal{L}}_{\text{GDR}}$ wrt. $g_0$ and $g_1$, see Eq.~\eqref{eq:gdr-learner}. } 
+    \label{fig:gdr-learners}
+    \vspace{-0.4cm}
+\end{figure}
+
+\subsection{Instantiations of GDR-learners}
+\vspace{-0.1cm}
+
+\textbf{Architecture.} We instantiate our \GDRlearners with four different state-of-the-art deep conditional generative models. That is, both the nuisance ($\hat{\eta} = (\hat{\xi}_a, \hat{\pi}_a)$) and the target models ($g_0, g_1$) are implemented with one of four deep generative models: (a)~conditional normalizing flows \citep{rezende2015variational,trippe2018conditional} (\textbf{\emph{GDR-CNFs}}); (b)~conditional generative adversarial networks \citep{goodfellow2014generative, laria2022transferring} (\textbf{\emph{GDR-CGANs}}), (c)~conditional variational autoencoders \citep{kingma2014auto,oh2022cvae} (\textbf{\emph{GDR-CVAEs}}), and (d)~conditional diffusion models \citep{ho2020denoising,lutati2023ocd} (\textbf{\emph{GDR-CDMs}}). To implement conditioning on $X$ and $V$ for all four generative models in a comparable way, we employed hypernetworks \citep{ha2017hypernetworks} or feature-wise linear modulations \citep{perez2018film}. We refer to Fig.~\ref{fig:gdr-learners} for an overview of a general architecture of our \GDRlearners instantiations. 
+
+
+
+\textbf{Training.} Our \GDRlearners are trained in two stages. \textbf{(1)} In the first stage, a nuisance conditional generative model aims to optimize the plug-in loss $\hat{\mathcal{L}}_{\text{PI}}$ together with minimizing a binary cross-entropy loss $\hat{\mathcal{L}}_{\text{BCE}}$ for both treatments $a=0$ and $1$. \textbf{(2)}~Then, in the second stage, the nuisance conditional generative model is frozen, and its outputs are used to train a target conditional generative model $\hat{g}_a$ wrt. to our \GDRlearners loss from Eq.~\eqref{eq:gdr-learner}. The target conditional generative model is also trained jointly for both $a = 0,1$. 
+
+
+
+\textbf{Implementation details.} To evaluate a second term in the Eq.~\eqref{eq:gdr-learner} (which requires integration wrt. $\hat{\xi}_a(\cdot \mid X)$), we employed MC-sampling with $n_{\text{MC}} = 1$. In this way, an estimator $\hat{\xi}_a$ needs to only provide a direct conditional sampling mechanism and not necessarily an explicit conditional density (this is the case for CGANs, CVAEs, and CDMs). To additionally stabilize the second-stage model training, we employed the exponential moving average (EMA) of model weights \citep{polyak1992acceleration} with a hyperparameter $\lambda = 0.995$. This also helped to heuristically ensure that $\mathcal{G} \subseteq \mathit{\Xi}$. We refer to Appendix~\ref{app:implementation} for other implementation details and the details on hyperparameter tuning.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\vspace{-0.1cm}
+\section{Experiments}
+\vspace{-0.1cm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\textbf{Setup.} We now evaluate our \GDRlearners. For this, we used several (semi-)synthetic causal ML benchmarks with varying $n, d_y,$ and $d_x$. In this way, we can have access to the \emph{ground-truth counterfactuals}: either as the target \CDPOs, $\mathbb{P}(Y[a] \mid X = x)$, or, alternatively, as a joint POs sample $\{(x_i, y[0]_i, y[1]_i)\}_{i=1}^{n}$. 
+
+\begin{wraptable}{r}{6.3cm}
+    \centering
+    \vspace{-0.8cm}
+    \caption{Aggregated results for 77 semi-synthetic \textbf{ACIC 2016 experiments} in \emph{(a)~full} and \emph{(b)~linear} settings. Reported: the $\%$ of runs, where our \GDRlearners improve over other learners wrt. the out-sample log-prob. Detailed results are in Fig.~\ref{fig:res-acic-full} in Appendix~\ref{app:experiments}.}
+    \vspace{-0.2cm}
+    \scalebox{0.8}{\input{tables/acic-perc}}
+    \label{tab:res-acic-perc}
+    \vspace{-0.5cm}
+\end{wraptable}
+
+\textbf{Evaluation metrics.} Whenever the ground-truth \CDPOs are available, we report the empirical Wasserstein distance ($W_2$) based on $p=200$ samples of the ground-truth $\mathbb{P}(Y[a] \mid X = x)$ and the estimated generative model averaged over $\{x_i\}_{i=1}^n$. On the other hand, when only the joint potential outcomes sample is available (\eg, for the ACIC 2016 datasets), we use the average log-probability of the estimated POs conditional density (log-prob).
+
+
+
+\textbf{Baselines.} We compare four instantiations of our \GDRlearners (namely, \textbf{\emph{GDR-CNFs}}, \textbf{\emph{GDR-CGANs}}, \textbf{\emph{GDR-CVAEs}}, and \textbf{\emph{GDR-CDMs}}) with the corresponding instantiations other learners (\ie, {plug-in}, {RA-}, and {IPTW-learners}). Here, we set $V = X$ for all the experiments, and, for a fair comparison, we implemented {plug-in} and {IPTW}-learners as single-stage models and {RA-} and \GDRlearners as two-stage models (see Appendix~\ref{app:implementation} for details).
+This results in comparing \textbf{\emph{16 different models}} (four instantiations times four meta-learners). In this way, we cover \emph{all the relevant existing baselines} described in Table~\ref{tab:methods-comparison}. For example, \textbf{\emph{RA-CGANs}} correspond to GANITE \citep{yoon2018ganite}, \textbf{\emph{Plug-in CCNFs}} to NOFLITE \citep{vanderschueren2023noflite}, \textbf{\emph{IPTW-CDMs}} to DiffPO \citep{ma2024diffpo}, etc.  
+
+
+\begin{figure}
+    \centering
+    \vspace{-0.5cm}
+    \includegraphics[width=\linewidth]{figures/synthetic-exp.pdf}
+    \vspace{-0.7cm}
+    \caption{Results for the \textbf{synthetic experiments with varying size of training data} ($n_{\text{train}}$). Reported: mean out-sample $W_2 \, \pm$ se over 20 runs (lower is better).}
+    \label{fig:res-synth}
+    \vspace{-0.5cm}
+\end{figure}
+
+
+% \vspace{-0.1cm}
+% \subsection{Synthetic data}
+% \vspace{-0.1cm}
+
+\textbf{Synthetic data.} We adopt a synthetic data generator from \citep{melnychuk2023normalizing} with $d_y=2$ and $d_x=2$.  
+In this dataset, the covariates are sampled from the noisy moons data generator and then rotated by a random angle depending on the treatment. Thus, the ground-truth \CDPOs are available as the sampling processes. We then sample $n_\text{train} \in \{500; 2000; 4000 \}$ training and $n_\text{test} = 1000$ test datapoints. In Appendix~\ref{app:experiments}, we additionally report results for another popular semi-synthetic benchmark dataset, namely, the IHDP100 dataset \citep{hill2011bayesian}. \textbf{Results.} Results are shown in Fig.~\ref{fig:res-synth}. Therein, our \GDRlearners achieve the best performance when the dataset size grows (this is expected due to the asymptotic optimality properties). Furthermore, our \textbf{\emph{GDR-CDMs}} achieved the best performance overall, when $n_\text{train} \in \{2000; 4000 \}$.
+
+
+
+
+% \vspace{-0.1cm}
+% \subsection{ACIC 2016 datasets}
+% \vspace{-0.1cm}
+
+\textbf{ACIC 2016 datasets.} The ACIC 2016 dataset collection  \citep{dorie2019automated} consists of 77 semi-synthetic datasets ($n = 4802, d_y=82, d_x=82$) with varying degree of overlap and \CDPOs entropy. Here, we do not have access to the ground-truth \CDPOs but only a sample from the POs joint distribution. Thus, the only viable evaluation metric is log-prob, and we can only evaluate models that provide explicit conditional density (namely, only CNFs). \textbf{Setup.}  As noted in the last remarks of Sec.~\ref{sec:gdr-learners}, when $V = X$ and the model classes for the nuisance functions and target models coincide, the IPTW-learners and our \GDRlearners are equivalent. Thus, our \GDRlearners are only guaranteed to outperform IPTW-learners when the target model class is restricted (see Sec.~\ref{sec:gdr-learners}). To simulate this, we conducted experiments in two settings: \emph{(a)~full}, where the target model is only smoothened with EMA of model weights (as in all the other experiments), and \emph{(b)~linear}, where the target model is artificially restricted to one linear layer in the conditioning hypernetwork. \textbf{Results.} We demonstrate aggregated results in Table~\ref{tab:res-acic-perc} and full results in Fig.~\ref{fig:res-acic-full} in Appendix~\ref{app:experiments}. Here, in the \emph{(a)~full setting}, our \GDRlearners perform similarly to the IPTW-learners as they both are Neyman-orthogonal. However, in the \emph{(b)~linear setting}, only our \GDRlearners are Neyman-orthogonal (as the target model is restricted), and they outperform both the plug-in and the IPTW-learners in the majority of the runs. Notably, our \GDRlearners rarely outperform RA-learners (even though RA-learners are not Neyman-orthogonal), which can be expected. The main reason here is that our \GDRlearners learners are only guaranteed to be \emph{quasi-oracle efficient wrt. $L_2$-norm} and not wrt. the log-prob, which is used in this benchmark (log-prob tends to overestimate the support of the distribution and may assign large negative values due to outliers). Still, our \GDRlearners are highly effective against plug-in and IPTW-learners in the restricted target model setting.            
+
+
+% \vspace{-0.1cm}
+% \subsection{HC-MNIST dataset}
+% \vspace{-0.1cm}
+
+\textbf{HC-MNIST dataset.} To showcase our \GDRlearners on the high-dimensional data, we used the HC-MNIST dataset with $d_y = 1, d_x = 784 + 1, n = 70,000$ \citep{jesson2021quantifying} (= high-dimensional confounders setting). 
+Here, the ground-truth \CDPOs are also available as the conditional normal distributions. \textbf{Results.} Results are in Table~\ref{tab:res-hc-mnist}. Here, our \GDRlearners consistently outperform other learners for the majority of the generative models and treatment arms. This supports the effectiveness of our \GDRlearners even in the high-dimensional confounding setting. 
+
+
+\begin{table}[t]
+    \centering
+    \vspace{-0.5cm}
+    \caption{Results for the \textbf{HC-MNIST dataset}. Reported: median out-sample $W_2 \, \pm$ std over 20 runs.}
+    \vspace{-0.3cm}
+    \scalebox{0.66}{\input{tables/hcmnist-wass}}
+    \label{tab:res-hc-mnist}
+    \vspace{-0.2cm}
+\end{table}
+
+\begin{table}[t]
+    \centering
+     \caption{{Qualitative results for the \textbf{colored MNIST dataset}. Shown: samples from fitted generative models for a digit intervention $a = 0$.}}
+    \vspace{-0.3cm}
+    \scalebox{0.85}{
+    \color{black}\begin{tabu}{l|cccc}
+        \toprule
+        & \multicolumn{4}{c}{$a = 0$} \\
+         Learner & CNFs & CGANs & CVAEs & CDMs \\
+         \midrule 
+         \raisebox{1.5\height}{Plug-in} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cnfs/plugin_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cgans/plugin_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cvaes/plugin_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cdiffusion/plugin_neural_colored_mnist_grid_0.png}\\ 
+         \midrule 
+         \raisebox{1.5\height}{IPTW} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cnfs/plugin_iptw_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cgans/plugin_iptw_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cvaes/plugin_iptw_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cdiffusion/plugin_iptw_neural_colored_mnist_grid_0.png} \\
+         \midrule 
+         \raisebox{1.5\height}{RA} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cnfs/ra_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cgans/ra_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cvaes/ra_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cdiffusion/ra_neural_colored_mnist_grid_0.png} \\
+         \midrule 
+         \raisebox{1.5\height}{GDR} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cnfs/dr_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cgans/dr_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cvaes/dr_neural_colored_mnist_grid_0.png} & \includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/cdiffusion/dr_neural_colored_mnist_grid_0.png} \\
+         \midrule 
+         \raisebox{1.5\height}{Ground-truth} & \multicolumn{4}{c}{\includegraphics[width=0.2\linewidth,trim={90pt 180pt 90pt 180pt},clip]{figures/gt_0_colored_mnist_grid_0.png}} \\
+         \bottomrule
+    \end{tabu}
+    }
+    \vspace{-0.4cm}
+    \label{tab:res-col-mnist}
+\end{table}
+    
+
+{\textbf{Colored MNIST dataset.} To further evaluate our \GDRlearners on the high-dimensional data, we adapted a colored MNIST dataset \citep{xia2024neural} (= high-dimensional outcomes setting). Namely, we considered $\mathcal{A} = \{0, 1, 2,3, 4\}$ digits as treatments and $\mathcal{X} = \{\text{red}, \text{orange}, \text{yellow}, \text{lightgreen}, \text{green} \}$ colors as covariates. We also down-scaled the images to $10\times10$ pixels. Thus, $d_a = 5; d_x=5$, and $d_y=10\times10\times3$ (= width $\times$ height $\times$ channels). Then, we used $n_{\text{train}} = 30,000$ and $n_{\text{test}}=5,000$ images. 
+\textbf{Results.} The qualitative results are in Table~\ref{tab:res-col-mnist}, where we show potential outcome samples ($a =0$) from different generative models and learners. Here, our \GDRlearners (in comparison to other learners) specifically allow to better preserve the shapes of digits. This was expected, as the digits are chosen as the treatment variables. We also provide detailed quantitative results for the same experiments in Appendix~\ref{app:experiments}.  }
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \vspace{-0.1cm}
+% \section{Conclusion}
+% \vspace{-0.1cm}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\textbf{Conclusion.} In our work, we introduced \GDRlearners, a novel general class of Neyman-orthogonal meta-learners for estimating the conditional distribution of potential outcomes. Unlike the existing methods, our \GDRlearners possess general theoretical properties of quasi-oracle efficiency and double robustness. Furthermore, we introduced several variants of our \GDRlearners on top of state-of-the-art deep generative models, namely, normalizing flows, generative adversarial networks, variational autoencoders, and diffusion models.
+
+
+\newpage
+\subsection*{Ethics statement}
+
+This work is primarily theoretical and does not involve sensitive data, human subjects, or system deployment. As such, we do not anticipate direct ethical risks.
+
+However, since the research relates to learning algorithms and generalization, possible downstream applications could include decision-making systems in sensitive domains (e.g., education, healthcare, or finance). We emphasize that such uses must consider fairness, interpretability, and safety before deployment. Our work does not include experiments on personal data and does not attempt to optimize or deploy models in real-world sensitive contexts.
+
+\subsection*{Reproducibility statement}
+
+We follow ICLR’s reproducibility guidelines. In particular:
+\begin{itemize}
+    \item \textbf{Theoretical results.} All theorems, lemmas, and propositions in this paper are presented with complete proofs (see Appendix~\ref{app:proofs}). Proofs are written to be self-contained, without reliance on unpublished materials.
+    \item \textbf{Empirical evaluation.} We provide details of datasets, hyperparameters, and training setups in the Appendix~\ref{app:implementation}, ensuring reproducibility.
+    \item \textbf{Resources.} We released all the code, along with a README describing how to reproduce the results.
+\end{itemize}
+
+\subsection*{LLM usage statement} 
+
+We used ChatGPT during the research and writing process in limited ways. Specifically, it was employed to brainstorm alternative proof strategies, to clarify technical arguments during early drafts, and to improve the clarity of explanations in some sections of the paper. All mathematical results, definitions, and proofs were verified independently by the authors. The LLM was not used to generate novel research contributions, datasets, or experiments.
+
+
+
+\newpage
+\textbf{Acknowledgments.} This paper is supported by the DAAD program “Konrad Zuse Schools of Excellence in Artificial Intelligence”, sponsored by the Federal Ministry of Education and Research. S.F. acknowledges funding via Swiss National Science Foundation Grant 186932. This work has been supported by the German Federal Ministry of Education and Research (Grant: 01IS24082). Additionally, the authors would like to thank Dennis Frauen for his helpful remarks and comments on the content of this paper.
+
+\bibliography{bibliography}
+\bibliographystyle{iclr2026_conference}
+
+
+\appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Extended Related Work} \label{app:extended-rw}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{\textbf{Semi-parametric efficiency \& Orthogonal statistical learning.} In the context of the treatment effect estimation, augmented inverse propensity of treatment weighting (A-IPTW) methods were developed to enable efficient, semi-parametric estimation of \emph{finite-dimensional target parameters} \citep{newey1994asymptotic,robins2000robust}. Conceptually, the A-IPTW estimators apply a first-order bias correction to plug-in estimators \citep{bickel1993efficient,tsiatis2006semiparametric}. However, in our case, we aim at estimating the \CDPOs, which are \emph{functional, infinite-dimensional target parameters}; and, thus, the standard semi-parametric efficiency theory does not apply here. As a remedy, a so-called  Neyman-orthogonal learning was proposed \citep{laan2003unified,laan2006statistical,chernozhukov2018double,semenova2021debiased,kennedy2023towards,foster2023orthogonal,morzywolek2023general,vansteelandt2025orthogonal}, also known as double machine learning (ML). It resolves the infinite-dimensionality of the target parameter by focusing on debiasing target risk /target score functionals (those are finite-dimensional quantities). In our paper, we specifically tailor a general idea of the Neyman-orthogonality to learning the \CDPOs.    
+}
+
+\textbf{Orthogonal learning of marginal POs distributions.} Multiple works suggested efficient estimators/learners for the marginal distributions of the POs. They target either (i)~at some distributional aspects of the marginal POs distributions (\eg, point-wise CDFs/quantiles) \citep{chernozhukov2013inference,firpo2007efficient,byambadalai2025on}; (ii)~at the distributional distances between the former \citep{kim2018causal,martinez2023efficient, fawkes2024doubly}; or (iii)~at the whole distributions of the former  \citep{kim2018causal,kennedy2023semiparametric,melnychuk2023normalizing,martinez2024counterfactual,luedtke2024one}. Out of those, the works of \citet{kennedy2023semiparametric} and \citet{melnychuk2023normalizing} are probably the most similar to our work, as they also aim to find the best approximation of the POs distributions in the class of some parametric probabilistic model. Our work, thus, may be interpreted as a non-trivial extension of  \citep{kennedy2023semiparametric,melnychuk2023normalizing} to the covariate-conditional POs distributions. 
+
+\textbf{Non-parametric estimators of \CDPOs.} Several non-parametric estimators were proposed to estimate the \CDPOs. For example, \citet{muandet2021counterfactual} used distributional kernel mean embeddings, and \citet{alaa2017bayesian,alaa2018limits} employed Bayesian non-parametrics (Gaussian processes). However, both approaches are in fact \emph{plug-in learners} and \emph{scale badly to high dimensions} (due to inability to learn low-dimensional manifolds of high-dimensional data). Therefore, we excluded those methods from the empirical comparison. 
+
+\textbf{Time-varying probabilistic models for POs.} Some works suggested generative models for time-varying potential outcomes distributions. They relied on different probabilistic models: Gaussian processes \citep{schulam2017reliable}, Bayesian neural networks \citep{hess2024bayesian}, and diffusion models/normalizing flows \citep{wu2024counterfactual,mu2025counterfactual}. However, they only restricted on plug-in losses \citep{schulam2017reliable,hess2024bayesian,mu2025counterfactual} and IPTW losses \citep{wu2024counterfactual}. Our paper operates only in the \emph{cross-sectional setting}, and, thus, we also establish an important foundation for future work on the Neyman-orthogonal generative learners in the time-varying potential outcomes setting (\eg, analogously to \citep{frauen2025modelagnostic}).
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Background materials} \label{app:background}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Generative models} \label{app:background-gm}
+
+In the following, we formalize four popular deep generative models that are later used as instantiations to our \GDRlearners: (a)~conditional normalizing flows \citep{rezende2015variational,trippe2018conditional}; (b)~conditional generative adversarial networks \citep{goodfellow2014generative, laria2022transferring},(c)~conditional variational autoencoders \citep{kingma2014auto,oh2022cvae}, and (d)~conditional diffusion models \citep{ho2020denoising,lutati2023ocd}.
+
+\subsubsection{(a) Conditional normalizing flows (CNFs)}
+\textbf{Probabilistic model.} Conditional normalizing flows (CNFs) \citep{tabak2010density,rezende2015variational,trippe2018conditional} are flexible probabilistic models with an explicit tractable density. They employ invertible and differentiable transformations $f_a(z \mid v): \mathcal{Z} \to \mathcal{Y}$ of some latent variable $Z \in \mathbb{R}^{d_y}$ with a known density $h_a(z)$. Then, the conditional density of the outcome is given by a change of variables formula:
+\begin{equation}
+    p_a(y \mid v) = p_a(z = f_a^{-1}(y)) \cdot \abs{\operatorname{det}\bigg[\frac{\diff f_a}{\diff z} \big(f_a^{-1}(y)\big) \bigg]}^{-1}.
+\end{equation}
+Then, we can fit the CNFs by parameterizing $f_a$ and directly maximizing the log-likelihood of the data. Notably, the marginalization wrt. $\varepsilon_z$ is not needed for the CNFs.
+
+\textbf{Learning as distributional distance minimization.} CNFs aim to maximize the log-likelihood wrt. $p_a$, namely
+\begin{equation}
+    \max_{p_a \in \mathcal{G}} \mathcal{L}(g_a) = \max_{p_a \in \mathcal{G}}\mathbb{E}\left[\log p_a(Y[a] \mid V) \right],
+\end{equation}
+where $\mathcal{L}$ is defined in Eq.~\eqref{eq:target-risk-id}, and $g_a(y, z \mid v) = p_a(y \mid v)$.
+As noted in \citep{kennedy2023semiparametric,melnychuk2023normalizing}, the maximization of the log-likelihood is equivalent to the Kullback–Leibler (KL) divergence projection of the ground-truth on the chosen model class $\mathcal{G}$. In our context, this is equivalent to the following:
+\begin{equation}
+    p_a^* = \argmax_{p_a \in \mathcal{G}} \mathcal{L}(p_a) \Longleftrightarrow p_a^* = \argmin_{p_a \in \mathcal{G}} \mathbb{E}_V \operatorname{KLD}(\mathbb{P}(Y[a] \mid V)\,|| \, p_a(Y \mid V )),
+\end{equation}
+where $\operatorname{KLD} (\cdot || \cdot )$ is the KL divergence. 
+
+
+\subsubsection{(b) Conditional generative adversarial networks (CGANs)}
+\textbf{Probabilistic model.} Conditional generative adversarial networks (CGANs) \citep{goodfellow2014generative, laria2022transferring} also apply a differentiable transformation $f_a(z \mid v): \mathcal{Z} \to \mathcal{Y}$ to the predefined latent variable $Z \in \mathbb{R}^{d_z}$ with a known density $h_a(z)$. Here, $f_a$ is called a conditional generator, and it induces an implicit conditional distribution of the POs, $p_a(y \mid v)$. Also, CGANs define an auxiliary model, a conditional discriminator $d_a(y \mid v): \mathcal{Y} \to [0, 1]$, that is used to train the whole model.  
+
+\textbf{Learning as distributional distance minimization.} CGANs are trained in the adversarial manner: While the conditional discriminator tries to distinguish the real samples from \CDPOs, the conditional generator tries to trick the conditional discriminator by generating realistic samples. Thus, the final objective wrt. $f_a$ and $d_a$ is as follows:
+\begin{equation}
+    \min_{f_a \in \mathcal{G}} \max_{d_a \in \mathcal{G}} \mathcal{L}(g_a) = \min_{f_a \in \mathcal{G}} \max_{d_a \in \mathcal{G}}  \mathbb{E}\left[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log d_a(Y[a] \mid V) \cdot \big(1 -d_a(f_a(Z \mid V) \mid V)\big)\right], 
+\end{equation}
+where $\mathcal{L}$ is defined in Eq.~\eqref{eq:target-risk-id}, $\varepsilon_z = h_a(z)$, and $g_a(y, z \mid v) = d_a(y \mid v) \cdot \big(1 -d_a(f_a(z \mid v) \mid v)\big)$. Furthermore, one can show \citep{goodfellow2014generative} that the conditional generator implicitly minimizes the Jensen–Shannon (JS) divergence:
+\begin{equation}
+    f_a^* = \argmin_{f_a \in \mathcal{G}} \max_{d_a \in \mathcal{G}} \mathcal{L}(g_a) \Longleftrightarrow p_a^* = \argmin_{p_a \in \mathcal{G}} \mathbb{E}_V \operatorname{JSD}(\mathbb{P}(Y[a] \mid V)\,|| \, p_a(Y \mid V )),
+\end{equation}
+where $\operatorname{JSD} (\cdot || \cdot )$ is the JS divergence.
+
+\subsubsection{(d) Conditional variational autoencoders (CVAEs)}
+
+\textbf{Probabilistic model.} Conditional variational autoencoders (CVAEs) \citep{kingma2014auto,oh2022cvae} also use a latent variable $Z \in \mathbb{R}^{d_z}$ with the density $h_a(z)$. However, instead of defining a transformation between $Z$ and $Y[a]$, they introduce a conditional distribution $p_a(y \mid z, v)$ (a conditional decoder). To sample from $p_a(y \mid v)$, one can first sample from $Z \sim h_a(Z)$ and then from $Y[a] \sim p_a(Y \mid Z, v)$. Furthermore, to fit the conditional decoder, we employ an auxiliary model $q_a(z \mid y, v)$ (a conditional encoder) that serves as a variational approximation of a ground-truth intractable posterior $p_a(z \mid y, v) = p_a(y\mid z, v) \, h_a(z) / \mathbb{P}(Y[a] = y \mid v)$. 
+
+\textbf{Learning as distributional distance minimization.} To fit CVAEs, we aim to maximize an evidence lower bound (ELBO) wrt. $p_a$ and $q_a$:
+\begin{equation}
+    \max_{p_a, q_a \in \mathcal{G}} \mathcal{L}(g_a) = \max_{p_a, q_a \in \mathcal{G}} \mathbb{E}\left[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log \frac{p_a(Y[a], Z \mid V)}{q_a(Z \mid Y[a], V)}\right],
+\end{equation}
+where $\mathcal{L}$ is defined in Eq.~\eqref{eq:target-risk-id}, $p_a(Y[a], Z \mid V)  = p_a(Y[a] \mid Z, V) \, h_a(Z)$, $\varepsilon_z = q_a(Z \mid Y[a], V)$. Thus, $g_a(y, z \mid v)$ equals $p_a(y , z \mid v) / q_a(z \mid y, v)$. Furthermore, as demonstrated by \citet{kingma2019introduction}, by maximizing the ELBO, we minimize the following distributional distance:
+\begin{align} \label{eq:kld-ig}
+    p_a^* = \argmax_{p_a \in \mathcal{G}} \max_{q_a \in \mathcal{G}}  \mathcal{L}(g_a)  & \Longleftrightarrow p_a^* = \argmin_{p_a \in \mathcal{G}} \mathbb{E}_V \bigg[\operatorname{KLD}(\mathbb{P}(Y[a] \mid V) \,|| \, p_a(Y \mid V )) \\
+    & +  \underbrace{\mathbb{E}_{Y[a]}\operatorname{KLD}\big(q_a(Z \mid Y[a], V) \,|| \, p_a(Z \mid Y[a], V)\big)}_{\text{inference gap (IG)}} \bigg], \nonumber
+\end{align}
+where $p_a(y \mid v) = \int_{\mathcal{Z}} p_a(y \mid z, v) h_a(z) \diff z$,  $\operatorname{KLD} (\cdot || \cdot )$ is the KL divergence, and the inference gap (IG) shrinks as we make a variational family of $q_a$ more expressive. 
+
+
+\subsubsection{(d) Conditional diffusion models (CDMs)} 
+
+\textbf{Probabilistic model.} Conditional diffusion models (CDMs) \citep{ho2020denoising,lutati2023ocd} extend the idea of the CVAEs and construct the whole sequence of the latent variables $Z_{1:T}$ where $T > 1$ is a number of diffusion steps and each $Z_t \in \mathbb{R}^{d_y}$. The CDMs gradually add noise to $Y[a]$ by defining a fixed diffusion process $q_a(z_{1:T} \mid y)$ so that the final $Z_T$ has the predefined latent noise distribution $h_a(z_T)$. Then, the probabilistic model $p_a(y \mid z_{1:T}, v)$ is defined as a conditional denoising process that restores the value of $Y[a]$. We refer to \citet{ma2024diffpo} for further details of the model definition.
+
+\textbf{Learning as distributional distance minimization.} Similarly to CVAEs, CDMs aim to maximize the ELBO, yet only wrt. to $p_a$:
+\begin{equation}
+    \max_{p_a \mathcal{G}} \mathcal{L}(g_a) = \max_{p_a \in \mathcal{G}} \mathbb{E}\left[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log \frac{p_a(Y[a] , Z_{1:T}\mid V)}{q_a(Z_{1:T}\mid Y[a])}\right],
+\end{equation}
+where $\mathcal{L}$ is defined in Eq.~\eqref{eq:target-risk-id}, $p_a(Y[a] , Z_{1:T}\mid V) = h_a(Z_{T}) \prod_{t=1}^T p_a(Z_{t-1} \mid Z_{t}, V)$ with $Z_0 = Y[a]$,  $\varepsilon_z = q_a(Z_{1:T} \mid Y[a])$. Hence, $g_a(y, z \mid v) = p_a(y , z_{1:T} \mid v) / q_a(z_{1:T} \mid y)$. The denoising process of the CDMs then has a similar interpretation as in CVAEs: it minimizes the KL divergence plus the inference gap (see Eq.~\eqref{eq:kld-ig}).
+
+\newpage
+\subsection{Orthogonal statistical learning} \label{app:background-orth-learning}
+
+In the following, we provide some key definitions of orthogonal statistical learning \citep{chernozhukov2018double,foster2023orthogonal,morzywolek2023general}. For that, we use some additional notation: $\norm{\cdot}_{L_p}$ denotes the $L_p$-norm with  $\norm{f}_{L_p} = {\mathbb{E}(\abs{f(Z)}^p)}^{1/p}$, $a \lesssim b$ implies that there exists $C \ge 0$ such that $a \le C \cdot b$, and $X_n = o_{\mathbb{P}}(r_n)$ means $X_n/r_n \stackrel{p}{\to} 0$.
+
+\begin{definition}[Neyman-orthogonality \citep{foster2023orthogonal,morzywolek2023general}]
+    A risk $\mathcal{L}$ is called \emph{Neyman-orthogonal} if its pathwise cross-derivatives equal to zero, namely,
+    \begin{equation} \label{eq:neym-orth-def}
+         D_\eta D_g {\mathcal{L}}(g^*, \eta)[g- g^*, \hat{\eta} - \eta] = 0 \quad \text{for all } g \in \mathcal{G} \text{ and } \eta \in \mathcal{H},
+    \end{equation}
+    where $D_f F(f)[h] = \frac{\diff}{\diff{t}} F (f + th) \vert_{t=0}$ and $D_f^k F(f)[h_1, \dots, h_k] = \frac{\partial^k}{\partial{t_1} \dots \partial{t_k}} F (f + t_1 h_1 + \dots + t_k h_k)  \vert_{t_1=\dots=t_k = 0}$ are pathwise derivatives \citep{foster2023orthogonal}; $g^* = \argmin_{g \in \mathcal{G}} \mathcal{L}(g, \eta)$; and $\eta$ is the ground-truth nuisance function. 
+\end{definition}
+
+\begin{definition}[Quasi-oracle efficiency]\label{def:quasi-oracle}
+An estimator \(\hat{g} = \argmin_{g \in \mathcal{G}} \mathcal{L}(g, \hat{\eta})\) of \(g^* = \argmin_{g \in \mathcal{G}}\mathcal{L}({g}, {\eta})\) is said to be {quasi-oracle efficient} if the estimator \(\hat{\eta}\) of the nuisance function $\eta$ is allowed to have slow rates of convergence, $o_{\mathbb{P}}(n^{-1/4})$, and the following still holds asymptotically:
+\begin{equation} \label{eq:oracle-eff}
+    \norm{\hat{g} - g^*}_{L_2}^2 \lesssim \mathcal{L}(\hat{g}, \hat{\eta}) - \mathcal{L}({g}^*, \hat{\eta}) + o_{\mathbb{P}}(n^{-1/2}),
+\end{equation}
+where \(\mathcal{L}(\hat{g}, \hat{\eta}) - \mathcal{L}({g}^*, \hat{\eta})\) is an optimization error term: the difference between the risks of the estimated target model and the optimal target model where the estimated nuisance functions are used. 
+\end{definition}
+
+\begin{definition}[Star hull]\label{def:star}
+ A star hull \citep{foster2023orthogonal} for elements $x$ and $x'$ of a vector space $\mathcal{X}$ is defined as $star(\mathcal{X},x,x') = \{tx + (1-t)x' \mid t \in [0, 1] \}$.
+\end{definition}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{{Theoretical results}} \label{app:proofs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{lemma}[Identification of the target risks] \label{lemma:target-risks-id}
+    Under the identifiability assumptions (i)-(iii), the target risks $\mathcal{L}(g_a)$ in Eq.~\eqref{eq:target-risk-def} can be identified as follows:
+    \begin{equation}
+        \mathcal{L}(g_a)= \mathbb{E} \bigg[ \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \xi_a(y | X) \diff{y} \bigg] = \mathbb{E}\left[\frac{\mathbbm{1}\{A = a\}}{\pi_a(X)} \, \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(Y, Z \mid V)\right].
+    \end{equation}
+\end{lemma}
+\begin{proof}
+    The first equality holds due to the law of total expectation, and the application of (i)~consistency and (iii)~unconfoundedness:
+    \begin{align}
+         \mathcal{L}(g_a) &= \mathbb{E} \big[ \underset{Z \sim \varepsilon_z }{\mathbb{E}}\log g_a(Y[a], Z \mid V) \big]  = \mathbb{E}_X \big[ \underset{Z \sim \varepsilon_z }{\mathbb{E}}\log g_a(Y[a], Z \mid V) \mid X\big] \\
+         & \stackrel{\text{(iii)}}{=} \mathbb{E}_X \big[ \underset{Z \sim \varepsilon_z }{\mathbb{E}}\log g_a(Y[a], Z \mid V) \mid X, A = a\big] \\
+         & \stackrel{\text{(i)}}{=} \mathbb{E}_X \big[ \underset{Z \sim \varepsilon_z }{\mathbb{E}}\log g_a(Y, Z \mid V) \mid X, A = a\big] \\
+         & = \mathbb{E}_X \bigg[ \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \xi_a(y | X) \diff{y} \bigg].
+    \end{align}
+    The second equality is then easy to obtain from the first one, by using the laws of conditional probability:
+    \begin{align}
+        \mathcal{L}(g_a) &= \mathbb{E}_X \bigg[ \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \xi_a(y | X) \diff{y} \bigg] \\
+        & = \mathbb{E}_X \bigg[ \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \frac{\mathbb{P}(Y=y, A =a \mid X)}{\pi_a(X)} \diff{y} \bigg] \\
+        & = \mathbb{E}\left[\frac{\mathbbm{1}\{A = a\}}{\pi_a(X)} \, \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(Y, Z \mid V)\right],
+    \end{align}
+    where the last equality holds due to the laws of total probability.
+\end{proof}
+
+\begin{lemma}[One-step bias correction of the RA-learner] \label{lemma:bias-correction}
+    To construct a Neyman-orthogonal learner, we perform a one-step bias correction of the RA-learner, namely:
+    \begin{equation}
+        \hat{\mathcal{L}}_\text{GDR}(g_a, \hat{\eta}) = \hat{\mathcal{L}}_\text{RA}(g_a, \hat{\eta}) + \mathbb{P}_n\Big\{ \mathbb{IF}(\mathcal{L}; (X, A, Y); \hat{\eta}) \Big\},
+    \end{equation}
+    where $\mathbb{IF}(\mathcal{L}; (X, A, Y); \hat{\eta})$ is an efficient influence function (EIF) \citep{kennedy2024semiparametric} of the target risk and is given by the following:
+    \begin{align}
+        & \mathbb{IF}(\mathcal{L}; (X, A, Y); \hat{\eta}) =   \frac{\mathbbm{1}\{A = a\}}{\hat{\pi}_a(X)} \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(Y, Z \mid V) \\
+        & \quad  \quad + \bigg(1 - \frac{\mathbbm{1}\{A = a\}} {\hat{\pi}_a(X)}\bigg) \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V)\Big] \hat{\xi}_a(y\mid X) \diff{y} - \hat{\mathcal{L}}. \nonumber
+    \end{align}
+\end{lemma}
+\begin{proof}
+    To derive the EIF for our target risk, we use multiple building blocks from \citet{kennedy2024semiparametric}, namely, the chain rule and the EIF of the conditional densities:
+    \begin{align}
+        & \mathbb{IF}(\mathcal{L}; (X, A, Y); {\eta}) = \mathbb{IF} \bigg(\mathbb{E}_X \bigg[ \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \xi_a(y | X) \diff{y} \bigg]\bigg) \\
+        = & \mathbb{E}_X \bigg[  \mathbb{IF} \bigg(\int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \xi_a(y | X) \diff{y}\bigg) \bigg] +  \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big]  \, \xi_a(y | X) \diff{y} - \mathcal{L}.
+    \end{align}
+    Then, we unroll the inner part of the first term further:
+    \begin{align}
+        & \mathbb{IF} \bigg(\int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \xi_a(y | X) \diff{y}\bigg) \\
+         = & \int_\mathcal{Y} \mathbb{IF} \bigg(\Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \bigg)\, \xi_a(y | X) \diff{y} + \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \mathbb{IF} \big( \xi_a(y | X) \big)\diff{y} \\
+        = & 0 + \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \frac{\delta\{X - x\} \mathbbm{1}\{A = a\}}{\mathbb{P}(X=x, A=a)}\big(\delta\{Y - y\} - \xi_a(y\mid X)\big) \diff{y},
+    \end{align}
+    where $0$ appears since $g_a$ is not an attribute of the ground-truth DGP, and $\delta\{\cdot\}$ is a Dirac delta function.
+    Then, by applying the outer expectation wrt. to the $X$, we can "smooth out" the Dirac delta functions:
+    \begin{align}
+        & \mathbb{E}_X \bigg[\int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \Big] \, \frac{\delta\{X - x\} \mathbbm{1}\{A = a\}}{\mathbb{P}(X=x, A=a)}\big(\delta\{Y - y\} - \xi_a(y\mid X)\big) \diff{y} \bigg] \\
+        & \quad = \frac{\mathbbm{1}\{A = a\}}{\pi_a(X)} \bigg(\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(Y, Z \mid V) - \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V)\Big] \xi_a(y\mid X) \diff{y}\bigg).
+    \end{align}
+    Finally, by regrouping the terms, we obtain the final formula:
+    \begin{align}
+        & \mathbb{IF}(\mathcal{L}; (X, A, Y); {\eta}) =   \frac{\mathbbm{1}\{A = a\}}{\pi_a(X)} \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(Y, Z \mid V) \\
+        & \quad  \quad + \bigg(1 - \frac{\mathbbm{1}\{A = a\}} {\pi_a(X)}\bigg) \int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V)\Big] \xi_a(y\mid X) \diff{y} - {\mathcal{L}}. \nonumber
+    \end{align}
+\end{proof}
+
+\begin{numtheorem}{1}[Neyman-orthogonality]\label{theor:no-app}
+    The risk given by our GDR-learners is Neyman-orthogonal (\ie, first-order insensitive to the nuisance function errors), namely:
+    \begin{equation}
+        \mathcal{D}_\eta \mathcal{D}_g\mathcal{L}_\text{\emph{GDR}}(g_a, \eta)[g_a - g_a^*, \hat{\eta} - \eta] = 0 \quad \text{ for all $g_a \in \mathcal{G}$},
+    \end{equation}
+    where $\mathcal{D}_{\cdot} \mathcal{L}(\cdot)[\cdot]$ are path-wise derivatives (see Appendix~\ref{app:background-orth-learning} for definitions).
+\end{numtheorem}
+\begin{proof}
+    Let us denote the IPTW weights as $\frac{\mathbbm{1}\{A = a\}} {\pi_a(X)} = w_a(A, X)$. Also, we define a DR pseudo-distribution $\tilde{\xi}^{\hat{\eta}}_a(X, A, Y) = \hat{w}_a(A, X)(\xi_a(Y \mid X) - \hat{\xi}_a(Y \mid X)) + \hat{\xi}_a(Y \mid X) $. Then, given the DR pseudo-distribution, our \GDRlearners risk simplifies to
+    \begin{equation}
+        \mathcal{L}_\text{{GDR}}({g}_a^*, {\eta}) = \mathbb{E} \bigg[\int_{\mathcal{Y}}\tilde{\xi}^{{\eta}}_a(X, A, y) \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a^*(y, Z \mid V) \diff y \bigg].
+    \end{equation}
+    
+    We verify Neyman-orthogonality by deriving the pathwise derivatives of $\mathcal{L}_\text{\emph{GDR}}$. First, we derive a derivative wrt. $g_a$:
+    % \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & \mathcal{D}_g\mathcal{L}_\text{{GDR}}(g_a^*, \eta)[g_a - g_a^*]= \frac{\diff}{\diff t} \bigg[ \mathcal{L}_\text{\emph{GDR}}(g_a^* + t ({g}_a - g_a^*), \eta)\bigg]\bigg|_{t=0}.
+     \end{align}
+    % \endgroup   
+    As we demonstrate in the following, it depends on a generative target model.
+
+    \textbf{(a)}~For \textbf{CNFs},  the first-order pathwise derivative is
+     \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        &  \mathcal{D}_g\mathcal{L}_\text{{GDR}}(g_a^*, \eta)[g_a - g_a^*] =  \frac{\diff}{\diff t} \mathbb{E}\Bigg[ \int_{\mathcal{Y}}\tilde{\xi}^{{\eta}}_a(X, A, y) \log \Big(p_a^*(y \mid V) + t \big({p}_a(y \mid V) - p_a^*(y \mid V) \big)\Big) \diff y \Bigg]\bigg|_{t=0} \\
+        & \quad  =  \mathbb{E}\Bigg[ \int_{\mathcal{Y}}\tilde{\xi}^{{\eta}}_a(X, A, y) \, \frac{{p}_a(y \mid V) - p_a^*(y \mid V)}{p_a^*(y \mid V)} \diff y \Bigg].
+    \end{align}
+    \endgroup
+    Then, we take a cross-derivative wrt. the nuisance functions:
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & \mathcal{D}_{\pi_a} \mathcal{D}_g\mathcal{L}_\text{\emph{GDR}}(g_a^*, \eta)[g_a - g_a^*, \hat{\pi}_a - \pi_a] \\
+        & \quad =  \frac{\diff}{\diff t} \mathbb{E}\Bigg[ \int_{\mathcal{Y}} \bigg(\frac{\mathbbm{1}\{A = a\}}{\pi_a(X) + t(\hat{\pi}_a(X) - \pi_a(X))} \Big(\xi_a(y \mid X) - {\xi}_a(y \mid X) \Big) + {\xi}_a(y \mid X) \bigg) \frac{p_a(y \mid V) - p_a^*(y \mid V)}{p_a^*(y \mid V)} \diff y \Bigg]\bigg|_{t=0} \nonumber\\
+        & \quad = - \mathbb{E}\Bigg[ \int_{\mathcal{Y}} \frac{\hat{\pi}_a(X) - \pi_a(X)}{\pi_a(X)} \Big(\xi_a(y \mid X) - {\xi}_a(y \mid X) \bigg) \frac{p_a(y \mid V) - p_a^*(y \mid V)}{p_a^*(y \mid V)} \diff y \Bigg] = 0.
+    \end{align}
+    \endgroup
+
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & \mathcal{D}_{\xi_a} \mathcal{D}_g\mathcal{L}_\text{\emph{GDR}}(g_a^*, \eta)[g_a - g_a^*, \hat{\xi}_a - \xi_a]=  \frac{\diff}{\diff t} \mathbb{E}\Bigg[ \int_{\mathcal{Y}} \bigg(\frac{\mathbbm{1}\{A = a\}}{\pi_a(X)} \Big(\xi_a(y \mid X) - {\xi}_a(y \mid X) - t \big( \hat{\xi}_a(y \mid X) - {\xi}_a(y \mid X) \big) \Big) \\
+        & \quad \quad + {\xi}_a(y \mid X) + t \big( \hat{\xi}_a(y \mid X) - {\xi}_a(y \mid X) \big) \bigg) \frac{p_a(y \mid V) - p_a^*(y \mid V)}{p_a^*(y \mid V)} \diff y\Bigg]\bigg|_{t=0} \nonumber \\
+        & \quad = \mathbb{E}\Bigg[ \int_{\mathcal{Y}} \bigg(- \frac{\pi_a(X)}{\pi_a(X)} \big( \hat{\xi}_a(y \mid X) - {\xi}_a(y \mid X) \big) + \big( \hat{\xi}_a(y \mid X) - {\xi}_a(y \mid X) \big) \bigg)  \frac{p_a(y \mid V) - p_a^*(y \mid V)}{p_a^*(y \mid V)} = 0.
+    \end{align}
+    \endgroup
+
+    \textbf{(b)}~For \textbf{CGANs}, we first note that the optimal discriminator $\hat{d}_a$ has the following form:
+    \begin{equation}
+        {d}^*_a(y \mid v) = \frac{\tilde{\xi}^{{\eta}}_a(x, a, y)}{\tilde{\xi}^{{\eta}}_a(x, a, y) + {p}^*_a(y \mid v)},
+    \end{equation}
+    where ${p}^*_a(y \mid v)$ is an implicit conditional density of the conditional generator (see Appendix~\ref{app:background-gm} for details). Therefore, the first-order pathwise derivative has the following form:
+     \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        &  \mathcal{D}_g\mathcal{L}_\text{{GDR}}(g_a^*, \eta)[g_a - g_a^*] =  \frac{\diff}{\diff t} \mathbb{E} \bigg[\int_{\mathcal{Y}}\tilde{\xi}^{\hat{\eta}}_a(X, A, y)  \log \frac{\tilde{\xi}^{{\eta}}_a(X, A, y)}{\tilde{\xi}^{{\eta}}_a(X, A, y) + {p}_a^*(y \mid V) + t\big({p}_a(y \mid V) - {p}_a^*(y \mid V)\big)} \diff y  \\
+        & \quad \quad+ \int_{\mathcal{Y}}\Big({p}_a^*(y \mid V) + t\big( {p}_a(y \mid V) - {p}_a^*(y \mid V)\big)\Big) \, \log \frac{{p}_a^*(y \mid V) + t\big( {p}_a(y \mid V) - {p}_a^*(y \mid V)\big)}{\tilde{\xi}^{{\eta}}_a(X, A, y) + {p}_a^*(y \mid V) + t\big( {p}_a(y \mid V) - {p}_a^*(y \mid V)\big)} \diff y \bigg] \bigg|_{t=0} \nonumber \\
+        & \quad  = \mathbb{E} \bigg[-\int_{\mathcal{Y}}\tilde{\xi}^{{\eta}}_a(X, A, y)  \frac{{p}_a(y \mid V) - {p}_a^*(y \mid V)}{\tilde{\xi}^{{\eta}}_a(X, A, y) + {p}_a^*(y \mid V)} \diff y  + \int_{\mathcal{Y}} \Big({p}_a(y \mid V) - {p}_a^*(y \mid V)\Big) \, \log \frac{{p}_a^*(y \mid V)}{\tilde{\xi}^{{\eta}}_a(X, A, y) + {p}_a^*(y \mid V)} \diff y  \\
+        & \quad\quad + \int_{\mathcal{Y}} {p}_a^*(y \mid V) \bigg( \frac{{p}_a(y \mid V) - {p}_a^*(y \mid V)}{{p}_a^*(y \mid V)} - \frac{{p}_a(y \mid V) - {p}_a^*(y \mid V)}{\tilde{\xi}^{{\eta}}_a(X, A, y) + {p}_a^*(y \mid V)}\bigg)\diff y \Bigg] \nonumber \\
+        & \quad = \mathbb{E} \bigg[\int_{\mathcal{Y}} \Big({p}_a(y \mid V) - {p}_a^*(y \mid V)\Big) \, \log \frac{{p}_a^*(y \mid V)}{\tilde{\xi}^{{\eta}}_a(X, A, y) + {p}_a^*(y \mid V)} \diff y \bigg].
+    \end{align}
+    \endgroup
+
+    Then, we take a cross-derivative wrt. the nuisance functions:
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & \mathcal{D}_{\pi_a} \mathcal{D}_g\mathcal{L}_\text{\emph{GDR}}(g_a^*, \eta)[g_a - g_a^*, \hat{\pi}_a - \pi_a] \\
+        & \quad =  - \frac{\diff}{\diff t} \mathbb{E}\Bigg[ \int_{\mathcal{Y}} \log \bigg(\frac{\mathbbm{1}\{A = a\}}{\pi_a(X) + t(\hat{\pi}_a(X) - \pi_a(X))} \Big(\xi_a(y \mid X) - {\xi}_a(y \mid X) \Big) + {\xi}_a(y \mid X) +p_a^*(y \mid V) \bigg) \big({p_a(y \mid V) - p_a^*(y \mid V)}\big) \diff y \Bigg]\bigg|_{t=0} \nonumber\\
+        & \quad = - \mathbb{E}\Bigg[ \int_{\mathcal{Y}} \frac{\frac{\mathbbm{1}\{A = a\}(\hat{\pi}_a(X) - \pi_a(X))}{\pi_a(X)^2} \Big(\xi_a(y \mid X) - {\xi}_a(y \mid X) \Big)}{{\frac{\mathbbm{1}\{A = a\}}{\pi_a(X)}}  \Big(\xi_a(y \mid X) - {\xi}_a(y \mid X)\Big) + {\xi}_a(y \mid X) + p_a^*(y \mid V)} \big({p_a(y \mid V) - p_a^*(y \mid V)}\big) \diff y \Bigg] = 0.
+    \end{align}
+    \endgroup
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & \mathcal{D}_{\xi_a} \mathcal{D}_g\mathcal{L}_\text{\emph{GDR}}(g_a^*, \eta)[g_a - g_a^*, \hat{\xi}_a - \xi_a]= \\
+        & \quad =  - \frac{\diff}{\diff t} \mathbb{E}\Bigg[ \int_{\mathcal{Y}} \log \bigg(\frac{\mathbbm{1}\{A = a\}}{\pi_a(X)} \Big(\xi_a(y \mid X) - {\xi}_a(y \mid X) - t \big(\hat{\xi}_a(y \mid X) - {\xi}_a(y \mid X)\big) \Big) \nonumber \\
+        & \quad \quad + {\xi}_a(y \mid X) + t\big(\hat{\xi}_a(y \mid X) - {\xi}_a(y \mid X)\big) +p_a^*(y \mid V) \bigg) \big({p_a(y \mid V) - p_a^*(y \mid V)}\big) \diff y \Bigg]\bigg|_{t=0} \nonumber \\
+        & \quad = \mathbb{E}\Bigg[ \int_{\mathcal{Y}} \frac{- \frac{\pi_a(X)}{\pi_a(X)} \big( \hat{\xi}_a(y \mid X) - {\xi}_a(y \mid X) \big) + \big( \hat{\xi}_a(y \mid X) - {\xi}_a(y \mid X) \big)}{\frac{\mathbbm{1}\{A = a\}}{\pi_a(X)} \Big(\xi_a(y \mid X) - {\xi}_a(y \mid X) \Big) + {\xi}_a(y \mid X)+ p_a^*(y \mid V)}  \big({p_a(y \mid V) - p_a^*(y \mid V)}\big) = 0.
+    \end{align}
+    \endgroup
+
+    \textbf{(c)}\&\textbf{(d)}~Now, we derive the first-order pathwise derivative for \textbf{CVAEs} and \textbf{CDMs} together, as they are both based on the maximization of the ELBO. In the case of the CVAEs, we need to take a derivative wrt. $p_a$ and $q_a$ simultaneously: 
+
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        &  \mathcal{D}_g\mathcal{L}_\text{{GDR}}(g_a^*, \eta)[g_a - g_a^*] \\
+        & \quad =  \frac{\diff}{\diff t} \mathbb{E} \bigg[\int_{\mathcal{Y}}\tilde{\xi}^{{\eta}}_a(X, A, y) \int_{\mathcal{Z}}\log \bigg( \frac{p_a^*(y, z \mid V) + t \big({p}_a(y, z \mid V) - p_a^*(y, z \mid V)\big)}{q_a^*(z \mid y, V) + t \big({q}_a(z \mid y, V) - q_a^*(z \mid y, V) \big)}\bigg) \nonumber \\
+        & \quad \quad \cdot \Big( q_a^*(z \mid y, V) + t \big({q}_a(z \mid y, V) - q_a^*(z \mid y, V) \big) \Big)  \diff z \diff y \bigg] \bigg|_{t=0} \nonumber \\
+        & \quad = \mathbb{E} \bigg[\int_{\mathcal{Y}} \tilde{\xi}^{{\eta}}_a(X, A, y) \int_{\mathcal{Z}} \big( {p}_a(y, z \mid V) - p_a^*(y, z \mid V)\big) \, \frac{q_a^*(z \mid y, V)}{p_a^*(y, z \mid V)} + \big( {q}_a(z \mid y, V) - q_a^*(z \mid y, V) \big) \log \frac{p_a^*(y, z \mid V)}{q_a^*(z \mid y, V)} \diff z \diff y  \bigg].
+    \end{align}
+    \endgroup
+
+    Then, we take the cross-derivative wrt. the nuisance functions is also zero (analogously to \textbf{(a)~CNFs}, namely with $\int_{\mathcal{Z}} \big( {p}_a(y, z \mid V) - p_a^*(y, z \mid V)\big) \, \frac{q_a^*(z \mid y, V)}{p_a^*(y, z \mid V)} + \big( {q}_a(z \mid y, V) - q_a^*(z \mid y, V) \big) \log \frac{p_a^*(y, z \mid V)}{q_a^*(z \mid y, V)} \diff z$ instead of $\frac{p_a(y \mid V) - p_a^*(y \mid V)}{p_a^*(y \mid V)}$.
+    The formulas for the CDMs are analogous, \ie, with $q_a(z \mid y, V) = q_a(z \mid V)$.
+    
+    
+    
+    
+\end{proof}
+
+\begin{numtheorem}{2}[Quasi-oracle efficiency and double robustness] \label{theorem:qo-dr-app}
+    Let us denote the IPTW weights as $\frac{\mathbbm{1}\{A = a\}} {\pi_a(X)} = w_a(A, X)$. Also, we define a DR pseudo-distribution $\tilde{\xi}^{\hat{\eta}}_a(X, A, Y) = \hat{w}_a(A, X)(\xi_a(Y \mid X) - \hat{\xi}_a(Y \mid X)) + \hat{\xi}_a(Y \mid X) $.
+    Assume that for some $\alpha > 0$ the following convexity conditions hold for different target generative models (a)-(d):
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        &\mathbb{E}\Bigg[\frac{(\hat{p}_a(Y \mid V) - p_a^*(Y \mid V))^2}{\bar{p}_a(Y \mid V)^2} \cdot \frac{\tilde{\xi}^{\hat{\eta}}_a(X, A, Y)}{\xi_a(Y \mid X)}  \Bigg] \ge \alpha \norm{p^*_a - \hat{p}_a}^2_{L_2} \quad \text{ for (a)~CNFs,}  \label{eq:covex-cnfs}\\
+        & \mathbb{E}\Bigg[\frac{(\hat{p}_a(Y \mid V) - p_a^*(Y \mid V))^2}{\bar{p}_a(Y \mid V) \big(\bar{p}_a(Y \mid V) + \tilde{\xi}^{\hat{\eta}}_a(X, A, Y)\big) } \cdot \frac{\tilde{\xi}^{\hat{\eta}}_a(X, A, Y)}{\xi_a(Y \mid X)} \Bigg] \ge \alpha \norm{p^*_a - \hat{p}_a}^2_{L_2} \quad \text{ for (b)~CGANs,} \label{eq:covex-cgans} \\
+        & \mathbb{E}\Bigg[ \underset{Z \sim \bar{\varepsilon}_z }{\mathbb{E}} \frac{(\hat{p}_a(Y, Z \mid V) - p_a^*(Y, Z \mid V))^2}{\bar{p}_a(Y, Z \mid V)^2 } \cdot \frac{\tilde{\xi}^{\hat{\eta}}_a(X, A, Y) }{\xi_a(Y \mid X)} + \frac{(\hat{q}_a(Z \mid Y, V) - q_a^*(Z \mid Y, V))^2}{\bar{q}_a(Z \mid Y, V)^2} \cdot \frac{\tilde{\xi}^{\hat{\eta}}_a(X, A, Y) }{\xi_a(Y \mid X)}  \Bigg]  \label{eq:covex-cvaes} \\
+        & \quad \quad \ge \alpha \big( \norm{p^*_a - \hat{p}_a}^2_{L_2} + \norm{q^*_a - \hat{q}_a}^2_{L_2} \big) \quad \text{ for (c)-(d)~CVAEs/CDMs.} \nonumber
+    \end{align}
+    \endgroup
+    
+    
+    Then, the squared distance between $g_a^*=\argmin_{g_a \in \mathcal{G}}/\argmax_{g_a \in \mathcal{G}} \mathcal{L}_\text{\emph{GDR}}(g_a, \eta) $ and $\hat{g}_a=\argmin_{g_a \in \mathcal{G}}/\argmax_{g_a \in \mathcal{G}} \mathcal{L}_\text{\emph{GDR}}(g_a, \hat{\eta}) $ can be upper-bounded by the following:    
+    \begin{align} \label{eq:qo-dr}
+        \norm{g_a^* - \hat{g}_a}_{\mathcal{G}}^2 \lesssim \underbrace{{\mathcal{L}}_\text{\emph{GDR}}(\hat{g}_a, \hat{\eta}) - {\mathcal{L}}_\text{\emph{GDR}}(g_a^*, \hat{\eta})}_\text{(I)} + \underbrace{\norm{\xi_a - \hat{\xi}_a}_{L_4}^2 \cdot \norm{\pi_a - \hat{\pi}_a}_{L_4}^2}_\text{(II)},
+    \end{align}
+    where $\norm{g_a}_{\mathcal{G}} = \sqrt{\mathbb{E}({p_a(Y \mid V)^2)}}$ for (a)\&(b) CNFs and CGANs, $\norm{g_a}_{\mathcal{G}} = \sqrt{\mathbb{E}({\mathbb{E}_{Z \sim \bar{\varepsilon}_z}}(p_a(Y, Z \mid V)^2 + q_a(Z \mid Y, V)^2))}$ where $\bar{\varepsilon}_z = \bar{q}_a(Z \mid Y, V) \in star(\mathcal{G}, \hat{g}_a,g_a^*)$ for (a)\&(b) CVAEs and CDMs, (I) is an optimization error term, and (II)~is a higher-order nuisance error term. This inequality implies that our \GDRlearners are (a)~\textbf{quasi-oracle efficient} and (b)~\textbf{doubly-robust}.
+\end{numtheorem}
+\begin{proof}
+    Given the DR pseudo-distribution, our \GDRlearners risk simplifies to
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{equation}
+        \mathcal{L}_\text{{GDR}}(\hat{g}_a, \hat{\eta}) = \mathbb{E} \bigg[\int_{\mathcal{Y}}\tilde{\xi}^{\hat{\eta}}_a(X, A, y) \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log g_a(y, Z \mid V) \diff y \bigg].
+    \end{equation}
+    \endgroup
+    
+    To prove the quasi-oracle efficiency, we apply a functional Taylor expansion to the following target risk:
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{align} \label{eq:dist-taylor}
+        &\mathcal{L}_\text{{GDR}}(\hat{g}_a, \hat{\eta}) = \mathcal{L}_\text{{GDR}}({g}_a^*, \hat{\eta}) + \mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \hat{\eta})[\hat{g}_a - g_a^*] + \frac{1}{2} \mathcal{D}_g^2\mathcal{L}_\text{{GDR}}(\bar{g}_a, \eta)[\hat{g}_a - g_a^*, \hat{g}_a - g_a^*],
+    \end{align}
+    \endgroup
+    where $\bar{g}_a \in star(\mathcal{G}, \hat{g}_a, g_a^*)$. Hence, we need to derive the second-order pathwise derivative of $\mathcal{L}_\text{{GDR}}$ wrt. $g_a$. As we demonstrate in the following, it depends on a generative target model.
+
+
+    \textbf{(a)}~For \textbf{CNFs},  the second-order pathwise derivative is
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{align}
+        & \mathcal{D}_g^2\mathcal{L}_\text{{GDR}}(\bar{g}_a, \hat{\eta})[\hat{g}_a - g_a^*, \hat{g}_a - g_a^*]
+        = \mathbb{E}\Bigg[\frac{(\hat{p}_a(Y \mid V) - p_a^*(Y \mid V))^2}{\xi_a(Y \mid X)} \cdot \frac{\tilde{\xi}^{\hat{\eta}}_a(X, A, Y)}{\bar{p}_a(Y \mid V)^2}  \Bigg].
+    \end{align}
+    \endgroup
+
+    \textbf{(b)}~For \textbf{CGANs}, we first note that the optimal discriminator $\hat{d}_a$ has the following form:
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{equation}
+        \hat{d}_a(y \mid v) = \frac{\tilde{\xi}^{\hat{\eta}}_a(x, a, y)}{\tilde{\xi}^{\hat{\eta}}_a(x, a, y) + \hat{p}_a(y \mid v)},
+    \end{equation}
+    \endgroup
+    where $\hat{p}_a(y \mid v)$ is an implicit conditional density of the conditional generator (see Appendix~\ref{app:background-gm} for details). Then, the \GDRlearners risk for CGANs is equivalent to
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        \mathcal{L}_\text{{GDR}}(\hat{g}_a, \hat{\eta}) = \mathbb{E} \bigg[\int_{\mathcal{Y}}\tilde{\xi}^{\hat{\eta}}_a(X, A, y)  \log \frac{\tilde{\xi}^{\hat{\eta}}_a(X, A, y)}{\tilde{\xi}^{\hat{\eta}}_a(X, A, y) + \hat{p}_a(y \mid V)} \diff y  + \int_{\mathcal{Y}}\hat{p}_a(y \mid V) \log \frac{\hat{p}_a(y \mid V)}{\tilde{\xi}^{\hat{\eta}}_a(X, A, y) + \hat{p}_a(y \mid V)} \diff y \bigg].
+    \end{align}
+    \endgroup
+    Finally, we can derive the second-order pathwise derivative:
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & \mathcal{D}_g^2\mathcal{L}_\text{{GDR}}(\bar{g}_a, \hat{\eta})[\hat{g}_a - g_a^*, \hat{g}_a - g_a^*]
+        = \mathbb{E}\Bigg[\frac{(\hat{p}_a(Y \mid V) - p_a^*(Y \mid V))^2}{\xi_a(Y \mid X)} \cdot \bigg(\frac{\tilde{\xi}^{\hat{\eta}}_a(X, A, Y)}{\bar{p}_a(Y \mid V) \big(\bar{p}_a(Y \mid V) + \tilde{\xi}^{\hat{\eta}}_a(X, A, Y)\big) } \bigg) \Bigg].
+    \end{align}
+    \endgroup
+
+    \textbf{(c)}\&\textbf{(d)}~Now, we derive the second-order pathwise derivative for \textbf{CVAEs} and \textbf{CDMs} together, as they are both based on the maximization of the ELBO. In the case of the CVAEs, we need to take a derivative wrt. $p_a$ and $q_a$ simultaneously: 
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & \mathcal{D}_g^2\mathcal{L}_\text{{GDR}}(\bar{g}_a, \hat{\eta})[\hat{g}_a - g_a^*, \hat{g}_a - g_a^*] \\
+        & \quad = \mathbb{E}\Bigg[ \underset{Z \sim \bar{\varepsilon}_z }{\mathbb{E}} \frac{(\hat{p}_a(Y, Z \mid V) - p_a^*(Y, Z \mid V))^2}{\xi_a(Y \mid X)} \cdot \frac{\tilde{\xi}^{\hat{\eta}}_a(X, A, Y) }{\bar{p}_a(Y, Z \mid V)^2 } + \frac{(\hat{q}_a(Z \mid Y, V) - q_a^*(Z \mid Y, V))^2}{\xi_a(Y \mid X)} \cdot \frac{\tilde{\xi}^{\hat{\eta}}_a(X, A, Y) }{\bar{q}_a(Z \mid Y, V)^2 }  \Bigg], \nonumber
+    \end{align}
+    \endgroup
+    where $\bar{\varepsilon}_z = \bar{q}_a(Z \mid Y, V)$. The formula for the CDMs is analogous, but with $q_a(Z \mid Y, V) = q_a(Z \mid V)$.
+
+    Now, under our convexity conditions, the following holds for all the models:
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{equation}
+        \mathcal{D}_g^2\mathcal{L}_\text{{GDR}}(\bar{g}_a, \hat{\eta})[\hat{g}_a - g_a^*, \hat{g}_a - g_a^*] \ge \alpha \norm{g^*_a - \hat{g}_a}^2_\mathcal{G},
+    \end{equation}
+    \endgroup
+    where $\alpha > 0$. 
+
+    Therefore, from Eq.~\eqref{eq:dist-taylor} we get the following:
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{align} \label{eq:qo-eff-middle}
+        & \frac{\alpha}{2} \norm{g^*_a - \hat{g}_a}^2_\mathcal{G} \le \mathcal{L}_\text{\emph{GDR}}(\hat{g}_a, \hat{\eta}) - \mathcal{L}_\text{{GDR}}({g}_a^*, \hat{\eta}) - \mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \hat{\eta})[\hat{g}_a - g_a^*] \\
+        &\quad  =  R_g - \mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \hat{\eta})[\hat{g}_a - g_a^*].
+    \end{align}
+    \endgroup
+
+    \textbf{(a)}~For \textbf{CNFs}, the last term, $- \mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \eta)[\hat{g}_a - g_a^*]$ can be expanded further as follows:
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & - \mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \eta)[\hat{g}_a - g_a^*] = \mathbb{E} \bigg[\int_{\mathcal{Y}}\tilde{\xi}^{\hat{\eta}}_a(X, A, y)  \frac{p_a^*(y \mid V) - \hat{p}_a(y \mid V)}{p_a^*(y \mid V)} \diff y \bigg] \\
+        & \quad = \underbrace{\mathbb{E} \bigg[\int_{\mathcal{Y}} (\tilde{\xi}^{\hat{\eta}}_a(X, A, y) -\xi_a(y \mid X) ) \frac{p_a^*(y \mid V) - \hat{p}_a(y \mid V)}{p_a^*(y \mid V)} \diff y \bigg]}_{R_2(\eta, \hat{\eta})} + \underbrace{\mathbb{E} \bigg[\int_{\mathcal{Y}} \xi_a(y \mid X) \frac{p_a^*(y \mid V) - \hat{p}_a(y \mid V)}{p_a^*(y \mid V)} \diff y \bigg]}_{(*)}.
+    \end{align}
+    \endgroup
+    
+    \textbf{(b)}~For \textbf{CGANs} the last term, $- \mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \eta)[\hat{g}_a - g_a^*]$ is:
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & - \mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \eta)[\hat{g}_a - g_a^*] \\
+        & \quad = \underbrace{\mathbb{E} \bigg[\int_{\mathcal{Y}} \bigg( \log \frac{{p}_a^*(y \mid V)}{\tilde{\xi}^{\hat{\eta}}_a(X, A, y) + {p}_a^*(y \mid V)} - \log \frac{{p}_a^*(y \mid V)}{\tilde{\xi}^{{\eta}}_a(X, A, y) + {p}_a^*(y \mid V)} \bigg) \big({p_a^*(y \mid V) - \hat{p}_a(y \mid V)}\big) \diff y \bigg]}_{R_2(\eta, \hat{\eta})} \nonumber \\
+        & \quad \quad + \underbrace{\mathbb{E} \bigg[\int_{\mathcal{Y}} \bigg(\log \frac{{p}_a^*(y \mid V)}{\tilde{\xi}^{{\eta}}_a(X, A, y) + {p}_a^*(y \mid V)} \bigg) \big({p_a^*(y \mid V) - \hat{p}_a(y \mid V)}\big) \diff y \bigg]}_{(*)}. \nonumber
+    \end{align}
+    \endgroup
+
+    \textbf{(c)\&(d)}~For \textbf{CVAEs} and \textbf{CDMs}, analogously to \textbf{(a)~CNFs}, the last term, $- \mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \eta)[\hat{g}_a - g_a^*]$ is:
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & - \mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \eta)[\hat{g}_a - g_a^*] \\
+        & \quad = \underbrace{\mathbb{E} \bigg[\int_{\mathcal{Y}} (\tilde{\xi}^{\hat{\eta}}_a(X, A, y) -\xi_a(y \mid X) ) \int_{\mathcal{Z}} \big( \hat{p}_a(y, z \mid V) - p_a^*(y, z \mid V)\big) \, \frac{q_a^*(z \mid y, V)}{p_a^*(y, z \mid V)} + \big( \hat{q}_a(z \mid y, V) - q_a^*(z \mid y, V) \big) \log \frac{p_a^*(y, z \mid V)}{q_a^*(z \mid y, V)} \diff z \diff y }_{R_2(\eta, \hat{\eta})}   \nonumber \\
+        & \quad \quad + \underbrace{\mathbb{E} \bigg[\int_{\mathcal{Y}} \xi_a(y \mid X) \int_{\mathcal{Z}} \big( \hat{p}_a(y, z \mid V) - p_a^*(y, z \mid V)\big) \, \frac{q_a^*(z \mid y, V)}{p_a^*(y, z \mid V)} + \big( \hat{q}_a(z \mid y, V) - q_a^*(z \mid y, V) \big) \log \frac{p_a^*(y, z \mid V)}{q_a^*(z \mid y, V)} \diff z \diff y \bigg]}_{(*)}. \nonumber
+    \end{align}
+    \endgroup
+
+    
+    Here, in all cases \textbf{(a)-(d)}, the first term is called a second-order remainder $R_2(\eta, \hat{\eta})$ and the second term $(*)$ equals to $-\mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \eta)[\hat{g}_a - g_a^*]$ (it always stays negative due to the virtue of minimization). 
+
+    \textbf{(a)}~For \textbf{CNFs}, the second-order remainder $R_2(\eta, \hat{\eta})$ is then:
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & R_2(\eta, \hat{\eta}) = \mathbb{E} \bigg[ \int_{\mathcal{Y}} \Big(\hat{w}_a(A, X)(\xi_a(y \mid X) - \hat{\xi}_a(y \mid X)) + \hat{\xi}_a(y \mid X) - \xi_a(y \mid X) \Big) \frac{p_a^*(y \mid V) - \hat{p}_a(y \mid V)}{p_a^*(y \mid V)} \diff y \bigg] \\
+        & \quad = \mathbb{E} \bigg[ \int_{\mathcal{Y}} \Big((\hat{w}_a(A, X) - 1)(\xi_a(y \mid X) - \hat{\xi}_a(y \mid X))\Big) \frac{p_a^*(y \mid V) - \hat{p}_a(y \mid V)}{p_a^*(y \mid V)} \diff y \bigg].
+    \end{align}
+    \endgroup
+    Hence, by denoting $\mathbb{E}(\int_{\mathcal{Y}}\frac{1}{h(y, X)} \diff y) = C_{h}$ for any function $h(y, x)$ and by applying the Cauchy-Schwarz inequality, we obtain the following:
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{align} \label{eq:r2-cnfs}
+        \abs{R_2(\eta, \hat{\eta})} \le \frac{C_{p_a^*} C_{\xi_a}^2}{\varepsilon} \norm{\pi_a - \hat{\pi}_a}_{L_4} \norm{\xi_a - \hat{\xi}_a}_{L_4} \norm{p_a^* - \hat{p}_a}_{\mathcal{G}},
+    \end{align}
+    \endgroup
+    where $\varepsilon > 0$ is a margin of the strong overlap assumption.
+
+    \textbf{(b)}~For \textbf{CGANs}, the second-order remainder $R_2(\eta, \hat{\eta})$ is:
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & R_2(\eta, \hat{\eta}) = - \mathbb{E} \bigg[\int_{\mathcal{Y}} \bigg( \log \big({\tilde{\xi}^{\hat{\eta}}_a(X, A, y) + {p}_a^*(y \mid V)}\big) - \log \big({{\xi}_a(y \mid X) + {p}_a^*(y \mid V)}\big) \bigg) \big({p_a^*(y \mid V) - \hat{p}_a(y \mid V)}\big) \diff y \bigg] \\
+        & \quad \stackrel{\star}{=} \mathbb{E} \bigg[ \int_{\mathcal{Y}} \frac{\big(\tilde{\xi}^{\hat{\eta}}_a(X, A, y) - {\xi}_a(y \mid X)  \big)}{\tilde{\xi}^{\bar{\eta}}_a(X, A, y)} \big({p_a^*(y \mid V) - \hat{p}_a(y \mid V)}\big) \diff y \bigg]\\
+        & \quad = \mathbb{E} \bigg[ \int_{\mathcal{Y}} \frac{(\hat{w}_a(A, X) - 1)(\xi_a(y \mid X) - \hat{\xi}_a(y \mid X))}{\tilde{\xi}^{\bar{\eta}}_a(X, A, y)} \big({p_a^*(y \mid V) - \hat{p}_a(y \mid V)}\big) \diff y \bigg], 
+    \end{align}
+    \endgroup
+    where $\star$ holds by a mean value theorem for some $\bar{\eta} \in star(\mathcal{H}, \hat{\eta}, \eta)$. This can be upper-bounded as:
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{align} \label{eq:r2-cgans}
+        \abs{R_2(\eta, \hat{\eta})} \le \frac{C_{\xi_a}^2 C_{\tilde{\xi}^{\bar{\eta}}_a}}{\varepsilon} \norm{\pi_a - \hat{\pi}_a}_{L_4} \norm{\xi_a - \hat{\xi}_a}_{L_4} \norm{p_a^* - \hat{p}_a}_{\mathcal{G}},
+    \end{align}
+    \endgroup
+    where $\varepsilon > 0$ is a margin of the strong overlap assumption.
+    
+
+    \textbf{(c)\&(d)}~Analogously to \textbf{CNFs}, for \textbf{CVAEs} and \textbf{CGANs}, the second-order remainder $R_2(\eta, \hat{\eta})$ is:
+    \begingroup\makeatletter\def\f@size{8}\check@mathfonts
+    \begin{align}
+        & R_2(\eta, \hat{\eta}) = \mathbb{E} \bigg[ \int_{\mathcal{Y}} \Big((\hat{w}_a(A, X) - 1)(\xi_a(y \mid X) - \hat{\xi}_a(y \mid X))\Big) \\
+        & \quad \quad \cdot \int_{\mathcal{Z}} \big( \hat{p}_a(y, z \mid V) - p_a^*(y, z \mid V)\big) \, \frac{q_a^*(z \mid y, V)}{p_a^*(y, z \mid V)} + \big( \hat{q}_a(z \mid y, V) - q_a^*(z \mid y, V) \big) \log \frac{p_a^*(y, z \mid V)}{q_a^*(z \mid y, V)} \diff z\diff y \bigg]. \nonumber
+    \end{align}
+    \endgroup
+    Let us now denote $\mathbb{E}(\int_{\mathcal{Y} \times \mathcal{Z}}\frac{1}{h(y, z, X)} \diff z \diff y)$ as $C_{h}$ for any function $h(y, x)$. Then, $\abs{R_2(\eta, \hat{\eta})}$ can upper-bounded by 
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{align} \label{eq:r2-cvaes}
+        \abs{R_2(\eta, \hat{\eta})} \le \frac{C_{p_a^*} C_{\xi_a}^2}{\varepsilon} \norm{\pi_a - \hat{\pi}_a}_{L_4} \norm{\xi_a - \hat{\xi}_a}_{L_4} \big(C_{\frac{\bar{q}_a}{q_a^*}}\norm{p_a^* - \hat{p}_a}_{\mathcal{G}} + C_{\bar{q}_a \log \frac{p_a^*}{q_a^*} } \norm{q_a^* - \hat{q}_a}_{\mathcal{G}}\big),
+    \end{align}
+    \endgroup
+    where $\varepsilon > 0$ is a margin of the strong overlap assumption, and $\norm{g_a}_{\mathcal{G}} = \sqrt{\mathbb{E}({\mathbb{E}_{Z \sim \bar{\varepsilon}_z}}(g_a(Y, Z \mid V)^2))}$.
+
+    Therefore, Eq.~\eqref{eq:qo-eff-middle} can be upper-bounded for all models \textbf{(a)-(d)}:
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{align}
+        & \frac{\alpha}{2} \norm{g^*_a - \hat{g}_a}^2_\mathcal{G} \le R_g  -\mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \eta)[\hat{g}_a - g_a^*]  +  C_{\star} \norm{\pi_a - \hat{\pi}_a}_{L_4} \norm{\xi_a - \hat{\xi}_a}_{L_4} \norm{g_a^* - \hat{g}_a}_{\mathcal{G}},
+    \end{align}
+    \endgroup
+    where $C_\star$ is a model dependent constant, see Eq.~\eqref{eq:r2-cnfs}, \eqref{eq:r2-cgans}, and \eqref{eq:r2-cvaes}.
+    
+    Finally, by using an AM-GM inequality and noting that the term $(*) = -\mathcal{D}_g\mathcal{L}_\text{{GDR}}({g}_a^*, \eta)[\hat{g}_a - g_a^*]$ always stays negative (similarly to \citep{morzywolek2023general}), we recover the final inequality in Eq.~\eqref{eq:qo-dr}.
+    
+    
+\end{proof}
+
+{\begin{rem}[Mildness of the convexity assumption] \label{rem:mildness}
+    The convexity assumptions in Eq.~\eqref{eq:covex-cnfs}, \eqref{eq:covex-cgans}, and \eqref{eq:covex-cgans} are relatively mild. Specifically, first, the densities $\bar{p}_a$, $\bar{q}_a$, and $\xi_a$ have all to be finite (so that their inverse is always greater than or equal to some $\delta > 0$). Then, we need to ensure that:
+    \begin{align}
+        \frac{\tilde{\xi}^{\hat{\eta}}_a(X, A, Y)}{\xi_a(Y \mid X)} = \frac{(\hat{w}_a(A, X) - 1)(\xi_a(Y \mid X) - \hat{\xi}_a(Y \mid X))}{\xi_a(Y \mid X)} + 1 \ge \delta > 0.
+    \end{align}
+    The latter holds asymptotically, assuming that (i)~both $\eta$ and $\hat{\eta}$ are H\"older smooth and (ii)~$\norm{\xi_a - \hat{\xi}_a}_{L_4}^2 \cdot \norm{\pi_a - \hat{\pi}_a}_{L_4}^2 \to 0$. Here, (i)~is a regular assumption for the estimability of $\xi$ and $\pi$, and (ii)~is required for quasi-oracle efficiency to hold. 
+\end{rem}}
+
+\begin{rem}[IPTW-learner] \label{rem:iptw-vs-dr}
+    When $V = X$ and the target model class $\mathcal{G}$ is set to be the same as the model class for $\hat{\xi}_a \in \mathit{\Xi}$, our \GDRlearners simplify to the IPTW-learner. This can be seen from the definition of the \emph{\GDRlearners} risk (Eq.~\eqref{eq:gdr-learner}):
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{align} \label{eq:iptw-dr}
+        {\mathcal{L}}_\text{GDR}(g_a = \hat{\xi}_a, \hat{\eta} & = \hat{\pi}_a) = \mathbb{E}\Bigg[\frac{\mathbbm{1}\{A = a\}}{\hat{\pi}_a(X)} \, \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log \hat{\xi}_a(Y, Z \mid X) \,  \\
+        & \quad + \, \left(1 - \frac{\mathbbm{1}\{A = a\}}{\hat{\pi}_a(X)} \right)\, \underbrace{\int_\mathcal{Y} \Big[\underset{Z \sim \varepsilon_z }{\mathbb{E}} \log \hat{\xi}_a(y, Z \mid X) \Big] \, \hat{\xi}_a(y | X) \diff{y}}_{(*)} \Bigg]. \nonumber
+    \end{align}
+    \endgroup
+    Here, the term $(*)$ contains the gradient blocking of $\hat{\xi}_a(y \mid x)$ (otherwise, the risk stops being Neyman-orthogonal). Also, because of that, the optimization of the term $(*)$ does not change the $\hat{\xi}_a$, as the optimum of $(*)$ is achieved when $\hat{\xi}_a(y \mid x)$ matches with $\hat{\xi}_a(y, z \mid x)$ (see the interpretation of the target risks as the minimization of the distributional distances in Appendix~\ref{app:background-gm}).
+
+    Therefore, the optimization of the risk in Eq.~\eqref{eq:iptw-dr} is equivalent to the following:
+    \begingroup\makeatletter\def\f@size{9}\check@mathfonts
+    \begin{align} 
+        {\mathcal{L}}_\text{IPTW}(g_a = \hat{\xi}_a, \hat{\eta} = \hat{\pi}_a) = \mathbb{E}\bigg[\frac{\mathbbm{1}\{A = a\}}{\hat{\pi}_a(X)} \, \underset{Z \sim \varepsilon_z }{\mathbb{E}} \log \hat{\xi}_a(Y, Z \mid X) \bigg],
+    \end{align}
+    \endgroup
+    which recovers the original IPTW-learner with $\mathcal{G} = \mathit{\Xi}$.
+    
+    Furthermore, if the ground-truth \CDPOs $\xi_a$ belong to $\mathit{\Xi}$, this IPTW-learner becomes Neyman-orthogonal and quasi-oracle efficient. To see that, one can easily verify that \mbox{$\mathcal{D}_g\mathcal{L}_\text{{IPTW}}({\xi}_a, \hat{\eta})[\hat{\xi}_a - \xi_a] =0$}.
+    
+\end{rem}
+    
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Implementation details and hyperparameters} \label{app:implementation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\textbf{Architecture.} The architecture of neural instantiations for our \GDRlearners is given in Fig.~\ref{fig:gdr-learners}. Depending on the structure of the potential outcome ((i) tabular or (ii) image), we implemented conditioning for both the nuisance and target conditional generative models differently. Specifically, (i)~for all but the colored MNIST experiments, we used hypernetworks \citep{ha2017hypernetworks} with two fully-connected sub-networks FC$_1$ and FC$_2$. Both sub-networks had $L$ hidden layers with $ d_h$ hidden units and ELU activation function. The second subnetwork FC$_2$ outputs the parameters of a generative model $\theta(X, A)$ (nuisance generative model) or $\theta(V, a)$ (target generative model). {On the other hand, (ii)~for the colored MNIST experiments, we used the first fully-connected sub-network FC$_1$ from (i) together with feature-wise linear modulations \citep{perez2018film}.} We then implement the generative models as follows:
+\begin{itemize}
+    \item (a)~CNFs. (i)~For all but the colored MNIST experiments, we used neural spline flows \citep{durkan2019neural} with additional auto-regressive transformation \citep{huang2018neural} when $d_y > 1$. {On the other hand, (ii)~for the colored MNIST experiments, we employed conditional masked autoregressive flows (MAFs) \citep{germain2015made,papamakarios2017masked}.} As a base distribution, we use a normal distribution $Z \sim N(0; I_{d_y})$. We further tuned the main flexibility hyperparameter: (i)~the number of knots $n_{\text{knots}}$ for the neural spline flows, and (ii)~number of autoregressive layers $n_{\text{l}}$ for the MAFs, respectively. Additionally, to regularize the log-likelihood, we add noise regularization \citep{rothfuss2019noise}  to the outcomes $\xi_y \sim N(0; \sigma^2_y)$.
+    \item (b)~CGANs. (i)~For all but the colored MNIST experiments, the generators and discriminators of our CGANs were both fully-connected networks with one hidden layer with $d_{\text{g/d}}$ hidden units and an ELU activation. {(ii)~For the colored MNIST experiments, we used two (de)convolutional layers with $d_{\text{g/d}}$ output channels preceded or followed by a fully-connected layer (for generators and discriminators, respectively), all with the ELU activations.} For the generator, we sampled $Z \sim N(0; I_{d_z})$, where $d_z=d_y$ in (i), and $d_z$ is tunable in (ii).
+    \item (c)~CVAEs. Similarly to CGANs, the encoder and decoder of the CVAEs were the networks with either (i)~fully-connected or (ii)~convolutional layers. For our CVAEs, we set a prior as $Z \sim N(0; I_{d_z})$.
+    \item (d)~CDMs. In our experiments, we closely followed an implementation of DiffPO \citep{ma2024diffpo}. Thus, the diffusion process uses conditional normal distributions and $Z_T \sim N(0; I_{d_y})$ (here $T$ is the number of diffusion steps). As the $\varepsilon$-net of the CDMs ($\varepsilon$-net aims to reconstruct the noise added during the diffusion process), we used (i)~a fully-connected network with one hidden layer $d_\varepsilon$ hidden units and the ELU activations in all but the colored MNIST experiments. {At the same time, (ii)~for the colored MNIST experiments, we used a U-Net \citep{ronneberger2015u} as the $\varepsilon$-net with four convolutional layers (each with $d_\varepsilon$ output channels) and the ELU activations. The middle layer of the U-Net had a tunable number of units $n_\varepsilon$.} The dimensionality of time embedding was set to $d_t=20$. 
+\end{itemize}
+
+\textbf{Implementation.} We implemented all the baselines with PyTorch and Pyro. To regularize the conditional generative models, we employed noise regularization \citep{rothfuss2019noise} after the first fully-connected sub-network FC$_1$ ($\xi_x \sim N(0; \sigma^2_x)$). Also, for IPTW- and \GDRlearners, we clipped too low propensity scores (lower than (i)~0.1 or (ii)~0.05), which helped to stabilize the training. For target conditional generative models, we additionally use EMA of the model weights \citep{polyak1992acceleration} with a hyperparameter $\lambda = 0.995$. We use the same training data $\mathcal{D}$ for two stages of learning: This does not harm the theoretical properties of our \GDRlearners as the (regularized) NNs belong to the Donsker class of estimators \citep{van2000asymptotic,kennedy2024semiparametric}.
+
+\textbf{Hyperparameters.} For all the baselines, we performed an extensive hyperparameter tuning. Therein, we tuned the flexibility and regularization hyperparameters of different conditional generative models. Further details on the hyperparameter tuning are in Tables~\ref{tab:hyperparams-all} and \ref{tab:hyperparams-colored-mnist}. Also, to ensure reproducibility, we report the tuned hyperparameters in our GitHub\footnote{Code is available at \url{https://github.com/Valentyn1997/gdr-learners}.} as YAML files.
+
+% \subsection{Hyperparameter tuning}
+\newpage
+\begin{table*}[h]
+    \caption{Hyperparameter tuning for different meta-learners and generative models for (i)~synthetic, IHDP, ACIC 2016, and HC-MNIST experiments.}
+    \label{tab:hyperparams-all}
+    \vspace{-0.4cm}
+    \begin{center}
+    \scalebox{0.7}{
+        \begin{tabu}{l|l|l|r}
+            \toprule
+            Model & Sub-model & Hyperparameter & Range / Value \\
+            \midrule
+            \multirow{19}{*}{\begin{tabular}{l} RA-CNFs, \\ GDR-CNFs \end{tabular} } & \multirow{9}{*}{\begin{tabular}{l} nuisance CNFs \\ ($\equalhat$ Plug-in CNF) \\ ($\equalhat$ IPTW-CNFs) \end{tabular}} &  Number of knots ($n_{\text{knots,N}}$) & 5, 10, 20\\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{N}}$) & 0.0, $0.01^2$, $0.05^2$, $0.1^2$ \\
+                                  && Intensity of noise regularization ($\sigma^2_{y, \text{N}}$) & 0.0, $0.01^2$, $0.05^2$, $0.1^2$ \\
+                                  && Learning rate ($\eta_\text{N}$) & 0.001, 0.005 \\
+                                  && Minibatch size ($b_\text{N}$) & 32, 64 \\
+                                  && Tuning strategy & random grid search with 50 runs \\
+                                  && Tuning criterion & $\mathcal{L}_\text{NLL}$ \\
+                                  && Number of epochs ($n_{e, \text{N}}$) & $E$ \\
+                                  && Optimizer & SGD (momentum = 0.9) \\
+                                  \cmidrule{2-4}
+                                  & \multirow{8}{*}{target CNFs} &  Number of knots ($n_{\text{knots,T}}$) & $ n_{\text{knots,N}}$ \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{T}}$) & $\sigma^2_{x, \text{N}}$ \\
+                                  && Intensity of noise regularization ($\sigma^2_{y, \text{T}}$) & 0.01 \\
+                                  && Learning rate ($\eta_\text{T}$) & 0.001 \\
+                                  && Minibatch size ($b_\text{T}$) & 64 \\
+                                  && Tuning strategy & w/o tuning \\
+                                  && Number of epochs ($n_{e, \text{T}}$) & $E$ \\
+                                  && Optimizer & AdamW \\
+            \midrule
+            \multirow{17}{*}{\begin{tabular}{l} RA-CGANs, \\ GDR-CGANs \end{tabular} } & \multirow{8}{*}{\begin{tabular}{l} nuisance CGANs \\ ($\equalhat$ Plug-in CGANs) \\ ($\equalhat$ IPTW-CGANs) \end{tabular}} &  Generator/discriminators hidden dimension ($d_{\text{g/d,N}}$) & 5, 10, 15, 20, 25, 30, 50\\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{N}}$) & 0.0, $0.01^2$, $0.05^2$, $0.1^2$ \\
+                                  && Learning rate ($\eta_\text{N}$) & 0.005, 0.001, 0.0001, 0.0005 \\
+                                  && Minibatch size ($b_\text{N}$) & 32, 64 \\
+                                  && Tuning strategy & random grid search with 50 runs \\
+                                  && Tuning criterion & $\mathcal{L}_\text{MSE}$ of generated sample\\
+                                  && Number of epochs ($n_{e, \text{N}}$) & $E$ \\
+                                  && Optimizer & AdamW \\
+                                  \cmidrule{2-4}
+                                  & \multirow{7}{*}{target CGANs} &  Generator/discriminators hidden dimension ($d_{\text{g/d,T}}$) & $d_{\text{g/d,N}}$ \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{T}}$) & $\sigma^2_{x, \text{N}}$ \\
+                                  && Learning rate ($\eta_\text{T}$) & 0.00005 \\
+                                  && Minibatch size ($b_\text{T}$) & 64 \\
+                                  && Tuning strategy & w/o tuning \\
+                                  && Number of epochs ($n_{e, \text{T}}$) & $E$ \\
+                                  && Optimizer & AdamW \\
+            \midrule
+            \multirow{19}{*}{\begin{tabular}{l} RA-CVAEs, \\ GDR-CVAEs \end{tabular} } & \multirow{9}{*}{\begin{tabular}{l} nuisance CVAEs \\ ($\equalhat$ Plug-in CVAEs) \\ ($\equalhat$ IPTW-CVAEs) \end{tabular}} &  Latent variable dimension  ($d_{z, \text{N}}$) & 3, 5, 7\\
+                            && Encoder/decoder hidden dimension ($d_{\text{e/d,N}}$) & 3, 5, 10\\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{N}}$) & 0.0, $0.01^2$, $0.05^2$, $0.1^2$ \\
+                                  && Learning rate ($\eta_\text{N}$) & 0.01, 0.001, 0.005, 0.0001, 0.0005 \\
+                                  && Minibatch size ($b_\text{N}$) & 32, 64 \\
+                                  && Tuning strategy & random grid search with 50 runs \\
+                                  && Tuning criterion & $\mathcal{L}_\text{ELBO}$ \\
+                                  && Number of epochs ($n_{e, \text{N}}$) & $E$ \\
+                                  && Optimizer & AdamW \\
+                                  \cmidrule{2-4}
+                                  & \multirow{8}{*}{target CVAEs} &  Latent variable dimension  ($d_{z, \text{T}}$) & 3 \\
+                                  && Encoder/decoder hidden dimension ($d_{\text{e/d,T}}$) & 10\\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{T}}$) & $\sigma^2_{x, \text{N}}$ \\
+                                  && Learning rate ($\eta_\text{T}$) & 0.001 \\
+                                  && Minibatch size ($b_\text{T}$) & 64 \\
+                                  && Tuning strategy & w/o tuning \\
+                                  && Number of epochs ($n_{e, \text{T}}$) & $E$ \\
+                                  && Optimizer & AdamW \\
+            \midrule
+             \multirow{19}{*}{\begin{tabular}{l} RA-CDMs, \\ GDR-CDMs \end{tabular} } & \multirow{9}{*}{\begin{tabular}{l} nuisance CDMs \\ ($\equalhat$ Plug-in CDMs) \\ ($\equalhat$ IPTW-CDMs) \end{tabular}} &  Number of diffusion steps  ($T_{\text{N}}$) & 50, 100 \\
+                            && $\varepsilon$-net hidden dimension ($d_{\varepsilon,\text{N}}$) & 10, 15, 20 \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{N}}$) & 0.0, $0.01^2$, $0.05^2$, $0.1^2$ \\
+                                  && Learning rate ($\eta_\text{N}$) & 0.01, 0.001, 0.005, 0.0001, 0.0005 \\
+                                  && Minibatch size ($b_\text{N}$) & 32, 64 \\
+                                  && Tuning strategy & random grid search with 50 runs \\
+                                  && Tuning criterion & $\mathcal{L}_\text{MSE}$ of generated sample \\
+                                  && Number of epochs ($n_{e, \text{N}}$) & 20 \\
+                                  && Optimizer & AdamW \\
+                                  \cmidrule{2-4}
+                                  & \multirow{8}{*}{target CDMs} &  Number of diffusion steps  ($T_{\text{T}}$) & 100 \\
+                                  && $\varepsilon$-net output channels ($d_{\varepsilon,\text{T}}$) & 128 \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{T}}$) & 0.0 \\
+                                  && Learning rate ($\eta_\text{T}$) & 0.0001 \\
+                                  && Minibatch size ($b_\text{T}$) & 64 \\
+                                  && Tuning strategy & w/o tuning \\
+                                  && Number of epochs ($n_{e, \text{T}}$) & 20 \\
+                                  && Optimizer & AdamW \\
+            \bottomrule
+            \multicolumn{4}{l}{$E = 100$ (synthetic data), $= 200$ (IHDP dataset), $= 50$ (ACIC 2016 datasets), $ = 20$ (HC-MNIST dataset)} \\ 
+            \multicolumn{4}{l}{$d_h = 15$ (synthetic data), $= 10$ (IHDP dataset), $= 15$ (ACIC 2016 datasets), $ = 64$ (HC-MNIST dataset)} \\ 
+        \end{tabu}}
+        \vspace{-1cm}
+    \end{center}
+\end{table*}
+
+\newpage
+\begin{table*}[h]
+    \caption{{Hyperparameter tuning for different meta-learners and generative models for (ii)~colored MNIST experiments.}}
+    \label{tab:hyperparams-colored-mnist}
+    \vspace{-0.4cm}
+    \begin{center}
+    \scalebox{0.7}{
+        \color{black}\begin{tabu}{l|l|l|r}
+            \toprule
+            Model & Sub-model & Hyperparameter & Range / Value \\
+            \midrule
+            \multirow{19}{*}{\begin{tabular}{l} RA-CNFs, \\ GDR-CNFs \end{tabular} } & \multirow{9}{*}{\begin{tabular}{l} nuisance CNFs \\ ($\equalhat$ Plug-in CNF) \\ ($\equalhat$ IPTW-CNFs) \end{tabular}} & Number of autoregressive layers ($n_{\text{l,N}}$) & 1, 3, 4, 6, 8\\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{N}}$) & 0.0 \\
+                                  && Intensity of noise regularization ($\sigma^2_{y, \text{N}}$) & 0.0, $0.01^2$, $0.05^2$, $0.1^2$ \\
+                                  && Learning rate ($\eta_\text{N}$) & 0.001, 0.005 \\
+                                  && Minibatch size ($b_\text{N}$) & 32, 64 \\
+                                  && Tuning strategy & random grid search with 50 runs \\
+                                  && Tuning criterion & $\mathcal{L}_\text{NLL}$ \\
+                                  && Number of epochs ($n_{e, \text{N}}$) & 10 \\
+                                  && Optimizer & AdamW \\
+                                  \cmidrule{2-4}
+                                  & \multirow{8}{*}{target CNFs} &  Number of autoregressive layers ($n_{\text{l,T}}$) & 4 \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{T}}$) & 0.0 \\
+                                  && Intensity of noise regularization ($\sigma^2_{y, \text{T}}$) & 0.01 \\
+                                  && Learning rate ($\eta_\text{T}$) & 0.0001 \\
+                                  && Minibatch size ($b_\text{T}$) & 64 \\
+                                  && Tuning strategy & w/o tuning \\
+                                  && Number of epochs ($n_{e, \text{T}}$) & 10 \\
+                                  && Optimizer & AdamW \\
+            \midrule
+            \multirow{19}{*}{\begin{tabular}{l} RA-CGANs, \\ GDR-CGANs \end{tabular} } & \multirow{9}{*}{\begin{tabular}{l} nuisance CGANs \\ ($\equalhat$ Plug-in CGANs) \\ ($\equalhat$ IPTW-CGANs) \end{tabular}} & Latent variable dimension  ($d_{z, \text{N}}$) & 50, 100, 150, 200 \\ 
+                                  && Generator/discriminators output channels ($d_{\text{g/d,N}}$) & 64, 128 \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{N}}$) & 0.0 \\
+                                  && Learning rate ($\eta_\text{N}$) & 0.001, 0.0001, 0.0005 \\
+                                  && Minibatch size ($b_\text{N}$) & 32, 64 \\
+                                  && Tuning strategy & random grid search with 50 runs \\
+                                  && Tuning criterion & $\mathcal{L}_\text{MSE}$ of generated sample \\
+                                  && Number of epochs ($n_{e, \text{N}}$) & 10 \\
+                                  && Optimizer & AdamW \\
+                                  \cmidrule{2-4}
+                                  & \multirow{8}{*}{target CGANs} &  Latent variable dimension  ($d_{z, \text{T}}$) & 150 \\ 
+                                  && Generator/discriminators output channels ($d_{\text{g/d,T}}$) & 64 \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{T}}$) & 0.0 \\
+                                  && Learning rate ($\eta_\text{T}$) & 0.00005 \\
+                                  && Minibatch size ($b_\text{T}$) & 64 \\
+                                  && Tuning strategy & w/o tuning \\
+                                  && Number of epochs ($n_{e, \text{T}}$) & 10 \\
+                                  && Optimizer & AdamW \\
+            \midrule
+            \multirow{19}{*}{\begin{tabular}{l} RA-CVAEs, \\ GDR-CVAEs \end{tabular} } & \multirow{9}{*}{\begin{tabular}{l} nuisance CVAEs \\ ($\equalhat$ Plug-in CVAEs) \\ ($\equalhat$ IPTW-CVAEs) \end{tabular}} &  Latent variable dimension  ($d_{z, \text{N}}$) & 50, 100, 150 \\
+                            && Encoder/decoder output channels ($d_{\text{e/d,N}}$) & 64, 128 \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{N}}$) & 0.0 \\
+                                  && Learning rate ($\eta_\text{N}$) & 0.01, 0.001, 0.005, 0.0001, 0.0005 \\
+                                  && Minibatch size ($b_\text{N}$) & 32, 64 \\
+                                  && Tuning strategy & random grid search with 50 runs \\
+                                  && Tuning criterion & $\mathcal{L}_\text{ELBO}$ \\
+                                  && Number of epochs ($n_{e, \text{N}}$) & 10 \\
+                                  && Optimizer & AdamW \\
+                                  \cmidrule{2-4}
+                                  & \multirow{8}{*}{target CVAEs} &  Latent variable dimension  ($d_{z, \text{T}}$) & 50 \\
+                                  && Encoder/decoder output channels ($d_{\text{e/d,T}}$) & 64 \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{T}}$) & 0.0 \\
+                                  && Learning rate ($\eta_\text{T}$) & 0.001 \\
+                                  && Minibatch size ($b_\text{T}$) & 64 \\
+                                  && Tuning strategy & w/o tuning \\
+                                  && Number of epochs ($n_{e, \text{T}}$) & 10 \\
+                                  && Optimizer & AdamW \\
+            \midrule
+            \multirow{21}{*}{\begin{tabular}{l} RA-CDMs, \\ GDR-CDMs \end{tabular} } & \multirow{10}{*}{\begin{tabular}{l} nuisance CDMs \\ ($\equalhat$ Plug-in CDMs) \\ ($\equalhat$ IPTW-CDMs) \end{tabular}} &  Number of diffusion steps  ($T_{\text{N}}$) & 50, 100, 150 \\
+                                  && Number of units in the middle layer of the U-Net ($d_{\varepsilon,\text{N}}$) & 200, 500, 700 \\
+                                  && $\varepsilon$-net output channels ($d_{\varepsilon,\text{N}}$) & 32, 64, 128 \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{T}}$) & 0.0 \\
+                                  && Learning rate ($\eta_\text{N}$) & 0.01, 0.001, 0.005, 0.0001, 0.0005 \\
+                                  && Minibatch size ($b_\text{N}$) & 32, 64 \\
+                                  && Tuning strategy & random grid search with 50 runs \\
+                                  && Tuning criterion & $\mathcal{L}_\text{MSE}$ of generated sample \\
+                                  && Number of epochs ($n_{e, \text{N}}$) & 20 \\
+                                  && Optimizer & AdamW \\
+                                  \cmidrule{2-4}
+                                  & \multirow{9}{*}{target CDMs} &  Number of diffusion steps  ($T_{\text{T}}$) & 300 \\
+                                  && Number of units in the middle layer of the U-Net ($d_{\varepsilon,\text{T}}$) & 700 \\
+                                  && $\varepsilon$-net output channels ($d_{\varepsilon,\text{T}}$) & 128 \\
+                                  && Intensity of noise regularization ($\sigma^2_{x, \text{T}}$) & 0.0 \\
+                                  && Learning rate ($\eta_\text{T}$) & 0.0001 \\
+                                  && Minibatch size ($b_\text{T}$) & 64 \\
+                                  && Tuning strategy & w/o tuning \\
+                                  && Number of epochs ($n_{e, \text{T}}$) & 20 \\
+                                  && Optimizer & AdamW \\
+            \bottomrule
+            \multicolumn{4}{l}{$d_h = 5$} \\ 
+        \end{tabu}}
+        \vspace{-1cm}
+    \end{center}
+\end{table*}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\section{Additional experiments} \label{app:experiments}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+{\subsection{Synthetic dataset}
+\textbf{Results.} In Fig.~\ref{fig:res-synth-ema}, we provide additional results for our \GDRlearners based on the synthetic data, where we vary the strength of EMA smoothing for the target models, $\lambda \in \{0.5, 0.9, 0.995 \}$ (see Appendix~\ref{app:implementation} for details). We see that the performance of different generative models remains relatively similar, with CDMs profiting from larger EMA smoothing values the most. Therefore, we set  $\lambda = 0.995$ for all the other experiments. 
+
+\begin{figure}[h]
+    \centering
+    \vspace{-0.1cm}
+    \includegraphics[width=\linewidth]{figures/synthetic-exp-ema.pdf}
+    \vspace{-0.7cm}
+    \caption{{Results for our \GDRlearners on the \textbf{synthetic experiments with varying size of training data} ($n_{\text{train}}$) \textbf{and varying strength of EMA smoothing} ($\lambda$). Reported: mean out-sample $W_2 \, \pm$ se over 20 runs (lower is better).}}
+    \label{fig:res-synth-ema}
+    \vspace{-0.1cm}
+\end{figure}
+
+}
+
+\subsection{IHDP100 dataset}
+\textbf{Results.} We report the out-sample results for the IHDP100 dataset \citep{hill2011bayesian,shalit2017estimating} in Table~\ref{tab:res-ihdp100}. As expected, our RA-learners achieve the best performance. This happens due to the severe overlap violations in the IHDP100 dataset \citep{curth2021nonparametric,curth2021really}, and learners that use IPTW weights are theoretically expected to perform worse.
+
+\begin{table}[h]
+    \centering
+    \vspace{-0.1cm}
+    \scalebox{0.7}{\input{tables/ihdp100-wass-0}}
+    \vspace{0.1cm}
+    \scalebox{0.7}{\input{tables/ihdp100-wass-1}}
+    \vspace{-0.3cm}
+    \caption{Results for the IHDP100 dataset. Reported: median out-sample $W_2 \, \pm$ std over 100 train/test splits.}
+    \label{tab:res-ihdp100}
+\end{table}
+
+\subsection{ACIC 2026 dataset collection}
+
+\textbf{Results.} In Fig.~\ref{fig:res-acic-full}, we display the result for every one of the 77 datasets in the ACIC 2016 collection. There, we see that our \GDRlearners outperform the majority of other learners when the target model class is restricted to linear (= (b)~linear setting).
+
+\newpage
+\begin{figure}
+    \centering
+    \vspace{-0.5cm}
+    \includegraphics[width=1.1\linewidth]{figures/acic-full-nonlin.pdf} \\
+    \includegraphics[width=1.1\linewidth]{figures/acic-full-lin.pdf}
+    \vspace{-0.5cm}
+    \caption{Full results for 77 semi-synthetic ACIC 2016 experiments in (a)~full and (b)~linear settings. Reported: out-sample median log-prob over 5 runs.}
+    \label{fig:res-acic-full}
+    \vspace{-1.3cm}
+\end{figure}
+
+
+
+{
+\subsection{HC-MNIST dataset}
+
+\textbf{Results.} We show the detailed results of Table~\ref{tab:res-hc-mnist} in Fig.~\ref{fig:res-hc-mnist-detail}. Therein, our \GDRlearners have slightly higher variance than the other meta-learners, mainly due to several outlier runs. This can be expected, as the \GDRlearners employ the inverse propensity scores and, thus, are not guaranteed to have a good finite-sample performance. Yet, the \GDRlearners outperform other meta-learners in terms of the median performance, especially for CNFs and CVAEs. 
+
+\begin{figure}[h]
+    \centering
+    \vspace{-0.1cm}
+    \includegraphics[width=\linewidth]{figures/hcmnist-exp-detail.pdf}
+    \vspace{-0.7cm}
+    \caption{{Detailed results for the \textbf{HC-MNIST dataset}. Reported: out-sample $W_2$ for 20 runs. Note that the y-axis for CDMS is truncated and, thus, it omits some outliers for the plug-in learner. }}
+    \vspace{-0.3cm}
+    \label{fig:res-hc-mnist-detail}
+\end{figure}
+
+% \newpage
+\subsection{Colored MNIST dataset}
+
+\textbf{Results.} We report the quantitative results of the colored MNIST experiments in Table~\ref{tab:res-colored-mnist}. Therein, our \GDRlearners almost always achieve best / second-best performance in terms of $W_2$ distance among other learners for all the generative models. This demonstrates good scalability of our \GDRlearners to the high-dimensional outcomes setting. Furthermore, we report more detailed results in Fig.~\ref{fig:res-colored-mnist-detail}. Here, interestingly, our \GDRlearners have relatively low variance, unlike in the HC-MNIST experiments (see Fig~\ref{fig:res-hc-mnist-detail}). This result could be expected, as the colored MNIST dataset possesses a relatively good overlap, given the one-dimensional confounder.
+
+{\begin{table}[h]
+    \centering
+    \vspace{-0.1cm}
+    \scalebox{0.7}{\color{black}\input{tables/colored-minst-wass-0-1}}\\
+    \scalebox{0.7}{\color{black}\input{tables/colored-minst-wass-2-3}} \\
+    \scalebox{0.7}{\color{black}\input{tables/colored-minst-wass-4}}
+    \vspace{-0.3cm}
+    \caption{{Quantitative results for the colored MNIST dataset. Reported: mean out-sample $W_2 \, \pm$ std over 10 runs.}}
+    \label{tab:res-colored-mnist}
+    \vspace{-0.3cm}
+\end{table}}
+}
+
+{
+\subsection{Runtime comparison}
+
+Table~\ref{tab:runtimes} provides the runtime comparison of different meta-learners and generative models. Here, the runtime of the RA- and \GDRlearners is roughly twice as long as that of the plug-in and IPTW-learners. This is expected, as both RA- and \GDRlearners have two learning stages. Still, our \GDRlearners are well scalable.
+
+\begin{figure}[h]
+    \centering
+    \vspace{-0.1cm}
+    \includegraphics[width=\linewidth]{figures/colored-mnist-exp-detail.pdf}
+    \vspace{-0.7cm}
+    \caption{{Detailed results for the \textbf{colored MNIST dataset}. Reported: out-sample $W_2$ for 10 runs.}}
+    \vspace{-0.3cm}
+    \label{fig:res-colored-mnist-detail}
+\end{figure}
+
+\begin{table}[h]
+    \centering
+    \vspace{-0.3cm}
+    \scalebox{0.9}{\color{black}\input{tables/runtime}}
+    \vspace{-0.2cm}
+    \caption{{Total runtime (in minutes) for different meta-learners and generative models based on the synthetic experiments with $n_{\text{train}}= 500$. Reported: mean duration $\pm$ std (lower is better). Experiments were carried out on 2 GPUs (NVIDIA A100-PCIE-40GB) with IntelXeon Silver 4316 CPUs @ 2.30GHz.}}
+    \label{tab:runtimes}
+    \vspace{-0.3cm}
+\end{table}
+
+
+}
+
+
+\end{document}

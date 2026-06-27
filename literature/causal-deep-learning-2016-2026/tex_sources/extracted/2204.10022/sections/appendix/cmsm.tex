@@ -1,0 +1,264 @@
+\section{Breaking down the Continuous Treatment Marginal Sensitivity Model}
+\label{app:cmsm}
+Let's go deeper into the Continuous Treatment Marginal Sensitivity Model (CMSM).
+
+
+\subsection{MSM for binary treatment values}
+\label{app:msm}
+This section details the Marginal Sensitivity Model of \cite{tan2006msm}.
+For binary treatments, $\Tcal_{B} = \{0, 1\}$, the (nominal) propensity score, $e(\x) \equiv Pr(T=1 \mid \X=\x)$, states how the treatment status, $\tf$, depends on the covariates, $\x$, and is identifiable from observational data.
+The potential outcomes, $\Y_{0}$ and $\Y_1$, conditioned on the covariates, $\x$, are distributed as $P(\Y_{0} \mid \X=\x)$ and $P(\Y_{1} \mid \X=\x)$.
+Each of these conditional distributions can be written as mixtures with weights based on the propensity score:
+\begin{equation}
+    \begin{split}
+        P(\Y_0 \mid \X=\x) &= (1 - e(\x)) P(\Y_0 \mid \Tf = 0, \X=\x) + e(\x) P(\Y_0 \mid \Tf = 1, \X=\x), \\
+        P(\Y_1 \mid \X=\x) &= (1 - e(\x)) P(\Y_0 \mid \Tf = 1, \X=\x) + e(\x) P(\Y_1 \mid \Tf = 1, \X=\x).
+    \end{split}
+\end{equation}
+The conditional distributions of each potential outcome given the observed treatment, $P(\Y_0 \mid \Tf = 0, \X=\x)$ and $P(\Y_1 \mid \Tf = 1, \X=\x)$, are identifiable from observational data, whereas the conditional distributions of each potential outcome given the counterfactual treatment, $P(\Y_0 \mid \Tf = 1, \X=\x)$ and $P(\Y_1 \mid \Tf = 0, \X=\x)$ are not.
+Under ignorability, $\{\Y_0, \Y_1\} \indep \Tf \mid \X=\x$, $P(\Y_0 \mid \Tf = 0, \X=\x) = P(\Y_0 \mid \Tf = 1, \X=\x)$ and $P(\Y_1 \mid \Tf = 1, \X=\x) = P(\Y_1 \mid \Tf = 0, \X=\x)$.
+Therefore, any deviation from these equalities will be indicative of hidden confounding.
+However, because the distributions  $P(\Y_0 \mid \Tf = 1, \X=\x)$ and $P(\Y_1 \mid \Tf = 0, \X=\x)$ are unidentifiable, the MSM postulates a relationship between each pair of identifiable and unidentifiable components.
+
+The MSM assumes that $P(\Y_t \mid \Tf = 1-t, \X=\x)$ is absolutely continuous with respect to $P(\Y_t \mid \Tf = t, \X=\x)$ for all $\tf \in \Tcal_{B}$. Therefore, given that $P(\Y_t \mid \Tf = t, \X=\x)$ and $P(\Y_t \mid \Tf = 1-t, \X=\x)$ are $\sigma$-finite measures, by the Radon-Nikodym theorem, there exists a function $\lambda_{B}(\Yt, \x; \tf): \Ycal \to [0, \inf)$ such that,
+\begin{equation}
+    P(\Y_t \mid \Tf = 1-t, \X=\x) = \int_{\Ycal} \lambda_{B}(\Yt, \x; \tf) dP(\Y_t \mid \Tf = t, \X=\x).
+\end{equation}
+Rearranging terms, $\lambda_{B}(\Yt, \x; \tf)$ is expressed as the Radon-Nikodym derivative or ratio of densities,
+\begin{equation}
+    \begin{split}
+        \lambda_{B}(\Yt, \x; \tf) &= \frac{dP(\Y_t \mid \Tf = 1-t, \X=\x)}{dP(\Y_t \mid \Tf = t, \X=\x)}, \\
+        &= \frac{p(\y_t \mid \Tf = 1-t, \X=\x)}{p(\y_t \mid \Tf = t, \X=\x)}.
+    \end{split}
+\end{equation}
+By Bayes's rule, $\lambda(\Y_0, \x; 0)$ and $\lambda(\Y_1, \x; 1)$ are expressed as odds ratios,
+\begin{equation}
+    \begin{split}
+        \lambda_{B}(\Y_0, \x; 0) &= \frac{1 - e(\x)}{e(\x)} \bigg/ \frac{1 - e(\x, \y_0)}{e(\x, \y_0)}, \\
+        \lambda_{B}(\Y_1, \x; 1) &= \frac{e(\x)}{1 - e(\x)} \bigg/  \frac{e(\x, \y_1)}{1 - e(\x, \y_1)},
+    \end{split}
+\end{equation}
+where $e(\x, \yt) \equiv Pr(\Tf=1 \mid \X=\x, \Yt=\yt)$ is the unidentifiable complete propensity for treatment.
+
+Finally, the MSM further postulates that the odds of receiving the treatment $\Tf=1$ for subjects with covariates $\X=\x$ can only differ from $e(\x) / (1 - e(\x))$ by at most a factor of $\Lambda$,
+\begin{equation}
+    \Lambda^{-1} \leq \lambda_{B}(\Y_t, \x; t) \leq \Lambda.
+\end{equation}
+
+\begin{equation}
+    \alpha(e(\x, \tf), \Lambda) = \frac{1}{\Lambda e(\x, \tf)} + 1 - \frac{1}{\Lambda} \leq \frac{1}{e(\x, \tf, \y_t)} \leq \frac{\Lambda}{e(\x, \tf)} + 1 - \Lambda = \beta(e(\x, \tf), \Lambda)
+\end{equation}
+
+\subsection{Modifying the MSM for categorical treatment values}
+\label{app:cat_msm}
+For categorical treatments, $\Tcal_{C} = \{\tf_i\}_{i=1}^{n_c}$, the (nominal) generalized propensity score \cite{hirano2004propensity}, $r(\x, \tf) \equiv Pr(T=\tf \mid \X=\x)$, states how the treatment status, $\tf$, depends on the covariates, $\x$, and is identifiable from observational data.
+The potential outcomes, $\{\Y_{\tf}: \tf \in \Tcal_{C}\}$, conditioned on the covariates, $\x$, are distributed as $\{P(\Y_{\tf} \mid \X=\x): \tf \in \Tcal_{C}\}$.
+Again, each of these conditional distributions can be written as mixtures with weights based on the propensity density, yielding the following set of mixture distributions:
+\begin{equation}
+    \left\{
+        P(\Y_t \mid \X=\x) = \sum_{\tfp \in \Tcal_{C}} r(\x, \tfp) P(\Yt \mid \Tf=\tfp, \X=\x)
+    \right\}.
+\end{equation}
+Each conditional distribution of the potential outcome given the observed treatment, $P(\Yt \mid \Tf=\tf, \X=\x)$, is identifiable from observational data, but each conditional distribution of the potential outcome given the counterfactual treatment, $P(\Yt \mid \Tf=\tfp, \X=\x)$, and therefore each mixture $P(\Y_t \mid \X=\x)$, is not.
+Under the ignorability assumption, $P(\Yt \mid \Tf=\tf, \X=\x) = P(\Yt \mid \Tf=\tfp, \X=\x)$ for all $\tfp \in \Tcal_{C}$.
+
+In order to recover the form of the binary treatment MSM, we can postulate a relationship between the unidentifiable $P(\Y_t \mid \X=\x) - r(\x, \tf) P(\Yt \mid \Tf=\tf, \X=\x)$ and the identifiable $P(\Yt \mid \Tf=\tf, \X=\x) - r(\x, \tf) P(\Yt \mid \Tf=\tf, \X=\x)$. Under the assumption that $P(\Y_t \mid \X=\x) - r(\x, \tf) P(\Yt \mid \Tf=\tf, \X=\x)$ is absolutely continuous with respect to $P(\Yt \mid \Tf=\tf, \X=\x) - r(\x, \tf) P(\Yt \mid \Tf=\tf, \X=\x)$, we define the Radon-Nikodym derivative
+\begin{equation}
+    \begin{split}
+        \lambda_{C}(\Yt, \x; \tf) &= \frac{d(P(\Yt \mid, \X=\x) - r(\x, \tf) P(\Yt \mid \Tf=\tf, \X=\x))}{d (1 - r(\x, \tf)) P(\Y_t \mid \Tf = t, \X=\x)}, \\
+        &= \frac{1}{1 - r(\x, \tf)} \left( \frac{dP(\Yt \mid, \X=\x)}{dP(\Y_t \mid \Tf = t, \X=\x)} - \frac{r(\x, \tf)dP(\Y_t \mid \Tf = t, \X=\x)}{dP(\Y_t \mid \Tf = t, \X=\x)} \right), \\
+        &= \frac{1}{1 - r(\x, \tf)} \left( \frac{\sum_{\tfp \in \Tcal_{C}} r(\x, \tfp) dP(\Yt \mid \Tf=\tfp, \X=\x)}{dP(\Y_t \mid \Tf = t, \X=\x)} - \frac{r(\x, \tf)dP(\Y_t \mid \Tf = t, \X=\x)}{dP(\Y_t \mid \Tf = t, \X=\x)} \right), \\
+        &= \frac{1}{1 - r(\x, \tf)} \left( \frac{\sum_{\tfp \in \Tcal_{C}} r(\x, \tfp) p(\yt \mid \Tf=\tfp, \X=\x)}{p(\y_t \mid \Tf = t, \X=\x)} - \frac{r(\x, \tf)p(\yt \mid \Tf = t, \X=\x)}{p(\yt \mid \Tf = t, \X=\x)} \right), \\
+        &= \frac{1}{1 - r(\x, \tf)} \left( \frac{\sum_{\tfp \in \Tcal_{C}} \cancel{r(\x, \tfp)} \frac{p(\Tf=\tfp \mid \yt, \x)\cancel{p(\yt)}}{\cancel{r(\x, \tfp)}}}{\frac{p(\Tf=\tf \mid \yt, \x)\cancel{p(\yt)}}{r(\x, \tf)}} - \frac{r(\x, \tf)\frac{p(\Tf=\tf \mid \yt, \x)\cancel{p(\yt)}}{\cancel{r(\x, \tf)}}}{\frac{p(\Tf=\tf \mid \yt, \x)\cancel{p(\yt)}}{\cancel{r(\x, \tf)}}} \right), \\
+        &= \frac{r(\x, \tf)}{1 - r(\x, \tf)} \frac{1 - p(\Tf=\tf \mid \yt, \x)}{p(\Tf=\tf \mid \yt, \x)}, \\
+        &= \frac{r(\x, \tf)}{1 - r(\x, \tf)} \bigg{/} \frac{r(\x, \tf, \yt)}{1 - r(\x, \tf, \yt)},
+    \end{split}
+\end{equation}
+where, $r(\x, \tf, \yt) \equiv p(\Tf=\tf \mid \yt, \x)$ is the unidentifiable complete propensity density for treatment.
+
+Finally, the categorical MSM further postulates that the odds of receiving the treatment $\Tf=\tf$ for subjects with covariates $\X=\x$ can only differ from $r(\x, \tf) / (1 - r(\x, \tf))$ by at most a factor of $\Lambda$,
+\begin{equation}
+    \Lambda^{-1} \leq \lambda_{C}(\Y_t, \x; t) \leq \Lambda.
+\end{equation}
+
+\begin{equation}
+    \alpha(r(\x, \tf), \Lambda) = \frac{1}{\Lambda r(\x, \tf)} + 1 - \frac{1}{\Lambda} \leq \frac{1}{r(\x, \tf, \y_t)} \leq \frac{\Lambda}{r(\x, \tf)} + 1 - \Lambda = \beta(r(\x, \tf), \Lambda)
+\end{equation}
+
+% \subsection{Adapting the MSM for continuous-valued interventions.}
+
+\subsection{Defining the Continuous MSM (CMSM) in terms of densities for continuous-valued interventions}
+\label{app:cont_msm}
+The conditional distributions of the potential outcomes given the observed treatment assigned, 
+\begin{equation*}
+    \left\{ P(\Yt \mid \Tf=\tf, \X=\x) : \tf \in \Tcal \right\},
+\end{equation*}
+are identifiable from observational data. However, the marginal distributions of the potential outcomes over all possible treatments, 
+\begin{equation}
+    \begin{split}
+        \{\quad& \\
+            &P(\Yt \mid \X=\x) = \\
+            &\quad \int_{\Tcal} p(\tfp \mid \x) P(\Yt \mid \Tf=\tfp, \X=\x) d\tfp  \\
+            &: \tf \in \Tcal \\
+        \}\quad&
+    \end{split}
+    % \left\{ P(\Yt \mid \X=\x) = \int_{\Tcal} p(\tfp \mid \x) P(\Yt \mid \Tf=\tfp, \X=\x) d\tfp : \tf \in \Tcal \right\},
+\end{equation}
+are not.
+This is because the component distributions, $P(\Yt \mid \Tf=\tfp, \X=\x)$, are not identifiable when $\tfp \neq \tf$ as $\Yt$ cannot be observed for units under treatment level $\Tf = \tfp$.
+Under the ignorability assumption, $P(\Yt \mid \Tf=\tf, \X=\x) = P(\Yt \mid \Tf=\tfp, \X=\x)$ for all $\tfp \in \Tcal$, and so $P(\Yt \mid, \X=\x)$ and $P(\Yt \mid \Tf=\tf, \X=\x)$ are identical. 
+Therefore, any divergence between $P(\Yt \mid, \X=\x)$ and $P(\Yt \mid \Tf=\tf, \X=\x)$ will be indicative of hidden confounding.
+
+Where in the binary setting the MSM postulates a relationship between the unidentifiable $P(\Yt \mid \Tf=1-\tf, \X=\x)$ and identifiable $P(\Yt \mid \Tf=\tf, \X=\x)$, our CMSM postulates a relationship between the unidentifiable $P(\Yt \mid \X=\x)$ and the identifiable $P(\Yt \mid \Tf=\tf, \X=\x)$. 
+\begin{quote}
+    The Radon-Nikodym theorem involves a measurable space $(\mathit{X}, \Sigma)$ on which two $\sigma$-finite measures are defined, $\mu$ and $\nu$.'' 
+    
+    -- Wikipedia
+\end{quote}
+In our setting, the measurable space is $(\mathbb{R}, \Sigma)$, and our $\sigma$-finite measures are, $\mu=P(\Yt \mid \Tf=\tf, \X=\x)$ and $\nu=P(\Yt \mid \X=\x)$: $\Yt \in \Ycal \subseteq \mathbb{R}$.
+\begin{quote}
+    If $\nu$ is absolutely continuous with respect to $\mu$ (written $\nu \ll \mu$), then there exists a $\Sigma$-measurable function $f: \mathit{X} \to [0, \infty)$, such that $\nu(\mathit{A}) = \int_{\mathit{A}} f d\mu$ for any measurable set $\mathit{A} \subseteq \textit{X}$. 
+    
+    -- Wikipedia
+\end{quote}
+We then need to assume that $P(\Yt \mid \X=\x) \ll P(\Yt \mid \Tf=\tf, \X=\x)$, that is $P(\mathit{A} \mid \Tf=\tf, \X=\x) = 0$ implies $P(\mathit{A} \mid \X=\x) = 0$ for any measurable set $\mathit{A}$. 
+
+This leads us to a proof for \Cref{prop:density_ratio}
+\begin{proof}
+    \label{proof:density_ratio}
+    Further, in our setting we have $f = \lambda(\yt; \x, \tf)$, therefore
+    \begin{equation}
+        P(\Yt \mid \X=\x) = \int_{\Ycal} \lambda(\yt; \x, \tf) dP(\Yt \mid \Tf=\tf, \X=\x).
+    \end{equation}
+    
+    Let the range of $\Yt$ be the measurable space $(\Ycal, \mathcal{A})$, and $\nu(A)$ denote the Lebesgue measure for any measurable $A \in \mathcal{A}$. 
+    Then,
+    \begin{subequations}
+        \label{eq:dr_proof}
+        \begin{align}
+            \lambda(\yt; \x, \tf)
+            &=\frac{dP(\Yt \mid \X=\x)}{dP(\Yt \mid \Tf=\tf, \X=\x)} \label{eq:dr_proof_a}\\
+            &= \frac{dP(\Yt \mid \X=\x)}{d\nu}\frac{d\nu}{dP(\Yt \mid \Tf=\tf, \X=\x)} \label{eq:dr_proof_b} \\
+            &= \frac{dP(\Yt \mid \X=\x)}{d\nu}\left(\frac{dP(\Yt \mid \Tf=\tf, \X=\x)}{d\nu}\right)^{-1} \label{eq:dr_proof_c} \\
+            &= \frac{d}{d\nu} \int_{A}p(\yt \mid \X=\x)d\nu \left(\frac{d}{d\nu} \int_{A}p(\yt \mid \Tf=\tf, \X=\x)d\nu\right)^{-1} \label{eq:dr_proof_d} \\
+            &= \frac{p(\yt \mid \X=\x)}{p(\yt \mid \Tf=\tf, \X=\x)} \label{eq:dr_proof_e} \\
+            &= \frac{p(\tf \mid \X=\x)}{p(\tf \mid \Yt=\yt, \X=\x)} \label{eq:dr_proof_f}
+        \end{align}
+    \end{subequations}
+    \Cref{eq:dr_proof_a} by the Radon-Nikodym derivative.
+    \Cref{eq:dr_proof_a}-\Cref{eq:dr_proof_c} hold $\nu-$almost everywhere under the assumption $P(\Yt \in A \mid \x) \ll \nu(A) \sim P(\Yt \in A \mid \Tf=\tf, \X=\x)$.
+    \Cref{eq:dr_proof_c}-\Cref{eq:dr_proof_d} by the Radon-Nikodym theorem.
+    \Cref{eq:dr_proof_d}-\Cref{eq:dr_proof_e} by the fundamental theorem of calculus under the assumption that $p(\yt \mid \x)$ and $p(\yt \mid \Tf=\tf, \X=\x)$ be continuous for $\yt \in \Ycal$.
+    \Cref{eq:dr_proof_e}-\Cref{eq:dr_proof_f} by Bayes's Rule.
+\end{proof}
+
+% We can now solve for $\lambda(\yt; \x, \tf)$ in terms of the complete and nominal propensity densities:
+% \begin{subequations}
+%     \label{eq:dr_proof}
+%     \begin{align}
+%         P(\Yt \mid \X=\x) &= \int_{\Ycal} \lambda(\yt; \x, \tf) dP(\Yt \mid \tf, \X=\x), 
+%     \label{eq:dr_proof_a} \\
+%         P(\Yt \mid \X=\x) &= \int_{\Ycal} \lambda(\yt; \x, \tf) p(\yt \mid \tf, \x)d\yt, \label{eq:dr_proof_b} \\
+%         dP(\Yt \mid \X=\x) &= \frac{d}{d\yt}\left(\int_{\Ycal} \lambda(\yt; \x, \tf) p(\yt \mid \tf, \x)d\yt\right) d\yt, \label{eq:dr_proof_c} \\
+%         dP(\Yt \mid \X=\x) &= \lambda(\yt; \x, \tf) p(\yt \mid \tf, \x)d\yt, \label{eq:dr_proof_d} \\
+%         p(\yt \mid \x) &= \lambda(\yt; \x, \tf) p(\yt \mid \tf, \x), \label{eq:dr_proof_e} \\
+%         p(\yt \mid \x) &= \lambda(\yt; \x, \tf) \frac{p(\tf \mid \yt, \x)p(\yt \mid \x)}{p(\tf \mid \x)}, \label{eq:dr_proof_f} \\
+%         \frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)} &= \lambda(\yt; \x, \tf) \label{eq:dr_proof_g}.
+%     \end{align}
+% \end{subequations}
+% \Cref{eq:dr_proof_a}-\Cref{eq:dr_proof_b} by $dP(\Yt \mid \tf, \X=\x)=p(\yt \mid \tf, \x)d\yt$.
+% \Cref{eq:dr_proof_b}-\Cref{eq:dr_proof_c} by definition of the differential.
+% \Cref{eq:dr_proof_c}-\Cref{eq:dr_proof_d} by $\frac{d}{dz}\left(\int f(z) dz\right) = f(z)$.
+% \Cref{eq:dr_proof_d}-\Cref{eq:dr_proof_e} by $dP(\Yt \mid \X=\x) = p(\yt \mid \x)d\yt$ and cancelling terms.
+% \Cref{eq:dr_proof_e}-\Cref{eq:dr_proof_f} by Bayes's Rule.
+% \Cref{eq:dr_proof_f}-\Cref{eq:dr_proof_g} by cancelling and rearranging terms.
+
+% The Radon-Nikodym derivative,
+% \begin{equation}
+%     \begin{split}
+%         P(\Yt \mid \X=\x) &= \int_{\Ycal} \lambda(\yt; \x, \tf) dP(\Yt \mid \Tf=\tf, \X=\x), \\
+%         dP(\Yt \mid \X=\x) &= \frac{d}{d\yt}\left(\int_{\Ycal} \lambda(\yt; \x, \tf) dP(\Yt \mid \Tf=\tf, \X=\x)\right)d\yt, \\
+%         dP(\Yt \mid \X=\x) &= \lambda(\yt; \x, \tf) dP(\Yt \mid \Tf=\tf, \X=\x), \\
+%         \frac{dP(\Yt \mid \X=\x)}{dP(\Yt \mid \Tf=\tf, \X=\x)} &= \lambda(\yt; \x, \tf).  \\
+%     \end{split}
+% \end{equation}
+% Then, for continuous random variables $\Yt$, we can expand the differentials and apply Bayes's rule to express in terms of the complete and nominal propensities
+% \begin{subequations}
+%     \begin{align}
+%         \lambda(\yt; \x, \tf) &= \frac{dP(\Yt \mid \X=\x)}{dP(\Yt \mid \Tf=\tf, \X=\x)}, \\
+%         &= \frac{p(\yt \mid \X=\x) \cancel{d\yt}}{p(\yt \mid \Tf=\tf, \X=\x) \cancel{d\yt}}, \\
+%         &= \frac{\cancel{p(\yt \mid \X=\x)}}{\frac{p(\tf \mid \Yt=\yt, \X=\x)\cancel{p(\yt \mid \X=\x)}}{p(\tf \mid \X=\x)}}, \\
+%         &= \frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)}
+%     \end{align}
+% \end{subequations}
+% Then, for continuous random variables $\Yt$,
+% \begin{equation}
+%     \begin{split}
+%         \lambda(\yt; \x, \tf) &= \frac{dP(\Yt \mid \X=\x)}{dP(\Yt \mid \Tf=\tf, \X=\x)}, \\
+%         \lambda(\yt; \x, \tf) &= \frac{d\int_{\Tcal} p(\tfp \mid \x) P(\Yt \mid \Tf=\tfp, \X=\x) d\tfp}{dP(\Yt \mid \Tf=\tf, \X=\x)}, \\
+%         \lambda(\yt; \x, \tf) &= \frac{\int_{\Tcal} p(\tfp \mid \x) dP(\Yt \mid \Tf=\tfp, \X=\x) d\tfp}{dP(\Yt \mid \Tf=\tf, \X=\x)}, \\
+%         \lambda(\yt; \x, \tf) &= \frac{\int_{\Tcal} p(\tfp \mid \x) p(\yt \mid \Tf=\tfp, \X=\x) \cancel{d\yt} d\tfp}{p(\yt \mid \Tf=\tf, \X=\x) \cancel{d\yt} }, \\
+%         \lambda(\yt; \x, \tf) &= \frac{\int_{\Tcal} p(\tfp \mid \x) p(\yt \mid \Tf=\tfp, \X=\x) d\tfp}{p(\yt \mid \Tf=\tf, \X=\x)}. \\
+%     \end{split}
+% \end{equation}
+% Now, we can use Bayes's rule to express in terms of the complete and nominal propensities
+% \begin{equation}
+%     \begin{split}
+%         \lambda(\x, \Yt; \tf) 
+%         &= \frac{\int_{\Tcal} p(\tfp \mid \x) p(\yt \mid \x, \tfp) d\tfp}{p(\yt \mid \x, \tf)}, \\
+%         &= \frac{\int_{\Tcal}p(\tfp \mid \x)\frac{p(\tfp \mid \yt, \x)p(\yt \mid \x)}{p(\tfp \mid \x)}d\tfp}{\frac{p(\tf \mid \yt, \x)p(\yt \mid \x)}{p(\tf \mid \x)}}, \\
+%         &= \frac{\int_{\Tcal}p(\tfp \mid \x)\frac{p(\tfp \mid \yt, \x)}{p(\tfp \mid \x)}d\tfp}{\frac{p(\tf \mid \yt, \x)}{p(\tf \mid \x)}}, \\
+%         &= \frac{p(\tf \mid \x)\int_{\Tcal}p(\tfp \mid \x)\frac{p(\tfp \mid \yt, \x)}{p(\tfp \mid \x)}d\tfp}{p(\tf \mid \yt, \x)}, \\
+%         &= \frac{p(\tf \mid \x)\int_{\Tcal}p(\tfp \mid \yt, \x)d\tfp}{p(\tf \mid \yt, \x)}, \\
+%         &= \frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)}.
+%     \end{split}
+% \end{equation}
+The sensitivity analysis parameter $\Lambda$ then bounds the ratio, which leads to our bounds for the inverse complete propensity density:
+\begin{equation}
+    \begin{split}
+        \frac{1}{\Lambda} \leq &\frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)} \leq \Lambda, \\
+        \frac{1}{\Lambda p(\tf \mid \x)} \leq &\frac{1}{p(\tf \mid \yt, \x)} \leq \frac{\Lambda}{p(\tf \mid \x)} \\
+        \alpha(p(\tf \mid \x), \Lambda) \leq &\frac{1}{p(\tf \mid \yt, \x)} \leq \beta(p(\tf \mid \x), \Lambda)
+    \end{split}
+\end{equation}
+
+% When we plug these bounds into our estimator for $\kappa(\x, \tf; \Lambda, u)$, \cref{eq:kappap}, via $\alphap(\x; \Lambda, p(\tf \mid, \x))$, \cref{eq:gamma}, the $p(\tf \mid \x)$ terms cancel out:
+% \begin{equation}
+%     \begin{split}
+%         \alphap(\x; \Lambda, p(\tf \mid, \x)) 
+%         &= \frac{\alpha(p(\tf \mid \x), \Lambda)}{\beta(p(\tf \mid \x), \Lambda) - \alpha(p(\tf \mid \x), \Lambda)}, \\
+%         &= \frac{\frac{1}{\Lambda p(\tf \mid \x)}}{\frac{\Lambda}{p(\tf \mid \x)} - \frac{1}{\Lambda p(\tf \mid \x)}}, \\
+%         &= \frac{1}{\Lambda^2 - 1}.
+%     \end{split}
+% \end{equation}
+% I'm not sure this is what we want, and yet...
+
+% \begin{figure}[ht]
+%     \centering
+%     \begin{subfigure}{0.45\textwidth}
+%         \includegraphics[width=\linewidth]{figures/discrete_dose_sensitivity.png}
+%         \caption{Categorical MSM}
+%         \label{fig:disc}
+%     \end{subfigure}
+%     ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. 
+%       %(or a blank line to force the subfigure onto a new line)
+%     \begin{subfigure}{0.45\textwidth}
+%         \includegraphics[width=\linewidth]{figures/continuous_dose_sensitivity.png}
+%         \caption{CMSM}
+%         \label{fig:cont}
+%     \end{subfigure}
+%     \caption{Discrete vs Continuous MSM}\label{fig:animals}
+% \end{figure}
+
+\subsubsection{KL Divergence}
+\label{app:kld}
+The bounds on the density ratio can also be expressed as bounds on the Kullback–Leibler divergence between $P(\Yt \mid \Tf=\tf, \X=\x)$ and $P(\Yt \mid \X=\x)$.
+\begin{gather}
+    \Lambda^{-1} \leq \frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)} \leq \Lambda, \\
+    \log{\left(\Lambda^{-1}\right)}  \leq \log{\left(\frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)}\right)}  \leq \log{\left(\Lambda\right)} \\
+    \E_{p(\y \mid \tf, \x)}\log{\left(\Lambda^{-1}\right)}  \leq \E_{p(\y \mid \tf, \x)}\log{\left(\frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)}\right)}  \leq \E_{p(\y \mid \tf, \x)}\log{\left(\Lambda\right)} \\
+    \log{\left(\Lambda^{-1}\right)}  \leq \E_{p(\y \mid \tf, \x)}\log{\left(\frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)}\right)}  \leq \log{\left(\Lambda\right)} \\
+    \log{\left(\Lambda^{-1}\right)} \leq  \int_{\Ycal}\log\left(\frac{dP(\Yt \mid \X=\x)}{dP(\Yt \mid \Tf=\tf, \X=\x)}\right)dP(\Yt \mid \Tf=\tf, \X=\x)  \leq \log{\left(\Lambda\right)} \\
+    \log{\left(\Lambda^{-1}\right)} \leq  -D_{\mathrm{KL}}\left( P(\Yt \mid \Tf=\tf, \X=\x) || P(\Yt \mid \X=\x) \right)  \leq \log{\left(\Lambda\right)} \\
+    |\log{\left(\Lambda\right)}| \geq  D_{\mathrm{KL}}\left( P(\Yt \mid \Tf=\tf, \X=\x) || P(\Yt \mid \X=\x) \right)
+\end{gather}

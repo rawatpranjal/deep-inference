@@ -1,0 +1,20 @@
+\begin{wrapfigure}{r}{0.27\textwidth}
+    \centering
+   \includegraphics[width=0.22\textwidth]{Experiment/example_small.pdf}
+   \caption{dSprite image}
+   \label{fig:example-image}
+\end{wrapfigure}
+
+To test the performance of DFIV methods for a high dimensional treatment variable, we utilized the dSprites dataset \citep{dsprites17}. This is an image dataset described by five latent parameters ({\tt shape,  scale, rotation, posX} and {\tt posY}). The images are $64 \times 64 = 4096$-dimensional. In this experiment, we fixed the {\tt shape} parameter to {\tt heart}, i.e. we only used heart-shaped images. An example is shown in Figure~\ref{fig:example-image}. 
+
+From this dataset, we generated data for IV regression in which we use each figure as treatment variable $X$. Hence, the treatment variable is 4096-dimensional in this experiment. To make the task more challenging, we used {\tt posY} as the hidden confounder, which is not revealed to the model. We used the other three latent variables as the instrument variables $Z$. The structural function $f_{\mathrm{struct}}$ and outcome $Y$ are defined as
+\begin{align*}
+    f_{\mathrm{struct}}(X) = \frac{\|AX\|_2^2 - 5000}{1000}, \quad Y =  f_{\mathrm{struct}}(X) + 32(\mathtt{posY}-0.5) + \varepsilon, \quad \varepsilon \sim \mathcal{N}(0, 0.5),
+\end{align*}
+where each element of the matrix $A \in \mathbb{R}^{10\times 4096}$ is generated from $\mathrm{Unif}(0.0, 1.0)$ and fixed throughout the experiment. See Appendix~\ref{sec:data-generation-process-dsprite} for the detailed data generation process.
+
+We tested the performance of DFIV with KIV and DeepGMM, where the hyper-parameters are determined as in the demand design problem. The results are displayed in Figure~\ref{fig:dsprite}. DFIV consistently yields the best performance of all the methods. DeepIV is not included in the figure because it fails to give meaningful predictions 
+%due to the ``forbidden regression'' issue, as the treatment variable is high-dimensional.
+due to the difficulty of performing conditional density estimation for the high-dimensional treatment variable.
+The performance of KIV suffers since it lacks the feature richness to express a high-dimensional complex structural function. Although DeepGMM performs comparatively to DFIV, we observe some instability during the training, see Appendix~\ref{sec:deep-gmm-instability}. % DFIV method performs better than DeepGMM, which suggests our 2SLS algorithm might be more suitable for learning a complex structural function than a method-of-moments approach\adcomment{last sentence does not add anything, we already said DFIV works better than DeepGMM}.
+

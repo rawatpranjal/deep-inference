@@ -1,0 +1,109 @@
+\section{Experiments}
+\label{sec:experiments}
+
+Evaluating causal inference algorithms is more difficult than many machine learning tasks, since for real-world data we rarely have access to the ground truth treatment effect. Existing literature mostly deals with this in two ways. One is by using synthetic or semi-synthetic datasets, where the outcome or treatment assignment are fully known; we use the semi-synthetic IHDP dataset from \citet{hill2011bayesian}. The other is using real-world data from randomized controlled trials (RCT). The problem in using data from RCTs is that there is no imbalance between the treated and control distributions, making our method redundant. We partially overcome this problem by using the Jobs dataset from \citet{lalonde1986evaluating}, which includes both a randomized and a non-randomized component. We use both for training, but can only use the randomized component for evaluation. This alleviates, but does not solve, the issue of a completely balanced dataset being unsuited for our method.
+
+We evaluate our framework CFR, and its variant without balancing regularization (\tarnet{}), in the task of estimating ITE and ATE. CFR is implemented as a feed-forward neural network with 3 fully-connected exponential-linear layers for the representation and 3 for the hypothesis. Layer sizes were 200 for all layers used for Jobs and 200 and 100 for the representation and hypothesis used for IHDP. The model is trained using Adam~\citep{kingma2014adam}. For an overview, see Figure~\ref{fig:neuralnet}. Layers corresponding to the hypothesis are regularized with a small $\ell_2$ weight decay.  For continuous data we use mean squared loss and for binary data, we use log-loss. While our theory does not immediately apply to log-loss, we were curious to see how our model performs with it. %sWe use the Wasserstein (CFR Wass) and MMD (CFR MMD) distances to penalize imbalance.
+
+We compare our method to Ordinary Least Squares with treatment as a feature (OLS-1), OLS with separate regressors for each treatment (OLS-2), $k$-nearest neighbor ($k$-NN), Targeted Maximum Likelihood, which is a doubly robust method (TMLE)~\citep{gruber2011tmle}, Bayesian Additive Regression Trees (BART)~\citep{chipman2010bart,bayestree}, Random Forests (Rand. For.)~\citep{breiman2001random}, Causal Forests  (Caus. For.)~\citep{wager2015estimation} as well as the Balancing Linear Regression (BLR) and Balancing Neural Network (BNN) by \citet{johansson2016counterfactual}.
+%We also compare to a variable selection procedure dubbed LASSO + Ridge (L+R) in which a ridge regression model is fit to the variables selected by LASSO.
+For classification tasks we substitute Logistic Regression (LR) for OLS.  %$\ell_1$-regularized Logistic Regression ($\ell_1$-LR) for OLS and L+R respectively.
+Choosing hyperparameters for estimating PEHE is non-trivial; we detail our selection procedure, applied to all methods, in subsection C.1 of the supplement.
+
+%\paragraph{Hyperparameter selection}\vskip -13pt
+%Standard methods for hyperparameter selection, such as cross-validation, are not generally applicable for estimating the PEHE loss since only one potential outcome is observed (unless the outcome is simulated). For real-world data, we may use the observed outcome $y_{j(i)}$ of the nearest neighbor $j(i)$ to $i$ in the opposite treatment group, $t_{j(i)} = 1 - t_i$ as surrogate for the counterfactual outcome. We use this to define a nearest-neighbor approximation of the PEHE loss, $\epehenn(f) = \frac{1}{n}\sum_{i=1}^n \left((1-2t_i)(y_{j(i)} - y_i) - (f(x_i,1) - f(x_i,0))\right)^2~$. On IHDP, we use the objective value on the validation set for early stopping in CFR, and $\epehenn(f)$ for hyperparameter selection. On the Jobs dataset, we use the policy risk on the validation set (see Section~\ref{sec:nsw}).
+
+We evaluate our model in two different settings. One is \emph{within-sample}, where the task is to estimate ITE for all units in a sample for which the (factual) outcome of \emph{one} treatment is observed. This corresponds to the common scenario in which a cohort is selected once and not changed. This task is non-trivial, as we never observe the ITE for any unit. The other is the \emph{out-of-sample} setting, where the goal is to estimate ITE for units with no observed outcomes. This corresponds to the case where a new patient arrives and the goal is to select the best possible treatment. Within-sample error is computed over both the training and validation sets, and out-of-sample error over the test set.
+
+\vskip -7pt
+\subsection{Simulated outcome: IHDP}\vskip -5pt
+\citet{hill2011bayesian} compiled a dataset for causal effect estimation based on the Infant Health and Development Program (IHDP), in which the covariates come from a randomized experiment studying the effects of specialist home visits on future cognitive test scores. The treatment groups have been made imbalanced by removing a biased subset of the treated population. The dataset comprises 747 units (139 treated, 608 control) and 25 covariates measuring aspects of children and their mothers. We use the simulated outcome implemented as setting ``A'' in the NPCI package~\citep{npci}. Following \citet{hill2011bayesian}, we use the \emph{noiseless} outcome to compute the true effect. We report the estimated (finite-sample) PEHE loss $\epehe$ (Eq. ~\ref{eq:pehe}), and the absolute error in average treatment effect $\eate = |\frac{1}{n}\sum_{i=1}^n (f(x_i, 1) - f(x_i, 0)) - \frac{1}{n}\sum_{i=1}^n (m_1(x_i) - m_0(x_i))|$.
+The results of the experiments on IHDP are presented in Table~\ref{tbl:ihdp_jobs_results} (left). We average over 1000 realizations of the outcomes with 63/27/10 train/validation/test splits.
+
+\begin{table}[t!]
+  \caption{\label{tbl:ihdp_jobs_results}Results on IHDP (left) and Jobs (right). MMD is squared linear MMD. Lower is better. \vspace{-1.3em}}
+  \begin{center}
+    \begin{small}
+      \begin{sc}
+      \begin{tabular}{l|cc|cc}
+        \multicolumn{5}{l}{\bf{Within-sample}} \\
+        \hline
+        & \multicolumn{2}{c|}{IHDP} & \multicolumn{2}{c}{Jobs} \\
+        & $\sqrt{\epehe}$ & $\eate$ & $R_{\text{Pol}}$  & $\eatt$\\
+        \hline
+        OLS/LR-1 & $5.8 \pm .3$ & $.73 \pm .04$ & $.22 \pm .0$ & $.01 \pm .00$ \\
+        OLS/LR-2  & $2.4 \pm .1$ & $.14 \pm .01$ & $.21 \pm .0$ & $.01 \pm .01$ \\
+        BLR  & $5.8 \pm .3$ & $.72 \pm .04$ & $.22 \pm .0$ & $.01 \pm .01$ \\
+        $k$-NN & $2.1 \pm .1$ & $.14 \pm .01$ & $.02 \pm .0$ & $.21 \pm .01$ \\
+		    TMLE  & $5.0 \pm .2$ & $.30 \pm .01$ & $.22 \pm .0$ & $.02 \pm .01$ \\
+		    %L + R / $\ell_1$-LR  & & & & \\
+        BART  & $2.1 \pm .1$ & $.23 \pm .01$ & $.23 \pm .0$ & $.02 \pm .00$ \\
+        Rand.For.  & $4.2 \pm .2$ & $.73 \pm .05$ & $.23 \pm .0$ & $.03 \pm .01$ \\
+        Caus.For.  & $3.8 \pm .2$ & $.18 \pm .01$ & $.19 \pm .0$ & $.03 \pm .01$ \\
+        BNN  & $2.2 \pm .1$ & $.37 \pm .03$ & $.20 \pm .0$ & $.04 \pm .01$ \\
+        %\hline
+        \tarnet{}  & $.88 \pm .0$ & $.26 \pm .01$ & $.17 \pm .0$ & $.05 \pm .02$ \\
+        CFR MMD & $.73 \pm .0$ & $.30 \pm .01$ & $.18 \pm .0$ & $.04 \pm .01$ \\
+        CFR Wass & $.71 \pm .0$ & $.25 \pm .01$ & $.17 \pm .0$ & $.04 \pm .01$ \\
+        \hline
+        \multicolumn{5}{l}{\bf{Out-of-sample}} \\
+        \hline
+        & \multicolumn{2}{c|}{IHDP} & \multicolumn{2}{c}{Jobs} \\
+        & $\sqrt{\epehe}$ & $\eate$ & $R_{\text{Pol}}$  & $\eatt$\\
+        \hline
+        OLS/LR-1  & $5.8 \pm .3$ & $.94 \pm .06$ & $.23 \pm .0$ & $.08 \pm .04$ \\
+        OLS/LR-2  & $2.5 \pm .1$ & $.31 \pm .02$ & $.24 \pm .0$ & $.08 \pm .03$ \\
+        BLR  & $5.8 \pm .3$ & $.93 \pm .05$ & $.25 \pm  .0$ & $.08 \pm .03$ \\
+        $k$-NN & $4.1 \pm .2$ & $.79 \pm .05$ & $.26 \pm .0$ & $.13 \pm .05$ \\
+		    %L + R / $\ell_1$-LR  & & & & \\
+        BART  & $2.3 \pm .1$ & $.34 \pm .02$ & $.25 \pm .0$ & $.08 \pm .03$ \\
+        Rand.For.  & $6.6 \pm .3$ & $.96 \pm .06$ & $.28 \pm .0$ & $.09 \pm .04$ \\
+        Caus.For.  & $3.8 \pm .2$ & $.40 \pm .03$ & $.20 \pm .0$ & $.07 \pm .03$ \\
+        %BNN-4-0  & & & & \\
+        BNN  & $2.1 \pm .1$ & $.42 \pm .03$ & $.24 \pm .0$ & $.09 \pm .04$ \\
+        %\hline
+        \tarnet{}  & $.95 \pm .0$ & $.28 \pm .01$ & $.21 \pm .0$ & $.11 \pm .04$ \\
+        CFR MMD & $.78 \pm .0$ & $.31 \pm .01$ & $.21 \pm .0$ & $.08 \pm .03$ \\
+        CFR Wass & $.76 \pm .0$ & $.27 \pm .01$ & $.21 \pm .0$ &  $.09 \pm .03$ \\
+        \hline
+      \end{tabular}
+    \end{sc}
+    \end{small}
+  \end{center}
+  \vspace{-1em}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\columnwidth]{fig/Imb_RelPEHEVsAlpha.pdf}\vspace{-1em}
+  \caption{\label{fig:ihdp_rel_imb}Out-of-sample ITE error versus IPM regularization for CFR Wass, relative to the error at $\alpha=0$, on 500 realizations of IHDP, with high ($q=1$), medium and low (artificial) imbalance between control and treated.}
+  \vspace{-1.2em}
+\end{figure}
+
+%\paragraph{Increasing imbalance}
+\vskip -5pt
+We investigate the effects of increasing imbalance between the original treatment groups by constructing biased subsamples of the IHDP dataset. A logistic-regression propensity score model is fit to form estimates $\hat{p}(t=1|x)$ of the conditional treatment probability. Then, repeatedly, with probability $q$ we remove the remaining \emph{control} observation $x$ that has $\hat{p}(t=1|x)$ closest to $1$, and with probability $1-q$, we remove a random control observation. The higher $q$, the more imbalance. For each value of $q$, we remove $347$ observations from each set, leaving $400$.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\columnwidth]{fig/policy_curve_comp_test.pdf}\vspace{-0.5em}
+  \caption{\label{fig:policy_curve}Policy risk on Jobs as a function of treatment inclusion rate. Lower is better. Subjects are included in treatment in order of their estimated treatment effect given by the various methods. CFR Wass is similar to CFR and is omitted to avoid clutter. }
+  \vspace{-1.2em}
+\end{figure}
+
+\subsection{Real-world outcome: Jobs}
+\label{sec:nsw}
+The study by \citet{lalonde1986evaluating} is a widely used benchmark in the causal inference community, where the treatment is job training and the outcomes are income and employment status after training. This dataset combines a randomized study based on the National Supported Work program with observational data to form a larger dataset~\citep{smith2005does}. The presence of the randomized subgroup gives a way to estimate the ``ground truth'' causal effect. The study includes 8 covariates such as age and education, as well as previous earnings. We construct a \emph{binary} classification task, called \emph{Jobs}, where the goal is to predict unemployment, using the feature set of \citet{dehejia2002propensity}. Following \citet{smith2005does}, we use the LaLonde experimental sample (297 treated, 425 control) and the PSID comparison group (2490 control). There were 482 (15\%) subjects unemployed by the end of the study. We average over 10 train/validation/test splits with ratios 56/24/20.
+
+Because all the treated subjects $T$ were part of the original randomized sample $E$, we can compute the true average treatment effect on the treated by $\text{ATT} = {|T|}^{-1}\sum_{i \in T} y_i - {|C \cap E|}^{-1}\sum_{i \in C \cap E} y_i$, where $C$ is the control group. We report the error $\eatt = | \text{ATT} - \frac{1}{|T|}\sum_{i\in T} (f(x_i, 1) - f(x_i, 0))|$.
+We cannot evaluate $\epehe$ on this dataset, since there is no ground truth for the ITE. Instead, in order to evaluate the quality of ITE estimation, we use a measure we call \emph{policy risk}. The policy risk is defined as the average loss in value when treating according to the policy implied by an ITE estimator. In our case, for a model $f$, we let the policy be to treat, $\pi_f(x) = 1$, if $f(x,1) - f(x,0) > \lambda$, and to not treat, $\pi_f(x) = 0$ otherwise. The policy risk is $R_{\text{Pol}}(\pi_f) = 1 - (\mathbb{E}[Y_1|\pi_f(x)=1]\cdot p(\pi_f=1) + \mathbb{E}[Y_0|\pi_f(x)=0]\cdot p(\pi_f=0))$ which we can estimate for the randomized trial subset of Jobs by $\hat{R}_{\text{Pol}}(\pi_f = 1 - (\mathbb{E}[Y_1|\pi_f(x)=1, t=1]\cdot p(\pi_f=1) + \mathbb{E}[Y_0|\pi_f(x)=0, t=0]\cdot p(\pi_f=0))$. See figure~\ref{fig:policy_curve} for risk as a function of treatment threshold $\lambda$, aligned by proportion of treated, and Table \ref{tbl:ihdp_jobs_results} for the risk when $\lambda=0$.
+\vskip -5pt
+\subsection{Results}
+We begin by noting that indeed imbalance confers an advantage to using the IPM regularization term, as our theoretical results indicate, see e.g. the results for CFR Wass ($\alpha > 0$) and \tarnet{} ($\alpha = 0$) on IHDP in Table~\ref{tbl:ihdp_jobs_results}. We also see in Figure~\ref{fig:ihdp_rel_imb} that even for the harder case of increased imbalance ($q>0$) between treated and control, the relative gain from using our method remains significant. On Jobs, we see a smaller gain from using IPM penalties than on IHDP. We believe this is the case because, while we are minimizing our bound over observational data and accounting for this bias, we are evaluating the predictions only on a randomized subset, where the treatment groups are distributed identically.
+For both IHDP, non-linear estimators do significantly better than linear ones in terms of individual effect ($\epehe$). On the Jobs dataset, straightforward logistic regression does remarkably well in estimating the ATT. However, being a linear model, LR can only ascribe a uniform policy - in this case, ``treat everyone''. The more nuanced policies offered by non-linear methods achieve lower policy risk in the case of Causal Forests and CFR. This emphasizes the fact that estimating average effect and individual effect can require different models. Specifically, while smoothing over many units may yield a good ATE estimate, this might significantly hurt ITE estimation. $k$-nearest neighbors has very good within-sample results on Jobs, because evaluation is performed over the randomized component, but suffers heavily in generalizing out of sample, as expected.
+
+
+
+
+%
+%The results of the IHDP and binary Jobs experiments are presented in Table~\ref{tbl:ihdp_jobs_results}. Non-linear estimators such as BART, CFR and Causal Forests fare  best in terms of the individual error $\epehe$ on IHDP, and using neural networks even without balancing gives good results as well. Our proposed method CFR performs well, achieving better results than linear methods, and is competitive with C.Forests and BART. We can also see a gain from the imbalance penalty $\alpha > 0$, both for $\epehe$ on IHDP and $R_{\text{Policy}}$ on Jobs. Based on the Jobs results, we see that a small average error is not always indicative of a good policy. Logistic regression for example, achieves an impressive estimate of average effect, but can only deliver a uniform policy, as the model is linear in the treatment variable.

@@ -1,0 +1,204 @@
+\newcommand{\Pcal}{\mathcal{P}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Yobs}{Y^{obs}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\define}{:=}
+\renewcommand{\P}{\mathbb{P}}
+\newcommand{\emin}{e_{\mbox{\small min}}}
+\newcommand{\emax}{e_{\mbox{\small max}}}
+
+\section{CATE ESTIMATION}
+
+%\subsection{Background and Notation}
+We begin by formally introducing the CATE estimation problem. 
+Following the potential outcomes framework \citep{rubin1974estimating}, assume there exists a single experiment wherein we observe $N$ i.i.d. distributed units from some super population, $(Y_i(0), Y_i(1), X_i, W_i) \sim \Pcal$. $Y_i(0) \in \R$ denotes the potential outcome of unit $i$ if it is in the control group, $Y_i(1)\in \R$ is the potential outcome of $i$ if it is in the treatment group, $X_i \in \R^d$ is a $d$-dimensional feature vector, and $W_i \in \{0,1\}$ is the treatment assignment.
+For each unit in the treatment group ($W_i = 1$), we only observe the outcome under treatment, $Y_i(1)$. For each unit under control ($W_i = 0$), we only observe the outcome under control. Crucially, there cannot exist overlap between the set of units for which $W_i = 1$ and the set for which $W_i = 0$. It is impossible to observe both potential outcomes for any unit. This is commonly referred to as the fundamental problem of causal inference. 
+
+
+However, not all hope is lost. We can still estimate the Conditional Average Treatment Effect (CATE) of the treatment. Let $x$ be an individual feature vector. Then the CATE of $x$, denoted $\tau(x)$, is defined by %Let $\Yobs_i = Y_i(W_i)$ be the observed outcome. 
+
+$$\tau(x) = \E[Y(1) - Y(0) | X = x].$$
+
+Estimating $\tau$ is impossible without making further assumptions on the distribution of $(Y_i(0), Y_i(1), X_i, W_i)$. In particular, we need to place two assumptions on our data. 
+
+
+%To avoid this problem, we assume that the treatment assignment is independent of the potential outcomes given the observed feature vector. Nevertheless, we can make CATE estimation tractable with two key assumptions.  .
+
+%The main task is to use the observed data $D = (\Yobs_i, X_i, W_i)_{i=1}^N$ to estimate the Conditional Average Treatment Effect (CATE) for a new unit with feature vector $x$, 
+%$$\tau(x) = \E[Y(1) - Y(0) | X = x].$$
+%This is a difficult problem, and without making further assumptions on the distribution of $(Y_i(0), Y_i(1), X_i, W_i)$ it is not possible to estimate it. 
+%For example, if there was some unobserved confounder, a random variable which influences both the probability of treatment and the potential outcomes, then the CATE is unidentifiable. To avoid this problem, we assume that the treatment assignment is independent of the potential outcomes given the observed feature vector.
+\begin{assumption}[Strong Ignorability, \cite{rosenbaum1983central}] \label{assumption:StrongIgnorability}
+$$
+    (Y_i(1), Y_i(0)) \perp W |X.     
+$$
+\end{assumption}
+\begin{assumption}[Overlap] \label{assumption:Overlap}
+Define the propensity score of $x$ as, 
+$$e(x) \define \P(W = 1 | X = x).$$ 
+Then there exists constant $0< \emin, ~\emax < 1$ such that for all $x \in \mbox{Support}(X)$, 
+$$0 < \emin < e(x) < \emax < 1.$$
+In words, $e(x)$ is bounded away from 0 and 1.
+\end{assumption}
+Assumption \ref{assumption:StrongIgnorability} ensures that there is no unobserved confounder, a random variable which influences both the probability of treatment and the potential outcomes, which would make the CATE unidentifiable. The assumption is particularly strong and difficult to check in applications. Meanwhile, Assumption \ref{assumption:Overlap} rectifies the situation wherein a certain part of the population is always treated or always in the control group. If, for example, all women were in the control group, one cannot identify the treatment effect for women. Though both assumptions are strong, they are nevertheless satisfied by design in randomized controlled trials. While the estimators we discuss would be sensible in observational studies when the assumptions are satisfied, we warn practitioners to be cautious in such studies, especially when the number of covariates is large \citep{overlapAlex}.
+
+Given these two assumptions, there exist many valid CATE estimators. The crux of these methods is to estimate two quantities: 
+the control response function, 
+$$
+\mu_0(x) = \E[Y(0)|X=x],
+$$
+and the treatment response function,
+$$
+\mu_1(x) = \E[Y(1)|X=x].
+$$
+If we denote our learned estimates as $\hat\mu_0(x)$ and $\hat\mu_1(x)$, then we can form the CATE estimate as the difference between the two
+$$
+\hat \tau(x) = \hat \mu_1(x) - \hat \mu_0(x).
+$$
+The astute reader may be wondering why we don't simply estimate $\mu_0$ and $\mu_1$ with our favorite function approximation algorithm at this point and then all go home. After all, we have access to the ground truths $\mu_0$ and $\mu_1$ and the corresponding inputs $x$. In fact, it is commonplace to do exactly that. When people directly estimate $\mu_0$ and $\mu_1$ with their favorite model, we call the procedure a T-learner \citep{kunzel2017meta}. Common choices of models include linear models and random forests, though neural networks have recently been considered \citep{nie2017learning}. 
+
+While it may seem like we've triumphed, the T-learner does have some drawbacks \citep{athey2015machine}. It is usually an inefficient estimator. For example, it will often perform poorly when one can borrow information across the treatment conditions. To overcome these deficiencies, a variety of alternative learners have been suggested. Closely related to the T-learner is the idea of estimating the outcome using all of the features and the treatment indicator, without giving the treatment indicator a
+special role \citep{hill2011bayesian}. The predicted CATE for an individual unit is then the difference between the predicted values when the treatment assignment indicator is changed from control to treatment, with all other features held fixed. This is called the S-learner, because it uses a single prediction model.
+
+In this paper, we suggest another new learner called the $\mathbf{Y}$\textbf{-learner} (See Figure \ref{fig:ylearner}). This learner has been engineered from the ground up to take advantage of some of the unique capabilities of neural networks. See the appendix for a full description of the Y-learner, and additional learners found in the literature. Below, we will use these learners as base algorithms for transfer learning. That is to say, we will use the knowledge gained by training one learner on one experiment to help a new learner with a new underlying experiment train faster with less data. 
+
+\FloatBarrier
+\begin{figure}
+	\centering
+	\includegraphics[width=0.5\linewidth]{figures/y_learner}
+    \caption{Y-learner with Neural Networks. One of many advanced methods for CATE estimation. See the appendix Section \ref{section:XvsY} and \ref{app:transfer.algos} for a more detailed overview.}
+    \label{fig:ylearner}
+\end{figure}
+
+%We follow \cite{kunzel2017meta} to categorize CATE estimators into CATE meta-learners. A CATE meta-learner decomposes the problem of estimating the CATE into several sub-regression problems, which can be solved using any regression estimator.\footnote{Note that the term "CATE meta learner" is different from the term "meta learners" used for neural networks, which usually describe transfer learning strategies for neural networks.
+
+
+%The simplest example of a CATE meta-learner is the T-learner, which decomposes the CATE estimation procedure into the two separate sub-regression problems: estimating the control response function, $\mu_0(x) = \E[Y(0)|X=x]$, and the treatment response function, $\mu_1(x) = \E[Y(1)|X=x]$. The CATE is then estimated by subtracting the two estimates $\hat \tau(x) = \hat \mu_1(x) - \hat \mu_0(x)$.
+%Note that $\mu_0$ and $\mu_1$ can be estimated using any regression method. For example, the following base learners have been used in the literature:  penalized linear models \citep{foster2013subgroup}, Random Forests (RF) \citep{athey2015machine}, and Bayesian Additive Regression Trees (BART) \citep{hill2011bayesian,green2012modeling}. 
+%We implemented the T-learner with RF and Neural Networks (NN) as base learners, and we refer to these learners as T-RF and T-NN. 
+
+%Similar to the T-learner, \cite{kunzel2017meta} identify four more meta-learners: the X, S, F, and the U learners. We evaluate all of these CATE meta-learners with neural networks and random forests as base learners. We use the notation X-NN to refer to the X-learner (which is formally defined below) that uses NN as the base learner. Therefore, we create a large pool of benchmark methods, which achieve state-of-the-art performance. 
+
+%and to demonstrate that neural networks often outperform estimators which are based on trees such as RF and BART. We do not believe that neural networks generally perform better than RF, but in our evaluation section, we find that they work much better considering the characteristics of our datasets.
+
+%R-NN, is out for now. We need to put this in later.
+%Not all CATE estimators can be classified as meta-learners. 
+%To our knowledge, the only previous CATE estimator using NN is \cite{nie2017learning}, and we refer to it as R-NN. It is similar to meta-learners in that it decomposes the problem into sub-problems which can be treated independently. Specifically, in a first step it estimates the propensity score and the mean outcome function, $\mu(x) = \E[\Yobs | X = x]$, and in a second step, it estimates the CATE by minimizing a new loss function which depends on the estimate of the propensity score and the estimate of the mean outcome function. We include it as a benchmark method.
+
+%Neural Networks have proven to be extremely successful on many data sets, and as we will see in Section \ref{section:Simulation}, they perform well in our examples. Using them as base learners enables us to create very powerful CATE estimators which perform favorably compared to other baseline estimators, which can even handle images.
+%Most importantly, neural networks enable us to borrow strength across different datasets using transfer learning.
+
+
+
+%\subsection{Transfer Learning Background}
+%The key idea of transfer learning is that new experiments should transfer knowledge from past experiences and external datasets. Perhaps the most straightforward example of successful transfer comes from computer vision. Here, large neural networks are trained to label the content of an image. Subsequently, the weights from this network are used to initialize a new neural network for a new task. 
+
+
+%Suppose that a deep neural network $\pi_\theta(I_j) = \ell_j$ is trained to take an input image $I_j$ and output a label $\ell_j$ corresponding to the object depicted in the image. To classify thousands of images correctly, $\pi_\theta$ must learn to encode sufficiently general and useful features with $\pi_\theta$. In fact, we often find that these features are sufficiently general and useful that they are helpful.    
+
+\section{Transfer Learning}
+
+
+\subsection{Background}
+The key idea in transfer learning is that new experiments should transfer insights from previous experiments rather than starting learning anew. The most straightforward example of transfer comes from computer vision \citep{finetune0, finetune2, finetune1, donahu}. %%PA.5.17: Donahue et al is a great example of transfer in NNs, but there is a lot of transfer work preceding it; It'd be good to first discuss in a couple sentences how there is a long history of research in transfer, cite a bunch of the oldest papers (Donahue et al could provide the references for this), and then say that our work builds most directly on / is most directly inspired by Donahue et al ...
+Here, it is standard practice to train a neural network $\pi_\theta$ for one task and then use the trained network weights $\theta$ as initialization for a new task. The hope is that some basic low-level features of a vision system should be quite general and reusable. Starting optimization from networks that have already learned these general features should be faster than starting from scratch. 
+
+Despite its promise, fine-tuning often fails to produce initializations that are uniformly good for solving new tasks \citep{maml}. One potent fix to this problem is a class of algorithms that seek to optimize meta-learning initialization weights \citep{maml, reptile}. In these algorithms, one meta-optimizes over many experiments to obtain neural network weights that can quickly find solutions to new experiments. We will use the Reptile algorithm to learn initialization weights for CATE estimation.   
+
+
+%A recently proposed solution to this problem is to meta learn initialization weights that can optimize the loss function much more quickly than random initialization \cite{maml, reptile}. 
+
+
+%By good initializers, we mean that starting from these weights, one can train neural networks $\pi_{\theta_0}$ and $\pi_{\theta_1}$ to estimate $\mu^i_0$ and $\mu^i_1$ for any arbitrary experiment much faster and with less data than starting from random initializations 
+
+
+%Luckily, a large body of transfer learning literature exists to rectify these issues \cite{tonsofstuff}. In this paper, we adapt two such strategies: joint-training and reptile \cite{reptile}. These methods were chosen because they are relatively simple, flexible, and delivered good results. 
+
+
+
+%It may be the case that $\theta^i_0 \cap \theta^i_1 = \emptyset$. However, they may also share layers as in the Y-Learner.
+
+%For example, a vision system that is good at labeling animals in images should also learn features that are useful for segmenting parts of a photograph
+
+%Sometimes, a slight modification of this idea is used wherein only some of the network weights will be used as `base layers' that feed their features into new untrained task-specific layers. In both cases, t
+
+
+%More concretely, let $\theta = \left[\theta^1, \theta^2, \dots, \theta^N \right]$, with $\theta^i$ being the weights of the $i$th neural network layer. Then, a new task considers a mixed set of weights $\left[ \theta^1, \theta_2, \phi^1, \phi^2, \dots, \phi^M \right]$, where $\theta^i$ are transfered from a previous task and $\phi^i$ are freshly initialized for the current task (See figure??)
+
+
+%manage to succeed when more naive methods fail because they explicitly optimize for finding a good initialization $\theta$ that can solve new tasks more efficiently than random initializations.
+
+
+%Indeed, we found that in practice fine-tuning offered a minimal performance boost over vanilla estimators whereas joint-training and SF Reptile offered more substaintial gains. 
+
+%The term joint-training is sometimes underspecified in the literature. In this paper, joint-training will be defined as follows. Suppose there exist $k$ tasks you would like to solve, each sharing a common input space. In joint-training, you train a neural network with base features $[\theta_1, \dots, \theta_i]$ and $k$ branches $[\theta_1, \dots, \theta_i, \phi_1^1, \dots, \phi_M^1],\dots, [\theta_1, \dots, \theta_i, \phi_1^k, \dots, \phi_M^k]$. Each branch is simultaneously trained and the gradients for the shared base layers are averaged. This interpretation is shown in figure ??. Meanwhile, in Reptile only one set of weights $[\theta_1, \dots , \theta_N]$ exists. There exist no task-specific weights. Instead, we train one set of weights $\theta$ to act as a good initialization for solving new tasks. By a good initialization, we mean that task $k+1$ can be solved with an order of magnitude less data when initialized from $\theta$ instead of a standard random initialization. Note that this is similar in spirit to the fine-tuning discussed above. However, in Reptile, we also optimize over the objective of $\theta$ being a good initialization by using a type of shrinkage optimizer. See our discussion of SF Reptile below for further details. Finally, a variant of MAML called first-order MAML is quite similar to reptile. Due to these similarities, we omit any further MAML analysis from this work.  
+
+\subsection{Transfer Learning CATE Estimators}
+
+%We are interested in transferring features from one average treatment effect estimate to another. Of the six methods discussed below, fine-tuning, frozen-features, multi-head, and joint training are relatively standard ideas in the field of neural networks but hitherto unexplored in the context of CATE estimation. Likewise, MLIW methods have been studied in the context of meta-reinforcement learning and supervised learning but no such algorithms exist for CATE estimation.  
+
+%Assuming there is mutual information between the experiments, then positive transfer should enable faster learning with less data
+
+%. Learning meta-regression weights that make good initializers has been studied in the context of 
+
+%Using one set of meta-regression weights for CATE estimation is an entirely novel concept, as all previous CATE estimators, we are aware of use at least some distinct weights for estimating $\mu_0$ and $\mu_1$. 
+
+%Though the discussion below typically assumes transfer between only two experiments; this is for ease of exposition. The ideas presented easily generalizes to transfer between an arbitrary number of experiments. In the next section, the problems we consider all involve transfer between $10-30$ experiments. Furthermore, in the case of the Y and X learners, $\pi_{\theta_i}$ requires computation from intermediate networks which must also be trained. For simplicity and so the discussion remains largely agnostic towards one's choice of CATE estimator, we omit those intermediate steps from the discussion below. We refer the reader to Appendix A for step-by-step algorithms for transfer learning with the T and Y learners. An even more granular level of detail is available in the released code. 
+
+In this section, we consider a scenario wherein one has access to many related causal inference experiments. Across all experiments, the input space $X$ is the same. Let $i$ index an experiment. Each experiment has its own distinct outcome when treatment is received, $\mu^i_1(x)$, and when no treatment is received, $\mu^i_0(x)$. Together, these quantities define the CATE $\tau^i = \mu^i_1 - \mu^i_0$, which we want to estimate. We are usually interested in estimating the CATE by using $X$ to predict $\mu_0^i$ and $\mu_1^i$. However, in transfer learning, the hope is that we can transfer knowledge between experiments such that being able to predict $\mu_0^i, \mu_1^i,$ and $\tau^i$ from experiment $i$ accurately will help us predict $\mu_0^j, \mu_1^j$, and $\tau^j$ from experiment $j$. 
+
+Below, let $\pi_{\theta}$ be a generic expression for a neural network parameterized by $\theta$. Sometimes, parameters will have a subscript indicating if their neural network predicts treatment or control (0 for control and 1 for treatment). Parameters may also have a superscript indicating the experiment number whose outcome is being predicted. For example, $\pi_{\theta_0^2}(x)$ predicts $\mu^2_0(x)$, the outcome under control for Experiment $2$. We will sometimes drop the superscript $i$ when the meaning is clear. All of the transfer algorithms described here are presented in detail in Appendix \ref{app:transfer.algos}.
+
+\textbf{Warm start (also known as fine-tuning):} Experiment $0$ predicts $\pi_{\theta^0_0}(x) = \hat{\mu}^0_0(x)$ and $\pi_{\theta^0_1}(x) = \hat{\mu}^0_1(x)$ to form the CATE estimator $\hat{\tau} = \hat{\mu}^0_1(x) - \hat{\mu}^1_0(x)$. Suppose $\theta^0_0$, $\theta^0_1$ are fully trained and produce a good CATE estimate. For experiment 1, the input space $X$ is identical to the input space for experiment $0$, but the outcomes $\mu^1_0(x)$ and $\mu^1_1(x)$ are different. %%PA.5.17: I am confused, isn't for experiment 1 the output space described by D instead of mu?  I might be wrong, but either way, I think a lot of people who haven't studied CATE estimation before would be lost here, requires clarification...  maybe somewhere explicitly define what it means to be experiment 0 and what it means to be experiment 1?  then later explain each version; also, especially b/c it's unfamiliar terminology, it becomes hard when above things are called two step procedure, but here it's seemingly a two experiment procedure; consistency in terminology helps a lot when reading new material [or maybe these aren't referring to same two things, not sure, lost on that...]
+However, we suspect the underlying data representations learned by $\pi_{\theta^0_0}$ and $\pi_{\theta^0_1}$ are still useful. Hence, rather than randomly initialize $\theta_0^1$ and $\theta_1^1$ for experiment 1, we set $\theta_0^1 = \theta_0^0$ and $\theta_1^1 = \theta_1^0$. We then train $\pi_{\theta_0^1}(x) = \hat{\mu}^1_0(x)$ and $\pi_{\theta_1^1}(x) = \hat{\mu}^1_1(x)$. See Figure \ref{fig:warm-start} and Algorithm \ref{alg:warm-t} in the appendix.
+
+%\begin{figure}
+%    \label{fig:warm-start}
+%    \begin{center}
+%            \includegraphics[scale=0.3]{figures/Warm_Start}
+%        \caption{Warm Start for the T-learner}
+%    \end{center}
+%\end{figure}
+
+\begin{figure}[t]
+\begin{center}
+\includegraphics[width = 1\textwidth]{figures/all_methods1}
+\end{center}
+%\begin{center}
+%\subfloat{\includegraphics[width=0.30\textwidth]{figures/Warm_Start}}\hfill
+%\subfloat{\includegraphics[width=0.30\textwidth]{figures/Frozen_Features}} \hfill
+%\subfloat{\includegraphics[width=0.30\textwidth]{figures/Warm_Start}}
+%\end{center}
+\caption{Warm start, frozen-features, and multi-head methods for CATE transfer learning. For these figures, we use the T-learner as the base learner for simplicity. All three methods attempt to reuse neural network features from previous experiments. See the appendix for an illustration of joint-training.}
+\label{fig:warm-start}
+\end{figure} 
+
+%Instead of initializing $\phi^1, \phi^2$ randomly, we set $\phi^0 = \theta^0$ and $\phi^1 = \theta^1$. The hope is that  
+
+\textbf{Frozen-features:} Begin by training $\pi_{\theta^0_0}$ and $\pi_{\theta^0_1}$ to produce good CATE estimates for experiment $0$. Assuming $\theta^0_0$ and $\theta^0_1$ have more than $k$ layers, let $\gamma_0$ be the parameters corresponding to the first $k$ layers of $\theta^0_0$. Define $\gamma_1$ analogously. Since we think the features encoded by $\pi_{\gamma_i} (X)$ would make a more informative input than the raw features $X$, we want to use those features as a transformed input space for $\pi_{\theta_0^1}$ and $\pi_{\theta_1^1}$. To wit, set $z_0 =\pi_{\gamma_0}(x)$ and $z_1 = \pi_{\gamma_1}(x)$. Then form the estimates $\pi_{\theta^1_0} (z_0) = \hat{\mu}^1_0$ and $\pi_{\theta_1^1}(z_1) = \hat{\mu}^1_1$. During training of experiment $1$, we only backpropagate through $\theta_0^1$, $\theta_1^1$ and not through the features we borrowed from $\theta_0^0$ and $\theta_1^0$. See Figure \ref{fig:warm-start} and Algorithm \ref{alg:frozen-t} in the appendix.
+
+%Let superscripts represent neural network weights corresponding to a specific network layer. For example, $\theta_0^0$ is the first layer of neural network $\pi_{\theta_0}$. Supposing $\theta_0$ and $\theta_1$ both have $k>2$ layers,
+%For experiment 0, let $\theta_0 = \left[\theta_0^0, \theta_0^1, \dots , \theta_0^N \right]$ and $\theta_1 = \left[\theta_1^0, \theta_1^1, \dots , \theta_1^N \right]$ to estimate $\mu^0_0$ and $\mu^0_1$
+%For experiment 1, we consider the hybrid network parameterized by $\omega_0 = \left[\theta_0^0, \theta_0^1, \phi_0^0, \phi_0^1, \dots , \phi_0^N \right]$ and likewise for $\omega_1$. Since we think the features learned by $\theta_i$ are good, we choose to not bakpropgate through $\theta_i^j$ during training of $\omega_i$. This is equivalent to transforming the input space of $\pi_{\phi_i}$ from $X$ to $\pi_\gamma(X)$ with $\gamma = \left[ \theta_i^0, \theta_i^1 \right]$. Put another way, $\pi_\phi$ now receives as input not the raw features from $X$ but the features $\pi_\gamma(X)$ that were trained under experiment $0$. See figure ??.
+
+\textbf{Multi-head:} In this setup, all experiments share base layers that are followed by experiment-specific layers. The intuition is that the base layers should learn general features, and the experiment-specific layers should transform those features into estimates of $\mu_j^i$. More concretely, let $\gamma_0$ and $\gamma_1$ be shared base layers. Set $z_0 = \pi_{\gamma_0}(x_0)$ and $z_1 = \pi_{\gamma_1}(x_1)$. The base layers are followed by experiment-specific layers $\phi_0^i$ and $\phi_1^i$. Let $\theta_j^i = \left[\gamma_j, \phi_j^i \right]$. Then $\pi_{\theta_j^i}(x) = \pi_{\phi_j^i} \left(\pi_{\gamma_j}(x) \right) = \pi_{\phi_j^i} (z_j) = \hat{\mu}_j^i$. Training alternates between experiments: each $\theta_0^i$ and $\theta_1^i$ is trained for some small number of iterations, and then the experiment and head being trained are switched. Every head is usually trained several times. See Figure \ref{fig:warm-start} Algorithm \ref{alg:multi-t} in the appendix.
+
+
+%Let $z_i = \pi_{\gamma_i}(x_i)$. Then we have $\hat{\mu}_0 = \pi_{\omega_0} (X)$. Training alternates between experiments. Each head is trained for some small number of iterations and then the head being trained switches. Each head is usually trained several times. See figure ???.
+%$\left[\gamma_i^0, \gamma_i^1, \dots, \gamma_i^k \right]$ $\left[\phi_i^0, \dots, \phi_i^N \right]$
+
+\textbf{Joint training:} All predictions share base layers $\theta$. From these base layers, there are two heads per-experiment $i$: one to predict $\mu_0^i$ and one to predict $\mu_1^i$. Every head and the base features are trained simultaneously by optimizing with respect to the loss function $\mathcal{L} = \sum_i  \| \left(\hat{\mu}_0^i - \mu_0^i \right) \| + \| \left(\hat{\mu}_1^i - \mu_1^i \right) \|$ and minimizing over all weights. This will encourage the base layers to learn generally applicable features and the heads to learn features specific to predicting a single $\mu_j^i$. See Figure Algorithm \ref{alg:joint-training}. 
+
+
+%The setup is somewhat similar to multi-head with some key differences. First, training no longer alternates. Instead, all experiments are optimized simultaneously. This is accomplished by adding together the loss terms for each experiment $\mathcal{L} = \sum_i  \| \left(\hat{\mu}_0^i - \mu_0^i \right) \| + \| \left(\hat{\mu}_1^i - \mu_1^i \right) \|$ and minimizing over all weights. Second, all $\mu_0^i$ and $\mu_1^i$ are computed directly as in the T-Learner. There are no intermediate calculations as in the X and Y learners. This is in contrast to multi-head, wherein the X and Y learners are permissible and simply receive multiple heads for all required intermediate calculations. Finally, estimates of $\mu_0^i$ and $\mu_1^i$ share only one set of base layers. In multi-head, networks that estimate $\mu_0^i$ and $\mu_1^i$ have distinct base layers.  
+
+%Joint-training is logically equivalent to simultaneously training one T-learners per experiment under the condition that all such T-learners share common base layers which feed into their own independent layers. See algorithm 2 in Appendix 1.1.   
+
+\textbf{SF Reptile transfer for CATE estimators:} Similarly to fine-tuning, we no longer provide each experiment with its own weights. Instead, we use data from all experiments to learn weights $\theta_0$ and $\theta_1$, which are good initializers. By good initializers, we mean that starting from $\theta_0$ and $\theta_1$, one can train neural networks $\pi_{\theta_0}$ and $\pi_{\theta_1}$ to estimate $\mu^i_0$ and $\mu^i_1$ for any arbitrary experiment much faster and with less data than starting from random initializations. To learn these good initializations, we use a transfer learning technique called Reptile. The idea is to perform experiment-specific inner updates $U(\theta)$ and then aggregate them into outer updates of the form $\theta_{\text{new}} = \mathbf{\epsilon} \cdot U(\theta) + (1- \mathbf{\epsilon}) \cdot \theta$. In this paper, we consider a slight variation of Reptile. In standard Reptile, $\epsilon$ is either a scalar or correlated to per-parameter weights furnished via SGD. For our problem, we would like to encourage our network layers to learn at different rates. The hope is that the lower layers can learn more general, slowly-changing features like in the frozen features method, and the higher layers can learn comparatively faster features that more quickly adapt to new tasks after ingesting the stable lower-level features. To accomplish this, we take the path of least resistance and make $\epsilon$ a vector which assigns  a different learning rate to each neural network layer. Because our intuition involves slow and fast weights, we will refer to this modification in this paper as SF Reptile: Slow Fast Reptile. Though this change is seemingly small, we found it boosted performance on our problems. See Figure \ref{fig:joint_training} and Algorithm \ref{alg:sf-reptile-t}.
+
+\textbf{MLRW transfer for CATE estimation:} In this method, there exists one single set of weights $\theta$. There are no experiment-specific weights. Furthermore, we do not use separate networks to estimate $\mu_0$ and $\mu_1$. Instead, $\pi_\theta$ is trained to estimate one $\mu_j^i$ at a time. We train $\theta$ with SF Reptile so that in the future $\pi_\theta$ requires minimal samples to fit $\mu_j^i$ from any experiment. To actually form the CATE estimate, we use a small number of training samples to fit $\pi_\theta$ to $\mu_0^i$ and then a small number of training samples to fit $\pi_\theta$ to $\mu_1^i$. We call $\theta$ \textbf{meta-learned regression weights (MLRW)} because they are meta-learned over many experiments to quickly regress onto any $\mu_j^i$. The full MLRW algorithm is presented as Algorithm \ref{alg:sf-reptile-meta-regression}. 
+
+
+
+
+

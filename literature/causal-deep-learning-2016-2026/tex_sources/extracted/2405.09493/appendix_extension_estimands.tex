@@ -1,0 +1,83 @@
+\section{Extending C-Learner to Other Estimands}\label{sec:extension}
+\label{sec:other_estimands}
+
+
+
+
+We briefly sketch how the C-Learner can be extended to other estimands, beyond just the ATE with $Y(0)=0$ as in \cref{sec:ate}. 
+Let $Z\defeq (W,Y)\sim P$ and let the target functional  $\psi(P)$ be continuous and linear in $\mu(W)=P(Y\mid W)$, the conditional distribution of $Y$ given $W$. For example, we let $W = (X,A)$ in the ATE setting. %
+For other functionals 
+that admit a distributional Taylor expansion with canonical gradient with respect to $P_{Y,W|X}$, $\varphi(Z)$, then we can similarly
+formulate the C-Learner again as 
+learning the best $\what\mu$, subject to the constraint that the estimate of the first-order error term is 0. 
+
+When $\psi(P)$ is continuous and linear in $\mu$,
+by the Riesz representation theorem, 
+if $\psi(P)$ is $L_2(P)$-continuous in $\mu$ (see for example Equation (4.4) from \cite{Newey94}),
+then 
+there exists $a\in L_2(P)$ such that for all $\mu\in L_2(P)$, 
+$$
+\psi(P) = P[a(W)\mu(W)].
+$$
+This $a(\cdot)$ is commonly referred to as the Riesz representer \citep{chernozhukov2021automatic}, and the corresponding random variable $a(W)$ can be referred to as the clever covariate \citep{VanDerLaanRo11}. These linear functionals satisfy the following mixed bias property: 
+$$ 
+\psi(\what P) - \psi(P) + P[\what a(W)(Y-\what \mu(W))] = P[(\what a(W) - a(W))(\what \mu(W) - \mu(W))],
+$$
+where the first-order term in the distributional Taylor expansion as discussed
+in \cref{sec:optimality_background} 
+is given by $P[\what a(W)(Y-\what\mu(W))]$. We refer the reader to \cite{chernozhukov2021automatic} or Proposition 4 of \cite{Newey94} for a discussion about this mixed bias property. 
+Therefore, the C-Learner can be formulated more generally as
+\begin{equation*}\label{eq:c-learner_general}
+\what \mu^C\in\argmin_{\wt \mu\in\mathcal F} 
+\left\{ P_{\rm train}[\ell(W,Y;\wt \mu)] : P_{\rm eval} [\what a(W)(Y-\wt \mu(W))]=0
+\right\},
+\end{equation*}
+where $\ell$ is an appropriate loss function for the outcome model.  
+
+Below, we provide several specific examples demonstrating how C-Learner could be adapted to various target functionals when $W = (X,A)$. 
+\paragraph{Average Treatment Effect}
+We have seen the mean missing outcome setting~\eqref{eq:c-learner} for estimating the target functional $\psi(P) = P[\mu(X)]$ where $\mu(x):=P[Y\mid A=1,X=x]$. The loss function is $\ell(W,Y;\what\mu) = A(Y-\what\mu(X))^2$. The Riesz representer is $a(X,A) = A/\pi(X)$.
+
+If we no longer assume that $Y(0)=0$ and we are interested in estimating the standard average treatment effect 
+$$
+\psi(P) = P[Y(1)-Y(0)]=P\left[P[Y\mid A=1, X]\right]-P\left[P[Y\mid A=0, X]\right],
+$$ then the Riesz representer, constrained outcome model, and estimator are, respectively,
+$$a(W) = \frac{A}{\pi(X)} - \frac{1-A}{1-\pi(X)},$$
+\begin{equation*}
+\what \mu^C\in\argmin_{\wt \mu\in\mathcal F} 
+\left\{ P_{\rm train}[\ell(X,A,Y;\wt \mu)] : P_{\rm eval} \left[\left(\frac{A}{\what\pi(X)} - \frac{1-A}{1-\what\pi(X)}\right)(Y-\wt \mu(X,A))
+\right]=0
+\right\},
+\end{equation*}
+$$\what\psi_{\textrm {C-Learner}} := P_{\rm eval}
+\left[\what\mu^C(X,1)-\what\mu^C(X,0)\right]
+.$$
+
+
+\paragraph{Average Policy Effect}
+For off-policy evaluation, the goal is to optimize over assignment policies $c(X)\in\{0,1\}$ to maximize the expected reward under the policy, using observational data collected under an unknown policy $\pi(x):=P(A=1\mid X)$. Assume the usual causal inference assumptions (SUTVA, ignorability, and overlap in \cref{sec:ate}). Fixing $c(X)$, the average policy effect is
+\begin{align*}
+    \psi(P) &= P[c(X)Y(1) + (1-c(X))Y(0)] \\
+    &= P[c(X)P[Y(1)\mid X] + (1-c(X))P[Y(0)\mid X]] \\
+    &= P[c(X)P[Y\mid A=1, X]] + (1-c(X))P[Y\mid A=0, X]] %
+\end{align*}
+Here, the Riesz representer, constrained outcome model, and estimator are, respectively,
+$$
+a(X,A) = c(X)\frac{A}{\pi(X)}  + (1-c(X))\frac{1-A}{1-\pi(X)},
+$$
+\begin{equation*}
+\what \mu^C\in\argmin_{\wt \mu\in\mathcal F} 
+\left\{ P_{\rm train}[\ell(X,A,Y;\wt \mu)] : P_{\rm eval}  \left(c(X)\frac{A}{\pi(X)}  + (1-c(X))\frac{1-A}{1-\pi(X)} \right)(Y-\wt \mu(X,A))=0
+\right\},
+\end{equation*}
+$$\what\psi_{\textrm {C-Learner}} := P_{\rm eval}
+\left[c(X)\what\mu^C(X,1)+(1-c(X))\what\mu^C(X,0)\right]
+.$$
+
+
+
+
+
+
+
+

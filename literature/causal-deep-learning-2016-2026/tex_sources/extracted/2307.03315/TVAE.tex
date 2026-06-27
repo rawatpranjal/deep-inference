@@ -1,0 +1,137 @@
+
+
+\section{TVAE}
+
+
+Our proposed TVAE framework builds upon a VAE architecture to transform the high-dimensional inputs into a lower-dimensional latent representation. A VAE jointly trains a decoder network (parameterized with $\theta$) with an encoder (parameterized with $\phi$) to recover the original inputs $X$ from the latent encoding $Z$ while regularizing the learned latent space to be close to the prior distribution. For a vanilla VAE, the loss function of training the encoder-decoder network can be written as:
+\begin{equation}
+\label{eq:VAE}
+    \begin{split}
+    l_{\text{VAE}}(\phi,\theta) &= \sum_{X_i \in \mathcal{X}} -\mathbb{E}_{Z_i\sim q_{\phi}(Z_i|X_i) } \Bigl[ \log p_{\theta} (X_i|Z_i)\Bigr]  \\
+    &+ KL\Bigl(q_{\phi}(Z|X) || p(Z)\Bigr) 
+    \end{split}
+\end{equation}
+where $p_{\phi}(Z|X)$ and $q_{\theta}(X|Z)$ are the learned approximation of the posterior and likelihood distributions, and $p(Z)$ is the prior assumption. This loss function consists of two parts: a reconstruction term and a Kullback–Leibler (KL) divergence regularizer. The former loss maximizes the recovery of the inputs, hence the latent encoding must be a  truthful representation of patients. The latter helps learn an approximation to the true underlying characteristics of the patient data and produce a compact, smooth and meaningful latent space, which can make the learned latent representations easier to use for downstream tasks such as clustering and data generation~\cite{xuebingkdd}.   
+
+In our proposed TVAE, we design a customized encoder, Treatment Joint Inference (Section \ref{sec:TI}), to simultaneously make inferences on both treatment assignment decision and treatment effect (by predicting both factual and counterfactual outcomes).
+We further propose two other schemes for TVAE, Distribution Balancing (Section \ref{sec:DB}) and Label Balancing (Section \ref{sec:LB}), to tackle the challenges of selection bias in treatment effect estimation and label imbalance in ECMO assignment prediction, respectively.
+Figure 1 shows an overview of our proposed TVAE framework.
+
+\subsection{Treatment Joint Inference}
+\label{sec:TI}
+Unlike the previous ITE approaches~\cite{curth2021st,shalit2017cfrnet,johansson2016bnn,alaa2017dcnpd,shi2019adapting}, we aim to simultaneously make inferences on treatment assignment and treatment effect (by predicting both factual and counterfactual outcomes) based on a compact neural structure without any auxiliary predictor network. In TVAE, this is achieved by assigning specific latent dimensions in the latent representation $Z$ as the estimate of the treatment assignment $W$, and the observed treatment outcome $Y(1)$ or control outcome $Y(0)$.
+Intuitively, irrelevant to the actual assignment (Assumption 1), both the factual and counterfactual treatment outcomes are true reflection of the patient physical status, and therefore can be naturally considered as part of the patient representation $Z$.
+
+Given the latent representation produced by the variational encoder, $Z=(Z^1, Z^2, ..., Z^d)\in\mathbb{R}^d$, let the first three dimensions, $Z^1, Z^2$ and $Z^3$, be encoded to estimate the treatment assginment (i.e., $Z^1=\hat{W}$), treatment outcome (i.e., $Z^2=\hat{Y}(1)$), and control outcome (i.e., $Z^3=\hat{Y}(0)$), respectively
+. Then the estimated assignment $\hat{W}=Z^1$ and the factual outcome $\hat{Y}(W)=Z^{3-W}$ (where $W\in\{0,1\}$) is supervised by minimizing the following loss:
+\begin{align}
+\label{eq:TI}
+    l_{\text{TI}}(\phi,\theta) = \sum_{X_i \in \mathcal{X}} -\mathbb{E}_{Z_i^1, Z_i^{3-W}\sim q_{\phi}} \Bigl[
+    \log p(W_i,Y_i(W_i)|Z_i^1, Z_i^{3-W})\Bigr]
+\end{align}
+where $W_i$ and $Y(W_i)$ are the true treatment assignment and factual outcome.
+For binary treatment outcomes, such as survival/death for ECMO data, cross entropy is used to implement Eq. (\ref{eq:TI}). 
+For continuous treatment outcomes, such as the semi-simulated IHDP dataset (Section 5.4), mean square error is used.
+
+
+The joint inference encoding allows us to make use of the label information (factual outcomes and treatment assignment) to optimize the encoder.
+Similar idea of incorporating supervised information into VAE can be found in prior work such as conditional VAE (CVAE)~\cite{NIPS2015_8d55a249} and CEVAE~\cite{louizos2017cevae}.
+However, they all rely on an auxiliary network for label prediction. Moreover, as part of the latent representation, the label inference is also directly regularized by the unsupervised data reconstruction.
+
+% while eliminating the auxillary networks in other VAE-based treatment effect models \cite{louizos2017cevae, wu2021intact} (see Figure 1). 
+% By incorporating the predictions into the clustering and reconstruction process as part of the latent encoding, all predictions are regularized towards truthful representations.  
+% As joint encoding eliminates the auxiliary networks, this simplifies the model training to the same set of neural network parameters as a vanilla VAE as shown in Eq.1.
+
+% With the presence of the decoder of the VAE structure, this inference of either treatment assignment or factual outcome can be optimized through a supervised learning process, by jointly optimizing $l_{VAE}$ in Eq. (\ref{eq:VAE}) and $l_{TI}$ in Eq. (\ref{eq:TI}). 
+
+
+% Then for each training sample $X_i$, its encoded latent positions in $Z^{W_i}, Z^2$ are regulated by the factual outcome $Y(W_i)$ and actual treatment assignment $W_i$, while the distribution of counterfactual prediction $Y(1-W_i)$ is regulated by the loss $l_{\text{VAE}}(\phi,\theta)$ in two ways: 1) in order to minimize reconstruction error, the encoded position $Z^{1-W_i}$ (prediction for $Y(1-W_i)$)  must be a truthful representation of $X$. Although the prediction of the counterfactual outcome cannot be explicitly supervised with labels, it can be regularized by learning to reconstruct the patient data. Optimizing for more accurate patient reconstruction results in better learned latent representation, thus more accurate counterfactual prediction; 2) the clustering effects of VAE architecture forces the distribution of counterfactual predictions in one group to match the supervised distributions of factual outcomes in the other group (semi-supervision).
+
+Due to the absence of counterfactual ground truth $Y(1-W)$, it's impossible to directly learn the encoded dimension $Z^{3-(1-W)}$ in a supervised fashion as in Eq. (\ref{eq:TI}) above. However, with our TVAE,
+the estimate of counterfactual outcomes can be optimized through a semi-supervised process by jointly optimizing $l_{\text{VAE}}(\phi,\theta)$ in Eq. (\ref{eq:VAE}) and $l_{\text{TI}}(\phi,\theta)$ in Eq. (\ref{eq:TI}). 
+On one hand, the learning of $\hat{Y}(1-W)$ is regularized by the patient reconstruction process in $l_{\text{VAE}}(\phi,\theta)$. To minimize reconstruction error, $Z^{3-(1-W)}$  must be a truthful representation of $X$.
+On the other hand, the semi-supervised setting of TVAE helps the latent encoding \textit{"share"} outcome information across similar patients.
+More concretely, similar patients are clustered close to each other in a well-learned smooth and compact latent space of VAE, the counterfactual outcome of a patient (e.g., treatment outcome of a control patient) can be inferred using the factual outcomes of similar patients with a different treatment assignment in the latent neighborhood . 
+% Note that the accurate counterfactual inference by TVAE deeply depends on a nonconfounding, assignment-irrelevant latent distribution (except first dimension $Z^1$), i.e., the latent distribution of the treatment patients resembles that of the control patients, so as to eliminate selection bias (Section \ref{sec:DB})
+
+
+
+
+
+
+\subsection{Distribution Balancing}
+\label{sec:DB}
+\subsubsection{Disentangled Latent Representation}
+Previous studies maximize the distribution similarity in control and treatment groups, therefore selection bias is removed and the representation of the scarce treatment group can be regularized \cite{johansson2016bnn,yao2018site,shalit2017cfrnet} by the control group. However, 
+instead of removing the selection bias from patients' representations, we argue that it should be utilized to enhance propensity scoring. This can be achieved by disentanglement \cite{chen2018isolating,xuebingkdd} together with the Treatment Joint Inference. By enforcing disentanglement in the latent space while jointly encoding the predicted outcomes ($W$, $Y(W)$) in the designated latent dimensions, the selection bias flows into $Z^1$ for treatment assignment prediction, and naturally the remaining latent dimensions are balanced between treatment and control group. To show this, consider the disentanglement through mini \textit{Total Correlation} (TC) in the $d$-dimensional latent space ~\cite{chen2018isolating},
+where the TC of the set of variables, $Z^{1:d}=\{Z^1, Z^2, ..., Z^d\}$, is defined as the ratio between the joint distribution and the product of the marginals, i.e., 
+$TC(Z^{1:d}|X) := KL\bigl(q_{{\phi}}(Z|X) \bigl|\bigr|  \prod_{j=1}^{d} q_{{\phi}}(Z^j|X)\bigr)$.
+
+
+\begin{proposition}
+    Given $Z^1 = \hat{W}$, conditioned on the data $X$, the total correlation of $Z^{1:d}$ equals the sum of the total correlation of $Z^{2:d}$ and the mutual information between the first dimension $\hat{W}$ and all the other dimensions $Z^{2:d}$, i.e., 
+\begin{equation}
+        TC(Z^{1:d}|X) = TC(Z^{2:d}|X) 
+    + I(\hat{W}|X;Z^{2:d}|X)
+\end{equation}
+where $I(A;B)$ is the mutual information between variable $A$ and $B$.
+\end{proposition}
+
+The proof can be found in Appendix C. As the Joint Encoding forces $Z^1$ to approximate $W$, clearly TC is minimized when $I(\hat{W};Z^{2:d}|X)$ is minimized. Alternatively, we can see this from the fact that all terms on both sides are nonnegative, hence the minimization is reached only if the mutual information between $Z^1$ and other latent dimensions is 0. 
+Hence, the remaining latent dimensions neither contain any treatment assignment information, nor are they affected by the selection bias. Due to the curse of dimensionality, the latent representation of treatment group using a deep encoder easily overfits and become poorly generalizable. Note that, however, we can use the learned representation in the control group to \textit{guide} the learned representation in the treatment group. The idea is as follows: when a latent dimension only preserves the non-confounding information, then the distribution is irrelevant to treatment assignment. For example, as gender is not considered in treatment assignment, the latent encoding for gender should be distributed indifferently in treatment and no-treatment groups. This can be expressed as
+\begin{proposition} For any dimension
+$ Z^j$ in the latent representation $ Z:=[Z^1,Z^2,...,Z^d]$,
+$ Dist(Z^j(0))=Dist(Z^j(1))$, if and only if $
+    Z^j\ind (Y(0),Y(1),W)|X 
+$, where $Dist(.)$ denotes the distribution. 
+\end{proposition}
+
+\subsubsection{Distribution Matching}
+This proposition provides the ground to further regulate the remaining latent dimensions by minimizing the distribution difference.  
+An intuitive way is to calculate the maximum mean discrepancy (MMD) for the distance on the space of probability measures, as it has an unbiased U-statistic estimator, which can be used
+in conjunction with gradient descent-based methods \cite{tolstikhin2017wasserstein,tolstikhin2016mmd}.  Considering the complexity of potential distributions, we apply the kernel trick so that the MMD is zero if and only if the distributions are identical in the projected Hilbert space. Denote $q_{\phi}(Z^j|X(0))$ by $P^j_{-}$ and $q_{\phi}(Z^j|X(1))$ by $P^j_{+}$, the kernelized MMD metric can be expressed as:
+\begin{equation}
+    \begin{split}
+    &\text{MMD}\Bigl(q_{\phi}\bigl(Z^j|X(0)\bigr),q_{\phi}\bigl(Z^j|X(1)\bigr)\Bigr) \\
+    =& \ 
+    \text{MMD}\bigl(P^j_{-},P^j_{+}\bigr)\\
+    =& \ 
+    \Bigl\|
+    \int_Z k_Z(z,.)dP^j_{-}(z)  -
+    \int_Z k_Z(z,.)dP^j_{+}(z)
+    \Bigr\|_{\mathcal{H}_k}
+    \end{split}
+\end{equation}
+where $k$ is an infinite-dimensional radial basis function (RBF) kernel and $\mathcal{H}_k$ is the corresponding reproducing kernel Hilbert space. Alternative distribution matching methods, such as linear MMD without kernelization, Wasserstein Distance and KL divergence are evaluated in treatment effect estimation in Sec. 5.5.
+
+With balanced representation, two factors are inserted into the loss function for joint-optimization: the TC loss and the MMD loss:
+\begin{equation}
+    \begin{split}
+    l_{\text{DB}}(\phi,\theta) = TC(Z^{1:d}|X) 
+    + \gamma\sum_{j=4}^{d}\text{MMD}\Bigl(q_{\phi}\bigl(Z^j|X(0)\bigr),q_{\phi}\bigl(Z^j|X(1)\bigr)\Bigr)
+    \end{split}
+\end{equation}
+where hyperparameter $\gamma$ is used to adjust the scales of the MMD loss to be similar to the TC loss.
+
+\subsection{Label Balancing}
+\label{sec:LB}
+The scarcity of ECMO treatment resources and the clinical considerations in treatment assignment induce the selection bias in COVID-19 patients. The limited number of the treatment assignment leads to significant data imbalance (less than 3\% in ECMO datasets), thus an encoder network easily ignores the minority group, overfits the minority group or underfits the majority group in latent representation. 
+
+To address this issue, we enrich the training data by augmenting the under-represented patients while maintaining their intrinsic characeristics. Instead of using extra data augmentation models \cite{sandfort2019gan,wang2020deepgenerative} to generate \textit{fake} patients, we utilize the generative power in our established latent space to sample more ECMO cases, as the latent representation of TVAE (or any VAE-based model) is a posterior distribution (as shown in Figure 1). Since the patients are sampled from the latent distribution of real ECMO cases, the generated "\textit{fake}" patients (constructed by passing the upsampled latent representations through decoder) do not change the distribution and characteristics of treatment group. Subsequently, the upsampled "\textit{fake}" data is concatenated with the original training data to form a more balanced inputs for model learning. 
+
+For a well-balanced dataset, the loss function of TVAE is simply $
+l_{\text{total}}(\phi,\theta) = l_{\text{VAE}}(\phi,\theta) + \alpha \cdot l_{\text{TI}}(\phi,\theta) + \beta \cdot l_{\text{DB}}(\phi,\theta)$, where hyperparameters $\alpha$ and $\beta$ are used to adjust each loss term to be in similar scales in the current dataset. Take the public IHDP dataset for example, we set $\alpha$ and $\beta$ to be 1 and 0.1, respectively. 
+In the ECMO case where treatment cases are rare,  the label balancing module kicks in during the training iteration, hence the model input is the augmented dataset $X' \sim p_\theta(X'|Z')$ where $Z'$ is the up-sampled latent representations. The loss function can be expressed as:
+\begin{equation}
+    \begin{split}
+    l_{\text{total}}(\phi,\theta) =& \sum_{X_i \in \mathcal{X}} -\mathbb{E}_{Z_i\sim q_{\phi}(Z_i|X_i) } \Bigl[\log p_{\theta} (X_i|Z_i) +
+    \alpha\log p(W_i,Y_i|Z_i) \Bigr] \\
+    &+ KL\bigl(q_{\phi}(Z|X') \| p(Z)\bigr) \\
+    &+ \beta\cdot KL\Bigl(q_{{\phi}}\bigl(Z|X'\bigr)\big\|\prod_{j=1}^{d} q_{{\phi}}\bigl(Z^j|X'\bigr)\Bigr) \\
+    &+ \beta\gamma\cdot\sum_{j=4}^{d}\text{MMD}\Bigl(q_{\phi}\bigl(Z^j|X'(0)\bigr),q_{\phi}\bigl(Z^j|X'(1)\bigr)\Bigr)
+    \end{split}
+\end{equation}
+When the loss function converges, the latent encoding will not change by the added \textit{fake} patients, hence $ q_{\phi}(Z|X') =  q_{\phi}(Z|X)$. 
+
+
+

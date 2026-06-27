@@ -1,0 +1,109 @@
+\section{Proofs for Low-Overlap Example in \Cref{sec:theory_simple}}
+\label{sec:theory_simple_more}
+In this appendix we prove Theorem~\ref{thm:simple_variance} from \Cref{sec:theory_simple}. We restate the theorem for convenience, and then provide the proof. 
+\begin{theorem}[Restatement of \Cref{thm:simple_variance}]
+Assume Assumptions~\ref{ass:envelope},~\ref{ass:soln_exists},~\ref{ass:prop_not_square_int}, 
+i.e. fix an $\epsilon>0$, assume true propensities $\pi(x)$ are known, and assume the following:
+\begin{enumerate}
+    \item There is an envelope $C(x)$ with  $P[C(X)^2]<\infty$ such that for all $f\in \mathcal F$, $|f(X)|\leq C(X)$ almost surely. 
+    \item With probability $\geq 1-\epsilon$ over draws of data of size $n$,  C-Learner solution exists in $\mathcal F$.
+\item There is a $v_0>0$ such that 
+$\text{Var}(Y\mid X, A=1)\geq v_0$
+for all $X$ in the support of $P$. Also, $\pi(X)>0$ almost surely and
+$P\left[\frac{1}{ \pi(X)}\right]=\infty$.
+\end{enumerate}
+Then the TMLE and AIPW estimators have infinite variance. In contrast, 
+with probability $\geq 1-\epsilon$,
+the C-Learner estimator has finite variance. 
+\end{theorem}
+\begin{proof}
+Recall definitions for C-Learner, AIPW, and TMLE using cross-fitting from \Cref{sec:data_splitting}, while using true propensities $\pi$. 
+We consider the $k$th fold out of $n$ total data points and take variance over draws of $P_{k,n},P_{-k,n}$. Let $m$ be the number of data points in $P_{k,n}$. For brevity, let $\what\mu$ denote $\what\mu_{-k,n}$ and $\what\mu^C$ denote $\what\mu^C_{-k,n}$. 
+
+The C-Learner estimator on the $k$th fold is $P_{k,n}[\what\mu^C(X)]$ which has finite variance since $\what\mu^C \in\mathcal F$, so that
+$|\what\mu^C(X)|\leq C(X)$ almost surely. Then for $X_1,\ldots,X_m$ in $P_{k,n}$,
+\[
+\Big(\frac1m\sum_{i=1}^m \what\mu^C(X_i)\Big)^2
+\;\le\;\Big(\frac1m\sum_{i=1}^m |\what\mu^C(X_i)|\Big)^2
+\;\le\;\Big(\frac1m\sum_{i=1}^m C(X_i)\Big)^2.
+\]
+Taking expectation over draws of data,
+\[
+ P\left[\big(P_{k,n}[\what\mu^C(X)]\big)^2\right]
+\;\le\;\frac1m\,P[C(X)^2]
++\frac{m-1}{m}\,(P[C(X)])^2 \;<\;\infty,
+\]
+since samples of $P_{k,n}$ are drawn IID and $C$ is square-integrable, so $\Var(P_{k,n}[\what\mu^C(X)])<\infty$.
+ 
+From \Cref{sec:data_splitting}, recall that the AIPW and TMLE estimators for the $k$th fold for sample size $n$, where we use true propensities $\what \pi$, can be written as
+\begin{align*}
+   \what\psi^{\rm AIPW}_{k,n}&=P_{k,n}[\what\mu(X)]+P_{k,n}\left[\frac{A}{\pi(X)}(Y-\what\mu(X))\right]\\ 
+   \what\psi^{\rm TMLE}_{k,n}&=P_{k,n}[\what\mu(X)]+\frac{P_{k,n}[1/\pi(X)]}{P_{k,n}[A/\pi(X)^2]}P_{k,n}\left[\frac{A}{\pi(X)}(Y-\what\mu(X))\right],
+\end{align*}
+respectively. 
+We show below that by Assumption~\ref{ass:prop_not_square_int}, the inverse propensity weighted term that appears in AIPW has infinite variance. In the expressions below, we condition on the training split $P_{-k,n}$ so that $\what\mu$ is a constant:
+\begin{align*}
+    P\left[\left(\frac{A}{\pi(X)}(Y-\what\mu(X))\right)^2 \;\middle|\; \text{train}\right]&=P\left[\frac{P[(Y-\what\mu(X))^2\mid X,A=1]}{\pi(X)}\;\middle|\; \text{train}\right]\\&\geq P\left[\frac{\Var(Y-\what\mu(X)\mid X,A=1)}{\pi(X)}\;\middle|\; \text{train}\right]\\&\geq v_0 P[1/\pi(X)]
+    \\&=\infty.
+\end{align*}
+It then follows that the AIPW estimator has infinite variance. 
+
+Now we address the TMLE estimator. This is more complex because multiple terms use the eval data split $P_{k,n}$. 
+For brevity, define
+$$
+S := {P}_{k,n}\!\left[\frac{A}{\pi(X)} (Y-\what\mu(X))\right], 
+\quad 
+T := {P}_{k,n}\!\left[\frac{A}{\pi(X)^2}\right],
+\quad 
+W := {P}_{k,n}\!\left[\frac{1}{\pi(X)}\right].
+$$
+Condition on $(X_{1:m},A_{1:m})$ and on the training fold (so $\what\mu$ is fixed).
+Write $Z_i := \frac{A_i}{\pi(X_i)}\{Y_i-\what\mu(X_i)\}$.  
+Given $(X_{1:m},A_{1:m},\text{train})$, the $Z_i$ are independent, and
+\[
+\mathrm{Var}(S\mid X_{1:m},A_{1:m},\text{train})
+= \frac{1}{m^2}\sum_{i=1}^m \mathrm{Var}(Z_i\mid X_i,A_i,\text{train}).
+\]
+If $A_i=0$ then $Z_i=0$, and
+if $A_i=1$ then 
+\[
+\mathrm{Var}(Z_i\mid X_i,A_i=1,\text{train})
+=\frac{1}{\pi(X_i)^2}\,\mathrm{Var}(Y\mid X_i,A=1)
+\ \ge\ \frac{v_0}{\pi(X_i)^2}.
+\]
+Thus
+\[
+P[S^2\mid X_{1:m},A_{1:m},\text{train}]
+\ \ge\ \mathrm{Var}(S\mid X_{1:m},A_{1:m},\text{train})
+\ \ge\ \frac{v_0}{m}\,T.
+\]
+Now consider $\Delta:=WS/T$, so that $\what \psi_{k,n}^{\rm TMLE}=P_{k,n}[\what \mu(X)]+\Delta$. It follows that
+\[
+P[\Delta^2\mid X_{1:m},A_{1:m},\text{train}]
+= \frac{W^2}{T^2}\,P[S^2\mid X_{1:m},A_{1:m},\text{train}]
+\ \ge\ \frac{v_0}{m}\,\frac{W^2}{T}.
+\]
+Taking $P[\;\cdot\mid X_{1:m},\text{train}]$ and using convexity of $t\mapsto 1/t$,
+\[
+P[\Delta^2\mid X_{1:m},\text{train}]
+\ \ge\ \frac{v_0}{m}\,W^2\,P\!\Big[\frac{1}{T}\,\Big|\,X_{1:m},\text{train}\Big]
+\ \ge\ \frac{v_0}{m}\,\frac{W^2}{P[T\mid X_{1:m},\text{train}]}.
+\]
+If $T=0$, then necessarily $S=0$ and $\Delta=0$, so the inequality holds
+trivially with the right-hand side interpreted as $0$ (or $+\infty$, depending on convention).
+Here $P[T\mid X_{1:m},\text{train}]
+= P_{k,n}[\pi(X)/\pi(X)^2]
+= P_{k,n}[1/\pi(X)] = W$.
+So
+\[
+P[\Delta^2\mid X_{1:m},\text{train}] \ \ge\ \frac{v_0}{m}\,W.
+\]
+Finally,
+\[
+P[\Delta^2] \ \ge\ \frac{v_0}{m}\,P[W]
+= \frac{v_0}{m}\,P\!\Big[\tfrac{1}{\pi(X)}\Big]
+= \infty
+\]
+by Assumption~\ref{ass:prop_not_square_int}. 
+\end{proof}
+\label{sec:theory_simple_more-end}

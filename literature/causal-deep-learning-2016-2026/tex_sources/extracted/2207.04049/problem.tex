@@ -1,0 +1,125 @@
+\vspace{-2mm}
+\section{Problem Definition and Analysis}
+We provide the formal problem definition and a brief theoretical analysis of our studied problem in this section. A notation table is provided in Appendix A.
+\begin{definition}
+Suppose a set of individuals $\mathcal{V}=\{v_i\}_{i=1}^n$ are connected via hyperedges $\mathcal{E}=\{\mathbf{e}_k\}_{k=1}^m$, together these form a \textbf{hypergraph} $\mathcal{H}=\{\mathcal{V},\mathcal{E}\}$ with $n$ nodes and $m$ hyperedges, where each hyperedge can connect an arbitrary number of nodes. 
+\end{definition}
+The observational data on this hypergraph can be denoted as $\{\mathbf{X}, \mathcal{H}, \mathbf{T}, \mathbf{Y}\}$, where $\mathbf{X} =\{\mathbf{x}_i\}_{i=1}^n$, $\mathbf{T}=\{t_i\}_{i=1}^n$ and $\mathbf{Y}=\{y_i\}_{i=1}^n$ represent node features, treatment assignments, and observed outcomes, respectively. $\mathbf{H}=\{h_{i,e}\}\in\mathbb{R}^{n\times m}$ is an incidence matrix which describes the hypergraph structure of $\mathcal{H}$. $h_{i,e}=1$ if node $i$ is in hyperedge $e$, otherwise $h_{i,e}=0$. For ease of discussion, we consider the treatment assignment for each node as a binary variable in this study (i.e., $t_i\in\{0,1\}$), but our work can be extended to non-binary categorical variables and continuous variables.
+
+{
+%\vspace{-1mm}
+\begin{definition}
+The \textbf{potential outcome} \cite{rubin1980randomization} of the instance $i$ (denoted by $y_i^1$ or $y_i^0$) is defined as the realized value of outcome for instance $i$ under the treatment value $t_i=1$ or $t_i=0$. These potential outcomes can be instantiated via a transformation $Y^{T_i}_i=\Phi_Y(T_i, X_i, T_{-i}, X_{-i}, H)$.  $\Phi_Y$ can be regarded as a (non-deterministic) function to output potential outcomes, which takes each node's treatment assignment, node features, the information (treatment assignments and node features) of other nodes on the hypergraph, and the hypergraph structure as input\footnote{In this paper, we use non-bold, italicized, and capitalized letters (e.g., $X_i$) to denote random variables; non-bold lowercase letters (e.g., $t_i$) to denote observed values of a scalar; bold lowercase letters (e.g., $\mathbf{x}_i$) to denote observed values of a vector; bold capitalized letters (e.g., $\mathbf{X}$) to denote observed values of a matrix or a set.}, i.e., $y_i^{t_i}=\Phi_Y(t_i, \mathbf{x}_i, \mathbf{T}_{-i}, \mathbf{X}_{-i}, \mathbf{H})$, where the subscript ${-i}$ denotes all other nodes on $\mathcal{H}$ except $i$.
+\end{definition}
+}
+%\vspace{-1mm}
+%Let $\mathbf{X}$ be the instance attributes (features), such that $\mathbf{X} =\{\mathbf{x}_i\}_{i=1}^n$, where $\mathbf{x}_i $ represents the features of the $i$-th instance, $n$ denotes the number of instances. $\mathbf{T}=\{t_i\}_{i=1}^n$ denotes the set of treatment assignment for all the nodes, here $t_i\in\{0,1\}, \forall i\in[n]$. $\mathbf{Y}=\{y_i\}_{i=1}^n$ denotes the set of observed outcomes of all the nodes. 
+%We have the hypergraph $\mathcal{H}=\{\mathcal{V},\mathcal{E}\}$, where $\mathcal{V}$ is the set of nodes, and each node here corresponds to an instance, $|\mathcal{V}|=n$.  $\mathcal{E}=\{e_i| i=1,...,m\}$ is the set of all hyperedges. Each $e_i$ is a hyperedge that connects multiple nodes, and $m$ is the total number of hyperedges. 
+% We denote the \textit{potential outcome} of instance $i$ under treatment $t_i$ and exposure variable $\mathbf{s}_i$ by $y_i(t_i, \mathbf{s}_i)$. 
+%We denote the \textit{potential outcomes} (i.e., the outcomes which would be realized under a certain treatment) \cite{rubin1980randomization} of instance $i$ under treatment $t_i=1$ and $t_i=0$  by $y_i^1$ and $y_i^0$ in this setting, respectively. 
+%Notice that for each node $i$, only one of the two potential outcomes (the one corresponds to the treatment assignment $t_i$) can be observed in the observational data. 
+%Specifically, $y_i^{t_i}=\Phi_Y(t_i, \mathbf{x}_i, \mathbf{T}_{-i}, \mathbf{X}_{-i}, \mathbf{H})$, where the subscript ${-i}$ denotes all of other nodes except $i$. 
+%$\mathbf{H}\in\mathbb{R}^{n\times m}$ is an incidence matrix which describes the hypergraph structure of $\mathcal{H}$. $\mathbf{H}_{i,e}=1$ if node $i$ is in hyperedge $e$, otherwise $\mathbf{H}_{i,e}=0$. 
+%$\Phi_Y(\cdot)$ is an unknown transformation which maps each node's treatment assignment, features and the other nodes' information on the hypergraph to the ground-truth potential outcomes of node $i$.  
+%Although $\Phi_Y(\cdot)$ here takes all the nodes on the hypergraph as input, the outcome of each node $i$ is usually be influenced only by its neighboring nodes (nodes which share same hypergraphs with $i$). 
+%For example, in Fig.~\ref{fig:interference}(b), the neighboring nodes of node $u_1$ include $\{u_2,u_3\}$ and $\{u_4,u_5\}$.
+%Here $\mathbf{s}_i$ represents a summary (e.g., mean) of neighboring treatments $\{t_j| j \in \mathcal{N}_e, \forall~e \in \mathcal{E}_i\}$), 
+%In this paper, $\mathcal{E}_i$ denotes the set of hyperedges which contains node $i$, and $\mathcal{N}_e$ denotes the nodes in hypergraph $e$. 
+%For example, in Fig.~\ref{fig:interference}(b), the exposure variable for the node $u_1$ summarizes the treatments of two sets of neighboring nodes $\{u_2,u_3\}$ and $\{u_4,u_5\}$. 
+
+Given the above preliminaries, %additional observed features of each individual $\mathbf{X}=\{\mathbf{x}_i\}$, 
+we are ready to provide the formal definition of individual treatment effect on hypergraphs.
+
+{
+\begin{definition}
+For each node $i$ on the hypergraph $\mathcal{H}$, the \textbf{individual treatment effect} (ITE) %under exposure $\mathbf{s}_i$ 
+is defined by the difference between potential outcomes corresponding to  $t_i=1$ and $t_i=0$:
+\begin{equation}
+\begin{split}
+    \tau(\mathbf{x}_i,\mathbf{T}_{-i},\mathbf{X}_{-i},\mathbf{H}) &=\mathbb{E}[Y_i^1-Y_i^0|X_i=\mathbf{x}_i,T_{-i}=\mathbf{T}_{-i},X_{-i}=\mathbf{X}_{-i},H=\mathbf{H}] \\
+    &= \mathbb{E}[\Phi_Y(1,\mathbf{x}_i,\mathbf{T}_{-i},\mathbf{X}_{-i},\mathbf{H}) - \Phi_Y(0,\mathbf{x}_i,\mathbf{T}_{-i},\mathbf{X}_{-i},\mathbf{H})].
+    \label{eq:ite}
+\end{split}
+\end{equation}
+% \begin{equation}
+%     \tau_i=y_i^1-y_i^0 = \mathbb{E}[\Phi_Y(1,\mathbf{x}_i,\mathbf{T}_{-i},\mathbf{X}_{-i},\mathbf{H}) - \Phi_Y(0,\mathbf{x}_i,\mathbf{T}_{-i},\mathbf{X}_{-i},\mathbf{H})].
+%     \label{eq:ite}
+% \end{equation}
+% \begin{equation}
+%     \tau_i=\tau(\mathbf{x}_i, \mathbf{s}_i) = \mathbb{E}[y_i(t_i=1, \mathbf{s}_i) - y_i(t_i=0, \mathbf{s}_i)| \mathbf{x}_i].
+%     \label{eq:ite}
+% \end{equation}
+\end{definition}
+}
+{We clarify that the ITE in this paper is actually defined in the form of conditional average treatment effect (CATE), similar as \cite{ma2021causal,guo2020learning}. The expectation is taken over the potential outcome (output of $\Phi_Y$) of the instances with same node features $\mathbf{x}_{i}$ and “environmental information” (hypergraph structure $\mathbf{H}$, other nodes’ features $\mathbf{X}_{-i}$ and treatments $\mathbf{T}_{-i}$). 
+The distribution of the output of $\Phi_Y$ is equivalent to the conditional distribution of the potential outcome conditioned on the parameters in $\Phi_Y$ with fixed values. For notation simplicity, we also denote $\tau_i=\tau(\mathbf{x}_i,\mathbf{T}_{-i},\mathbf{X}_{-i},\mathbf{H})$ in this paper.
+}
+Meanwhile, we introduce the notion of spillover effect in this work to assess the level of interference on hypergraphs.
+\begin{definition}
+The \textbf{spillover effect} of node $i$ under its treatment  $t_i$ and other nodes' treatment assignment $\mathbf{T}_{-i}$ on the hypergraph $\mathcal{H}$ is defined as:
+% \begin{equation}
+%     \delta(\mathbf{x}_i, t_i, \mathbf{s}_i=\mathbf{s}) = \mathbb{E}[y_i(t_i, \mathbf{s}_i=\mathbf{s}) - y_i(t_i, \mathbf{s}_i=0)| \mathbf{x}_i].
+%     \label{eq:spillover}
+% \end{equation}
+\begin{equation}
+    \delta_i = \mathbb{E}[\Phi_Y(t_i,\mathbf{x}_i,\mathbf{T}_{-i},\mathbf{X}_{-i},\mathbf{H}) - \Phi_Y(t_i,\mathbf{x}_i,\mathbf{0},\mathbf{X}_{-i},\mathbf{H})].
+    \label{eq:spillover}
+\end{equation}
+\end{definition}
+
+In this paper, given the observed data $\{\mathbf{X}, \mathcal{H}, \mathbf{T}, \mathbf{Y}\}$, we aim to estimate the ITE defined in Eq.~\ref{eq:ite} for each node in $\mathcal{H}$ with the existence of high-order interference defined in Eq.~\ref{eq:spillover}.
+
+\subsection{Theoretical Analysis}
+With the above definitions, we show that the ITE can be identifiable from the observational data under the following two assumptions.
+
+% the list may be repeated
+Similar as the assumptions in other works of causal inference under network interference \cite{ma2021causal}, for each individual, we assume there exists a summary function capable of characterizing all the ``environmental'' information related to this node on the hypergraph.
+%Formally, we denote the set of all the hyperedges which have interference to node $i$ as $\tilde{\mathcal{E}}_i$ and all nodes in these hyperedges as $\tilde{\mathcal{V}}_i$. This provides a more generic neighborhood definition for interference but in practice one can restrict the assumption to the first-order neighborhood on the hypergraph (i.e., $\tilde{\mathcal{E}}_i=\mathcal{E}_i$ and $\tilde{\mathcal{V}}_i=\mathcal{V}_i$).
+%(e.g., the hyperedges which contains node $i$, i.e., $\mathcal{E}_i$) as $\mathcal{E}^s_i$, and denote the set of nodes contained in at least one of the hyperedges in $\mathcal{E}^s_i$ as $\mathcal{V}^s_i$ (e.g., the set of node $i$'s neighboring nodes). 
+%We use  $\tilde{\mathcal{V}}_i-\{i\}$ to denote the set of nodes in $\tilde{\mathcal{V}}_i$ except $i$ itself. 
+%Suppose there is a summary function $\mathtt{SMR}(\cdot)$ which takes $\tilde{\mathcal{E}}_i$, the treatment assignment of nodes in $\tilde{\mathcal{V}}_i-\{i\}$ and the features of these nodes as input, then maps them into a vector $\mathbf{o}_i$: 
+Suppose there is a summary function $\mathtt{SMR}(\cdot)$: for each node $i$, $\mathtt{SMR}(\cdot)$ takes the hypergraph structure $\mathbf{H}$, the treatment assignment of other nodes $\mathbf{T}_{-i}$ and the features of these nodes $\mathbf{X}_{-i}$ as input, then maps them into a vector $\mathbf{o}_i$: 
+%For simplicity, we denote the list of nodes which influence node $i$ as $\mathcal{N}_i$ (not including node $i$ itself), and 
+%We denote the summary function $\mathtt{SMR}(\cdot): \mathcal{X}^{|\mathcal{N}_i| \times d} \times \{0,1\}^{|\mathcal{N}_i|} \rightarrow \mathcal{S}$ over their covariates and treatment assignments is denoted by:
+% \begin{equation}
+%     \mathbf{s}_i = \mathtt{SMR}(\mathbf{X}_{\mathcal{N}_i}, \mathbf{T}_{\mathcal{N}_i})
+% \end{equation}
+% \begin{equation}
+%      \mathbf{o}_i = \mathtt{SMR}(\tilde{\mathcal{E}}_i, \mathbf{X}_{\tilde{\mathcal{V}}_i-\{i\}}, \mathbf{T}_{\tilde{\mathcal{V}}_i-\{i\}}).
+%  \end{equation}
+\begin{equation}
+      \mathbf{o}_i = \mathtt{SMR}(\mathbf{H}, \mathbf{T}_{-i}, \mathbf{X}_{-i}).
+  \end{equation}
+%Then the potential outcome under treatment $t_i$, $\mathbf{x}_i$ and summary $\mathbf{s}_i$ is denoted by $Y_i(t_i,\mathbf{x}_i,\mathbf{s}_i)$. 
+We use $H,X,T$ to denote the random variables for the hypergraph structure, features, and treatment assignment for any node. 
+Then our first assumption can be formalized as below.
+\begin{assumption}
+(Expressiveness of summary function) 
+For any node $i$, any values of $H, {X}_{-i}$, and ${T}_{-i}$, if the output of summary function $\mathbf{o}_i$ is determined, then the value of the potential outcomes $y_i^{1}$ and $y_i^{0}$ with feature $\mathbf{x}_i$ are also determined. 
+%For all the node $\forall i=1,...,n, \forall \mathbf{T}, \mathbf{T}' \in \{0,1\}^{n}, \forall \mathbf{X}, \mathbf{X}' \in \mathcal{X}^{n}$, if the summary function  $\mathtt{SMR}(\mathbf{X}_{\mathcal{N}_i},\mathbf{T}_{\mathcal{N}_i}, \mathcal{E}_i)=\mathtt{SMR}(\mathbf{X}'_{\mathcal{N}_i},\mathbf{T}'_{\mathcal{N}_i},\mathcal{E}_i)$, then the potential outcome $Y_i(t_i, \mathbf{T}, \mathbf{X})=Y_i(t_i, \mathbf{T}', \mathbf{X}')$.
+\label{assumption:summary}
+\end{assumption}
+
+Our second assumption extends the unconfoundedness assumption \cite{rubin1980randomization} to the hypergraph interference setting. That is we assume conditioned on the above summary function, the observed features can capture all possible confounders.
+\begin{assumption}
+(Unconfoundedness) For any node $i$, given the node features, the potential outcomes are independent with the treatment assignment and summary of neighbors, i.e., $Y_i^1,Y_i^0 \bigCI T_i, O_i | {X}_i$. \label{assumption:unconfoundeness}
+\end{assumption}
+
+Based on the above assumptions, the identification of the expectation of potential outcomes $Y_i^{1}$ and $Y_i^{0}$ can be proved (here we take $Y_i^{1}$ as an example):
+% \begin{align}
+% \mathbb{E}[Y_i|T_i = t_i, \mathbf{S}_i = \mathbf{s}_i, \mathbf{X}_i] &\overset{Asm. 1}{=} \mathbb{E}[Y_i(t_i,  \mathbf{s}_i)|T_i = t_i, \mathbf{S}_i = \mathbf{s}_i, \mathbf{X}_i]\\
+% &\overset{Asm. 2}{=} \mathbb{E}[Y_i(t_i, \mathbf{s}_i))|\mathbf{X}_i]
+% \end{align}
+{ 
+\begin{align}
+&\mathbb{E}[Y^{1}_i|T_i=1, X_i=\mathbf{x}_i, T_{-i}=\mathbf{T}_{-i},{X}_{-i}=\mathbf{X}_{-i},H=\mathbf{H}] \\
+\overset{(a)}{\longeq}&\mathbb{E}[\Phi_Y(T_i=1, X_i=\mathbf{x}_i, T_{-i}=\mathbf{T}_{-i},{X}_{-i}=\mathbf{X}_{-i},H=\mathbf{H})] \\\overset{(b)}{\longeq}& \mathbb{E}[\Phi_Y(T_i=1, X_i=\mathbf{x}_i, O_i=\mathbf{o}_i)] \\
+\overset{(c)}{\longeq} &\mathbb{E}[\Phi_Y(T_i=1, X_i=\mathbf{x}_i, O_i=\mathbf{o}_i)|X_i=\mathbf{x}_i] \\
+\overset{(d)}{\longeq} &\mathbb{E}[\Phi_Y(T_i=1, X_i=\mathbf{x}_i, O_i=\mathbf{o}_i)|X_i=\mathbf{x}_i, T_i=1,O_i=\mathbf{o}_i] \\
+\overset{(e)}{\longeq} &\mathbb{E}[Y_i|X_i=\mathbf{x}_i, T_i=1,O_i=\mathbf{o}_i].
+\end{align}
+}
+
+Here, the equation $(a)$ is based on the definition of potential outcome in this setting; $(b)$ is inferred from Assumption (1); $(c)$ is a straightforward derivation; $(d)$ is based on Assumption (2); and $(e)$ is based on the widely used consistency assumption \cite{rubin1980randomization}. Based on the above proof for the identification of potential outcomes, the identification of ITE can be straightforwardly derived.
+
+%Although the above ITE definition and analysis include all nodes on the hypergraph as input, in practice one can simplify these by assuming the outcome of node $i$ is interfered by its neighboring nodes only (nodes which share same hyperedges with $i$). 

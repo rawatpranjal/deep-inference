@@ -1,0 +1,162 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2017
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2017}
+
+\usepackage[final]{nips_2017}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+%\usepackage[final]{nips_2017}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+
+\usepackage{adjustbox}
+\usepackage{amssymb} %maths
+\usepackage{amsmath} %maths
+\usepackage{float}
+\usepackage{subfigure}
+% \usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{enumerate}
+\usepackage{tikz-qtree}
+\usepackage{tikz}
+\usetikzlibrary{bayesnet}
+% \usepackage[noend]{algpseudocode}
+% \usepackage[makeroom]{cancel}
+\usepackage{amsthm}
+\DeclareMathOperator{\E}{\mathbb{E}}
+\DeclareMathOperator{\V}{\mathbb{V}}
+\DeclareMathOperator{\vect}{vec}
+\DeclareMathOperator{\matt}{mat}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\dett}{det}
+\def\!#1{\boldsymbol{#1}}
+\def\*#1{\mathbf{#1}}
+\def\E{\mathbb{E}}
+\def\R{\mathbb{R}}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+
+%\usepackage{natbib}
+%\bibliographystyle{abbrvnat}
+\usepackage[numbers]{natbib}
+\bibliographystyle{abbrvnat}
+
+\newcommand\blfootnote[1]{%
+  \begingroup
+  \renewcommand\thefootnote{}\footnote{#1}%
+  \addtocounter{footnote}{-1}%
+  \endgroup
+}
+
+%creates command for \note{initials}{content}, or just \note{content}
+\makeatletter
+\def\note#1{\def\tempa{#1}\futurelet\next\note@i}% Save first argument
+\def\note@i{\ifx\next\bgroup\expandafter\note@ii\else\expandafter\note@end\fi}%Check brace
+\def\note@ii#1{\textcolor{red}{\tempa\ : #1}}%Two args
+\def\note@end{\textcolor{red}{: \tempa}}%Single args
+\makeatother
+
+\title{Causal Effect Inference with \\ Deep Latent-Variable Models}
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+
+\author{ Christos Louizos \\
+University of Amsterdam\\
+TNO Intelligent Imaging\\
+\texttt{c.louizos@uva.nl}
+\And
+Uri Shalit  \\
+New York University\\
+CIMS\\
+\texttt{uas1@nyu.edu}
+\And
+Joris Mooij   \\
+University of Amsterdam\\
+\texttt{j.m.mooij@uva.nl}
+\AND 
+David Sontag\\
+Massachusetts Institute of Technology\\
+CSAIL \& IMES\\
+\texttt{dsontag@csail.mit.edu}
+\And 
+Richard Zemel\\
+University of Toronto\\
+CIFAR\thanks{Canadian Institute For Advanced Research}\\
+\texttt{zemel@cs.toronto.edu}
+\And 
+Max Welling\\
+University of Amsterdam\\
+CIFAR$^*$\\
+\texttt{m.welling@uva.nl}
+}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Learning individual-level causal effects from observational data, such as inferring the most effective medication for a specific patient, is a problem of growing importance for policy makers. The most important aspect of inferring causal effects from observational data is the handling of confounders, factors that affect both an intervention and its outcome. A carefully designed observational study attempts to measure all important confounders. However, even if one does not have direct access to all confounders, there may exist noisy and uncertain measurement of proxies for confounders.
+We build on recent advances in latent variable modeling to simultaneously estimate the unknown latent space summarizing the confounders and the causal effect. 
+Our method is based on Variational Autoencoders (VAE) which follow the causal structure of inference with proxies. We show our method is significantly more robust than existing methods, and matches the state-of-the-art on previous benchmarks focused on individual treatment effects. 
+\end{abstract}
+
+\section{Introduction}
+\input{intro}
+
+{\bf Related work.} \;
+\input{related}
+
+\section{Identification of causal effect}\label{sec:ident}
+\input{ident}
+
+\section{Causal effect variational autoencoder}
+\input{model}
+
+\section{Experiments}
+\input{experiments}
+
+\section{Conclusion}
+\input{discussion}
+
+\subsubsection*{Acknowledgements}
+We would like to thank Fredrik D. Johansson for valuable discussions, feedback and for providing the data for IHDP and Jobs. We would also like to thank Maggie Makar for helping with the Twins dataset. Christos Louizos and Max Welling were supported by TNO, NWO and Google. Joris Mooij was supported by the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation programme (grant agreement 639466).
+
+
+
+\subsubsection*{References}
+\begingroup
+\renewcommand{\section}[2]{}%
+%\renewcommand{\chapter}[2]{}% for other classes
+{\small{
+% \bibliographystyle{ieeetr}
+\bibliography{example_paper}
+}}
+\endgroup
+%  \newpage
+ \appendix
+ \section*{Appendix}
+ \input{appendix}
+\end{document}

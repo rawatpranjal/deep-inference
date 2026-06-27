@@ -1,0 +1,45 @@
+
+\begin{wrapfigure}{r}{0pt}
+    \begin{tikzpicture}
+        % x node set with absolute coordinates
+        \node[state, fill=yellow] (x) at (0,0) {$X$};
+    
+        % y node set relative to x.
+        % Locations can be:
+        % right,left,above,below,
+        % above left,below right, etc
+        \node[state, fill=yellow] (y) [right =of x] {$Y$};
+        \node[state, fill=yellow] (z) [left =of x] {$Z$};
+        \node[state] (eps) [above right =of x, xshift = -0.5cm] {$\varepsilon$};
+        % Directed edge
+        \path (x) edge (y);
+        \path (z) edge (x);
+        \path (eps) edge (y);
+        \path (eps) edge (x);
+    \end{tikzpicture} 
+    \caption{Causal Graph.}
+    \label{fig:causal-graph}
+\end{wrapfigure}
+    
+We begin with a description of the IV setting. We observe a treatment $X\in \mathcal{X}$, where  $\mathcal{X} \subset \mathbb{R}^{d_X}$, and an outcome $Y\in \mathcal{Y}$, where $\mathcal{Y} \subset \mathbb{R}$.  
+We also have an unobserved confounder that affects both $X$ and $Y$. This causal relationship can be represented with the following structural causal model:
+\begin{align}\label{eq:structuralcausalmodel}
+    Y = f_\mathrm{struct}(X) + \varepsilon, \quad \expect{\varepsilon} = 0, \quad \expect{\varepsilon | X} \neq 0,
+\end{align}
+where $f_\mathrm{struct}$ is called the structural function, which we assume to be continuous, and $\varepsilon$ is an additive noise term. This specific confounding assumption is necessary for the IV problem. In \citet{Bareinboim2012}, it is shown that we cannot learn $f_\mathrm{struct}$ if we allow any type of confounders. The challenge is that $\expect{\varepsilon | X} \neq 0$, which reflects the existence of a confounder. Hence, we cannot use ordinary supervised learning techniques since $f_\mathrm{struct}(x) \neq \expect{Y | X=x}$.  Here, we assume there is no observable confounder but we may easily include this, as discussed in Appendix~\ref{sec:observable-confounder}. 
+
+To deal with the hidden confounder $\varepsilon$, we assume to have access to an instrumental variable $Z \in \mathcal{Z}$ which satisfies the following assumption. 
+\begin{assum}\label{assum:iv}
+    The conditional distribution $P(X | Z)$ is not constant in $Z$ and $\expect{\varepsilon | Z} = 0$.
+\end{assum}
+Intuitively, Assumption~\ref{assum:iv} means that the instrument $Z$ induces variation in the treatment $X$ but is uncorrelated with the hidden confounder $\varepsilon$. Again, for simplicity, we assume $\mathcal{Z} \subset \mathbb{R}^{d_Z}$. The causal graph describing these relationships is shown in Figure~\ref{fig:causal-graph}.\footnote{We show the simplest causal graph in Figure~\ref{fig:causal-graph}
+% One can infer $Z \indepe \varepsilon$ and $Z \indepe Y | X, \varepsilon$ 
+% from Figure~\ref{fig:causal-graph}, 
+It entails $Z \indepe \varepsilon$,
+but we only require $Z$ and $\varepsilon$ to be uncorrelated in Assumption~\ref{assum:iv}. Of course, this graph also says that $Z$ is not independent of $\varepsilon$ when conditioned on  observations $X$.}. Note that the instrument $Z$ cannot have an incoming edge from the latent confounder that is also a parent of the outcome.
+
+Given Assumption~\ref{assum:iv}, we can see that the function $f_\mathrm{struct}$ satisfies the operator equation $\expect{Y|Z} = \expect{f_\mathrm{struct}(X)|Z}$ by taking expectation conditional on $Z$ of both sides of \eqref{eq:structuralcausalmodel}. \citet{Newey2003} provide necessary and sufficient conditions, known as completeness assumptions, to ensure identifiability of $f_\mathrm{struct}(X)$. Solving this equation, however, is known to be ill-posed \citep{Nashed1974}. To address this, recent works \citep{Carrasco2007,Darolles2011,Muandet2019,Singh2019} minimize the following regularized loss $\mathcal{L}$ to obtain the estimate $\hat{f}_{\mathrm{struct}}$:
+\begin{align}
+    \hat{f}_{\mathrm{struct}} = \argmin_{f\in \mathcal{F}} \mathcal{L}(f), \quad \mathcal{L}(f) = \expect[YZ]{(Y - \expect[X|Z]{f(X)})^2} + \Omega(f), \label{eq:total-loss}
+\end{align}
+where $\mathcal{F}$ is an arbitrary space of continuous functions and $\Omega(f)$ is a regularizer on $f$.

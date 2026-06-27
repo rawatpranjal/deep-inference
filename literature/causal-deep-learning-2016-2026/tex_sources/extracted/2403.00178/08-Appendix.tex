@@ -1,0 +1,101 @@
+\appendix
+\section{Dataset Description} \label{sec:dataset_descriptions}
+\subsection{COVID-19 Dataset}\label{sec:covid19_dataset}
+
+ Our experiments used the dataset provided by the Johns Hopkins Coronavirus Resource Center (JHU) \footnote{https://coronavirus.jhu.edu/about/how-to-use-our-data} from April 12th to December 31st, 2020. That is, we consider 264 time points, with each point representing one day. 
+%where the interval between each time point is one day. 
+ The dataset contains a comprehensive range of information, but for our experiments, we focus on up to 7 specific features. These features include the daily counts of confirmed cases, deaths, recovered cases, active cases, incident rate (cases per 100,000 people), mortality rate (calculated as the number of recorded deaths multiplied by 100 divided by the number of cases), and testing rate (total test results per 100,000 people). It's worth noting that while the JHU dataset provides cumulative data for confirmed, deaths, recovered, and active cases, our experiments and models specifically consider the daily increases in these features (e.g., the number of new cases reported each day).
+
+
+To capture dynamic interaction edges, we use a temporal mobility flow network among a selection of 47 states based on COVID-19 USFlows \cite{mobility}.
+
+The treatments are represented as statewide policies that aim to combat the spread of COVID-19. We identify 58 different statewide policies enacted throughout 2020, from the data given by the Department of Health \& Human Services \footnote{https://catalog.data.gov/dataset/covid-19-state-and-county-policy-orders-9408a}. Each state enacted around 20 of these policies during the time period of April 2020 to December 2020, where the dataset provides the start and end dates of each enacted policy. In our model, treatments are encoded such that for each time point, the value is either 1 or 0 depending on whether the particular policy is enacted (for a given state) at that time or not, respectively. 
+
+Overall, the model receives input data for a total of 264 time points, covering each of the 47 states, and includes 7 features. Alongside this, the model is also provided with treatments and a mobility graph. Prior to being used as input for our models, the data is normalized. However, when calculating the test loss for comparison with other baseline models, the output is unnormalized. Our goal is to predict either the number of confirmed cases or the number of deaths for a future period of 7, 14, or 21 days.
+ 
+\subsection{Tumor Growth Dataset}\label{sec:tumor_growh_dataset}
+We extend the state-of-the-art pharmacokinetic-pharmacodynamic (PK-PD) model of tumor growth proposed by \cite{geng2017prediction} to simulate a more complex scenario where multiple tumor regions within a single patient interact with each other. The original model characterizes patients suffering from non-small cell lung cancer and models the evolution of their tumor under the combined effects of chemotherapy and radiotherapy. For a detailed description of the original model, we refer the readers to the original paper \cite{geng2017prediction}. In our extended model, we incorporate two new terms: an interference term and a neighborhood covariate term. The volume of the tumor in region \(i\) at \(t+1\) days after diagnosis is modeled as follows:
+\begin{small}
+\begin{equation}
+\begin{aligned}
+& V_i(t + 1)  \\
+= & \Bigg(1 + \underbrace{\rho \log\left(\frac{K}{V_i(t)}\right)}_{\text{Tumor Growth}} - \underbrace{\beta_c C_i(t)}_{\text{Chemotherapy}} - \underbrace{\left(\alpha_r d_i(t) + \beta_r d_i(t)^2\right)}_{\text{Radiotherapy}} + \underbrace{e_{it}}_{\text{Noise}} \Bigg) V_i(t) \nonumber \\
+& + \underbrace{\left(\frac{1}{N_i} \sum_{j \in \mathcal{N}_i} \iota_c C_j(t)\right)}_{\text{Chemotherapy Interference}} + \underbrace{\left(\frac{1}{N_i} \sum_{j \in \mathcal{N}_i} \left(\iota_r d_j(t) + \iota_r d_j(t)^2\right)\right)}_{\text{Radiotherapy Interference}}  \\
+&  \qquad \qquad \qquad \qquad \qquad + \underbrace{\left(\frac{1}{N_i} \sum_{j \in \mathcal{N}_i} \kappa V_j(t)\right)}_{\text{Neighborhood Covariates}}.
+\end{aligned}
+\label{eq:tumor_growth_eq}
+\end{equation}    
+\end{small}
+where the parameters \(K\), \(\rho\), \(\beta_c\), \(\alpha_r\), \(\beta_r\) are sampled from the prior distributions described in \cite{geng2017prediction}, and \(e_{it} \sim N(0, 0.012)\) is a noise term that accounts for randomness in the tumor growth. The prior means for \(\beta_c\) and \(\alpha_r\) are adjusted to create three patient subgroups \(S(i) \in \{1, 2, 3\}\) as described in \cite{bica2020crn}. The chemotherapy drug concentration follows an exponential decay with a half-life of 1 day.  The time-varying confounding is introduced by modeling chemotherapy and radiotherapy assignment as Bernoulli random variables, with probabilities \(p_c\) and \(p_r\) depending on the tumor diameter. For more details, we refer the reader to the paper \cite{bica2020crn}. For our newly defined interference and neighborhood covariate terms, we set the hyperparameters \(\iota_c\) and \(\iota_r\) to 0.01, and \(\kappa\) to 0.001. These values were carefully chosen to reflect the strength of the interference and neighborhood covariates in the dataset. The number of tumors in each patient $N_i$ is fixed to 15, and for each tumor region, the number of edges connected between the tumor regions is defined randomly from the range of 22 to 45. For additional experiments shown in Appendix~\ref{sec:appendix_tumor_results}, the number of tumor regions for each patient is fixed to 5, and the number of edges ranges from 6 to 10. The dataset is input into our model similar to the COVID-19 dataset. Both chemotherapy and radiotherapy are encoded into 0 or 1 value depending on whether it was applied at a specific time point. The input data consists of 60-time points with 4 features, which include tumor volume, patient type, and the two treatments. The data is normalized for model input but unnormalized for test loss calculation. The model's objective is to predict tumor volume for future periods of 14, 21, or 28 days. We also create a longer-range dataset with 120-time points, which is described in \ref{sec:appendix_tumor_results}.
+
+
+
+
+
+\begin{table*}[htbp]
+  \centering
+    \begin{tabular}{l|ccc|ccc|ccc}
+    \toprule
+    \multicolumn{1}{c|}{Prediction Length} & \multicolumn{3}{c|}{35-days} & \multicolumn{3}{c|}{49-days} & \multicolumn{3}{c}{63-days} \\
+    \multicolumn{1}{c|}{Treatment F.R.} & 0.25 & 0.5 & 0.75   & 0.25 & 0.5 & 0.75 & 0.25 & 0.5 & 0.75 \\ \hline
+    CAG-ODE & 35.00 & 34.68 & 34.50 & 34.12 & 37.92 & 37.88 & 46.71 & 47.28 & 48.12 \\
+    \bottomrule
+    \end{tabular}%
+    \medskip
+    \caption{Root Mean Square Error (RMSE) for counterfactual outcome evaluation on the longer-range Tumor Growth dataset with treatment flipping ratio: $25\%, 50\%, 75\%$.}
+  \label{tab:long_range}%
+\end{table*}%
+
+\section{Data Splitting}\label{sec:training_details}
+% {\color{red} Reviewer kMQ9:  How is data sparsity handled in the Covid-19 experiments?}
+We train our model in a sequence-to-sequence setting, where we split the trajectory of each training sample into two parts $[t_1,t_K]$ and $[t_{K+1},t_T]$. We condition the model on the first part of observations and predict the second part. To fully utilize the data points within each trajectory, we generate training and validation samples by splitting each trajectory into several chunks using a sliding window with three hyperparameters: the observation length and prediction length for each sample, and the interval between two consecutive chunks (samples). We summarize the procedure in Algorithm~\ref{al:split}, where $K$ is the number of trajectories and $d$ is the input feature dimension. For both datasets, we set the observation length to be 7 and the interval to be 3. We ask the model to make predictions at varying lengths for evaluation.
+
+\begin{algorithm}[htbp]
+\caption{Data Splitting Procedure.}
+\label{al:split}
+\KwIn{
+Original Training trajectories  {$X_{\text{input}}\in \mathbb{R}^{K\times N\times T\times d}$};\\
+Observation length $O$;
+Prediction length $M$;
+Interval $I$;
+Trajectory length $T$.\\}
+\KwOut{Training samples after splitting $X_{\text{train}}$.}
+sample$\_$length = $O+M$;\\
+num$\_$chunk = ($T$ - sample$\_$length )//interval + 1;\\
+\For{i in range (0,K)}{
+    \For{j $\text{in range}$(0,num$\_$chunk,I)}
+    {Generate the split training sample as $X_{\text{input}}[i,:,j:j +
+\text{sample}\_\text{length},:]$\\
+Add the training sample to the training set $X_{\text{train}}$.}
+    }
+\end{algorithm}
+
+
+
+
+
+    
+
+
+
+
+
+\section{Longer-range Prediction for the Tumor Growth Dataset}\label{sec:appendix_tumor_results}
+
+In Table~\ref{tab:long_range}, we evaluate the performance of our model. An extended version of the simulation dataset with a range of 120 days was used in the experiment. The considered prediction lengths are 35, 49, and 63 days.
+
+
+As anticipated, the prediction errors exhibit a moderate increase with longer prediction lengths, as the added duration poses a greater challenge for accurate predictions.  Note that the prediction error remains relatively stable when the treatment flipping ratio is increased from 25\% to 75\%. This observation suggests that the utilization of treatment balancing and interference balancing techniques effectively mitigates the risk of overfitting to confounding factors, ensuring CAG-ODE's robustness.
+
+
+
+
+\section{Model Implementation Details}
+We use the fourth-order Runge-Kutta method from the torchdiffeq python package~\cite{ode} as the ODE solver, for solving the ODE systems on a time grid that is five times denser than the observed time points. We also utilize the Adjoint method described in ~\cite{ode} to reduce memory use. 
+
+
+\section{Limitations}
+One limitation of~\model~is that when inferring the future trajectories of nodes, we simply assume that all nodes are connected and jointly infer such edge evolution. This would bring huge computational costs when generalized to large-scale dynamical systems. In the future, we will consider more efficient sampling methods to accelerate the edge inference procedure to scale up our model. Another line of future work would be how to model more complex multiple treatment effects, including competing, hierarchical relationships.
+
+\section{Broader Impacts}
+Our work significantly enhances the performance of causal inference over multi-agent dynamical systems, which can potentially benefit a wide range of fields including public health,  biology, physics, and robotics. Our work also advances the recent study of continuous graphODE for modeling multi-agent system dynamics, providing an efficient tool for further research on AI for science.

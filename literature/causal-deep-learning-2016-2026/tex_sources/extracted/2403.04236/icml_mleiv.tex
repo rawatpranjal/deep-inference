@@ -1,0 +1,265 @@
+%%%%%%%% ICML 2024 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+
+\usepackage{booktabs} % for professional tables
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2024} with \usepackage[nohyperref]{icml2024} above.
+\usepackage{hyperref}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2024}
+\input{notation}
+% If accepted, instead use the following line for the camera-ready submission:
+% \usepackage[accepted]{icml2024}
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\crefname{assumption}{Assumption}{Assumptions}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Fast and Adaptive Rates for Regularized DeepIV}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Fast and Adaptive Rates for Regularized DeepIV}
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2024
+% package.
+
+% List of affiliations: The first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% You can specify symbols, otherwise they are numbered in order.
+% Ideally, you should not use this facility. Affiliations will be numbered
+% in order of appearance and this is the preferred way.
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Zihao Li}{yyy}
+\icmlauthor{Hui Lan}{sch}
+\icmlauthor{Vasilis Syrgkanis}{sch}
+\icmlauthor{Masatoshi Uehara}{comp}
+\icmlauthor{Mengdi Wang}{yyy}
+% \icmlauthor{Firstname6 Lastname6}{sch,yyy,comp}
+% \icmlauthor{Firstname7 Lastname7}{comp}
+% %\icmlauthor{}{sch}
+% \icmlauthor{Firstname8 Lastname8}{sch}
+% \icmlauthor{Firstname8 Lastname8}{yyy,comp}
+%\icmlauthor{}{sch}
+%\icmlauthor{}{sch}
+\end{icmlauthorlist}
+
+\icmlaffiliation{yyy}{Princeton University, NJ, USA}
+\icmlaffiliation{comp}{Genentech, CA, USA}
+\icmlaffiliation{sch}{Stanford University, CA, USA}
+
+\icmlcorrespondingauthor{Zihao Li}{zl9045@princeton.edu}
+% \icmlcorrespondingauthor{Hui Lan}{first2.last2@www.uk}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Machine Learning, ICML}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+\newcount\Comments  %
+\Comments=1 %
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+\definecolor{darkred}{rgb}{0.7,0,0}
+\definecolor{teal}{rgb}{0.3,0.8,0.8}
+\definecolor{orange}{rgb}{1.0,0.5,0.0}
+\definecolor{purple}{rgb}{0.8,0.0,0.8}
+\newcommand{\kibitz}[2]{\ifnum\Comments=1{\textcolor{#1}{\textsf{\footnotesize #2}}}\fi}
+\usetikzlibrary{positioning}
+
+\definecolor{Gray}{gray}{0.9}
+
+\input{Note/notation}
+
+\newcommand{\defeq}{\triangleq}
+\newcommand{\Otilde}{\tilde{O}}
+\newcommand{\KL}{\mathrm{KL}}
+\newcommand{\sa}{(s,a)}
+\newcommand{\misp}{\epsilon_{\text{misspec}}}
+\newcommand{\gproj}{g_{\text{proj}}}
+\newcommand{\E}{\mathbb{E}}
+%%%% calligraphic fonts
+\newcommand{\Acal}{\mathcal{A}}
+\newcommand{\Bcal}{\mathcal{B}}
+\newcommand{\Ccal}{\mathcal{C}}
+\newcommand{\Dcal}{\mathcal{D}}
+\newcommand{\Ecal}{\mathcal{E}}
+\newcommand{\Fcal}{\mathcal{F}}
+\newcommand{\Gcal}{\mathcal{G}}
+\newcommand{\Hcal}{\mathcal{H}}
+\newcommand{\Ical}{\mathcal{I}}
+\newcommand{\Jcal}{\mathcal{J}}
+\newcommand{\Kcal}{\mathcal{K}}
+\newcommand{\Lcal}{\mathcal{L}}
+\newcommand{\Mcal}{\mathcal{M}}
+\newcommand{\Ncal}{\mathcal{N}}
+\newcommand{\Ocal}{\mathcal{O}}
+\newcommand{\Pcal}{\mathcal{P}}
+\newcommand{\Qcal}{\mathcal{Q}}
+\newcommand{\Rcal}{\mathcal{R}}
+\newcommand{\Scal}{{\mathcal{S}}}
+\newcommand{\Tcal}{{\mathcal{T}}}
+\newcommand{\Ucal}{\mathcal{U}}
+\newcommand{\Vcal}{\mathcal{V}}
+\newcommand{\Wcal}{\mathcal{W}}
+\newcommand{\Xcal}{\mathcal{X}}
+\newcommand{\Ycal}{\mathcal{Y}}
+\newcommand{\Zcal}{\mathcal{Z}}
+\newcommand*{\mini}{\mathop{\mathrm{minimize}}}
+\newcommand*{\maxi}{\mathop{\mathrm{maximize}}}
+\newcommand*{\argmin}{\mathop{\mathrm{argmin}}}
+\newcommand*{\argmax}{\mathop{\mathrm{argmax}}}
+\newcommand{\sgn}{\mathop{\mathrm{sign}}}
+\newcommand{\tr}{\mathop{\mathrm{tr}}}
+
+\newcommand{\cmc}{C_{2\rightarrow 4}}
+\newcommand{\kl}{D_{\text{KL}}}
+\newcommand{\CC}{\mathbb{C}} % Complex numbers
+\newcommand{\EE}{\mathbb{E}} % Expectation
+\newcommand{\VV}{\mathbb{V}} % Variance
+\newcommand{\II}{\mathbb{I}} % Indicator
+\newcommand{\KK}{\mathbb{K}} % Arbitrary field
+\newcommand{\LL}{\mathbb{L}} % Loss
+\newcommand{\MM}{\mathbb{M}} % Median
+\newcommand{\NN}{\mathbb{N}} % Natural numbers
+\newcommand{\PP}{\mathbb{P}} % Probability
+\newcommand{\QQ}{\mathbb{Q}} % Rationals
+\newcommand{\RR}{\mathbb{R}} % Real numbers
+\newcommand{\ZZ}{\mathbb{Z}} % Integers
+\newcommand{\XX}{\mathbb{X}} %
+\newcommand{\YY}{\mathbb{Y}} %
+\newcommand{\OO}{\mathbb{O}} %
+\newcommand{\TT}{\mathbb{T}} %
+\newcommand{\smallfrac}[2]{{\textstyle \frac{#1}{#2}}}  
+                                                        
+\newcommand*{\zero}{{\textbf 0}}
+\newcommand*{\one}{{\textbf 1}}
+
+\newcommand*{\Risk}{{\rm Risk}}
+\newcommand*{\Bias}{{\rm Bias}}
+
+\newcommand{\pen}{{\rm pen}}
+\newcommand{\diag}{{\rm diag}}
+\newcommand{\rank}{{\rm rank}}
+
+\def\iid{{\it i.i.d.}}
+\renewcommand{\arraystretch}{2.}
+
+
+\begin{abstract}
+In this paper, we study nonparametric estimation of instrumental variable (IV) regressions. Recently, many
+flexible machine learning methods have been developed for instrumental variable estimation. However, these
+methods have at least one of the following limitations:  (1) restricting the IV regression to be uniquely identified; (2) requiring minimax computation oracle, which is highly unstable in practice; (3) not allowing model selection procedure.  In this paper, we present the first method and analysis that can avoid all three limitations, while still permitting general function approximation. Specifically, we propose a minimax-oracle-free method called Density Estimation IV (DEIV) regression that can converge to the least-norm IV solution. Our method consists of two stages: first, we learn the conditional distribution of covariates, and by utilizing the learned distribution,  we learn the estimator by minimizing a Tikhonov-regularized loss function. We further extend DBIV to an iterative estimator, and show that our method allows model selection procedures such as convex aggregation and $Q$-aggregation. We conclude by empirically justifying our results with numerical simulations.
+\end{abstract}
+\input{Sections/intro}
+\input{Sections/pre}
+\input{Sections/method}
+\input{Sections/experiments}
+
+
+%restatable
+
+
+
+
+
+\bibliography{Note/rl}
+\bibliographystyle{icml2024}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+\appendix
+\onecolumn
+\input{Sections/related_works}
+\input{Sections/appdx}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
+% Modified again in 2023 and 2024 by Sivan Sabato and Jonathan Scarlett.
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.

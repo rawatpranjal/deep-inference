@@ -1,0 +1,29 @@
+One might want to jointly minimize the loss $\tilde{\mathcal{L}}^{(n)}_2$, which is the empirical approximation of $\mathcal{L}$. However, this fails to learn the true structural function $f_{\mathrm{struct}}$, as shown in this appendix.
+
+Figure~\ref{fig:learning_fail} shows the learning curve obtained when we jointly minimize $\theta_X$ and $\theta_Z$ with respect to $\tilde{\mathcal{L}}^{(n)}_2$, where $\mathcal{L}_{\mathrm{test}}$ is the empirical approximation of
+\begin{align}
+    {L}_{\mathrm{test}} = \expect[X]{\|f_{\mathrm{struct}}(X) - (\hat{\vec{u}}^{(n)})^\top\vec{\psi}_{\theta_X}(X)\|^2}.
+\end{align}
+
+We observe in Figure~\ref{fig:learning_fail} that the decrease of stage 2 loss does not improve the performance of the learned structural function. This is because the model focuses on learning the relationship between instrument $Z$ and outcome $Y$, while ignoring treatment $X$. We can see this from the fact that stage 1 loss becomes large and unstable. This is against the goal of IV regression, which is to learn a causal relationship between $X$ and $Y$.
+
+On the other hand, Figure~\ref{fig:learning_suc} shows the learning curve obtained using DFIV. Now, we can see that stage 2 loss matches $\mathcal{L}_{\mathrm{test}}$. Also, we can confirm that stage 1 loss stays small and stable.
+
+
+\begin{figure}[t]
+    \begin{minipage}{0.48\hsize}
+    \centering
+    \includegraphics[width=0.95\textwidth]{Appendix/learning_curve_fail.pdf}
+
+    \caption{Learning curve of joint minimization}
+    \label{fig:learning_fail}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \includegraphics[width=0.95\textwidth]{Appendix/learning_curve_suc.pdf}
+        \caption{Learning curve of DFIV}
+        \label{fig:learning_suc}
+    \end{minipage}
+\end{figure}
+

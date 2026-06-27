@@ -1,0 +1,540 @@
+%%%%%%%% ICML 2022 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass[nohyperref]{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx, float, subcaption, pdflscape, afterpage, wrapfig}
+\usepackage{threeparttable, booktabs, placeins, multirow}
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2022} with \usepackage[nohyperref]{icml2022} above.
+\usepackage{hyperref}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+%\usepackage{icml2022}
+
+% If accepted, instead use the following line for the camera-ready submission:
+\usepackage[accepted]{icml2022}
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\input{math_commands.tex}
+
+% if you use cleveref
+\usepackage[capitalize,noabbrev]{cleveref}
+\usepackage{url}
+
+
+\newcommand{\ldot}[2]{\ensuremath{\left\langle #1, #2 \right\rangle}}
+\newcommand{\rrloss}{\ensuremath{\mathrm{RRloss}}}
+\newcommand{\regloss}{\ensuremath{\mathrm{REGloss}}}
+\newcommand{\tmleloss}{\ensuremath{\mathrm{TMLEloss}}}
+\newcommand{\shull}{\ensuremath{\mathrm{star}}}
+\newcommand{\RR}{\ensuremath{\mathbb{R}}}
+\newcommand{\der}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\child}{\ensuremath{\mathrm{child}}}
+\newcommand{\wt}{\widehat{\theta}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{RieszNet and ForestRiesz: Auto-DML with Neural Nets and Random Forests}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{RieszNet and ForestRiesz:
+Automatic Debiased \\ Machine Learning with Neural Nets and Random Forests}
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2022
+% package.
+
+% List of affiliations: The first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% You can specify symbols, otherwise they are numbered in order.
+% Ideally, you should not use this facility. Affiliations will be numbered
+% in order of appearance and this is the preferred way.
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Victor Chernozhukov}{mit}
+\icmlauthor{Whitney Newey}{mit}
+\icmlauthor{Víctor Quintas-Martínez}{mit}
+\icmlauthor{Vasilis Syrgkanis}{ms}
+\end{icmlauthorlist}
+
+\icmlaffiliation{mit}{Department of Economics, Massachusetts Institute of Technology, Cambridge MA, USA}
+\icmlaffiliation{ms}{Microsoft Research New England, Cambridge MA, USA}
+
+\icmlcorrespondingauthor{Víctor Quintas-Martínez}{vquintas@mit.edu}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Machine Learning, ICML, Debiased Machine Learning, Causal Inference, Off-policy Evaluation, Interpretable Machine Learning, Riesz Representers, Neural Networks, Random Forests}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+
+\begin{abstract}
+Many causal and policy effects of interest are defined by linear functionals of high-dimensional or non-parametric regression functions. $\sqrt{n}$-consistent and asymptotically normal estimation of the object of interest requires debiasing to reduce the effects of regularization and/or model selection on the object of interest. Debiasing is typically achieved by adding a correction term to the plug-in estimator of the functional, which leads to properties such as semi-parametric efficiency, double robustness, and Neyman orthogonality. We implement an automatic debiasing procedure based on automatically learning the Riesz representation of the linear functional using Neural Nets and Random Forests. Our method only relies on black-box evaluation oracle access to the linear functional and does not require knowledge of its analytic form. We propose a multitasking Neural Net debiasing method with stochastic gradient descent minimization of a combined Riesz representer and regression loss, while sharing representation layers for the two functions. We also propose a Random Forest method which learns a locally linear representation of the Riesz function. Even though our method applies to arbitrary functionals, we experimentally find that it performs well compared to the state of art neural net based algorithm of \citet{shi2019adapting} for the case of the average treatment effect functional. We also evaluate our method on the problem of estimating average marginal effects with continuous treatments, using semi-synthetic data of gasoline price changes on gasoline demand. Code available at \href{https://github.com/victor5as/RieszLearning}{github.com/victor5as/RieszLearning}.
+\end{abstract}
+
+\section{Introduction}
+
+A large number of problems in causal inference, off-policy evaluation and optimization and interpretable machine learning can be viewed as estimating the average value of a moment functional that depends on an unknown regression function:
+\begin{equation}
+    \theta_0 = \E[m(W; g_0)],
+\end{equation}
+where $W := (Y, Z)$ and $g_0(Z) := \E[Y \mid Z]$. In most cases, $Y$ will be the outcome of interest, and inputs $Z = (T,X)$ will include a binary or continuous treatment $T$ and covariates $X$. Prototypical examples include the estimation of average treatment effects, average policy effects, average derivatives and incremental policy effects.
+
+\begin{example}[Average treatment effect] \label{ex1} Here $Z=(T,X)$ where $T$ is a binary treatment indicator, and $X$ are covariates. The object of interest is:
+\begin{align*}
+    \theta_0 = \E[g_0(1,X)-g_0(0,X)] %, \quad m(W;g) = g(1,X)-g(0,X).
+\end{align*}
+If $Y = T\cdot Y(1) + (1 - T) \cdot Y(0)$, where potential outcomes $(Y(1), Y(0))$ are conditionally independent of treatment $T$ given covariates $X$, then this object is the average treatment effect \citep{rosenbaum1983central}.
+\end{example}
+
+\begin{example}[Average policy effect] \label{ex2} In the context of offline policy evaluation and optimization, our goal is to optimize over a space of assignment policies $\pi: X \to \{0,1\}$, when having access to observational data collected by some unknown treatment policy. The policy value can also be formulated as the average of a linear moment:
+\small
+\begin{align*}
+    \theta_0 = \E[\pi(X) (g_0(1, X) - g_0(0, X)) + g_0(0, X)] %, \quad m(W; g) = \pi(X) (g(1, X) - g(0, X)) + g(0, X).
+\end{align*}
+\normalsize
+A long-line of prior work has considered doubly-robust approaches to optimizing over a space of candidate policies from observational data (see, e.g., \citealp{dudik2011doubly,athey2021policy}).
+\end{example}
+
+\begin{example}[Average marginal effect / derivative] \label{ex3} Here $Z=(T,X)$, where $T$ is a continuously distributed policy variable of interest, $X$ are covariates, and:
+\begin{align*}
+    \theta_0 = \E\left[\der{g_0(T,X)}{t}\right] %, \quad m(W;g) = \der{g(T,X)}{t}.
+\end{align*}
+This object has received previous attention in the econometrics literature (e.g., \citealp{imbens2009identification}), and it is essentially the average slope in the partial dependence plot frequently used in work on interpretable machine learning (see, e.g., \citealp{zhao2021causal,Friedman2001,molnar2020interpretable}).
+\end{example}
+
+\begin{example}[Incremental policy effects] \label{ex4} Here $Z=(T,X)$, where $T$ is a continuously distributed policy variable of interest, $X$ are covariates, and $\pi: X\to [-1,1]$ is an incremental policy of infinitesimally increasing or descreasing the treatment from its baseline value (see, e.g., \citealp{athey2021policy}). The incremental value of such an infinitesimal policy change takes the form:
+\begin{align*}
+    \theta_0 = \E\left[\pi(X) \der{g_0(T,X)}{t}\right] %, \quad m(W;g) = \pi(X)\der{g(T,X)}{t}.
+\end{align*}
+Such incremental policy effects can also be useful within the context of policy gradient algorithms in deep reinforcement learning, so as to take gradient steps towards a better policy, and debiasing techniques have already been used in that context \citep{grathwohl2017backpropagation}.
+\end{example}
+
+Even though the non-parametric regression function is typically estimable only at slower than parametric rates, one can often achieve parametric rates for the average moment functional. However, this is typically not achieved by simply pluging a non-parametric regression estimate into the moment formula and averaging, but requires debiasing approaches to reduce the effects of regularization and/or model selection when learning the non-parametric regression.
+
+Typical debiasing techniques are tailored to the moment of interest. In this work we present automatic debiasing techniques that use the representation power of neural nets and random forests and which only require oracle access to the moment of interest. Our resulting average moment estimators are typically consistent at parametric $\sqrt{n}$ rates and are asymptotically normal, allowing for the construction of confidence intervals with approximately nominal coverage. The latter is essential in social science applications and can also prove useful in policy learning applications, so as to quantify the uncertainty of different policies and implement automated policy optimization algorithms which require uncertainty bounds (e.g., algorithms that use optimism in the face of uncertainty).
+
+Relative to previous works in the automatically debiased ML (Auto-DML) literature, the contribution of this paper is twofold. On the one hand, we provide the first practical implementation of Auto-DML using neural networks (RieszNet) and random forests (ForestRiesz). As such, we complement the theoretical guarantees of \citet{chernozhukov2021automatic} for generic machine learners. On the other hand, we show that our methods perform better than existing benchmarks and that inference based on asymptotic confidence intervals obtains coverage close to nominal in two settings of great relevance in applied research: the average treatment effect of a binary treatment and the average marginal effect (derivative) of a continuous treatment.
+
+The rest of the paper is structured as follows. \cref{sec:estimation} provides some background on estimation of average moments of regression functions. In \ref{sec:debiasing} we describe the form of the debiasing term, and in \ref{sec:riesz} we explain how it can be automatically estimated. Sections \ref{sec:riesznet} and \ref{sec:forestriesz} introduce our proposed estimators: RieszNet and ForestRiesz, respectively. Finally, in \cref{sec:experiments} we present our experimental results.
+
+\section{Estimation of Average Moments of Regression Functions}\label{sec:estimation}
+
+\subsection{Debiasing the Average Moment} \label{sec:debiasing}
+We focus on problems where there exists a square-integrable random variable  $\alpha_0(Z)$  such that:
+\begin{gather*}
+    \E[m(W; g)]=\E[\alpha_0(Z)g(Z)], \\ \text{ for all $g$ with } \E[g(Z)^2]<\infty.
+\end{gather*}
+By the Riesz representation theorem, such an $\alpha_0(Z)$ exists if and only if $\E[m(W;g)]$ is a continuous linear functional of $g$. We will refer to $\alpha_0(Z)$ as the Riesz representer (RR). 
+%, as in Newey (1994) and Hirshberg and Wager (2018).
+
+The RR exists in each of \crefrange{ex1}{ex4} under mild regularity conditions. For instance, in \cref{ex1} the RR is $\alpha_0(Z) = T/p_0(X) - (1-T)/(1-p_0(X))$ where $p_0(X)=\Pr(T=1 \mid X)$ is the propensity score, and in \cref{ex3}, integration by parts gives $\alpha_0(Z)=-\left(\partial f_0(T,X)/ \partial t\right)/f_0(Z)$ where $f_0(Z)$ is the joint probability density function (pdf) of $T$ and $Z$. In general, the RR involves (unknown) nonparametric functions of the data, such as the propensity score or the density $f_0(Z)$ and its derivative.
+
+The RR is a crucial object in the debiased ML literature, since it allows us to construct a debiasing term for the moment functional $m(W; g)$ (see \citealp{chernozhukov2018double}, for details). The debiasing term in this case takes the form $\alpha(Z) (Y - g(Z))$. To see that, consider the score $m(W; g) + \alpha(Z)(Y-g(Z))-\theta$. It satisfies the following \textit{mixed bias property}:
+\begin{multline*}
+    \E[m(W; g) + \alpha(Z)(Y-g(Z)) - \theta_0] \\ =
+    -\E[(\alpha(Z)-\alpha_0(Z))(g(Z)-g_0(Z))].
+\end{multline*}
+This property implies double robustness of the score.\footnote{Indeed, the score will be zero in expectation when either $\alpha(Z) = \alpha_0(Z)$ or $g(Z) = g_0(Z)$.The key property we rely on is the mixed bias property, and not double robustness.} 
+
+A debiased machine learning estimator of $\theta_0$ can be constructed from this score and first-stage learners $\widehat{g}$ and $\widehat\alpha$. Let $\E_n[\cdot]$ denote the empirical expectation over a sample of size $n$, i.e., $\E_n[Z]=\frac{1}{n}\sum_{i=1}^n Z_i$. We consider:
+\begin{align}
+    \widehat\theta = \E_n\left[m(W; \widehat{g}) + \widehat\alpha(Z)(Y-\widehat{g}(Z))\right].
+\end{align}
+
+The mixed bias property implies that the bias of this estimator will vanish at a rate equal to the product of the mean-square convergence rates of $\widehat\alpha$ and $\widehat{g}$. Therefore, in cases where the regression function $g_0$ can be estimated very well, the rate requirements on $\widehat{\alpha}$ will be less strict, and vice versa. More notably, whenever the product of the mean-square convergence rates of $\widehat\alpha$ and $\widehat{g}$ is larger than $\sqrt{n}$, we have that $\sqrt{n} (\widehat{\theta} - \theta_0)$ converges in distribution to centered normal law $N(0, \E[\psi_0(W)^2])$, where $$\psi_0(W) := m(W; g_0) + \alpha_0(Z)(Y-g_0(Z))-\theta_0,$$ as proven formally in Theorem 4 of \citet{chernozhukov2021automatic}.  Results in \citet{newey1994asymptotic} and \citet{chernozhukov2018global} imply that $\E[\psi_0(W)^2]$ is a semiparametric efficient variance bound for $\theta_0$, and therefore the  estimator achieves this bound.
+
+The regression estimator $\widehat{g}$ and the RR estimator $\widehat{\alpha}$ may use samples different than the $i$-th, which constitutes cross-fitting. Cross-fitting reduces bias from using the $i$-th sample in estimating $\alpha$ and $g$. We may also use
+different samples to compute $\widehat{g}$ and $\widehat{\alpha}$, which constitutes double cross-fitting (see \citealp{newey2018cross} for the benefits of double cross-fitting).
+
+\subsection{Riesz Representer as Minimizer of Stochastic Loss}\label{sec:riesz}
+The theoretical foundation for this paper is the recent work of \citet{chernozhukov2021automatic}, who show that one can view the Riesz representer as the minimizer of the loss function:
+\begin{align*}
+\alpha_0 & = \argmin_\alpha \E[(\alpha(Z) - \alpha_0(Z))^2]
+\\ & = \argmin_\alpha \E[\alpha(Z)^2 - 2\alpha_0(Z)\alpha(Z) + \alpha_0(Z)^2]
+\\ & = \argmin_\alpha \E[\alpha(Z)^2 - 2m(W; \alpha)],
+\end{align*}
+(because $\E[\alpha_0(Z)^2]$ is a constant with respect to the minimizer) and hence consider an empirical estimate of the Riesz representer by minimizing the corresponding empirical loss within some hypothesis space ${\cal A}_n$:
+\begin{equation}\label{eq:rieszloss}
+    {\widehat{\alpha} = \argmin_{\alpha\in {\cal A}_n} \E_n[\alpha(Z)^2 - 2m(W; \alpha)]}
+\end{equation}
+
+The benefits of estimating the RR using this loss are twofold: (i) we do not need to derive an analytic form of the RR of the object of interest, (ii) we are trading-off bias and variance for the actual RR, since the loss is asymptotically equivalent to the square loss $\E[(\alpha_0(Z) - \alpha(Z))^2]$, as opposed to plug-in Riesz estimators that first solve some classification, regression or density estimation problem and then plug the resulting estimate into the analytic RR formula. This approach can lead to finite sample instabilities, for instance, in the case of binary treatment effects, when the propensity scores are close to 0 or 1 and they appear in the denominator of the RR. Prior work by \citet{chernozhukov2022automatic} optimized the loss function in \eqref{eq:rieszloss} over linear Riesz functions with a growing feature map and L1 regularization, while \citet{chernozhukov2020adversarial} allowed for the estimation of the RR in arbitrary function spaces, but proposed a computationally harder minimax loss formulation.
+
+From a theoretical standpoint, \citet{chernozhukov2021automatic} also provide fast statistical estimation rates.
+Let $\|\cdot\|_2$ denote the $\ell_2$ norm of a function of a random input, i.e., $\|a\|_2=\sqrt{\E[a(Z)^2]}$. We also let $\|\cdot\|_{\infty}$ denote the $\ell_{\infty}$ norm, i.e., $\|a\|_{\infty} = \max_{z\in {\cal Z}} |a(z)|$.
+
+\vspace{0.5em}
+\begin{theorem}[\citet{chernozhukov2021automatic}]\label{thm1}
+Let $\delta_{n}$ be an upper bound on the critical radius \citep{wainwright2019high} of the function spaces:
+\begin{gather*}
+    \{z \mapsto \gamma\,(\alpha(z) - \alpha_0(z)): \alpha \in {\cal A}_n, \gamma \in [0,1]\} \notag \text{~and~} \\
+    \{w \mapsto \gamma\,(m(w; \alpha)-m(w;\alpha_0)): \alpha \in {\cal A}_n, \gamma \in [0,1]\}, %\label{eqn:spaces}
+\end{gather*} and suppose that for all $f$ in the spaces above: $\|f\|_{\infty}\leq 1$. 
+Suppose, furthermore, that $m$ satisfies the mean-squared continuity property:
+\begin{align*} 
+    \E[(m(W; \alpha) - m(W; \alpha'))^2] \leq M\, \|\alpha-\alpha'\|_2^2
+\end{align*}
+for all $\alpha,\alpha'\in {\cal A}_n$ and some $M\geq 1$. Then for some universal constant $C$, we have that w.p. $1-\zeta$:
+\begin{align}
+\begin{split}
+    \|\widehat{\alpha}-\alpha_0\|_2^2 \leq C\bigg(& \delta_n^2\, M + \frac{M\log(1/\zeta)}{n} \\ & + \inf_{\alpha_*\in {\cal A}_n}\|\alpha_*-\alpha_0\|_2^2 \bigg)    
+\end{split}
+\end{align}
+\end{theorem}
+
+The critical radius is a quantity that has been analyzed for several function spaces of interest, such as high-dimensional linear functions with bounded norms, neural networks and shallow regression trees, many times showing that $\delta_n = O(d_n\, n^{-1/2})$, where $d_n$ are effective dimensions of the hypothesis spaces (see, e.g., \citealp{chernozhukov2021automatic}, for concrete rates). \cref{thm1} can be applied to provide fast statistical estimation guarantees for the corresponding function spaces. %, albeit this result does not give guidelines on how to optimize over such function spaces in practice. 
+In our work, we take this theorem to practice for the case of neural networks and random forests.% and propose several practical enhancements.
+
+\section{RieszNet: Targeted Regularization and multitasking}\label{sec:riesznet}
+
+Our design of the RieszNet architecture starts by showing the following lemma:
+\begin{lemma}[Central Role of Riesz Representer]\label{lem:observation} In order to estimate the average moment of the regression function $g_0(Z)=\E[Y \mid Z]$ it suffices to estimate regression functions of the form $g_0(Z) = h_0(\alpha_0(Z))$, where $h_0(A) = \E[Y \mid A]$ and $A=\alpha_0(Z)$ is the evaluation of the Riesz representer at a sample. In other words, it suffices to estimate a regression function that solely conditions on the value of the Riesz representer.
+\end{lemma}
+\begin{proof}
+It is easy to verify that:
+\begin{align*}
+    \theta_0 =~& \E[m(W; g_0)] = \E[g_0(Z) \alpha_0(Z)] = \E[Y \alpha_0(Z)]\\
+    =~& \E[\E[Y\mid A=\alpha_0(Z)] \alpha_0(Z)] = \E[h_0(\alpha_0(Z)) \alpha_0(Z)] \\ =~& \E[m(W; h_0 \circ \alpha_0)]. \qedhere
+\end{align*}
+\end{proof}
+
+This property is a generalization of the observation that, in the case of average treatment effect estimation, it suffices to condition on the propensity score and treatment variable  \citep{rosenbaum1983central}. In the case of the average treatment effect moment, these two quantities suffice to reproduce the Riesz representer. The aforementioned observation generalizes this well-known fact in causal estimation, which was also invoked in the prior work of \citet{shi2019adapting}. 
+
+\cref{lem:observation} allows us to argue that, when estimating the regression function, we can give special attention to features that are predictive of the Riesz representer. This leads to a multitasking neural network architecture, which is a generalization of that of \citet{shi2019adapting} to arbitrary linear moment functionals. 
+
+We consider a deep neural representation of the RR of the form: $\alpha(Z; w_{1:k}, \beta) = \ldot{f_1(Z; w_{1:k})}{\beta}$, where $f_1(X; w_{1:k})$ is the final feature representation layer of an arbitrary deep neural architecture with $k$ hidden layers and weights $w_{1:k}$. The goal of the Riesz estimate is to minimize the Riesz loss:
+\begin{multline*}
+    \rrloss(w_{1:k}, \beta) := \E_n\big[\alpha(Z; w_{1:k}, \beta)^2 \notag \\ -2\, m(W; \alpha(\cdot; w_{1:k}, \beta)) \big] 
+\end{multline*}
+In the limit, the representation layer $f_1(Z; w_{1:k})$ will contain sufficient information to represent the true RR. Thus, conditioning on this layer to construct the regression function suffices to get a consistent estimate. %Hence, even if these features are completely driven by predicting the RR, they will be a super-set that is required by Lemma~\ref{lem:observation}.
+
+We will also represent the regression function with a deep neural network, starting from the final layer of the Riesz representer, i.e., $g(Z; w_{1:d}) = f_2(f_1(Z; w_{1:k}); w_{(k+1):d})$, with $d - k$ additional hidden layers and weights $w_{(k+1):d}$. The regression is simply trying to minimize the square loss:
+\begin{align*}
+    \regloss(w_{1:d}) := \E_n\left[(Y - g(Z; w_{1:d}))^2\right] 
+\end{align*}
+
+Importantly,the parameters of the common layers also enter the regression loss, and hence even if the RR function is a constant, the feature representation layer $f_1(Z; w_{1:k})$ will be informed by the regression loss and will be trained to reduce variance by explaining more of the output $Y$ (see Figure~\ref{fig:riesznet-arch}).
+
+\begin{figure}[!htbp]
+    \centering
+    \resizebox{0.25\textwidth}{0.2\textwidth}{\input{document1.tex}}
+    \caption{RieszNet architecture.}
+    \label{fig:riesznet-arch}
+\end{figure}
+
+Finally, we will add a regularization term that is the analogue of the targeted regularization introduced by \citet{shi2019adapting}. In fact, the intuition behind the following regularization term dates back to the early work of \citet{bang2005doubly}, who observed that one can show double robustness of a plug-in estimator in the case of estimation of average effects if one simply adds the inverse of the probability of getting the treatment the units actually received, in a linear manner, and does not penalize its coefficient. We bring this idea into our general formulation by adding the RR as an extra input to our regression problem in a linear manner. In other words, we learn a regression function of the form $\tilde{g}(Z) = g(Z) + \epsilon\cdot \alpha(Z)$, where $\epsilon$ is an unpenalized parameter. Then note that, if we minimize the square loss with respect to $\epsilon$, the resulting estimate will satisfy the property (due to the first order condition), that:
+\begin{align*}
+    \E_n\left[(Y - g(Z) - \epsilon\cdot \alpha(Z))\cdot \alpha(Z)\right] = 0
+\end{align*}
+The debiasing correction in the doubly-robust moment formulation is identically equal to zero when we use the regression function $\tilde{g}$, since
+$\E_n\left[(Y - \tilde{g}(Z))\cdot \alpha(Z)\right] = 0$.
+Thus, the plug-in estimate of the average moment is equivalent to the doubly-robust estimate when one uses the regression model $\tilde{g}$, since:
+\begin{align*}
+    \widehat{\theta} & = \E_n[m(Z; \tilde{g})] \\ & = \E_n[m(Z;\tilde{g})] + \E_n\left[(Y - \tilde{g}(Z))\cdot \alpha(Z)\right]
+\end{align*}
+
+A similar intuition underlies the TMLE framework. However, in that framework, the parameter $\epsilon$ is not simultaneously optimized together with the regression parameters $w$, but rather in a post-processing step: first, an arbitrary regression model $g$ is fitted (via any regression approach), and, subsequently, the preliminary $g$ is corrected by solving a linear regression problem of the residuals $Y - g(Z)$ on the Riesz representer $\alpha(Z)$, to estimate a coefficient $\epsilon$. Then, the corrected regression model $g(Z) + \epsilon\cdot \alpha(Z)$ is used in a plug-in manner to estimate the average moment. For an overview of these variants of doubly-robust estimators see \citet{tran2019double}. In that respect, our Riesz estimation approach can be viewed as automating the process of identifying the least favorable parametric sub-model required by the TMLE framework and which is typically done on a case-by-case basis and based on analytical derivations of the efficient influence function. Thus, we contribute to the recent line of work on such automated TMLE \citep{carone2019}.
+
+In this work, similar to \citet{shi2019adapting}, we take an intermediate avenue, where the correction regression loss
+\begin{multline*}
+  \tmleloss(w_{1:d}, \beta, \epsilon) := \E_n\big[ (Y - g(Z; w_{1:d}) \\ - \epsilon\cdot \alpha(Z; w_{1:k}, \beta))^2 \big].  
+\end{multline*}
+is added as a targeted regularization term, rather than as a post-processing step. 
+
+Combining the Riesz, regression and targeted regularization terms leads to the overall loss that is optimized by our multitasking deep architecture:
+\begin{align}
+\begin{split}
+    \min_{w_{1:d}, \beta, \epsilon} ~& \regloss(w_{1:d}) + \lambda_1 \rrloss(w_{1:k}, \beta) \\
+    ~&~~ + \lambda_2 \tmleloss(w_{1:d}, \beta, \epsilon) + R(w_{1:d}, \beta) \label{eqn:riesznet-loss}
+\end{split}
+\end{align}
+where $R$ is any regularization penalty on the parameters of the neural network, which crucially does not take $\epsilon$ as input. Minimizing the neural network parameters of the loss defined in Equation~(\ref{eqn:riesznet-loss}) using stochastic first order methods constitutes our RieszNet estimation method for the average moment of a regression function.
+Note that, in the extreme case when $\lambda_1=0$, the second loss is equivalent to the one-step approach of \citet{bang2005doubly}, while as $\lambda_2$ goes to zero the parameters $w_{1:d}$ are primarily optimized based on the square loss, and hence the $\epsilon$ is estimated given a fixed regression function $g$, thereby mimicking the two-step approach of the TMLE framework. 
+
+
+
+\section{ForestRiesz: Locally Linear Riesz Estimation}\label{sec:forestriesz}
+
+One approach to constructing a tree that approximates the solution to the Riesz loss minimization problem is to simply use the Riesz loss as a criterion function when finding an optimal split among all variables $Z$. However, we note that this approach introduces a large discontinuity in the treatment variable $T$, which is part of $Z$. Such discontinuous in $T$ function spaces will typically not satisfy the mean-squared continuity property. Furthermore, since the moment functional typically evaluates the function input at multiple treatment points, the critical radius of the resulting function space $m\circ \alpha$ runs the risk of being extremely large and hence the estimation error not converging to zero. Moreover, unlike the case of a regression forest, it is not clear what the ``local node'' solution will be if we are allowed to split on the treatment variable, since the local minimization problem can be ill-posed.
+
+As a concrete case, consider the example of an average treatment effect of a binary treatment. One could potentially minimize the Riesz loss by constructing child nodes that contain no samples from one of the two treatments. In that case the local node solution to the Riesz loss minimization problem is not well-defined. 
+
+For this reason, we consider an alternative formulation, where the tree is only allowed to split on variables other than the treatment, i.e., the variables $X$. Then we consider a representation of the RR that is locally linear with respect to some pre-defined feature map $\phi(T, X)\in \RR^d$ (e.g., a polynomial series): $\alpha(Z) = \ldot{\phi(T, X)}{\beta(X)}$, where $\beta(X)$ is a non-parametric (potentially discontinuous) function estimated based on the tree splits and $\phi(T, X)$ is a smooth feature map. In that case, by the linearity of the moment, the Riesz loss takes the form:
+\begin{align}
+    \min_{\beta} \E_n[\beta(X)^\top \phi(Z) \phi(Z)^\top \beta(X) - 2\, \beta(X)^\top m(W; \phi)]
+\end{align}
+where we use the short-hand notation $m(W; \phi)=(m(W; \phi_1), \ldots, m(W; \phi_d))$.
+Since $\beta(\cdot)$ is allowed to be fully non-parametric, we can equivalently formulate the above minimization problem as satisfying the local first-order conditions conditional on each target $x$, i.e., $\beta(x)$ solves:
+\begin{align}
+\E[\phi(Z)\phi(Z)^\top\beta(x)  - m(W; \phi) \mid X=x] = 0
+\end{align}
+This problem falls in the class of problems defined via solutions to moment equations. Hence, we can apply the recent framework of Generalized Random Forests (henceforth, GRF) of \citet{athey2019generalized} to solve this local moment problem via random forests.
+
+That is exactly the approach we take in this work. We note that we depart from the exact algorithm presented in \citet{athey2019generalized} in that we slightly modify the criterion function to not solely maximize the heterogeneity of the resulting local estimates from a split (as in \citealp{athey2019generalized}), but rather to exactly minimize the Riesz loss criterion. The two criteria are slightly different. In particular, when we consider the splitting of a root node into two child nodes, then \citet{athey2019generalized} chooses a split that maximizes $N_1 \beta_1(X)^2 + N_2 \beta_2(X)^2$. Our criterion penalizes splits where the local jacobian matrix:
+$$J(\text{child}) := \frac{1}{|\text{child}|}\sum_{i\in \text{child}} \phi(Z_i) \phi(Z_i)^\top$$
+is ill-posed, i.e. has small minimum eigenvalues (where $|\text{child}|$ denotes the number of samples in a child node). In particular, note that the local solution at every leaf is of the form $\beta(\text{child}) =  J(\child)^{-1} M(\child)$, where: \begin{align*} M(\child) := \textstyle{\frac{1}{|\child|} \sum_{i\in \child} m(W_i;\phi)}
+\end{align*}
+and the average Riesz loss after a split is proportional to:
+$$- \sum_{\child \in \{1, 2\}} |\child|\, \beta(\child)^\top J(\child) \beta(\child).$$
+Hence, minimizing the Riesz loss is equivalent to maximizing the negative of the above quantity. Note that the heterogeneity criterion of \citet{athey2019generalized} would simply maximize $\sum_{\child \in \{1, 2\}} |\child|\, \beta(\child)'\beta(\child)$, ignoring the ill-posedness of the local Jacobian matrix. However, we note that the consistency results of \citet{athey2019generalized} do not depend on the exact criterion that is used and solely depend on the splits being sufficiently random and balanced. Hence, they easily extend to the criterion that we use here.
+
+Finally, we note that our forest approach is also amenable to multitasking, since we can add to the moment equations the extra set of moment equations that correspond to the regression problem, i.e., simply $\E[Y - g(x)\mid X=x]=0$ and invoking a GRF for the super-set of these equations and the Riesz loss moment equations. This leads to a multitasking forest approach that learns a single forest to represent both the regression function and the Riesz function, to be used for subsequent debiasing of the average moment.
+
+\section{Experimental Results}\label{sec:experiments}
+In this section, we evaluate the performance of RieszNet and ForestRiesz in two settings that are central in causal and policy estimation: the Average Treatment Effect (ATE) of a binary treatment (\cref{ex1}) and the Average Derivative of a continuous treatment (\cref{ex3}). Throughout this section, we use RieszNet and ForestRiesz to learn the regression function $g_0$ and RR $\alpha_0$, and compare the following three methods: (i) direct, (ii) Inverse Propensity Score weighting (IPS) and (iii) doubly-robust (DR): 
+\begin{gather*}
+\wt_{\mathrm{direct}} = \E_n[m(W; \widehat{g})], \qquad \wt_{\mathrm{IPS}} = \E_n[\widehat{\alpha}(Z) Y], \\
+\wt_{\mathrm{DR}} = \E_n\left[m(W; \widehat{g}) + \widehat\alpha(Z)(Y-\widehat{g}(Z))\right].
+\end{gather*}
+The first method simply plugs in the regression estimate $\widehat{g}$ into the moment of interest and averages. The second method uses the fact that, by the Riesz representation theorem and the tower property of conditional expectations, $\theta_0 = \E[m(W; g_0)] = \E[\alpha_0(Z) g_0(Z)] = \E[\alpha_0(Z) Y]$. The third, our preferred method, combines both approaches as a debiasing device, as explained in \cref{sec:estimation}.
+
+\subsection{Average Treatment Effect in the IHDP Dataset}
+Following \citet{shi2019adapting}, we evaluate the performance of our estimators for the Average Treatment Effect (ATE) of a binary treatment on 1000 semi-synthetic datasets based on the Infant Health and Development Program (IHDP). IHDP was a randomized control trial aimed at studying the effect of home visits and attendance at specialized clinics on future developmental and health outcomes for low birth weight, premature infants \citep{gross1993infant}. We use the \texttt{NPCI} package in \texttt{R} to generate the semi-synthetic datasets under setting ``A'' \citep{dorie2016non}. Each dataset consists of 747 observations of an outcome $Y$, a binary treatment $T$ and 25 continuous and binary confounders $X$.
+
+\cref{tab:MAE_IHDP} presents the mean absolute error (MAE) over the 1000 semi-synthetic datasets. Our preferred estimator, which uses the doubly-robust (DR) moment functional to estimate the ATE, achieves a MAE of 0.110 (std. err. 0.003) and 0.126 (std. err. 0.004) when using RieszNet and ForestRiesz, respectively.\footnote{See \cref{sec:details} for the architecture and tuning details we used for RieszNet in all experiments.} A natural benchmark against which to compare our Auto-DML methods are plug-in estimators. These use the known form of the Riesz representer for the case of the ATE and an estimate of the propensity score $p_0(X) := \Pr(T = 1 \mid X)$ to construct the Riesz representer as: $$\widehat{\alpha}(T,X) = \frac{T}{\widehat{p}(X)} - \frac{1 - T}{1 - \widehat{p}(X)}.$$
+The state-of-the-art neural-network-based plug-in estimator is the Dragonnet of \citet{shi2019adapting}, which gives a MAE of 0.14 over our 1000 instances of the data. A plug-in estimator where both the regression function and the propensity score are estimated by random forests yields a MAE of 0.389. The CausalForest alternative of \citet{athey2019generalized}, which also plugs in an estimated propensity score, yields an even larger MAE of 0.728. Hence, automatic debiasing seems a promising alternative to current methods even for causal parameters like the ATE, for which the form of the Riesz representer is well-known.
+
+\begin{table}[!htbp]
+    \centering
+    \caption{RieszNet and ForestRiesz: Mean Absolute Error (MAE) and its standard error over 1000 semi-synthetic datasets based on the IHDP experiment.}
+    \label{tab:MAE_IHDP}
+    \begin{subtable}{0.45\textwidth}
+    \centering
+    \caption{RieszNet}
+    \input{figures/IHDP_MAE_NN}
+    \end{subtable}
+    
+    \vspace{1em}
+    \begin{subtable}{0.45\textwidth}
+    \centering
+    \caption{ForestRiesz}
+    \input{figures/IHDP_MAE_RF}
+    \end{subtable}
+\end{table}
+
+To assess the coverage of our asymptotic confidence intervals in the same setting, we perform another experiment in which this time we also redraw the treatment, according to the propensity score setting ``True'' in the \texttt{NPCI} package. Outcomes are still generated under setting ``A.'' The normal-based asymptotic 95\% confidence intervals are constructed as $\big[\wt \mp 1.96 \times \mathrm{s.e.}(\wt)\big]$, where $\mathrm{s.e.}(\wt)$ is $n^{-1/2}$ times the sample standard deviation of the corresponding identifying moment: $m(W; \widehat{g})$ for the direct method, $\widehat{\alpha}(Z)Y$ for IPS and $m(W; \widehat{g}) + \widehat{\alpha}(Z)(Y - \widehat{g}(Z))$ for DR.
+
+The results in \cref{fig:cov_IHDP}, based on 100 instances of the dataset, show that the performance of RieszNet and ForestRiesz is excellent in terms of coverage when using the doubly-robust (DR) moment. Confidence intervals cover the true parameter 95\% and 96\% of the time (for a nominal 95\% confidence level), respectively. The DR moment also has the lowest RMSE. On the other hand, the direct method (which does not use the debiasing term) seems to have lower bias for the RieszNet estimator, although in both cases its coverage is very poor. This is because the standard errors without the debiasing term greatly underestimate the true variance of the estimator.
+\begin{figure}[!h]
+    \centering
+    \begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width = 0.8\textwidth]{figures/IHDP_coverage_NN.pdf}
+    \caption{RieszNet}
+    \end{subfigure}
+
+\vspace{1em}
+    \begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width = 0.8\textwidth]{figures/IHDP_coverage_RF.pdf}
+    \caption{ForestRiesz}
+    \end{subfigure}
+    \caption{RieszNet and ForestRiesz: Bias, RMSE, coverage and distribution of estimates over 100 semi-synthetic datasets based on the IHDP experiment, where we redraw $T$.}
+    \label{fig:cov_IHDP}
+\end{figure}
+  
+\subsection{Average Derivative in the BHP Gasoline Demand Data}\label{sec:bhp}
+To evaluate the performance of our estimators for average marginal effects of a continuous treatment, we conduct a semi-synthetic experiment based on gasoline demand data from \citet{blundell2017nonparametric} [BHP]. The dataset is constructed from the 2001 National Household Travel Survey, and contains 3,640 observations at the household level. The outcome of interest $Y$ is (log) gasoline consumption. We want to estimate the effects of changing (log) price $T$, adjusting for differences in confounders $X$, including (log) household income, (log) number of drivers, (log) household respondent age, and a battery of geographic controls.
+
+We generate our semi-synthetic data as follows. First, we estimate $\mu(X) := \E[T \mid X]$ and $\sigma^2(X) := \Var (T \mid X)$ by a Random Forest of $T$ and $(T - \widehat{\mu}(X))^2$ on $X$, respectively. We then draw 3,640 observations of $T \sim \mathcal{N}(\widehat{\mu}(X), \widehat{\sigma}^2(X))$, and generate $Y = f(T, X) + \varepsilon$, for six different choices of $f(\cdot)$. The error term $\epsilon$ is drawn from a $\mathcal{N}(0, \sigma^2)$, with $\sigma^2$ chosen to guarantee that the simulated regression $R^2$ matches the one in the true data. 
+
+The exact form of $f$ in each design is detailed in \cref{sec:designs}. In the ``simple $f$'' designs we have a constant, homogeneous marginal effect of $-0.6$ (within the range of estimates in \citealp{blundell2012measuring}, using the real survey data). In the ``complex $f$'' designs, we have a regression function that is cubic in $T$, and where there are heterogeneous marginal effects by income (built to average approximately $-0.6$). In both cases, we evaluate the performance of the estimators without confounders $X$, and with confounders entering the regression function linearly and non-linearly.
+
+\cref{tab:BHPshort} presents the results for the most challenging design: a complex regression function with linear and non-linear confounders (see \cref{tab:BHP_NN,tab:BHP_RF} in the Appendix for the full set of results in all designs). ForestRiesz with the doubly-robust moment combined with the post-processing TMLE adjustment (in which we use a corrected regression $\widetilde{g}(Z) = \widehat{g}(Z) + \epsilon \cdot \widehat{\alpha}(Z)$, where $\epsilon$ is the OLS coefficient of $Y - \widehat{g}(Z)$ on $\widehat{\alpha}(Z)$) seems to have the best performance in cases with many linear and non-linear confounders, with coverage close to or above the nominal confidence level (95\%), and biases of around one order of magnitude lower than the true effect. As in the binary treatment case, the direct method has low bias but the standard errors underestimate the true variance of the estimator, and so coverage based on asymptotic confidence intervals is poor.\footnote{As can be seen in the Appendix, ForestRiesz seems to have larger bias and low coverage when there are no confounders compared to RieszNet (both using the IPS or the DR moments).}
+
+We can consider a plug-in estimator as a benchmark. Using the knowledge that $T$ is normally distributed conditional on covariates $X$, the plug-in Riesz representer can be constructed using Stein's identity \citep{lehmann2006theory}, as: $$\widehat{\alpha}(T,X) = \frac{T - \widehat{\mu}(X)}{\widehat{\sigma}^2(X)},$$ where $\widehat{\mu}(X)$ and $\widehat{\sigma}^2$ are random forest estimates of the conditional mean and variance of $T$, respectively. The results for the plug-in estimator are on \cref{tab:plugin_RF}. Surprisingly, we find that our method, which is fully generic and non-parametric, slightly outperforms the plug-in that uses knowledge of the Gaussian conditional distribution.
+
+\begin{table}[!h]
+    \centering
+    \caption{RieszNet and ForestRiesz: bias, RMSE and coverage over 1000 semi-synthetic datasets based on the BHP gasoline price data (10 different random seeds). The DGP is based on a complex regression function with linear and non-linear confounders.}
+    \label{tab:BHPshort}
+    \begin{subtable}[t]{0.45\textwidth}
+    \centering
+    \caption{RieszNet}
+    \input{figures/avgder_sim_res/NN/res_avg_der_NN_short}
+    \end{subtable}
+    
+    \vspace{1em}
+    \begin{subtable}[t]{0.45\textwidth}
+    \centering
+    \caption{ForestRiesz (with simple cross-fitting and multitasking)}
+    \input{figures/avgder_sim_res/RF/res_avg_der_RF_short}
+    \end{subtable}
+\end{table}
+
+\cref{fig:BHP_cov} shows the distribution of estimates under the most complex design for RieszNet and ForestNet (simple cross-fitting and multitasking). The distribution is approximately normal and properly centered around the true value, with small bias for the doubly-robust estimators.
+
+\begin{figure}[!h]
+    \centering
+    \begin{subfigure}[b]{0.4\textwidth}\centering
+    \includegraphics[width=0.8\textwidth]{figures/avgder_sim_res/NN/all.pdf}
+    \caption{RieszNet}
+    \end{subfigure}
+    
+    \vspace{1em}
+    \begin{subfigure}[b]{0.4\textwidth}\centering
+    \includegraphics[width=0.8\textwidth]{figures/avgder_sim_res/RF/xfit_1_mult_1_all.pdf}
+    \caption{ForestRiesz (simple xfit, multitasking)}
+    \end{subfigure}
+    \caption{RieszNet and ForestRiesz: bias, RMSE, coverage and distribution of estimates over 1000 semi-synthetic datasets based on the BHP gasoline price data (10 different random seeds). The DGP is based on a complex regression function with linear and non-linear confounders.}
+    \label{fig:BHP_cov}
+\end{figure}
+
+\vspace{-1em}
+\subsection{Ablation Studies}
+\begin{table*}[!tp]
+    \centering
+    \caption{IHDP ablation studies for RieszNet. Row 2 uses no multitasking, the Riesz representer and regression function are estimated using separate NNs. Row 3 removes ``end-to-end'' training of the shared representation: the weights of the common layers are trained on the Riesz loss only, then frozen when optimizing the regression loss. Row 4 removes ``end-to-end'' learning of the TMLE adjustment: we set $\lambda_2 = 0$ and then adjust the outputs of RieszNet in a standard TMLE post-processing step.}
+    \label{tab:ablationRN}
+    \vspace{1em}
+    \input{figures/ablationRN}
+\end{table*}
+
+\begin{table*}[!tp]
+    \centering
+    \caption{BHP ablation studies for ForestRiesz. Row 2 uses no cross-fitting and no multitasking. Row 3 uses no cross-fitting and multitasking. Row 4 uses simple cross-fitting and no multitasking. Row 5 uses double cross-fitting.}
+    \label{tab:ablationFR}
+    \vspace{1em}
+    \resizebox{\textwidth}{!}{\footnotesize\input{figures/ablationFR}}
+    %\footnotesize{\input{figures/ablationFR}}
+\end{table*}
+
+\paragraph{RieszNet} The RieszNet estimator combines several features: multitasking and end-to-end learning of the shared representation for the regression and the RR, end-to-end learning of the TMLE adjustment. To assess which of those features are crucial for the performance gains of RieszNet, we conduct a series of ablation studies based on the IHDP ATE experiments. The results are in \cref{tab:ablationRN}.
+
+The first row of the table presents the results of the baseline RieszNet specification, as in \cref{fig:cov_IHDP} (a). The second row considers two separate neural nets for the regression and RR (which the same architecture as RieszNet, but with the difference that the first layers are not shared), trained separately. This has much worse bias, RMSE and coverage as compared to the multitasking RieszNet architecture. The second row considers the RieszNet architecture but without end-to-end training: here, we train the shared layers first based on the Riesz loss only ($f_1(Z;w_{1:k})$ in the notation of \cref{sec:riesznet}), and then we train the regression-specific layers ($f_2(f_1(Z;w_{1:k}); w_{(k+1):d})$ in the notation of \cref{sec:riesznet}) freezing $w_{1:k}$. This alternative also performs substantially worse than the baseline RieszNet specification, with much larger RMSE due to a higher variance, which also results in lower coverage. Finally, we try a version of RieszNet without end-to-end learning of the TMLE adjustment; i.e., we set $\lambda_2 = 0$ and train the TMLE adjustment in a standard TMLE post-processing step. This alternative performs as well as the baseline RieszNet in terms of coverage, but it has somewhat worse bias. All in all, it seems that multitasking, end-to-end learning of the regression and RR learners, in the spirit of \cref{lem:observation}, is important for the performance gains of RieszNet. This is consistent with the results of \citet{shi2019adapting}, who train the regression and propensity score learners with a similar architecture.
+
+\vspace{-1em}
+\paragraph{ForestRiesz} We leverage the BHP average derivative experiment to investigate the effects of cross-fitting and multitasking on our ForestRiesz estimator. The baseline specification in \cref{tab:BHPshort} (b) uses multitasking (i.e., the regression $\widehat{g}$ and RR $\widehat{\alpha}$ are learnt using a single GRF) and simple cross-fitting (see \cref{sec:debiasing}). The results are collected in \cref{tab:ablationFR}. 
+
+As in \cref{sec:bhp}, we find that the DR method with the TMLE adjustment tends to outperform the other methods both in terms of bias and in terms of coverage. When we use no cross-fitting (rows 2 and 3), the coverage of the confidence intervals is substantially lower than the nominal confidence level of 95\%. Simple cross-fitting without multitasking or double cross-fitting (rows 4 and 5) improve coverage, but have slightly worse bias and RMSE as compared to the baseline. Notice that multitasking is not compatible with double cross-fitting, since different samples are used to estimate the regression $\widehat{g}$ and RR $\widehat{\alpha}$. 
+
+
+Our results highlight the role of cross-fitting in performing inference on average causal effects using machine learning. Early literature focused on deriving sufficient conditions on the growth of the entropic complexity of machine learning procedures such that overfitting biases in estimation of the main parameters are small, e.g., \citet{belloni2012sparse}, \citet{belloni2014uniform}, \citet{belloni2017program, belloni2018:Z}; see also \citet{farrell2021deep}, \citet{chen2022debiased} for recent advances, in particular \citet{chen2022debiased} replace entropic complexity requirements with (more intuitive) stability conditions. 
+On the other hand,  \citet{belloni2012sparse}, \citet{chernozhukov2018double}, \citet{newey2018cross} show that cross-fitting requires strictly weaker regularity conditions on the machine learning estimators, and in various experiments it removes the overfitting biases even if the machine learning estimators theoretically obey the required conditions to be used without sample splitting (e.g.,  Lasso or Random Forest). \citet{shi2019adapting} comment that that cross-fitting decreases the performance of their NN-based dragonnet estimator in some (non-reported) experiments.
+%With ForestRiesz, 
+Here we find the opposite with ForestRiesz: simple  cross-fitting tends to improve coverage of the confidence intervals substantially.
+
+% Acknowledgements should only appear in the accepted version.
+\section*{Acknowledgements}
+Newey acknowledges research support from the National Science Foundation grant 1757140. Chernozhukov acknowledges research support from Amazon's Core AI research grant.
+
+\bibliography{references}
+\bibliographystyle{icml2022}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+\section{Appendix}
+\setcounter{table}{0}
+\renewcommand{\thetable}{A\arabic{table}}
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{A\arabic{figure}}
+\subsection{RieszNet Architecture and Training Details}\label{sec:details}
+As described in \cref{sec:riesznet}, the architecture of RieszNet consists of $k$ common hidden layers that are used to learn both the RR and the regression function, and $d-k$ additional hidden layers to learn the regression function. In our simulations, we choose $k = 3$ with a width of 200 and ELU activation function for the common hidden layers, and $d - k = 2$ with a width of 100 and also ELU activation function for the regression hidden layers. In the ATE experiments, the architecture is bi-headed, i.e., we estimate one net of regression hidden layers for $T = 1$ and one for $T = 0$, with one single net of common hidden layers.
+
+We split our dataset in a training fold and a test fold (20\% and 80\% of the sample respectively). Following \citet{shi2019adapting}, we train our network in two steps: (i) a fast training step, (ii) a fine-tuning step. In the fast training step, we use a learning rate of $10^{-4}$, with early stopping after 2 epochs if the test error is smaller than $10^{-4}$, and with a maximum of 100 training epochs. In the fine tuning step, we use a learning rate of $10^{-5}$, with the same early stopping rule after 40 epochs, and with a maximum of 600 training epochs.
+
+We use L2 regularization throughout, with a penalty of $10^{-3}$, a weight $\lambda_1 = 0.1$ on the RRLoss and $\lambda_2 = 1$ on the targeted regularization loss (as defined in \cref{eqn:riesznet-loss}), and the Adam optimizer.
+
+\subsection{Designs for the BHP Experiment}\label{sec:designs}
+For the average derivative experiment based on BHP data, we generate the outcome variable $y = f(T,X) + \varepsilon$ with six different choices of $f$:
+\begin{enumerate}
+    \item Simple $f$: $$f(T, X) = -0.6T$$
+    \item Simple $f$ with linear confounders: $$f(T, X) = -0.6T + X_{1:21} \cdot b$$
+    \item Simple  $f$ with linear and non-linear confounders: $$f(T, X) = -0.6T + X_{1:21} \cdot b + \mathrm{NL}(X)$$
+    \item Complex $f$: $$f(T, X) = -\frac{1}{6} \left(\frac{X_1^2}{10} + 0.5\right) T^3$$
+    \item Complex $f$ with linear confounders: $$f(T, X) = -\frac{1}{6}\left(\frac{X_1^2}{10} + X_{1:9} \cdot c + 0.5\right) T^3 + X_{1:21} \cdot b$$
+    \item Complex  $f$ with linear and non-linear confounders: $$f(T, X) = -\frac{1}{6}\left(\frac{X_1^2}{10} + X_{1:9} \cdot c + 0.5\right) T^3 + X_{1:21} \cdot b + \mathrm{NL}(X)$$
+\end{enumerate} where $\mathrm{NL}(X) = 1.5 \sigma(10X_6) + 1.5 \sigma(10X_8)$ for the sigmoid function $\sigma(t) = 1/(1 + e^{-t})$, and where the coefficients $b \sim \text{iid } \mathcal{U}[-0.5, 0.5]$ and $c \sim \text{iid } \mathcal{U}[-0.2, 0.2]$ are drawn once per design at the beginning of the simulations (we try 10 different random seeds).
+
+\clearpage
+\subsection{Full Set of Results for the BHP Experiment}
+\begin{table}[!htbp]
+    \centering
+    \caption{RieszNet: Regression and Riesz representer $R^2$, bias, RMSE and coverage over 1000 semi-synthetic datasets based on the BHP gasoline price data (10 different random seeds).}\label{tab:BHP_NN}
+    \vspace{1em}
+    \input{figures/avgder_sim_res/NN/res_avg_der_NN}
+\end{table}
+
+\begin{table}[!htbp]
+    \centering
+    \caption{ForestRiesz: Regression and Riesz representer $R^2$, bias, RMSE and coverage over 1000 semi-synthetic datasets based on the BHP gasoline price data (10 different random seeds).}\label{tab:BHP_RF}
+    \vspace{1em}
+    \resizebox{\textwidth}{!}{\input{figures/avgder_sim_res/RF/res_avg_der_RF}}
+\end{table}
+
+\begin{table}[!htbp]
+    \centering
+    \caption{RF Plug-in Benchmark: Regression and Riesz representer $R^2$, bias, RMSE and coverage over 1000 semi-synthetic datasets based on the BHP gasoline price data (10 different random seeds).}\label{tab:plugin_RF}
+    \vspace{1em}
+    \begin{subtable}{.45\textwidth}
+    \input{figures/avgder_sim_res/plugin}
+    \end{subtable}
+    ~~~~~
+    \begin{subtable}{.45\textwidth}
+    \input{figures/avgder_sim_res/plugin2}
+    \end{subtable}
+\end{table}
+\end{document}

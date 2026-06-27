@@ -1,0 +1,249 @@
+\section{Proposed method\label{sec:proposed}}
+We propose a novel ITE estimation method that utilizes both the labeled and unlabeled instances.
+The proposed solution called {\it counterfactual propagation} is based on the resemblance between the matching method in causal inference and the graph-based semi-supervised learning method.
+%We consider a weighted graph over both labeled instances with treatment outcomes and unlabeled instances with no outcomes, and estimate ITEs using the smoothness assumption of the outcomes and the ITEs.
+%
+% We make use of several semi-supervised learning techniques in order to estimate treatment effect even under the number of labeled instances are limited. 
+
+\subsection{Matching}
+Matching is a popular solution to address the counterfactual outcome problem.
+Its key idea is to consider two similar instances as the counterfactual instance of each other so that we can estimate the causal effect by comparing the pair.
+More concretely, we define the similarity $w_{ij}$ between two instances $i$ and $j$, as that defined between their covariates; for example, we can use the Gaussian kernel.
+\begin{equation}\label{eq:GK}
+    w_{ij} = \exp \left(- \frac{\| \x_i - \x_j \|^2}{\sigma^2} \right).
+\end{equation}
+The set of $(i,j)$ pairs with $w_{ij}$ being larger than a threshold and satisfying $t_i \neq t_j$ are found and compared as counterfactual pairs.
+%
+Note that owing to definition of the matching pair, the matching method only uses labeled data.
+
+\subsection{Graph-based semi-supervised learning}\label{sec:gb}
+Graph-based semi-supervised learning methods assume that the nearby instances in a graph are likely to have similar outputs. 
+For a labeled dataset $\{(\x_i, y_i)\}_{i=1}^N$ and an unlabeled dataset $\{\x_i\}_{i=N+1}^{N+M}$, their loss functions for standard predictive modeling typically look like
+\begin{equation}\label{eq:LPreg}
+L(f)=\sum_{i=1}^{N}l(y_i, f(\x_i))+\lambda\sum_{i,j=1}^{N+M}w_{ij}\left(f(\x_i)-f(\x_j) \right)^2,
+\end{equation}
+where $f$ is a prediction model, $l$ is a loss function for the labeled instances, and $\lambda$ is a hyper-parameter.
+The second term imposes ``smoothness" of the model output over the input space characterized by $w_{ij}$ that can be considered as the weighted adjacency matrix of a weighted graph; it can be seen the same as that used for matching~(\ref{eq:GK}).
+
+The early examples of graph-based methods include label propagation~\cite{zhu2002learning} and manifold regularization~\cite{belkin2006manifold}.
+More recently, deep neural networks have been used as the base model $f$~\cite{weston2012deep}.
+
+% あまり本意ではないが, 文量が埋まらなさそうな気がしてきたので, TARNetの説明を入れて伸ばす
+\subsection{Treatment effect estimation using neural networks}
+% Recently, deep-learning based methods~\cite{shalit2017estimating,johansson2016learning} have been successfully applied in treatment effect estimation, we built our model based on deep learning framework~\cite{weston2012deep}.
+%Recently, deep-learning based methods have been successfully applied in treatment effect estimation. 
+We build our ITE estimation model based on the recent advances of deep-learning approaches for ITE estimation, specifically, the treatment-agnostic representation  network~(TARNet)~\cite{shalit2017estimating} that is a simple but quite effective model. 
+%\kashima{Is the following sentence correct?}
+% \harada{TARNet shares common parameters for both treatment instances and control instances, but employs different parameters in its prediction layers},
+TARNet shares common parameters for both treatment instances and control instances to construct representations but employs different parameters in its prediction layer,
+which is given as:
+% \begin{equation}
+    \begin{align}\label{eq:tarnet}
+    f({\bf x}_i, t_i)=\left\{ \begin{array}{ll}
+    \Theta_1^{\top}g\left(\Theta^{\top}x_i\right)&\ (t_i=1)\\
+    \Theta_0^{\top}g\left(\Theta^{\top}x_i\right) &\ (t_i=0)\\
+  \end{array}, \right.
+    \end{align}
+% \end{equation}
+where $\Theta$ is the parameters in the representation learning layer and $\Theta_1, \Theta_0$ are those in the  prediction layers for treatment and controlled instances, respectively. 
+The $g$ is a non-linear function such as ReLU. 
+One of the advantages of TARNet is that joint representations learning and separate prediction functions for both treatments enable more flexible modeling. 
+
+
+% Graph based regularization is a technique which has been applied in semi-supervised learning tasks. Utilizing a given or a generate graph based on nearest neighbors, graph based regularization encourage neighbor instances to have similar labels or outcomes based on the assumption that nearby instances in the graph should have similar results. Label Propagation~\cite{zhu2002learning} 
+
+\subsection{Counterfactual propagation}
+% As we have already seen, the
+
+It is evident that the matching method relies only on labeled data, while the graph-based semi-supervised learning method does not address ITE estimation; however, 
+they are quite similar because they  both use instance similarity to interpolate the  factual/counterfactual outcomes or model predictions as mentioned in Section \ref{sec:gb}.
+Our idea is to combine the two methods to propagate the outcomes and ITEs over the matching graph assuming that similar instances would have similar outcomes.
+% we combine the matching method with graph-based regularization.
+
+Our objective function consists of three terms, $L_\text{s}, L_\text{o}, L_\text{e}$, given as
+\begin{equation}\label{eq:proposed}
+L(f) = L_\text{s}(f) +\lambda_\text{o}L_\text{o}(f) +\lambda_\text{e}L_\text{e}(f),
+\end{equation}
+where $\lambda_o$ and $\lambda_e$ are the regularization hyper-parameters. 
+%the three main terms are~$({\rm i})$~a supervised outcome regression loss,~$({\rm ii})$~a neighbor outcome regularizer,~$({\rm iii})$~a neighbor treatment effect regularizer. 
+% \harada{
+We employ TARNet~\cite{shalit2017estimating} as the outcome prediction model $f(\x, t)$.
+% \kashima{What do the next two sentences mean?? (Nihon-go de OK) $\rightarrow$ }
+% One of the advantages of using TARNet is that joint learning of representations of each treatment makes the model more flexible in both obtaining representation and better predictive performance. 
+% When it comes to propagating outcomes and ITEs, handling both of them in the single model lets the model propagate easier and more effectively.}\haradap{Ittan Nihongo de kaitemimasita (file sansho)}
+% \harada{treatmentのインスタンスもcontrolのインスタンスも同一のモデルでrepresentation learningを行えるため, より柔軟な表現が学習でき, それぞれで別々にrepresentationおよびoutcomeを予測するよりも多くのデータを扱うことができ, 良い結果になると期待される. また類似インスタンスのoutcomeを考慮するラベル伝搬では, 一層期待される. } とか書いてみましたが、消した方がよい気がするので消します。
+The first term in the objective function (\ref{eq:proposed})  is a standard loss function for supervised outcome estimation; we specifically employ the squared loss function as
+\begin{equation}
+% \vspace{-3mm}
+\label{eq:supervised}
+L_s(f)=\sum_{i=1}^{N}(y^{t_i}_i-f(\x_i, t_i))^{2}.
+\end{equation}
+% We employ the treatment-agnostic representation network~(TARNet)~as the base neural network model $f$~\cite{shalit2017estimating} that shares common parameters for the treatment and control instances but employs different parameters for the predictive layers. 
+%The difference from the standard supervised loss is 
+Note that it relies only on the observed outcomes of the treatments that are observed in the data denoted by $t_i$.
+%Note that if we set $\lambda_o=\lambda_e=0$, our model reduces to TARNet~\cite{shalit2017estimating}. 
+
+The second term $L_\text{o}$ is the outcome propagation term:
+\begin{equation}
+\label{eq:outcome}
+\begin{split}
+L_\text{o}(f)=\sum_{t}\sum_{i,j=1}^{N+M}w_{ij}((f(\x_i, t)-f(\x_j, t))^{2}.
+\end{split}
+\end{equation}
+Similar to the regularization term (\ref{eq:LPreg}) in the graph-based semi-supervised learning, this term encourages the model to output similar outcomes for similar instances by penalizing the difference between their outcomes. 
+This regularization term allows the model to propagate outcomes over a matching graph.
+If two nearby instances have different treatments, they interpolate the counterfactual outcome of each other, which compares the factual and (interpolated) counterfactual outcomes to estimate the ITE.
+%In this problem, even labeled instances have missing outcomes~(counterfactual)~as well as unlabeled instances. Thereby, differently from standard graph based regularization, by giving regularization for both treatment and control cases, we expect to build a better predictive model for treatment effect as well as outcome.
+The key assumption behind this term is the smoothness of outcomes  for each treatment over the covariate space. 
+While $w_{ij}$ indicates the adjacency between nodes $i$ and $j$  in the graph-based regularization, it can be considered as a matching between the instances $i$ and $j$ in the treatment effect estimation problem.
+Even though traditional matching methods have only rely on labeled instances, we combine matching with graph-based regularization which also utilizes unlabeled instances. 
+This regularization enables us to propagate the outcomes for each treatment over the matching graph and mitigate the counterfactual problem. 
+
+
+% Utilizing scheme of related work~\cite{weston2012deep}, we introduce the following loss function:
+% \begin{equation}\label{eq:outcome2}
+% L_o=\sum_{t}\sum_{i,j=1}^{N+M}W_{i,j}((g(x_i, t)-g(x_j, t))^{2},
+% \end{equation}
+% where $g$ is a function which shares the first $m$ layer with supervised network and has new weights.
+
+% We believe this term have a large difference from standard graph laplacian regularization losses since standard setting do not assume several outcomes for each instance if they are exposed to the same situation.
+The third term $L_\text{e}$ is the ITE propagation term defined as
+\begin{align}\label{eq:treatment}
+L_\text{e}(f)=  \sum_{i,j=1}^{N+M}w_{ij} (\hat{\tau}_i - \hat{\tau}_j)^{2},
+\end{align}
+where $\hat{\tau}_i$ is the ITE estimate for instance $i$:
+\[
+\hat{\tau}_i = f(\x_i, 1)-f(\x_i, 0).
+\]
+\if0
+\begin{align}\label{eq:treatment}
+& L_\text{e}(f)= \nonumber \\
+&~~ \sum_{i,j=1}^{N+M}w_{ij} ((\underbrace{f(x_i, 1)-f(x_i, 0)}_\text{ITE for instance $i$}) - (\underbrace{f(x_j, 1)-f(x_j, 0)}_\text{ITE for instance $j$}))^{2},
+\end{align}
+\fi
+$L_\text{e}(f)$ imposes the smoothness of the ITE values in addition to that of the outcomes  imposed by outcome propagation (\ref{eq:outcome}).
+In comparison to the standard supervised learning problems, where the goal is to predict the outcomes, as stated in Section~\ref{sec:problem}, our objective is to predict the ITEs.
+This term encourages the model to output similar ITEs for similar instances. 
+%Hence, based on the assumption that similar instances would have similar outcomes under the same treatment, we can consider the smoothness of treatment effect as well as the outcome. 
+%The treatment effect for an instance $i$ predicted by $f$ is given as $f(x_i, 1)-f(x_i, 0)$. Following the smoothness assumption on treatment effect, we assume similar instances would have similar treatment effects with regard to each treatment. That is the difference of treatment effect between an instance $i$ and $j$, $(f(x_i, 1)-f(x_i, 0))-(f(x_j, 1)-f(x_j, 0))$, should be smaller.  
+We expect that the outcome propagation and ITE propagation terms are beneficial especially when the available labeled instances are limited while there is an abundance of unlabeled  instances, similar to semi-supervised learning.
+
+
+\if0
+More specifically, because $f(x_i, 1)-f(x_i, 0)$ indicates predicted ITE for an instance $i$, ${\rm\widehat{ITE}}_i$, this regularization term can be interpreted as:
+\begin{equation}
+\label{eq:treatment}
+L_e=\sum_{i,j=1}^{N+M}W_{ij} ({\rm\widehat{ ITE}}_i-{\rm \widehat{ITE}}_j) ^{2}.
+\end{equation}
+%We believe this regularization is very identical in this treatment effect estimation problem where the goal is not only to predict outcomes but effects.
+In this paper, since we only focus on the binary treatment setting for simplicity, we introduce the treatment effect regularization using binary intervention. However our method can be easily extended to multiple intervention setting. 
+\fi
+
+
+
+
+\if0
+\subsection{Supervised outcome regression loss}
+
+The first term is the standard supervised loss term. 
+\begin{equation}
+% \vspace{-3mm}
+\label{eq:supervised}
+L_s=\sum_{i=1}^{N}(y^{t_i}_i-f(x_i, t_i))^{2},
+\end{equation}
+where $f$ is a predictive base model such as neural networks. We employ Treatment-Agnostic Representation Networks~(TARNet)~as a base neural network model~\cite{shalit2017estimating} which shares parameters for treatment and control instances while employs different parameters for predictive layers. The difference in this term from the standard supervised loss is that we only access to observed outcome in each treatment which is denoted by $t_i$ for each observed instance. 
+
+
+\subsection{Outcome regularization}
+The second term is the outcome regularization term. This encourages the model to output similar outcomes for similar instances by penalizing when similar instances have different outcomes. This regularization term allows the model to propagate outcomes over a matching graph. In this problem, even labeled instances have missing outcomes~(counterfactual)~as well as unlabeled instances. Thereby, differently from standard graph based regularization, by giving regularization for both treatment and control cases, we expect to build a better predictive model for treatment effect as well as outcome.
+\begin{equation}
+\label{eq:outcome}
+\begin{split}
+L_o=\sum_{t}\sum_{i,j=1}^{N+M}W_{ij}((f(x_i, t)-f(x_j, t))^{2}.
+\end{split}
+\end{equation}
+The key assumption behind this term is the smoothness of outcomes in covariate space for each treatment. While in the graph-based regularization, $w_{ij}$ indicates the adjacency between node $i$ and $j$, in treatment effect estimation problem $w_{ij}$ can be considered as a matching between an instance $i$ and $j$. Though traditional matching methods have been only rely on labeled instances, we combine matching with graph-based regularization which utilizes unlabeled instances. This regularization enables us to propagate outcomes for each treatment over the matching graph and mitigate the counterfactual problem. We expect that the this model benefits from the propagation of outcomes especially in available instances are severely limited while observable instances are a lot.
+
+% Utilizing scheme of related work~\cite{weston2012deep}, we introduce the following loss function:
+% \begin{equation}\label{eq:outcome2}
+% L_o=\sum_{t}\sum_{i,j=1}^{N+M}W_{i,j}((g(x_i, t)-g(x_j, t))^{2},
+% \end{equation}
+% where $g$ is a function which shares the first $m$ layer with supervised network and has new weights.
+
+\subsection{Treatment effect regularization}
+% We believe this term have a large difference from standard graph laplacian regularization losses since standard setting do not assume several outcomes for each instance if they are exposed to the same situation.
+The third term is the treatment effect regularization term. This encourages the model to output similar treatment effect for similar instances. In standard supervised learning problems, their target is just to predict outcomes such as real values or labels for each instance. However, as stated in Section~\ref{sec:problem}, our goal is not only predict outcomes but also treatment effects for each instance. Hence, based on the assumption that similar instances would have similar outcomes under the same treatment, we can consider the smoothness of treatment effect as well as the outcome. The treatment effect for an instance $i$ predicted by $f$ is given as $f(x_i, 1)-f(x_i, 0)$. Following the smoothness assumption on treatment effect, we assume similar instances would have similar treatment effects with regard to each treatment. That is the difference of treatment effect between an instance $i$ and $j$, $(f(x_i, 1)-f(x_i, 0))-(f(x_j, 1)-f(x_j, 0))$, should be smaller.  In the same way as outcome regularization term, we introduce the following loss function:
+\begin{equation}\label{eq:treatment}
+L_e=\sum_{i,j=1}^{N+M}W_{ij} ((f(x_i, 1)-f(x_i, 0)) - (f(x_j, 1)-f(x_j, 0))) ^{2}.
+\end{equation}
+\noindent
+More specifically, because $f(x_i, 1)-f(x_i, 0)$ indicates predicted ITE for an instance $i$, ${\rm\hat{ITE}}_i$, this regularization term can be interpreted as:
+\begin{equation}
+\label{eq:treatment}
+L_e=\sum_{i,j=1}^{N+M}W_{ij} ({\rm\hat{ ITE}}_i-{\rm \hat{ITE}}_j) ^{2}.
+\end{equation}
+We believe this regularization is very identical in this treatment effect estimation problem where the goal is not only to predict outcomes but effects.
+In this paper, since we only focus on the binary treatment setting for simplicity, we introduce the treatment effect regularization using binary intervention. However our method can be easily extended to multiple intervention setting. 
+
+
+
+\subsection{Semi-supervised treatment effect estimation }
+Finally the objective function of our proposed method is introduced by combining the regularization terms above:
+\footnotesize
+\begin{equation}\label{eq:proposed}
+\begin{split}
+L&=\overbrace{\sum_{i=1}^{N}(y^{t_i}_i-f(x_i, t_i))^{2}}^{\text{Supervised loss}}\\&\quad+\lambda_o\overbrace{\sum_{t}\sum_{i,j=1}^{N+M}W_{ij}((f(x_i, t)-f(x_j, t))^{2}}^{\text{Outcome regularization}}\\ &\quad+\lambda_e\overbrace{\sum_{i,j=1}^{N+M}W_{ij}((f(x_i, 1)-f(x_i, 0)) - (f(x_j, 1)-f(x_j, 0)))^2}^{\text{Treatment effect regularization}}\\
+&=L_s+\lambda_{o}L_o+\lambda_{e}L_e,
+\end{split}
+\end{equation}\normalsize
+where $\lambda_o, \lambda_e$ are the regularization parameters which control the strengths of regularization terms. 
+Note that if we set $\lambda_o=\lambda_e=0$, our model reduces to TARNet~\cite{shalit2017estimating}. 
+\fi
+
+\subsection{Estimation algorithm}
+As mentioned earlier, we assume the use of neural networks as the specific choice of the outcome prediction model $f$ based on the recent successes of deep neural networks in causal inference. 
+For computational efficiency, we apply a sampling approach to optimizing Eq.~(\ref{eq:proposed}).
+Following the existing method~\cite{weston2012deep}, we employ the Adam optimizer~\cite{kingma2014adam},~which is based on stochastic gradient descent to train the model  in a mini-batch manner. 
+
+Algorithm~\ref{alg:train}~describes the procedure of model training, which iterates two steps until convergence. 
+% In the first step, we sample a mini-batch consisting of $b_1$ labeled instances to approximate the supervised loss (\ref{eq:supervised}) and update the model using them.
+% In the second step, we update the outcome and ITE propagation terms using a mini-batch consisting of $b_2$ instance pairs. 
+In the first step, we sample a mini-batch consisting of $b_1$ labeled instances to approximate the supervised loss (\ref{eq:supervised}).
+In the second step, we compute the outcome propagation term and the ITE propagation terms using a mini-batch consisting of $b_2$ instance pairs. 
+Note that in order to make the model more flexible, we can employ different regularization parameters for the treatment outcomes and the control outcomes. 
+The $b_1$ and $b_2$ are considered as hyper-parameters; the details are described in Section~\ref{sec:experiments}.
+In practice, we optimize only the supervised loss for the first several epochs, and decrease the strength of regularization as training proceeds, in order to guide efficient training~\cite{weston2012deep}.  
+\begin{algorithm}[tb]
+  \caption{Counterfactual propagation}\label{alg:train}
+  \SetAlgoLined
+  % \State {\bf Input:} \mathcal{P},\mathcal{I},\mathcal{R}, t_{ui}>0\\
+  % \State {\bf Output:} the latent factors, {\bf p}_u, {\bf q}_i\\
+%   {\bf Initialize:} $\Theta$\\
+%   {\# Estimate the dwell-time distribution for each user}\\
+ {\bf Input:} labeled instances~$\{(\x_i, t_i, y^{t_i}_i)\}^{N}_{i=1}$, unlabeled instances~$\{(\x_i)\}^{N+M}_{i=N+1}$, a similarity matrix $w=(w_{ij})$, and mini-batch sizes $b_1, b_2$.\\
+ {\bf Output:} estimated outcome(s) for each treatment $\hat{y}^{1}_i$ and/or $\hat{y}^{0}_i$ using Eq.(~\ref{eq:tarnet}~).   \\
+%   \For{instance $i$}{
+%   neighbors_{i}$\leftarrow$Find nearest neighbors top-k\\
+%     }
+%   {\# BPR framework}
+%   {\# Train a BPR model}\\
+  \While{not converged}{
+%   {\# Minimizing supervised loss }\\
+  {\# Approximating the supervised loss }\\
+    Sample $b_1$ instances $\{(\x_i, t_i, y_i)\}$ from the labeled instances\\
+%     Update $f$ to minimize the mini-batch approximation of the supervised loss (\ref{eq:supervised})\\
+%     {\# Minimizing propagation terms}\\
+%         Sample $b_2$ pairs of instances~$\{(\x_i, \x_j)\}$\\
+%     Update $f$ to minimize the mini-batch approximation of the propagation terms $\lambda_\text{o}L_\text{o}$\\
+%     Sample $b_2$ pairs of instances~$\{(\x_i, \x_j)\}$\\
+%     Update $f$ to minimize the mini-batch approximation of the propagation terms $\lambda_\text{e}L_\text{e}$\\
+Compute the supervised loss (\ref{eq:supervised}) for the $b_1$ instances\\
+ {\# Approximating propagation terms}\\
+  Sample $b_2$ pairs of instances~$\{(\x_i, \x_j)\}$\\
+ Compute the outcome propagation terms $\lambda_\text{o}L_\text{o}$ for $b_2$ pairs of instances\\
+   Sample $b_2$ pairs of instances~$\{(\x_i, \x_j)\}$\\
+ Compute the ITE propagation terms $\lambda_\text{e}L_\text{e}$ of $b_2$ pairs of instances\\
+ Update the parameters to minimize $L_s+\lambda_{o}L_o+\lambda_{e}L_e$ for the sampled instances\\
+ 
+    }
+\end{algorithm}

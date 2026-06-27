@@ -1,0 +1,22 @@
+A number of works \citep{Newey2003,Singh2019} tackle the minimization problem  \eqref{eq:total-loss} using two-stage least squares (2SLS) regression, in which the
+structural function is modeled as $f_{\mathrm{struct}}(x) = \vec{u}^\top \vec{\psi}(x)$, where $\vec{u}$ is a learnable weight vector and 
+$\vec{\psi}(x)$ is a vector of fixed basis functions. For example, linear 2SLS used the identity map $\vec{\psi}(x) = x$, while sieve IV \citep{Newey2003} uses Hermite polynomials. %In KIV, $\vec{\psi}(x)$ becomes infinite-dimensional using kernels in RKHS.
+
+In the 2SLS approach, an estimate $\hat{\vec{u}}$ is obtained by solving two regression problems successively. In stage 1, we estimate the conditional expectation $\expect[X|z]{\vec{\psi}(X)}$ as a function of $z$. Then in stage 2, as $\expect[X|z]{f(X)} = \vec{u}^\top\expect[X|z]{\vec{\psi}(X)}$, we minimize $\mathcal{L}$ with $\expect[X|z]{f(X)}$ being replaced by the estimate obtained in stage 1.
+
+Specifically, we model the conditional expectation as $\expect[X|z]{\vec{\psi}(X)} = \vec{V}\vec{\phi}(z)$, where $\vec{\phi}(z)$ is another vector of basis functions and $\vec{V}$ is a \emph{matrix} to be learned. Again, there exist many choices for $\vec{\phi}(z)$, which can be infinite-dimensional, but we assume the dimensions of $\vec{\psi}(x)$ and $\vec{\phi}(z)$ to be $d_1, d_2 < \infty$ respectively.
+
+% In the 2SLS approach, an estimate $\hat{\vec{u}}$ is obtained by solving two regression problems successively. In stage 1, we estimate the conditional expectation $\expect[X|z]{f(X)}$ as a function of $z$. Then, we minimize $\mathcal{L}$ in stage 2, with $\expect[X|z]{f(X)}$ being replaced by the estimate obtained in stage 1.
+% %\yccomment{If $\expect[X|z]{f(X)}$ is already estimated as a function fo $z$ in 1st stage, it's not clear to me what we optimize $\mathcal{L}$ with respect to in 2nd stage. Nando reply: in stage 2 we learn u}
+% %\yccomment{The mixed use of $f$ and $\vec{u}$ is confusing. Can we always use $f_{\mathrm{struct}}$ for $f$ or choose a different symbol?}
+% As $\expect[X|z]{f(X)} = \vec{u}^\top\expect[X|z]{\vec{\psi}(X)}$, it is sufficient to learn the conditional expectation of the basis function $\vec{\psi}$. In 2SLS, we model this conditional expectation as $\expect[X|z]{\vec{\psi}(X)} = \vec{V}\vec{\phi}(z)$, where $\vec{\phi}(z)$ is another vector of basis functions and $\vec{V}$ is a \emph{matrix} to be learned. Again, there exist many choices for $\vec{\phi}(z)$, which can be infinite dimensional, but we assume the dimensions of $\vec{\psi}(x)$ and $\vec{\phi}(z)$ to be $d_1, d_2 < \infty$ respectively.
+
+In stage 1, the matrix $\vec{V}$ is learned by minimizing the following loss,
+\begin{align}
+    \hat{\vec{V}} = \argmin_{\vec{V} \in \mathbb{R}^{d_1 \times d_2}} \mathcal{L}_1(\vec{V}), \quad \mathcal{L}_1(\vec{V}) = \expect[X,Z]{\|\vec{\psi}(X) - \vec{V}\vec{\phi}(Z) \|^2} + \lambda_1 \|\vec{V}\|^2, \label{eq:stage1-loss}
+\end{align}
+where $\lambda_1>0$ is a regularization parameter. This is a  linear ridge regression problem with multiple targets, which can be solved analytically. In stage 2, given $\hat{\vec{V}}$, we can obtain $\vec{u}$ by minimizing the  loss 
+\begin{align}
+    \hat{\vec{u}} = \argmin_{\vec{u} \in \mathbb{R}^{d_1}} \mathcal{L}_2(\vec{u}), \quad \mathcal{L}_2(\vec{u}) = \expect[Y,Z]{\|Y - \vec{u}^\top \hat{\vec{V}} \vec{\phi}(Z) \|^2} + \lambda_2 \|\vec{u}\|^2, \label{eq:stage2-loss}
+\end{align}
+where $\lambda_2>0$ is another regularization parameter. Stage 2 corresponds to a ridge linear regression from $\hat{\vec{V}} \vec{\phi}(Z)$ to $Y$, and also enjoys a closed-form solution. Given the learned weights $\hat{\vec{u}}$, the estimated structural function is $\hat{f}_{\mathrm{struct}}(x) = \hat{\vec{u}}^\top \vec{\psi}(x)$.

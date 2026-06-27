@@ -1,0 +1,236 @@
+\appendix
+\section{Notation Table}
+We use Table~ \ref{tab:notation} to list the most important notations used in this paper.
+\begin{table}[H]
+  \caption{Notation.}
+  \label{tab:notation}
+  \vspace{-4mm}
+  \begin{tabular}{ll}
+    \toprule
+    Notation & Definition \\ 
+    \midrule
+    $\mathcal{H}$          & hypergraph\\
+    $\mathcal{V},\mathcal{E}$          & the set of nodes/hyperedges \\
+    $\mathbf{H}$          & hypergraph structure matrix\\
+    $n$               & the number of nodes \\
+    $m$               & the number of hyperedges\\
+    $\mathcal{N}_i$ & the set of neighboring nodes for the $i$-th node \\
+    $\mathcal{N}_e$ & the set of nodes on the hyperedge $e$ \\
+    $\mathcal{E}_i$ & the set of hyperedges which contains the $i$-th node\\
+    $\mathbf{X},\mathbf{x}_i$ & features of all nodes/the $i$-th node\\
+    $\mathbf{T},{t}_i$ & treatment assignment of all nodes/the $i$-th node\\
+    $\mathbf{Y},{y}_i$ & observed outcome of all nodes/the $i$-th node\\
+    ${y}^1_i,y_i^0$ & potential outcomes of the $i$-th node\\
+    $\Phi_Y(\cdot)$ & potential outcome function \\
+    $\tau_i,\hat{\tau}_i$ & true/predicted ITE for the $i$-th node\\
+    $y_i, \hat{y}_i$ & true/predicted outcome for the $i$-th node\\
+    $(\cdot)_{-i}$ & variables for all the nodes except the $i$-th node\\
+    $\delta_i$ & the spillover effect of the $i$-th node\\
+    $\mathtt{SMR}(\cdot)$ & summary function\\
+    $\mathbf{O}, \mathbf{o}_i$ & the environment information of the $i$-th node\\
+    $\mathbf{Z},\mathbf{z}_i$ & confounder representations of all nodes/the $i$-th node\\
+    $\Psi(\cdot)$ & interference representation learner\\
+    $f_1(\cdot),f_0(\cdot)$ & potential outcome prediction functions\\
+    $\mathbf{P},\mathbf{p}_i$ & interference representations of all nodes/the $i$-th node\\
+    $r(i)$ & the ratio of the treatment assignment of the $i$-node \\&in its neighborhood\\
+    \bottomrule
+\end{tabular}
+\end{table}
+
+\section{More Experimental Results}
+\subsection{ITE Estimation Performance under Different Settings on All the Datasets}
+In this section, we show the ITE estimation performance under different settings (including the linear and quadratic settings with $\beta$ among $\{1.0, 3.0, 5.0\}$) on all the datasets in Fig.~\ref{fig:ITE_complete}. We can observe that the proposed \mymodel~ consistently outperforms the baselines under different settings on all the datasets. The superiority of our framework against baselines becomes more obvious when $\beta$ is larger (i.e., the interference is stronger), because our framework can better handle the interference in the hypergraph.
+
+
+
+
+
+% \begin{figure}
+% \centering
+%      \includegraphics[width=.42\textwidth,height=1.6in]{figs/case.pdf}
+%      \vspace{-0.15in}
+%       \caption{Case studies: the difference between ITE estimations with hypergraph and projected ordinary graph on GoodReads dataset. The difference becomes stronger when $r(i)$ is lower and and $|\mathcal{N}(i)|$ is higher.}
+% %      \vspace{-0.1in}
+%       \label{fig:case}
+% \end{figure}
+
+%\subsection{Q3: High-order Interference for Different Individuals: Overview and Case Studies}
+% node: d
+%To further investigate the influence of interference for different nodes, we conduct case studies on the GoodReads dataset. 
+
+\subsection{Case Studies}
+We further conduct case studies to investigate how the proposed method acts on individuals in responding to their neighboring nodes (i.e., the size of one's neighborhood and the homophily of treatment assignments within one's neighborhood). The neighborhood of $i$ is defined as the set of nodes which are connected with $i$ via any hyperedges, i.e., $\mathcal{N}_i=\bigcup_{e\in\mathcal{E}_i}\{j\in\mathcal{N}_e\}$. The homophily of treatment assignment is defined as the ratio of neighboring nodes which share the same treatment assignment as oneself, i.e., $r(i)=\frac{\sum_{j\in \mathcal{N}_i}\mathbf{1}(t_j=t_i)}{|\mathcal{N}_i|}$. In Fig.~\ref{fig:heatmap}, we show the difference between the ITE estimation results made %(i) with/without the hypergraph; and (ii) 
+with the original hypergraph and with the projected graph, w.r.t. $\mathcal{N}_i$ and $r(i)$. Overall, we see larger divergences on individuals with a larger neighborhood size but less agreement with their neighbors in terms of treatment assignments. 
+In Fig.~\ref{fig:case-study}, we further showcase the insights by presenting several representative children books on the GoodReads dataset. For example, the author of ``Peter Pan'' had not published many works but these books all received good rating scores, leading to a ``consistent" reputation of the author. Therefore, the outcome of the book ``Peter Pan'' is less impacted by the high-order interference among its neighbors. 
+On the other hand, the high rating score of the book ``Oddhopper Opera'' differs from most of its neighbors, leading to a mixed reputation of the author. In this case, the potential outcome is more likely to be affected by the high-order interference on the hypergraph.
+
+
+\begin{figure}[H]
+% \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=1.1in]{figs/case_none_.pdf}
+%         \caption{With/without hypergraph}
+%     \end{subfigure}
+  \begin{subfigure}[b]{0.207\textwidth}
+        \centering
+        \includegraphics[height=1.1in]{figs/case_projected_.pdf}
+        \caption{Heatmap}\label{fig:heatmap}
+    \end{subfigure}
+    ~
+    \begin{subfigure}[b]{0.29\textwidth}
+        \centering
+        \includegraphics[height=1.1in]{figs/case.pdf}
+        \caption{Case studies}\label{fig:case-study}
+    \end{subfigure}
+    \vspace{-4mm}
+  \caption{%a) Heatmap: the difference between ITE estimations (a) with/without hypergraph; 
+  (a) Heatmap: the difference between ITE estimations with hypergraph and with  projected ordinary graph on GoodReads. Nodes are divided into $6\times 6$ grids w.r.t. their number of neighbors $|\mathcal{N}_i|$ and the homophily of treatment assignment $r(i)$. %Higher row index corresponds to higher $r(i)$, and higher column index corresponds to higher $|\mathcal{N}_i|$.
+  (b) Case studies of representative books. %the difference between ITE estimations with hypergraph and projected ordinary graph on GoodReads dataset. The difference becomes stronger when $r(i)$ is lower and $|\mathcal{N}(i)|$ is higher.
+  }
+  %\label{fig:heatmap}
+%\vspace{-1mm}
+\end{figure}
+
+\section{Details of Experimental Settings}
+All the experiments are conducted under the following environment:
+\begin{itemize}
+    \item Operating system: Ubuntu 18.04
+    \item GPU memory: 16GB
+    \item Pytorch 1.9.0, Cuda ToolKit 11.1, cuDNN 8.0.5
+\end{itemize}
+
+\noindent\textbf{Baseline parameter settings.} For the baselines CEVAE, CFR, Netdeconf, GNN-HSIC, and GCN-HSIC, we set the representation dimension as 32, 32, 100, 64, respectively. The numbers of training epochs for these baselines are set as $500$. The number of samples in CEVAE in training is set as $5$ by default.
+
+\begin{figure*}
+\centering
+  \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_contact_pehe_linear.png}
+        \caption{Linear, $\sqrt{\epsilon_{PEHE}}$, CT}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_contact_ate_linear.png}
+        \caption{Linear, $\epsilon_{ATE}$, CT}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_contact_pehe_quadratic.png}
+        \caption{Quadratic, $\sqrt{\epsilon_{PEHE}}$, CT}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_contact_ate_quadratic.png}
+        \caption{Quadratic, $\epsilon_{ATE}$, CT}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_GoodReads_pehe_linear_2.png}
+        \caption{Linear, $\sqrt{\epsilon_{PEHE}}$, GR}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_GoodReads_ate_linear.png}
+        \caption{Linear, $\epsilon_{ATE}$, GR}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_GoodReads_pehe_quadratic.png}
+        \caption{{\small Quadratic,$\sqrt{\epsilon_{PEHE}}$,GR}}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_GoodReads_ate_quadratic.png}
+        \caption{Quadratic, $\epsilon_{ATE}$, GR}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_Microsoft_pehe_linear.png}
+        \caption{Linear, $\sqrt{\epsilon_{PEHE}}$, MS}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_Microsoft_ate_linear.png}
+        \caption{Linear, $\epsilon_{ATE}$, MS}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_Microsoft_pehe_quadratic.png}
+        \caption{Quadratic, $\sqrt{\epsilon_{PEHE}}$, MS}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_Microsoft_ate_quadratic.png}
+        \caption{Quadratic, $\epsilon_{ATE}$, MS}
+    \end{subfigure}
+  \caption{Comparison of the performance of ITE estimation under different settings. ``CT", ``GR" and ``MS" stand for Contact, GoodReads and Microsoft Teams datasets, respectively.}
+  \label{fig:ITE_complete}
+\vspace{-3mm}
+\end{figure*}
+% \begin{figure*}
+% \centering
+%   \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_contact_pehe_linear.pdf}
+%         \caption{Linear, $\sqrt{\epsilon_{PEHE}}$, CT}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_contact_ate_linear.pdf}
+%         \caption{Linear, $\epsilon_{ATE}$, CT}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_contact_pehe_quadratic.pdf}
+%         \caption{Quadratic, $\sqrt{\epsilon_{PEHE}}$, CT}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_contact_ate_quadratic.pdf}
+%         \caption{Quadratic, $\epsilon_{ATE}$, CT}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_GoodReads_pehe_linear_2.pdf}
+%         \caption{Linear, $\sqrt{\epsilon_{PEHE}}$, GR}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_GoodReads_ate_linear.pdf}
+%         \caption{Linear, $\epsilon_{ATE}$, GR}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_GoodReads_pehe_quadratic.pdf}
+%         \caption{{\small Quadratic,$\sqrt{\epsilon_{PEHE}}$,GR}}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_GoodReads_ate_quadratic.pdf}
+%         \caption{Quadratic, $\epsilon_{ATE}$, GR}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_Microsoft_pehe_linear.pdf}
+%         \caption{Linear, $\sqrt{\epsilon_{PEHE}}$, MS}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_Microsoft_ate_linear.pdf}
+%         \caption{Linear, $\epsilon_{ATE}$, MS}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_Microsoft_pehe_quadratic.pdf}
+%         \caption{Quadratic, $\sqrt{\epsilon_{PEHE}}$, WC}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.235\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_Microsoft_ate_quadratic.pdf}
+%         \caption{Quadratic, $\epsilon_{ATE}$, WC}
+%     \end{subfigure}
+%   \caption{Comparison of the performance of ITE estimation under different settings. ``CT", ``GR" and ``WC" stand for Contact, GoodReads and Workplace Communication datasets, respectively.}
+%   \label{fig:ITE_complete}
+% \vspace{-3mm}
+% \end{figure*}
+

@@ -1,0 +1,141 @@
+\section{Introduction\label{sec:introduction}}
+\begin{figure}[tb]
+ \begin{minipage}{0.33\hsize}
+  \begin{center}
+   \includegraphics[width=\linewidth]{images/toy_data_ja.pdf}
+   (a):~Data distribution
+  \end{center}
+%   \caption{IHDP}
+ \end{minipage}
+ \begin{minipage}{0.33\hsize}
+  \begin{center}
+   \includegraphics[width=\linewidth]{images/OLS_1.pdf}
+   (b):~Linear regression
+  \end{center}
+%   \caption{News}
+ \end{minipage}
+  \begin{minipage}{0.33\hsize}
+  \begin{center}
+   \includegraphics[width=\linewidth]{images/MLP.pdf}
+    (c):~Neural networks
+  \end{center}
+%   \caption{IHDP}
+ \end{minipage}
+ \\
+  \begin{minipage}{0.33\hsize}
+  \begin{center}
+ \includegraphics[width=\linewidth]{images/knn.pdf}
+    (d):~$k$NN
+  \end{center}
+%   \caption{IHDP}
+ \end{minipage}
+  \begin{minipage}{0.33\hsize}
+  \begin{center}
+   \includegraphics[width=\linewidth    ]{images/LP.pdf}
+   (e):~\bf Proposed method
+  \end{center}
+%   \caption{IHDP}
+ \end{minipage}
+   \begin{minipage}{0.07\hsize}
+  \begin{center}
+ \vspace{-0.72cm}
+   \includegraphics[width=\linewidth   ]{images/cbar.pdf}
+  \end{center}
+%   \caption{IHDP}
+ \end{minipage}
+ \caption{Illustrative example using (a) two-moon dataset. Each moons has a constant ITE either of $0$ and $1$.
+ Only two labeled instances are available for each moon, denoted by yellow points, whose observed $(\text{treatment}, \text{outcome})$ pairs are $(0, 1), (1, 1), (1, 1), (0,0)$ from left to right. 
+Figures (b), (c), and (d) show the ITE estimation error (PEHE) by the standard two-model approach using different base models suffered from the lack of labeled data.
+The deeper-depth color indicates larger errors. The proposed semi-supervised method (e) successfully exploits the unlabeled data to estimate the correct ITEs.\label{fig:toy} }
+\end{figure}
+
+
+One of the important roles of predictive modeling is to support decision making related to taking particular actions in responses to situations.
+The recent advances of in the machine learning technologies have significantly improved their predictive performance.
+However, most predictive models are based on passive observations and do not aim to predict the  causal effects of actions that actively intervene in environments.
+%
+For example, advertisement companies are interested not only in their customers' behavior when an advertisement is presented, but also in the causal effect of the advertisement, in other words, the change it causes on their behavior.
+%
+There has been a growing interest in moving from this passive predictive modeling to more active causal modeling in various domains, such as education~\cite{hill2011bayesian}, advertisement~\cite{chan2010evaluating,li2016matching}, 
+economic policy~\cite{lalonde1986evaluating},
+and health care~\cite{glass2013causal}.
+
+Taking an action toward a situation generally depends on the expected improvement in the outcome due to the action.
+% Generally speaking, whether or not we should take a particular action to a target depends on how much the outcome is expected to improve by taking the action.
+This is often called the {\it individual treatment effect~(ITE)}~\cite{rubin1974estimating} and is defined as the difference between the outcome of taking the action and that of {\it not} taking the action.
+%
+An intrinsic difficulty in ITE estimation is that ITE is defined as the difference between the factual and counterfactual outcomes~\cite{lewis1974causation,pearl2009causality,rubin1974estimating}; in other words, the outcome that we can actually observe is either of the one when we take an action or the one when we do not, and it is physically impossible to observe both.
+%
+To address the counterfactual predictive modeling from observational data, various techniques including matching~\cite{rubin1973matching}, inverse-propensity weighting~\cite{rosenbaum1983central}, instrumental variable methods~\cite{baiocchi2014instrumental}, and more modern deep learning-based approaches have been developed~\cite{shalit2017estimating,johansson2016learning}.
+For example, in the matching method, matching pairs of instances with similar covariate values and different treatment assignments are determined.
+The key idea is to consider the two instances in a matching pair as the counterfactual instance of each other so that we can estimate the ITE by comparing the pair.
+
+
+Another difficulty in ITE estimation is data scarcity.
+For ITE estimation, we need some labeled instances whose treatments (i.e., whether or not an action was taken on the instance) and their outcomes (depending on the treatments) as well as their covariates are given.
+However, collecting such labeled instances can be quite costly in terms of time and money, or owing to other reasons, such as physical and ethical constraints~\cite{radlinski2005query,pombo2015machine}. 
+Consequently, ITE estimation from scarcely labeled data is an essential requirement in many situations.
+
+In the ordinary predictive modeling problem, a promising option to the scarcity of labeled data is semi-supervised learning that exploits unlabeled instances only with covariates because it is relatively easy to obtain such unlabeled data. 
+% since such unlabeled data is relatively easy to obtain.
+A typical solution is the graph-based label propagation method~\cite{zhu2002learning,belkin2006manifold,weston2012deep}, which makes predictions for unlabeled instances based on the assumption that instances with similar covariate values are likely to have a same label.
+
+In this study, we consider a semi-supervised ITE estimation problem.
+The proposed solution called {\it counterfactual propagation} is based on the resemblance between the matching method in causal inference and the graph-based semi-supervised learning method called label propagation.
+We consider a weighted graph over both labeled instances with treatment outcomes and unlabeled instances with no outcomes, and estimate ITEs using the smoothness assumption of the outcomes and the ITEs.
+
+The proposed idea is illustrated in Fig.~\ref{fig:toy}.
+Fig.~\ref{fig:toy}(a)~describes the two-moon shaped data distribution. 
+We consider a binary treatment and binary outcomes.
+The blue points indicate the instances with a positive ITE~($=1$), where the outcome is $1$ if the treatment is $1$ and $0$ if the treatment is $0$. 
+The red points indicate the instances with zero ITE~($=0$); their outcomes are always $1$ irrespective of the treatments.
+We have only four labeled data instances shown as yellow points, whose observed $(\text{treatment}, \text{outcome})$ pairs are $(0, 1), (1, 1), (1, 1), (0,0)$ from left to right. 
+Since the amount of labeled data is considerably limited,
+supervised methods relying only on labeled data fail to estimate the ITEs.
+Figures~\ref{fig:toy}(b), (c), (d) show the ITE estimation errors by the standard two-model approach using different base learners, which show poor performance. 
+In contrast, the proposed approach exploits unlabeled data to find connections between the red points and those between the blue points to estimate the correct ITEs (Fig.~\ref{fig:toy}(e)).
+
+\if0
+\harada{
+% 本研究の動機をより明確にするために, 人工データを用いた実験を行う. 我々の関心は, 利用可能な教師付きインスタンスが厳しく制限された状況下で, 教師付きインスタンスのみを用いた通常の学習ではどのような結果を招くのかという点にある. 図~\ref{fig:toy}において半教師付き学習問題で典型的なtwo moon型のデータ分布による実験の結果を示す. 図~\ref{fig:toy}(a)~は人工データの分布であり, 赤と青の点はそれぞれ正の介入効果がある~(ITE$=1$)~インスタンス及び介入効果がない~(ITE$=0$)~インスタンスを示す. 簡単の為, 正の介入効果を持つ全てのインスタンスに対する介入効果を$1$とする.  図~\ref{fig:toy}(b), (c), (d), (e)はそれぞれ線形回帰, ニューラルネットワーク, k近傍法~(KNN)~, 提案手法による実験結果を示す. ヒートマップは誤差の程度を示しており色が濃い程大きな誤差を生んでいることを示す. $3$つのモデルを単純な教師付き学習によって構築し介入効果を予測すると, それぞれのモデルは特定のインスタンスについては大きな誤差を示す. 一方, 半教師付き学習によって予測を行うと, ほとんど全てのインスタンスに対して一定の予測性能を示しており, 教師インスタンスが少数である場合でも一定頑健である. 我々はこのような現象が実世界でも生じうることを考慮し, 教師付きインスタンスの数が厳しく制限されている状況下でも頑健なモデルを構築することに動機づけされている.
+We are particularly interested in examining what will happen if we just employ just a supervised model when the available labeled data are strictly limited. Fig.~\ref{fig:toy}(a)~describes the distribution of two moon dataset. Yellow points represent labeled data whose covariates, type of treatments, and outcomes have been observed. Blue and red points represent instances which have positive ITE~(ITE$=1$)~ and no ITE~(ITE$=0$), respectively. For simplicity, we set the all ITE to the same value, $1$. Fig.(b)-(e) represent experimental results using linear regression, neural networks, k nearest neighbors~(k-NN), and proposed method. If we train widely employed models in just supervised manner, we observed these models showed significantly poor performance for some instances~(Figure~\ref{fig:toy}(a), \ref{fig:toy}(b), \ref{fig:toy}(c), \ref{fig:toy}(d)). In contrast, our proposed method showed moderate performance for almost all instances. We consider similar phenomena could be possible in the real-world and are highly motivated to build a model which can maintain robustness under such a severe situation.
+% Inspired by counterfactual problem, we are interested in what will happen
+% under situations when available labeled instances are strictly limited  stated in Section~\ref{sec:introduction}. Figure~\ref{fig:toy}~describes experimental results using toy data based on two moon. Red and blue are instances which have no treatmen effect~(${\rm ITE}=0$)~and positive treatment effect~(${\rm ITE}=1$), respectively. For simplicity, we set the all positive treatment effects to $1$. If we train widely employed models in just supervised manner, we observe these models showed significantly poor performances for some instances~(Figure~\ref{fig:toy}a, \ref{fig:toy}b, \ref{fig:toy}c, \ref{fig:toy}d). In contrast, our proposed model showed moderate performance for almost all instances. We assume similar phenomena could be possible in the real-world and are highly motivated to build a model which can maintain robustness in such a severe situation.
+}
+\fi
+
+
+We propose an efficient learning algorithm assuming the use of a neural network as the base model, and conduct experiments using semi-synthetic real-world datasets to demonstrate that the proposed method estimates the ITEs more accurately than baselines when the labeled instances are limited.
+
+
+\if0
+==========
+Our goal is to estimate the treatment effect per instance, which is referred to as {\it individual treatment effect~(ITE)~} in this context~\cite{rubin1974estimating}. %However, we face a challenge in this problem.
+%ITE is the difference between 
+Treatment effect estimation problem has completely different aspects and challenges from a standard supervised learning. The ground truth in this problem is the difference between the treatment outcome and control outcome per instance. However, we can only access to factual outcomes and never observe outcomes of  actions which was not been actually conducted. This is called {\it counterfactual}~\cite{lewis1974causation,pearl2009causality,rubin1974estimating}.  Second, in practical, the treatment assignment often tend to be biased. That is specific instances who are considered to achieve desirable results often receive treatments and vice versa. Hence, standard supervised methods can not be straightforwardly applied in this problem. 
+% Randomized controlled trials~(RCT)~is one of the approaches in which the distribution of treatment and control group is known,   
+
+Moreover, in order to estimate treatment effect, we need some instances as labeled data whose treatments and outcomes have been observed as well as confounder variables. In some domains,  collecting such instances would be seriously time consuming and expensive~\cite{radlinski2005query,pombo2015machine}. Therefore, it is not hard to imagine that there would be cases when the number of available labeled data is strictly limited. Although labeled instances are limited, we can easily access to confounder variables of unlabeled data. For example, in health care, even though we do not have much labeled data, we can know several confounder variables such as age, sex, and blood type of patients who we would like to prescribe. In this way, the limitation of available labeled data and the existence of observable confounder variables are both realistic scenarios in many domains. Under such a situation, semi-supervised learning can be naturally introduced as a practical setting.
+
+
+
+
+%We can not always observe the outcome of other treatments which is called {\it counterfactual} .
+
+%{\it counterfactual problem}. Counterfactual problem means we can only observe one factual outcome per one unit.  
+
+%Note that we make "no-hidden confounders" assumption, which assumes there no confounder variables affecting results. This assumption can be formalized using the strong ignorability condition:$(y_0,y_1),t\mid x$, and $0<p(t=1\mid x)<1$. 
+ Semi-supervised learning is a very standard learning approach which makes use of both labeled data and unlabeled data. Semi-supervised learning have been quite effective especially when we are given limited number of labeled instances~\cite{bengio2007greedy,hinton2006fast}. 
+ In many problems of semi-supervised learning methods, they try to leverage abundant unlabeled instances to improve predictive performance based on some assumed relationships between labeled and unlabeled instances. One of the assumption is that similar instances would have similar outcomes~\cite{zhu2002learning,belkin2006manifold,kipf2016semi}. 
+ 
+ In treatment effect estimation problem, traditional matching based methods, which construct pairs of instances and predict counterfactual outcomes, have been developed on the similar assumption. Hence, solving treatment effect estimation problem over the framework of semi-supervised learning does not seem unnatural and undoubtedly important for the reasons as mentioned.  However, to the best of our knowledge, none of existing methods have not tried to consider the treatment effect estimation problem based on the semi-supervised learning problem setting. 
+
+In this paper, we newly formalize the treatment effect estimation problem as a semi-supervised learning problem and aim to improved semi-supervised technique for mitigating counterfactual and limited labeled data problems  in a non-trivial manner. Our contributions in this work are summarized as follows:
+\begin{itemize}
+\item We introduce a new problem setting, semi-supervised treatment effect estimation, which exploits not only labeled instances but also unlabeled instances to improve model performance.
+\item We propose a novel semi-supervised treatment effect estimation method based on the regularization which encourages the model to have similar outcomes for similar inputs. We extend this idea to treatment effect estimation problem.
+\item On experiments using the semi-synthetic real-world datasets, we demonstrate our method works better especially in the case where the available labeled instances are limited.
+\end{itemize}
+
+
+\fi

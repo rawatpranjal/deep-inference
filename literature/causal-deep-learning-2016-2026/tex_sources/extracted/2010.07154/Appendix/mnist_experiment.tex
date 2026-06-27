@@ -1,0 +1,26 @@
+Here, we report the result of MNIST experiments proposed by \citet{Bennett2019}, who consider the following datasets:
+\begin{align*}
+    &Z \sim \mathrm{Unif}([-3,3]^2)\\
+    &e \sim \mathcal{N}(0,1), \quad \gamma,\delta \sim \mathcal{N}(0, 0.1)\\
+    &X = Z_1 + e + \gamma\\
+    &Y = |X| + e + \delta
+\end{align*}
+Here, the structural function we aim to learn is $f_{\mathrm{struct}}(X) = |X|$. Additionally, we map $Z$, $X$, or both $X$ and $Z$ to MNIST images to see whether the model can handle the high-dimensional treatment and instrumental variables. Let the output of original IV problem above to be $X_\mathrm{low}$, $Z_\mathrm{low}$ and
+$\pi(x) = \mathrm{round}(\min(\max(1.5x+5, 0), 9))$ be a transformation function that maps inputs to an integer between 0 and 9, and let $\mathrm{RandomImage}(d)$ be a function that selects a random MNIST image from the digit class $d$. The images are 28 $\times$ 28 = 784-dimensional. We consider the three following scenarios.
+\begin{itemize}
+    \item \textbf{MNIST}${}_{x}$: $X \leftarrow X_{\mathrm{low}}, Z \leftarrow \mathrm{RandomImage}(\pi(Z_{\mathrm{low}}))$
+    \item \textbf{MNIST}${}_{z}$: $X \leftarrow \mathrm{RandomImage}(\pi(X_{\mathrm{low}})), Z \leftarrow Z_{\mathrm{low}}$
+    \item \textbf{MNIST}${}_{xz}$: $X \leftarrow \mathrm{RandomImage}(\pi(X_{\mathrm{low}})), Z \leftarrow \mathrm{RandomImage}(\pi(Z_{\mathrm{low}}))$
+\end{itemize}
+We refer the reader to \citet{Bennett2019} for a detailed description. We applied DFIV using the same architecture as DeepGMM. In Table~\ref{tab:mnist-experiments}, we present the mean and standard error of out-of-sample MSE for DFIV and report the results obtained for DeepGMM in \citet{Bennett2019}. From Table~\ref{tab:mnist-experiments}, we can see that DFIV performs essentially like DeepGMM.
+
+\begin{table}
+    \centering
+    \begin{tabular}{lccc}
+         &  \textbf{MNIST}${}_{x}$ &\textbf{MNIST}${}_{z}$ & \textbf{MNIST}${}_{xz}$  \\ \hline
+        DeepGMM &.15 $\pm$ .02 &.07 $\pm$ .02& .14 $\pm$ .02\\
+        DFIV &.18 $\pm$ .01 &  .07 $\pm$ .001 & .10 $\pm$ .003
+    \end{tabular}
+    \caption{Out-of-Sample MSE in MNIST experiment of \citet{Bennett2019}}
+    \label{tab:mnist-experiments}
+\end{table}

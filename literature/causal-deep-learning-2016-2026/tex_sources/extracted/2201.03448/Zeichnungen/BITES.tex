@@ -1,0 +1,202 @@
+\documentclass{standalone}
+\usepackage{amsmath}   % enthaelt nuetzliche Makros fuer Mathematik
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usetikzlibrary{decorations.pathreplacing}
+\begin{document}
+	
+	\tikzset{%
+		node circle/.style={
+			circle,
+			draw,
+			minimum size=0.1em
+		},
+		layer missing/.style={
+			draw=none, 
+			scale=1.5,
+			text height=0.333cm,
+			execute at begin node=\color{black}$\ldots$
+		},
+		layer/.style={
+			rectangle,
+			draw,
+			thick,
+			minimum width=2em,
+			align=center,
+			rounded corners,
+			minimum height=8em,
+			fill=black!10
+		},
+	    latent layer/.style={
+			rectangle,
+			draw=black,
+			thick,
+			minimum width=2em,
+			align=center,
+			minimum height=7em,
+		},
+		latent layer part/.style={
+			rectangle,
+			draw=black,
+			thick,
+			minimum width=2em,
+			align=center,
+			minimum height=3em,
+		},
+		single node/.style={
+			rectangle,
+			draw,
+			thick,
+			align=center,
+			rounded corners,
+			minimum height=2em,
+			minimum width=2em,
+			fill=black!10
+		},
+		loss node/.style={
+			rectangle,
+			draw,
+			dashed,
+			align=center,
+			rounded corners,
+			minimum height=2em,
+			minimum width=2em,
+			fill=red!10
+		},
+		hazard0/.style={
+			rectangle,
+			draw,
+			thick,
+			align=center,
+			rounded corners,
+			minimum height=2em,
+			minimum width=2em,
+			fill=green!20
+		},
+		hazard1/.style={
+			rectangle,
+			draw,
+			thick,
+			align=center,
+			rounded corners,
+			minimum height=2em,
+			minimum width=2em,
+			fill=black!20!green!40
+		},
+		ite/.style={
+			rectangle,
+			draw,
+			thick,
+			align=center,
+			rounded corners,
+			minimum height=6em,
+			minimum width=10em,
+			fill=yellow!10
+		}	
+	}
+	
+	\begin{tikzpicture}[x=1.5cm, y=1.5cm, >=stealth]
+		
+		%Shared Network
+		\node [layer] (shared-1) at (0,0) {};
+		\node [latent layer] (shared-2) at (1,0) {};
+		\node [layer missing] (shared-3) at (2,0) {};
+		\node [latent layer,fill=blue!30] (out) at (3,0) {$\Phi$};
+		\node [node circle] (p) at (3.5,0) {};
+
+		\draw [->] (shared-1) -- (shared-2);
+		\draw [->] (shared-2) -- (shared-3);
+		\draw [->] (shared-3) -- (out);
+		\draw [->] (out) -- (p);
+		
+%		\foreach \l [count=\x from 0] in {Input} \node [align=center, above] at (\x*3,1.3) {\l \\ layer};
+%		\foreach \l [count=\x from 0] in {Latent} \node [align=center, above] at (\x+3,1.3) {\l \\ representation};
+%		\foreach \l [count=\x from 0] in {Individual} \node [align=center, above] at (\x+5.8,1.3) {\l \\ Treatment Heads};
+%		
+		\node (x) at (-0.5,0) {$X$};
+		
+		%Head T=1
+		\node (T-1) at (4,0.5) {};
+		\node [latent layer part] (indT1-1) at (5,0.5) {};
+		\node [layer missing] (indT1-2) at (6,0.5) {};
+		\node [hazard1] (indT1-3) at (7,0.5) {$\lambda^{T=1}(x)$};
+		\node [loss node] (L1) at (7,1.2) {$\mathcal{L}_{\text{Cox}}^{T=1}$};
+
+		\draw [->] (p) -- (4,0.5) --(indT1-1);
+		\draw [->] (indT1-1) -- (indT1-2);
+		\draw [->] (indT1-2) -- (indT1-3);
+		\draw [->] (L1) -- (indT1-3);		
+		\node [above] at (T-1.north east) {$T=1$};
+		\node [above] at (6,0.6) {$h_1$};
+
+
+		%Head T=0
+		\node (T-0) at (4,-0.5) {};
+		\node [latent layer part] (indT0-1) at (5,-0.5) {};
+		\node [layer missing] (indT0-2) at (6,-0.5) {};
+		\node [hazard0] (indT0-3) at (7,-0.5) {$\lambda^{T=0}(x)$};
+		\node [loss node] (L0) at (7,-1.2) {$\mathcal{L}_{\text{Cox}}^{T=0}$};
+		
+		\draw [->] (p) -- (4,-0.5) --(indT0-1);
+		\draw [->] (indT0-1) -- (indT0-2);
+		\draw [->] (indT0-2) -- (indT0-3);
+		\draw [->] (L0) -- (indT0-3);		
+		\node [below] at (T-0.south east) {$T=0$};
+		\node [below] at (6,-0.7) {$h_0$};
+
+			
+%		%Treatment Row
+%		\draw [->] (out.south) -- (3,-1.1)--(7.75,-1.1);
+%		\draw [->] (0,-1.3) --(3.5,-1.3) --(7.75,-1.3);
+%		\node [single node] (T) at (0,-1.2) {};
+%		\node [single node] (IPM) at (8,-1.2) {};
+%		\draw [->] (3.5,-1.3) -- (p);
+%		\node (x) at (-0.5,-1.2) {T};
+%		
+%		%Event Row
+%		\node [single node] (E) at (0,1.2) {};
+%		\node (e) at (-0.5,1.2) {E};
+%		\draw [-] (E) -- (7.55,1.2)--(7.55,-0.5);
+
+
+		%Treatment Row
+		\draw [->] (3,-1.15)--(out.south);
+		\draw [->,dashed] (0,-1.5) -- (1.15,-1.5);
+		\draw [->,dashed] (0,-1.7) --(3.5,-1.7);
+		\draw [->,dashed] (3.5,-1.7) -- (p);
+		\node [single node] (T) at (0,-1.6) {};
+		\node [loss node] (IPM) at (2.2,-1.4) {$\text{IPM}_\epsilon^p(\Phi^{T=1},\Phi^{T=0})$};
+		\draw [->,dashed] (3.5,-1.6) -- (p);
+		\node (x) at (-0.5,-1.5) {$T$};
+		
+		
+
+		%Cox Loss
+%		\node (loss1) at (9.9,0.5) {$L_{\text{Cox}}^{T=1}(h_1(\Phi(\textbf{x})),Y^{T=1},E^{T=1})$};
+%		\node (loss0) at (9.9,-0.5) {$L_{\text{Cox}}^{T=0}(h_0(\Phi(\textbf{x})),Y^{T=0},E^{T=0})$};		
+
+
+		%Baseline estimates
+		\node [single node] (Y) at (0,-2.5) {};
+		\node (y) at (-0.5,-2.5) {$Y$};
+		\node [hazard1] (base1) at (5,-2) {$\lambda^{T=1}(y)$};
+		\node [hazard0] (base0) at (5,-3) {$\lambda^{T=0}(y)$};
+		
+		
+		\node [node circle] (pp) at (3.5,-2.5) {};
+		\draw [->,dashed] (3.5,-1.6) -- (pp);
+		\draw [->] (Y) -- (pp);
+		\draw [->] (pp) -- (4,-2) --(base1);
+		\draw [->] (pp) -- (4,-3) --(base0);
+		
+		\node [ite] (ite) at (7.3,-2.5) {\textbf{ITE}$(x,y)$};	%$\tau(x,y)=$\\$S^{T=1}(x,y)-S^{T=0}(x,y)$
+		\draw [->] (base1) -- (6.11,-2);
+		\draw [->] (base0) -- (6.11,-3);
+		\draw [->] (indT1-3) -- (8.2,0.5)--(8.2,-1.8);
+		\draw [->] (indT0-3) -- (8,-0.5)--(8,-1.8);
+		
+
+		
+	\end{tikzpicture}
+	
+\end{document}

@@ -1,0 +1,62 @@
+\section{Asymptotic Properties}
+\label{sec:theory_text}
+In \Cref{sec:theory_simple} we focused on a low-overlap setting with $P[1/\pi(X)]=\infty$ where true propensities are known. In contrast, here we consider a more standard setting and identify conditions under which  the C-Learner is semiparametrically efficient and doubly robust. In particular, our theoretical treatment also shows the asymptotic optimality of one-step estimation (self-normalized AIPW) and targeting (TMLE with unbounded real outcomes) since they are also C-Learners satisfying the requisite conditions. 
+
+The proof techniques here are common across those used for other first-order de-biasing methods~\citep{van2006targeted,van2011targeted,van2016one,van2017generally,Kennedy22} as we share the goal of setting the first-order error term in the distributional Taylor expansion to zero, and also showing second-order terms are negligible. 
+
+
+As in \Cref{sec:theory_simple}, we focus on the cross-fitted~\citep{van2011cross,ChernozhukovChDeDuHaNeRo18} formulation of the C-Learner in \Cref{sec:data_splitting}. %
+In addition to its practical benefits,
+cross-fitting simplifies the proof of  asymptotic optimality, especially when nuisance parameter models can be large and complex. When nuisance  model classes are Donsker---converging at $\sqrt{n}$-rates---asymptotic optimality can be shown without explicit sample splitting~\citep{Kennedy22,vaart2023empirical,van2000asymptotic}.
+The constraint~\eqref{eq:constraint} is over $P_{k,n}$. %
+
+\input{assumption_d_note}
+
+
+
+
+
+\looseness=-1 The C-Learner~\eqref{eq:c_learner_def} enjoys the following asymptotics; see \cref{sec:asymptotics} for the proof.
+\begin{theorem}[Asymptotic variance of C-Learner]
+\label{thm:asymp}
+ Under Assumptions~\ref{ass:overlap}, \ref{ass:consistency}, 
+ \ref{ass:bounded_outcomes}, and
+\ref{ass:empirical_proc_mean},
+ \begin{equation*}
+    \sqrt{n} 
+    (\what{\psi}_{n}^C - \psi(P))
+    \cd N(0, \sigma^2)~~~\mbox{where}~~~
+    \sigma^2 \defeq 
+    \var_P\left( \frac{A}{\pi(X)}(Y - \mu(X))
+    +\mu(X)
+    \right).
+ \end{equation*}
+\end{theorem}
+\vspace{-0.7em}
+\noindent  Since $\sigma^2$ is the semiparametric efficiency bound for the ATE estimand~\cite{Tsiatis07,Kennedy22}, 
+the C-Learner~\eqref{eq:c_learner_def}  achieves the tightest  confident interval  and is optimal in the usual local asymptotic minimax sense~\citep[Theorem 25.21]{van2000asymptotic}.
+\vspace{-0.3em}
+\paragraph{Double robustness}
+
+By virtue of their first-order correction, standard approaches like one-step estimation and targeting enjoy double robustness: if either of the propensity model or the outcome model is consistent, then the resulting estimator is consistent. We show a similar guarantee for the C-Learner. 
+Here, 
+we assume that either $\what\pi_{-k,n}$ $\what\mu_{-k,n}^C$ is consistent.
+\vspace{-0.9em}
+\begin{assumption}[At least one of $\what\pi,\what\mu^C$ is consistent]\label{ass:risk_decay}
+For all $k$, the product of the errors for the outcome and propensity
+models decays as
+\vspace{-0.7em}
+    $$\|\what\pi_{-k,n} - \pi\|_{L_2(P)}
+    \cdot \|\what\mu^C_{-k,n} - \mu\|_{L_2(P)}=o_P(1).$$
+\end{assumption}
+
+Using Assumption~\ref{ass:risk_decay} in place of Assumption~\ref{ass:consistency}, we arrive at the following result; see \cref{sec:double_robustness} for the proof.
+\begin{theorem}[C-Learner is doubly robust]
+\label{thm:dr}
+The C-Learner~\eqref{eq:c_learner_def} is consistent under Assumptions~\ref{ass:overlap}, \ref{ass:bounded_outcomes}, \ref{ass:empirical_proc_mean}, and 
+\ref{ass:risk_decay}.
+\end{theorem}
+
+\vspace{-0.3em}
+\paragraph{``Dual'' C-Learner}
+The results in \Cref{thm:asymp} and \Cref{thm:dr} are extended to the ``Dual'' C-Learner as defined in \Cref{eq:c_learner_dual}, and are stated and proved in \Cref{sec:proofs_dual}. 

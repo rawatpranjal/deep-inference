@@ -1,0 +1,97 @@
+\subsection{Balancing through Representation Learning}
+\label{section:balancing}
+
+\emph{TARNet (\textit{Tutorial 1 \href{https://colab.research.google.com/drive/1hjnyfJjFm0wWM3BcZMi0cpW0uBRd5c5f?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png} }})}
+\label{section:TARNet}
+
+Balancing is a treatment adjustment strategy that aims to deconfound the treatment from outcome by forcing the treated and control covariate distributions closer together \citep{Johansson2016}. \textit{The novel contribution of deep learning to the selection on observables literature is the proposal that a neural network can transform the covariates into a representation space $\Phi$ such that the treated and control covariate distributions are indistinguishable (Fig. \ref{fig:balancing}).}
+
+To encourage a neural network to learn balanced representations, the seminal paper in this literature, \citet{Shalit2017}, proposes a simple two-headed neural network called Treatment Agnostic Regression Network (TARNet) that extends the outcome modeling T-learner with shared representation layers (Fig. \ref{fig:tlearner}B). Each head models a separate potential outcome: one head learns the function $\hat{Y}(1)=h_1(\Phi(X),1)$, and the other head learns the function $\hat{Y}(0)=h_0(\Phi(X),0)$. During training, only one head will receive error gradients at a time (the one predicting the observed outcome). However, both heads backpropagate their gradients to shared representation layers that learn $\Phi(X)$. The idea is that these representation layers must learn to balance the data because they are tasked with predicting both outcomes. The authors of this algorithm have subsequently extended TARNet with additional losses in an algorithm called CFRNET that explicitly encourage balancing by minimizing a statistical distance between the two covariate distributions in representation space (see Appendix A.\ref{appendix:cfrnet} for details) \citep{Johansson2018,johannson2020}. 
+
+The complete objective for the network is to fit the parameters of $h$ and $\Phi$ for all $n$ units in the training sample such that,
+\begin{equation}
+\argmin_{h,\Phi}\frac{1}{N}\sum_{i=1}^N (Y_i -(T_i(Y_i,\underbrace{h_1(\Phi(X_i),1)}_{\hat{Y_i}(1)}) + (1-T_i)(Y_i,\underbrace{h_0(\Phi(X_i),0)}_{\hat{Y_i}(0)})^2 + \lambda\underbrace{\mathcal{R}(h)}_{L_2} 
+\end{equation}
+
+ or more compactly,
+\label{eq:tarnetloss}
+\begin{equation}
+\argmin_{h,\Phi} MSE(Y_i,\underbrace{h(\Phi(X_i),T_i)}_{\hat{Y_i}(T_i)}) + \lambda\underbrace{\mathcal{R}(h)}_{L_2} 
+\end{equation}
+where $\mathcal{R}(h)$ is a model complexity term (e.g., for $L_2$ regularization) and $\lambda$ is a hyperparameter chosen through model selection. For coded versions of TARNet in Tensorflow and Pytorch, see Box \ref{box:tarnetcode}.  
+
+\begin{TCBBox}[label=box:tarnetcode]{TARNet in Code}
+Below we show simple implementations of TARNet in Python Tensorflow 2 and Pytorch. For more explanation on this implementation and to run this code on the IHDP data, see the tutorials.
+
+\textbf{Tensorflow 2 Functional API (Keras)}
+\begin{python}
+def make_tarnet(input_dim):
+    #The argument is the number of X covariates.
+    x = Input(shape=(input_dim,), name='input')
+    
+    #In TF fxnl API, stack layers by feeding output of prev layer to next
+    #Make 2 representation layers
+    #units is the output dim of layer
+    #elu is \"exponentiated linear unit" activation fxn
+    phi = Dense(units=200, activation='elu')(x)
+    phi = Dense(units=200, activation='elu')(phi)
+
+    #Begin separate outcome modeling heads
+    y0_hidden = Dense(units=100, activation='elu')(phi)
+    y1_hidden = Dense(units=100, activation='elu')(phi)
+
+    # Add second layers
+    y0_hidden = Dense(units=100, activation='elu')(y0_hidden)
+    y1_hidden = Dense(units=100, activation='elu')(y1_hidden)
+
+    # Output predictions
+    y0_pred = Dense(units=1, activation=None)(y0_hidden)
+    y1_pred = Dense(units=1, activation=None)(y1_hidden)
+    
+    #Bundle outputs
+    concat_pred = Concatenate(1)([y0_pred, y1_pred])
+    
+    #instantiate model
+    model = Model(inputs=x, outputs=concat_pred)
+    return model
+\end{python}
+\textbf{Pytorch}
+\begin{python}
+class TARNet(nn.Module):
+    def __init__(self,input_dim):
+        super(TARNet,self).__init__()
+        
+        self.phi = nn.Sequential(
+            #both input and output dims are specified in torch
+            nn.Linear(input_dim, 200),
+            nn.ELU(), #activations are discrete from layers
+            nn.Linear(200,200),
+            nn.ELU())
+            
+        self.y0_hidden = nn.Sequential(
+            nn.Linear(200, 100),
+            nn.ELU(),
+            nn.Linear(100,100),
+            nn.ELU())
+            
+        self.y1_hidden = nn.Sequential(
+            nn.Linear(200, 100),
+            nn.ELU(),
+            nn.Linear(100,100),
+            nn.ELU())
+            
+        self.y0_pred =nn.Linear(100,1)
+        self.y1_pred = nn.Linear(100,1)
+        
+    #the flow of data/gradients in torch is declared in a forward fxn    
+    def forward(self,X):
+        rep = self.phi(X)
+        y0_rep=self.y0_hidden(rep)
+        y0_hat=rep=self.y0_pred(y0_rep)
+        
+        y1_rep=rep=self.y1_hidden(rep)
+        y1_hat=rep=self.y1_pred(y1_rep)
+        
+        return y0_hat, y1_hat
+\end{python}
+\end{TCBBox}

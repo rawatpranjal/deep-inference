@@ -1,0 +1,729 @@
+\section{Additional Related Works for Model Selection}\label{sec:related-works}
+\paragraph{Model Selection.}Under the classical supervised learning setting, a common approach is to perform empirical risk minimization (ERM) on a separate validation set, and choose the candidate model that achieves the smallest risk \citep{modelSelection}, or similarly, through M-fold cross-validation which splits the data into M folds, and evaluates the risk on the different held out set for each model \citep{crossVal}. As an alternative to selecting a single model, convex aggregation or linear aggregation is employed to find the best convex/linear combination of models \citep{convexAgg, linearAgg}. However, it can be shown that the aforementioned approaches are sub-optimal in the sense that they cannot achieve the optimal $\frac{\log(M)}{n}$ rate for the model selection residual. To tackle this challenge, \cite{lecue2009aggregation} proposed a different approach for convex aggregation by first finding a subset of "almost minimizers" - a subset of the candidate functions that is sufficiently close to the minimizer within the candidates on the validation set, and then finding a best aggregate in the convex hull of this subset. This approach achieves the optimal model selection rates as it performs ERM on a subset that is much smaller than the convex hull of all candidate models, thereby reducing the statistical error. Furthermore, other optimal model selection approaches include the Q-aggregation approach which performs ERM with a modified loss that adds an additional penalty based on individual model performance \citep{lecue2014optimal}. 
+
+\section{Results when Using $\chi^2$-MLE}\label{sec:chi2}
+In this section, we consider another density estimation for the density estimation, the $\chi^2$-MLE: 
+ \begin{align}\label{eq:chi2-mle-est}
+\hat{g} = \argmin_{g\in\Gcal} 0.5\cdot \E_n\bigg[\int_{\Xcal} g^2(x|Z)d\mu(x)\bigg] - \E_n[g(X|Z)]. 
+\end{align}
+
+
+\subsection{Finite Sample Results}
+
+Although Assumption \ref{ass:lower-bound} is widely accepted in previous works, in practice, it often fails to hold when $g_0$ does not have full support on $\Xcal$. To address this drawback of MLE, in this subsection, we further discuss the finite sample convergence rate of Algorithm \ref{alg:dbiv} when the conditional density estimation is performed by $\chi^2$-MLE. In this case, the first step estimation procedure is given by Equation \eqref{eq:chi2-mle-est}. Notably, our guarantee does not relate to the lower bound of $g_0(x|z)$. Our results rely on the following assumption, which characterizes the smoothness of function class $\Hcal$.
+\begin{assumption}[$\gamma$-Smoothness]\label{ass:gamma-smooth}
+    For all $h - h' \in \Hcal - \Hcal$, we assume that $\|h - h'\|_\infty \leq \|h - h'\|_2^\gamma$.
+\end{assumption}
+Such a relationship is known for instance to hold for Sobolev spaces and more generally
+for reproducing kernel Hilbert spaces (RKHS) with a polynomial eigendecay. A notable instance is RKHS with eigendevay at a rate of $O(1/j^{1/p})$ for some $p\in(0,1)$. In that case, Lemma 5.1 of \cite{mendelson2010regularization} shows that $\gamma = 1- p$.   For the Gaussian
+kernel, which has an exponential eigendecay, we can take $ p $ arbitrarily close to $0$.
+We now summarize our result for $\chi^2$-MLE in the following theorem.
+\begin{theorem}[$L_2$ convergence rate for RMIV with $\chi^2$-MLE]\label{thm:chi2-mle-result-noniter}
+    Suppose Assumption \ref{ass:source-cond},\ref{ass: realizability},\ref{ass:gamma-smooth} hold. By setting $\alpha = \delta_n^{\frac{2}{2+ (2-\gamma)\min\{\beta, 2\}}}$, with probability at least $1- c_1\exp(c_2n\delta_n^2)$, we have $$
+    \|\hat{h} - h_0\|_2^2 \leq O\big(\delta_n^{\frac{2\min\{\beta, 2\}}{2+(2-\gamma)\min\{\beta, 2\}}}\big).
+    $$
+ Here $\delta_{n}$ has the same definition in Theorem \ref{thm: mle-nonmisspec-noniter}.
+\end{theorem}
+% \begin{proof}
+%     For a detailed proof, see Appendix \ref{sec:proof-mle-nonmisspec-noniter}.
+% \end{proof}
+The convergence rate of RMIV with $\chi^2$-MLE depends on the smoothness parameter $\gamma$. As $\gamma \rightarrow 1$ ,  we have $\|\hat{h} - h_0\|_2^2 \leq O\big(\delta_n^{\frac{2\min\{\beta,2\}}{2+\min\{\beta,2\}}}\big)$, which recovers the rate in Theorem \ref{thm: mle-nonmisspec}.  We further discuss the results for $\chi^2$-MLE based IV regression under misspecification. 
+\begin{theorem}[$L_2$ convergence rate for RMIV with $\chi^2$-MLE under misspecification]\label{thm: chi2mle-misspec}
+    Suppose Assumption \ref{ass:source-cond},\ref{ass:gamma-smooth} hold, and there exists $h^{\dag}\in \Hcal$ and $g^{\dag} \in \Gcal$ such that $\|h_0 - h^{\dag}\|_2 \leq \epsilon_\Hcal$ and $\E\big[\int_{\Xcal} (g^{\dag}(x|Z) - g_0(x|Z)  )^2 d \mu(x)\big] \leq \epsilon_\Gcal$. For any $0<\alpha\leq 1$,with probability at least $1- c_1\exp(c_2n\delta_n^2)$, we have \begin{align*}
+    &\|\hat{h} - h_0\|_2^2\leq O\bigg( \bigg(\frac{\delta_n^2+\epsilon_\Gcal}{\alpha^2} \bigg)^{1/(2-\gamma)} + \alpha^{\min\{\beta+1,2\}-1}+\frac{\epsilon_\Hcal^2}{\alpha}\bigg),
+    \end{align*}
+    Here $\delta_n$ has the same definition in Theorem \ref{thm: mle-nonmisspec-noniter}. 
+\end{theorem}
+% \begin{proof}
+%     For a detailed proof, see Appendix \ref{sec: proof-misspec}.
+% \end{proof}
+\begin{remark}
+    We define $\epsilon:= \{\epsilon_\Gcal,\epsilon_\Hcal^2 \}$. If $\epsilon < 1$, then by setting $\alpha = (\delta_n^2 + \epsilon)^{\frac{2}{2+(2-\gamma)\min\{\beta,1\}}}$, we have $$
+    \|\hat{h} - h_0\|_2^2 \leq O\big((\delta_n^2 + \epsilon)^{\frac{2\min\{\beta,1\}}{2+(2-\gamma)\min\{\beta,1\}}}\big).
+    $$
+    If $\epsilon \geq 1$, then by setting $\alpha = 1$, we have $\|\hat{h} - h_0\|_2^2 \leq O(\epsilon^{1/(2-\gamma)})$.
+    
+\end{remark}
+\subsection{Results for Model Selection}
+
+
+\pref{thm:model_selection} is extended when using $\chi^2$-MLE. Indeed, if Assumption \ref{ass:gamma-smooth} holds and the candidate function are trained with $\hat{g}$ estimated using the $\chi^2$-MLE approach, the output of Convex-ERM or Best-ERM $\hat{\theta}$, satisfies
+    \begin{align*}
+    \|h_{\hat{\theta}} - h_0\|_2^2 \leq \min_{j}O\left(\alpha^{\min\{\beta+1,2\}-1} + \left(\frac{\delta_{n,j}^2+\epsilon_\Gcal}{\alpha^2} \right)^{1/(2-\gamma)} + \frac{1}{\alpha} \epsilon_{\Hcal_j}^2\right). 
+\end{align*}
+
+\subsection{Convergence Results for Iterative Version}
+
+We further discuss the finite sample convergence rate of Algorithm \ref{alg:dbiv} when the conditional density estimation is performed by $\chi^2$-MLE. In this case, the first step estimation procedure is given by Equation \eqref{eq:chi2-mle-est}. Notably, in this case, we do not require the ground truth density $g_0$ to be uniformly lower bounded, which is assumed in Assumption \ref{ass:lower-bound} and serves as a prerequisite for MLE convergence. Our results are summarized by the following theorem. 
+\begin{theorem}[$L_2$ convergence rate for iterative $\chi^2$-MLE estimator]\label{thm:chi2-mle-result}
+    Under Assumption \ref{ass: sol-exist},\ref{ass:source-cond},\ref{ass: realizability},\ref{ass:gamma-smooth}, by setting $\alpha = \delta_n^{\frac{2}{2+ (2-\gamma)\min\{\beta, 2m\}}}$, with probability at least $1- c_1 m\exp(c_2n\delta_n^2)$, we have $$
+    \|\hat{h}_m - h_0\|_2 \leq O\big(16^{2m}\cdot \delta_n^{\frac{2\min\{\beta, 2m\}}{2+(2-\gamma)\min\{\beta, 2m\}}}\big).
+    $$
+    Here $\delta_n$ has the same definition in Theorem \ref{thm: mle-nonmisspec-noniter}.
+\end{theorem}
+% \begin{proof}
+%     For a detailed proof, see Appendix \ref{sec: proof-iterative}.
+% \end{proof}
+\begin{remark}
+Similar to Section \ref{sec:misspecified}, by setting the iteration number $m = \lceil \min\{\beta/ 2, \log\log(1/\delta_n)\} \rceil$, we have $$
+   \|\hat{h}_m - h_0\|_2 \leq O\bigg(16^{2m}\cdot \delta_n^{\frac{2\min\{\beta, 2m\}}{2+(2-\gamma)\min\{\beta, 2m\}}}\bigg).
+$$
+Therefore, for $\log\log \delta_n \geq \beta$, eventually we have the rate of $O\big(\delta_n^{\frac{2\beta}{2+ (2-\gamma) \beta}}\big)$. If $\delta_n = O(n^{-\iota})$, then we can set $m = \lceil \min\{\beta/ 2, \sqrt{\log(1/\delta_n)}\} \rceil$ to obtain the same rate.
+Moreover, if $\gamma \rightarrow 1$, e.g.  RKHS with exponential eigenvalue decay \citep[Lemma 5.1]{mendelson2010regularization}, then we recover the rate of $O\big(\delta_n^{\frac{2\beta}{2 + \beta}}\big)$ even without Assumption \ref{ass:lower-bound}.
+\end{remark}
+
+\section{Proof of Theorem \ref{thm: mle-nonmisspec-noniter} and \ref{thm:chi2-mle-result-noniter}}\label{sec:proof-mle-nonmisspec-noniter}
+In this section, we prove the convergence rate of non-iterative RMIV. We prove the results of Theorem \ref{thm: mle-nonmisspec-noniter} and \ref{thm:chi2-mle-result-noniter}\label{sec:proof-mle-nonmisspec-noniter} respectively. Recall that we define \begin{align}
+h_{*} := \argmin_{h\in \Hcal} \|Y-\Tcal h \|_2^2 + \alpha \|h\|_2^2,
+\end{align}
+by Lemma \ref{lem:iter-tikh-bias}, we have $$
+\|h_{*} - h_0\|_2^2 \leq \|w_0\|^2 \alpha^{\min\{\beta,2\}}.
+$$
+Therefore, we only need to provide an upper bound for $\|\hat{h} - h_{*}\|_2^2$. We start by proving the following lemma, and with the convergence rate of MLE and $\chi^2$-MLE, we conclude the proof of Theorem \ref{thm: mle-nonmisspec-noniter} and Theorem \ref{thm:chi2-mle-result-noniter} respectively. 
+\begin{lemma}\label{lem: quadra-lemma}
+With probability at least $1 - c_1\exp(c_2 n\delta_{n,\Hcal}^2)$, we have the following inequality:
+    \begin{align*}
+    &\alpha \|\hat h - h_* \|^2_2 + \|\Tcal(\hat h-h_*)\|^2_2 \leq \EE[\ell_{\hat{h},g_0} -  \ell_{h_*,g_0}] \\
+    &\qquad\qquad= O\bigg( \delta_{n,\Hcal}\{ (\alpha+1) \|\hat h-h_*\|_2  +   \delta_{n,\Hcal}   \}+  \|(\hat \Tcal-\Tcal)(\hat h-h_*)\|_1\bigg).
+    \end{align*}
+\end{lemma}
+\begin{proof}
+By the optimality of $h_*$ in Eq.~\eqref{eq:pop-reg-noniter}, we have 
+\begin{align*}
+    & \alpha \|\hat{h} - h_* \|^2_2 + \|\Tcal(\hat{h}-h_*)\|^2_2  \leq \EE[L(\Tcal \hat{h}) ] - \EE[L (\Tcal h_*)] + \alpha\{\EE[\hat{h}^2(X)] - \EE[h_*(X)^2]\},
+\end{align*}
+where define $L(\Tcal h):= (Y- \Tcal h)^2$. 
+Recall that \begin{align*}
+    &\EE[L(\Tcal \hat{h}) ] - \EE[L (\Tcal h_*)] + \alpha\{\EE[\hat{h}^2(X)] - \EE[h_*(X)^2]\} =\\
+    &\qquad\EE[ - 2 Y  \Tcal (\hat{h}-h_*)(Z)  + (\Tcal \hat{h})^2(Z) -  (\Tcal h_*)^2(Z) ] +  \alpha\{\EE[\hat{h}^2(X)] - \EE[h_*(X)^2]\},
+\end{align*}
+
+
+we have 
+\begin{align}\label{eq:single-quadratic}
+    & \alpha \|\hat{h}- h_* \|^2_2 + \|\Tcal(\hat{h}-h_*)\|^2_2  \nonumber\\ 
+    &\qquad= \EE[ - 2 Y  \Tcal (\hat{h}-h_*)(Z)  + (\Tcal \hat{h})^2(Z) -  (\Tcal h_*)^2(Z) ] +  \alpha\{\EE[\hat{h}^2(Z)] - \EE[h_*(Z)^2]\}\nonumber\\
+    &\qquad= \EE[ - 2 Y  \hat \Tcal (\hat{h}-h_*)(Z) + (\hat \Tcal \hat{h})^2(Z) - (\hat \Tcal h_*)^2(Z) ]   +  C_1 \times \EE[|(\hat \Tcal - \Tcal) (\hat{h}-h_*)(X)|] \nonumber\\ 
+    &\qquad\qquad+  \alpha\{\EE[\hat{h}^2(X)] - \EE[h_*(X)^2]\} \nonumber\\
+    &\qquad\leq \mathrm{Emp} + \mathrm{Loss} + C_1 \times \EE[|(\hat \Tcal - \Tcal) (\hat{h}-h_*)(Z)|]  \nonumber\\ 
+    &\qquad= \mathrm{Emp} + \mathrm{Loss} + \|(\hat \Tcal-\Tcal) (  \hat{h}- h_*)\|_1,
+\end{align}
+here the inequality comes from the uniform boundedness of $\hat{h}, h_*, \Tcal{h}, \Tcal{\hat{h}},\hat{\Tcal}h,\hat{\Tcal}\hat{h} $,  and the $O(1)$-Lipschitz of $L(\cdot)$.
+\begin{align*}
+    &\mathrm{Emp} = |(\EE_n-\EE)  [L(\hat \Tcal \hat{h})- L(\hat \Tcal h_*)+\alpha(\hat{h}^2(X)-h_*(X)^2)]|,  \\ 
+    & \mathrm{Loss} =  \EE_n[ -2Y  \hat \Tcal (\hat{h}-h_*)(Z)  + (\hat \Tcal \hat{h})^2(Z) - (\hat \Tcal h_*)^2(Z) + \alpha\{\hat{h}^2(X)- h_*(X)^2 \}]. 
+\end{align*} 
+Here, using Lemma \ref{lem:local-concen}, the term $\mathrm{Emp} $ is upper-bounded as follows with probability at least $1 - c_1\exp(c_2 n\delta_{n,\Hcal}^2)$: 
+\begin{align}\label{eq:single-emp}    
+  \mathrm{Emp}  &\leq \delta_{n,\Hcal}\{ \alpha \|\hat{h}-h_*\|_2+ \|\hat \Tcal(\hat{h}-h_*)\|_2+   \delta_{n,\Hcal}   \} \nonumber\\ 
+&\leq \delta_{n,\Hcal}\{ \alpha \|\hat{h}-h_*\|_2 +  \|\hat{h}-h_*\|_2 +   \delta_{n,\Hcal}   \}. 
+\end{align} 
+% In the first inequality, we use the following variance bound: 
+% \begin{align*}
+%     &\EE[\{L(\hat \Tcal \hat{h})- L(\hat \Tcal h_*)\}^2]\\
+%     &\leq \EE\left [ \left \{ -2 Y ( \hat \Tcal f - \hat \Tcal h_*)(Z) + \{\hat \Tcal \hat{h}-\hat \Tcal h_* \}(Z)\{ \hat \Tcal \hat{h} + \hat \Tcal h_*\}(Z) \right \}^2 \right ] \\ 
+%     &\leq C_2 \times \|\hat \Tcal (  \hat{h} - h_*)\|^2_2. 
+% \end{align*}
+
+Furthermore, recall that by our iteration in \eqref{eq:emp-reg-noniter}, we have
+\begin{align*}
+     \EE_n[  - 2 Y  \Tcal (\hat{h}-h_*)(Z)  + (\Tcal \hat h)^2(Z) - (\Tcal h_*)^2(Z)+ \alpha\{\hat h^2(X)- h_*(X)^2 \} ]\leq 0. 
+\end{align*}
+Hence, we have 
+\begin{align}\label{eq:single-loss}
+    \mathrm{Loss}\leq 0. 
+\end{align}
+
+Combining everything, we have 
+\begin{align}\label{eq: useful}
+    \alpha \|\hat h - h_* \|^2_2 + \|\Tcal(\hat h-h_*)\|^2_2 \leq \delta_{n,\Hcal}\{ (\alpha+1) \|\hat h-h_*\|_2 +   \delta_{n,\Hcal}   \}+  \|(\hat \Tcal-\Tcal)(\hat h-h_*)\|_1, 
+\end{align}
+Here the constant $c_1$ and $c_2$ hide constants related to $C, C_0$. The first inequality comes from \eqref{eq:single-emp}. We implicitly use $ \alpha \leq 1$ in the last inequality. 
+\end{proof}
+\paragraph{Proof of Theorem \ref{thm: mle-nonmisspec-noniter}.} By Assumption \ref{ass: realizability}, we have $\epsilon_\Gcal = 0$. By Corollary \ref{cor: T-mle} and Lemma \ref{lem: quadra-lemma},  since $\alpha\leq 1$ we have \begin{align*}
+      \alpha \|\hat h - h_* \|^2_2 + \|\Tcal(\hat h-h_*)\|^2_2&= O\bigg(\delta_{n,\Hcal}\{ (\alpha+1) \|\hat h-h_*\|_{2} +   \delta_{n,\Hcal}   \}+  \delta_{n,\Gcal} \|\hat{h} - h_*\|_2\bigg) \nonumber\\
+     &\leq c_1 \delta^2_n  + c_2 \delta_n\|\hat{h} - h_*\|_2 \tag{$\delta_n := \max\{\delta_{n,\Gcal}, \delta_{n,\Hcal}\}$}\\
+     &\leq c_1\delta_n^2 +2c_2''\delta_n^2/\alpha + 2c_2'\alpha\|\hat{h} - h^*\|_2^2 \tag{$2ab \leq ca^2 + \frac{b^2}{c}$}
+\end{align*}
+holds with probability at least $1 - c\exp(n\delta_n^2)$, where $c_2'\leq 1$.
+By Lemma \ref{lem:aux-1}, we have 
+\begin{align*}
+\|\hat h - h_* \|^2_2 \leq  O( (\delta_n^2 / \alpha^2)  + \delta_n^2 / \alpha \big) = O(\delta_{n}^2 / \alpha^2), \tag{$\alpha \leq 1$}
+\end{align*}
+therefore by Lemma \ref{lem:iter-tikh-bias}, we have $$
+    \|\hat h-h_0 \|^2_2\leq  \delta_{n}^2 / \alpha^2+ \alpha^{\min(\beta,2)} ,
+$$
+set $\alpha = \delta_n^{\frac{2}{2+\min\{\beta, 2\}}}$, and we conclude the proof of Theorem \ref{thm: mle-nonmisspec-noniter}.
+\paragraph{Proof of Theorem \ref{thm:chi2-mle-result-noniter}.}
+By Assumption \ref{ass: realizability}, we have $\epsilon_\Gcal = 0$. By Corollary \ref{cor: T-mle} and Lemma \ref{lem: quadra-lemma}, we have \begin{align*}
+      \alpha \|\hat h - h_* \|^2_2 + \|\Tcal(\hat h-h_*)\|^2_2&\leq \delta_{n,\Hcal}\{ \alpha \|\hat h-h_*\|_{2} + \|\Tcal(h-h_*)\|_2 +   \delta_{n,\Gcal} \|\hat{h} - h_*\|_\infty+   \delta_{n,\Hcal}  \}+  \delta_{n,\Gcal} \|\hat{h} - h_*\|_\infty ,
+\end{align*}
+By Assumption \ref{ass:gamma-smooth}, we have \begin{align*}
+\alpha \|\hat h - h_* \|^2_2 + \|\Tcal(\hat h-h_*)\|^2_2 &\leq \delta_{n,\Hcal}\{ (\alpha +1)\|\hat h-h_*\|_{2} +   \delta_{n,\Hcal}   \}+  \delta_{n,\Gcal} \|\hat{h} - h_*\|_2^\gamma\\
+&\leq c_1 \delta_n\|\hat{h} - h_*\|_2 +c_2 \delta_n \|\hat{h} - h_*\|_2^\gamma \tag{$\delta_n := \{\delta_{n,\Gcal}, \delta_{n,\Hcal}\}$},
+\end{align*}
+By Lemma \ref{lem:aux-1}, we have $$
+\|\hat{h} - h_{*}\|_2^2 \leq O((\delta_n/\alpha)^{\frac{2}{2-\gamma}} + (\delta_n/\alpha)^2)  \leq O(\delta_n/\alpha)^{\frac{2}{2-\gamma}}
+$$
+since $\gamma \in (0,1)$. Therefore, by Lemma \ref{lem:iter-tikh-bias}, we have \begin{align*}
+    \|\hat h-h_0 \|^2_2\leq  (\delta_n/\alpha)^{\frac{2}{2-\gamma}}+ \alpha^{\min(\beta,2)}.
+\end{align*}
+By selecting $\alpha = O(\delta_n^{\frac{2}{2+ (2 - \gamma)\min\{\beta,2\}}})$, we have $$
+\|\hat h-h_0 \|^2_2\leq \delta_n^{\frac{2\min\{\beta,2\}}{2+ (2 - \gamma)\min\{\beta,2\}}},
+$$
+and we conclude the proof of Theorem \ref{thm:chi2-mle-result-noniter}.
+\section{Proof of Theorem \ref{thm: mle-misspec} and \ref{thm: chi2mle-misspec}}\label{sec: proof-misspec}
+In this section, we consider the case when $\epsilon_\Gcal$ and $\epsilon_{\Hcal}$ doht equal zero, i.e. Assumption \ref{ass: realizability} does not hold. We aim to establish a convergence rate for $\|\hat{h} - h_0\|_2$ for both MLE-based RDIV and $\chi^2$-MLE based RDIV in terms of $\delta_n$, $\epsilon_\Hcal$ and $\epsilon_\Gcal$. 
+\begin{lemma}\label{lem:misspec-main}
+Under Assumption \ref{ass:source-cond}, for $\alpha \in (0,1)$ we have 
+    \begin{align*}
+    \|\hat{h} - h_0\|^2 \leq 3\|\hat{h} - h_{*}\|^2+O\bigg(\frac{1}{\alpha}\bigg\{\epsilon_\Hcal^2 + \alpha^{\min\{\beta+1,2\}}\bigg\}\bigg),
+\end{align*}
+\end{lemma}
+\begin{proof}
+Note that in the misspecified case, we no longer have $h_0\in\Hcal$. We further a augmented function class $\Hcal' = \operatorname{Span}(\Hcal \cup \{h_0\})$, and the corresponding optimizer of $\Lcal_0$ on $\Hcal$ and $\Hcal'$: 
+\begin{align*}
+&h_*' = \argmin_{h\in\Hcal'}\|\Tcal(h - h_0)\|_2^2 + \alpha \|h\|^2,\\
+&h_* = \argmin_{h\in\Hcal} \|\Tcal(h - h_0)\|_2^2 + \alpha \|h\|^2.
+\end{align*}
+We define a function $$
+\Lcal_0(t):= \|\Tcal(h_*' + t(h_* - h_*') - h_0)\|_2^2 + \alpha \|h_*' + t(h_* - h_*')\|^2,
+$$
+then $\Lcal_0$ is $\alpha$-strongly convex, and attains its minimum at $\Lcal_0(0)$. Note that we have the following inequality holds for all $h\in\Hcal$, \begin{align*}
+\frac{1}{\alpha}(L_0(1) - L_0(0))&=\frac{1}{\alpha}\bigg\{ \|\Tcal(h_* - h_0)\|^2 + \alpha \|h_*\|^2 - (\|\Tcal(h_*' - h_0)\|^2 + \alpha \|h_*'\|^2) \bigg\} \\
+&\leq \frac{1}{\alpha}\bigg\{ \|\Tcal(h - h_0)\|^2 + \alpha \|h\|^2 - (\|\Tcal(h_*' - h_0)\|^2 + \alpha \|h_*'\|^2) \bigg\} \tag{Optimality of $h_*'$}\\
+& = \frac{1}{\alpha}\{\|\Tcal(h - h_*')\|^2 + \alpha \|h_*'\|^2\} \tag{First order condition of $h_*'$}\\
+&\leq \frac{2}{\alpha}\bigg\{    2\|\Tcal(h-h_0)\|^2 + 2\|\Tcal(h_*'-h_0)\|^2 + 2\alpha\|h-h_0\|^2 + 2\alpha \|h_*' - h_0\|^2\bigg\}\\
+&\leq \frac{2}{\alpha}\big\{4\|h-h_0\|^2 + O\big(\|w_0\|^2\alpha^{\min\{\beta+1,2\}}\big)\big\},
+\end{align*}
+set $h = h^{\dagger}$,  by strong convexity and $\partial\Lcal_0(0) = 0$, we have \begin{align*}
+   \|h_* - h_*'\|^2 \leq \frac{1}{\alpha}|\Lcal_0(1) - \Lcal(0)|\leq O(\frac{1}{\alpha}\{\epsilon_\Hcal^2 + \alpha^{\min\{\beta+1,2\}}\}).
+\end{align*}
+% We further have \begin{align*}
+% \|h_* - h_*'\|^2 &\leq 2\bigg(1+ \frac{1}{\alpha}\bigg) \bigg\{ \|h_*' - h_0\|^2 + \min_{h^\dagger} \|h_0 - h^{\dagger}\|^2 \bigg\}\\
+% &\leq \bigg(1+ \frac{1}{\alpha}\bigg) \big\{\alpha^{\min\{\beta,2\}} + \epsilon_\Hcal^2\big\}.
+% \end{align*}
+% Here the second inequality comes from Lemma \ref{lem:iter-tikh-bias}, by which we have $\|h_{*}' - h_0\|_2^2 \leq \alpha^{\min\{\beta,2\}}$. 
+Therefore we have \begin{align*}
+    \|\hat{h} - h_0\|^2 &\leq 3\bigg\{\|\hat{h} - h_{*}\|^2 + \|h_{*} - h'_{*}\|^2 + \|h_{*}' - h_0\|^2  \bigg\}\\
+    &= 3\|\hat{h} - h_{*}\|^2+O\bigg(\frac{1}{\alpha}\bigg\{\epsilon_\Hcal^2 + \alpha^{\min\{\beta+1,2\}}\bigg\}\bigg) + 3\alpha^{\min\{\beta,2\}},
+\end{align*}
+and we conclude our proof for the lemma.
+\end{proof}
+\paragraph{Proof for Theorem \ref{thm: mle-misspec}.}
+By Lemma \ref{lem: quadra-lemma}, we have \begin{align*}
+    \alpha \|\hat{h} - h_{*}\|^2 =  O\bigg(\delta_{n,\Hcal}\bigg\{ (\alpha+1)  \|\hat h-h_*\|_2   +  \delta_{n,\Hcal}   \bigg\}+  \|(\hat \Tcal-\Tcal)(\hat h-h_*)\|_1\bigg),
+\end{align*}
+
+By Corollary \ref{cor: T-mle}, we have $\|(\Tcal - \hat{\Tcal})(\hat{h} - h_*)\|_1  \leq (\delta_{n,\Gcal}^2 +\epsilon_\Gcal)^{1/2}\|\hat{h} - h_*\|$, 
+and we have $$
+\|\hat{h} - h_*\|^2 \leq \frac{1}{\alpha}\cdot O\bigg(\delta_{n,\Hcal} \|\hat{h} - h_*\| +  (\delta_{n,\Gcal}^2 +\epsilon_\Gcal )^{1/2}\|\hat{h} - h_*\| + \delta_{n,\Gcal}^2 \bigg), 
+$$
+therefore by Lemma \ref{lem:aux-1}, we have
+\begin{align}
+    \|\hat{h} - h_*\|^2 = O\bigg(\frac{\delta_{n,\Gcal}^2 + \epsilon_\Gcal + \delta_{n,\Hcal}^2}{\alpha^2}   \bigg). \label{eqn: misspec_G_only}
+\end{align}
+By Lemma \ref{lem:misspec-main}, combine everything together: $$
+\|\hat{h} - h_0\|^2 = O\bigg(\frac{\delta_{n,\Gcal}^2+ \delta_{n,\Hcal}^2 + \epsilon_\Gcal}{\alpha^2} + \alpha^{\min\{\beta+1,2\}-1}+\frac{\epsilon_\Hcal^2}{\alpha}\bigg).
+$$
+note that $\delta_n :=\{\delta_{n,\Gcal}, \delta_{n,\Hcal}\}$, we conclude the proof of Theorem \ref{thm: mle-misspec}.
+% \begin{remark}
+% By choosing $\alpha = (\delta_n^2 + \epsilon_\Gcal)^{\frac{1}{\min\{\beta,2\}+1}}$,  we have $$
+% \|\hat{h} - h_0\|^2 \leq (\delta_n^2 + \epsilon_\Gcal)^{\frac{\min\{\beta,2\}-1}{\min\{\beta,2\}+1}}+(\delta_n^2 + \epsilon_\Gcal)^{\frac{\min\{\beta,2\}}{\min\{\beta,2\}+1}} + \epsilon_{\Hcal}^2 \big\{1+ (\delta_n^2 + \epsilon_\Gcal)^{-\frac{1}{\min\{\beta,2\}+1}}\big\}.
+% $$
+% \end{remark}
+\paragraph{Proof of Theorem \ref{thm: chi2mle-misspec}.}
+By Lemma \ref{lem: quadra-lemma}, we have \begin{align*}
+    \alpha \|\hat{h} - h_{*}\|^2 &\leq  O\bigg(\delta_n\bigg\{ (\alpha+1) \|\hat h-h_*\|_2  +     \delta_n   \bigg\}+  \|(\hat \Tcal-\Tcal)(\hat h-h_*)\|_1\bigg)\\
+    &\leq O\bigg(\delta_n\bigg\{ (\alpha+1) \|\hat h-h_*\|_2  +     \delta_n   \bigg\}+  \|(\hat \Tcal-\Tcal)(\hat h-h_*)\|_2\bigg),
+\end{align*}
+by Lemma \ref{cor: T-chi2_mle}, we have $\|(\hat \Tcal-\Tcal)(\hat h-h_*)\|_2\leq (\delta_n^2+\epsilon_\Gcal)^{1/2}\|\hat h-h_*\|_\infty$, therefore we have \begin{align*}
+\|\hat{h} - h_*\|^2 &\leq \frac{1}{\alpha}\cdot O\bigg(\delta_n \|\hat{h} - h_*\| +  (\delta_n^2 +\epsilon_\Gcal )^{1/2}\|\hat{h} - h_*\|_\infty\bigg)\tag{$\alpha\leq 1$}\\
+&\leq \frac{1}{\alpha}\cdot O\bigg(\delta_n\|\hat{h} - h_*\|+ (\delta_n^2 +\epsilon_\Gcal )^{1/2}\|\hat{h} - h_*\|_2^\gamma\bigg),
+\end{align*}
+where the second inequality comes from Assumption \ref{ass:gamma-smooth}. By Lemma \ref{lem:aux-1}, we have 
+\begin{align}
+    \|\hat{h} - h_*\|^2 \leq O\bigg(\bigg(\frac{\delta_n^2+\epsilon_\Gcal}{\alpha^2} \bigg)^{1/(2-\gamma)}\bigg)
+    \label{eqn: misspec_only_G_chi2}
+\end{align}
+
+by Lemma \ref{lem:misspec-main}, combine everything together,  we have $$
+\|\hat{h} - h_0\|^2 \leq O\bigg(\bigg(\frac{\delta_n^2+\epsilon_\Gcal}{\alpha^2} \bigg)^{1/(2-\gamma)}+ \alpha^{\min\{\beta+1,2\}-1}+\frac{\epsilon_\Hcal^2}{\alpha}\bigg),
+$$ 
+and thus we conclude the proof of Theorem \ref{thm: chi2mle-misspec}.
+
+% \begin{remark}
+%     By setting $\alpha= (\delta_n^2 + \epsilon_\Gcal)^{\frac{1}{\min\{\beta-1,1\}(2-\gamma)+2}} $, we have $$
+%     \|\hat{h} - h_0\|^2 \leq O\big((\delta_n^2 + \epsilon_\Gcal)^{\frac{\min\{\beta-1,1\}}{\min\{\beta-1,1\}(2-\gamma)+2}}+(\delta_n^2 + \epsilon_\Gcal)^{\frac{\min\{\beta,2\}}{\min\{\beta-1,1\}(2-\gamma)+2}}+\epsilon_\Hcal^2\big\{1+ (\delta_n^2 + \epsilon_\Gcal)^{-\frac{1}{\min\{\beta-1,1\}(2-\gamma)+2}}\big\}\big).
+%     $$
+% \end{remark}
+\section{Proof of Theorem \ref{thm:model_selection}}\label{sec: proof-model-selection}
+In this section, we will provide the details for the model selection results in the paper. 
+Let $\ell_{h,g}(Y,Z,X)$ denote the loss evaluated for a function $h$ using the likelihood function $\hat{g}$: 
+\begin{align*}
+    \ell_{h,\hat{g}}(Y,Z,X) ={\left(Y - \int h(x)\hat{g}(x|Z)\mu(dx)\right)^2} + {\alpha h(X)^2}
+\end{align*}
+Also, to simplify the notation, we use $\{X_i,Y_i,Z_i\}$ instead of  $\{X'_i,Y'_i,Z'_i\}$. 
+
+For $\theta\in\Theta = \{\theta | \sum_j \theta_j = 1, \theta_j\geq 0 \forall j\} $, denote $h_{\theta} = \sum_j \theta_j f_j$. For any convex combination $\theta$ over a set of candidate functions $\{h_1, \ldots, h_M\}$, we define the notation:
+\begin{align*}
+    \ell_{\theta,g}(Y,Z,X) :=~& \ell_{h_{\theta}, g}(Y,Z,X) &
+    R(\theta,g) :=~& P\ell_{\theta,g}(Y,Z,X)
+\end{align*}
+Here we define some optimal aggregates in the following sense:
+\begin{align*}
+    j^*_{\alpha} :=~& \argmin_{j = 1, \dots, M}  R(h_{j},g_0) &
+    j^* :=~& \argmin_{j = 1, \dots, M} \|h_0 - h_j\|^2\\
+    \theta^*_{\alpha} :=~& \argmin_{\theta \in \Theta} R(h_{\theta},g_0) &
+    \theta^* :=~& \argmin_{\theta \in \Theta} \|h_0 - h_{\theta}\|^2\\
+    h_{\alpha}^* :=~& \argmin R(h,g_0) &
+    h_{\alpha, \Hcal}^* :=~& \argmin_{h \in \Hcal} R(h,g_0)
+\end{align*}
+
+\begin{proof}[Proof of Theorem \ref{thm:model_selection}]
+\begin{align*}
+    \|h_{\hat{\theta}} - h_0\|^2 \leq ~& 2\|h_{\hat{\theta}} - h_{\alpha}^*\|^2 + 2\|h_{\alpha}^*-h_0\|^2 \tag{By Strong Convexity}\\
+    \leq~& \frac{2}{\alpha}\left(R(h_{\hat{\theta}},g_0) - R(h_{\alpha}^*,g_0)\right) + O\left(\alpha^{\min\{2,\beta\}}\right)\\
+    =~& \frac{2}{\alpha}\left(R(h_{\hat{\theta}},g_0) -R(h_{\alpha,\Hcal_j}^*,g_0) + R(h_{\alpha, \Hcal_j}^*,g_0)-R(h_{\alpha}^*,g_0)\right) + O\left(\alpha^{\min\{2,\beta\}}\right)\tag{for any $j$}\\
+    =~& \frac{2}{\alpha} \left(R(h_{\hat{\theta}},g_0) - R(h_{j_{\alpha}^*},g_0) + R(h_{j_{\alpha}^*},g_0) -R(h_{\alpha,\Hcal_{j}}^*,g_0) + R(h_{\alpha, \Hcal_{j}}^*,g_0)-R(h_{\alpha}^*,g_0)\right) \\
+    ~&+O\left(\alpha^{\min\{2,\beta\}}\right)\\
+    \leq ~&\frac{2}{\alpha} \left(R(h_{\hat{\theta}},g_0) - R(h_{j_{\alpha}^*},g_0) + R(h_{j},g_0) -R(h_{\alpha,\Hcal_{j}}^*,g_0) + R(h_{\alpha, \Hcal_{j}}^*,g_0)-R(h_{\alpha}^*,g_0)\right)\\
+    ~&+O\left(\alpha^{\min\{2,\beta\}}\right)\\
+    % \leq ~&\frac{2}{\alpha} \left( R(h_{j},g_0) -R(h_{\alpha,\Hcal_{j}}^*,g_0) + R(h_{\alpha, \Hcal_{j}}^*,g_0)-R(h_{\alpha}^*,g_0)\right)\\
+    % ~&+O\left(\alpha^{\min\{2,\beta\}} + \frac{M}{\alpha n} + \frac{\delta_{n,\Gcal}^2}{\alpha^2}\right) \tag{By Theorem \ref{thm:oracle_model_selection}}\\
+\end{align*}
+When $\hat{g}$ is estimated using the standard MLE appraoch, we have that by Corollary \ref{cor: T-mle} and Lemma \ref{lem: quadra-lemma}, we have that:
+\begin{align*}
+    R(h_{j},g_0) -R(h_{\alpha,\Hcal_{j}}^*,g_0) \leq~& c_1 \delta_{n,j}^2 + c_2 (\delta_{n,j}^2 + \epsilon_{\Gcal})^{\frac{1}{2}}\|h_j-h_{\alpha,\Hcal_{j}}^*\|\\
+    \leq~& c_1 \delta_{n,j}^2 + \frac{c_2^2 (\delta_{n,j}^2 + \epsilon_{\Gcal})}{\alpha} + \frac{1}{2}\alpha \|h_j-h_{\alpha,\Hcal_{j}}^*\|^2\\
+    \leq ~& O\bigg( \delta_{n,j}^2 + \frac{(\delta_{n,j}^2 + \epsilon_{\Gcal})}{\alpha}\bigg) \tag{By Eqn \ref{eqn: misspec_G_only}}
+\end{align*}
+Thus, we have $R(h_{j},g_0) -R(h_{\alpha,\Hcal_{j}}^*,g_0) \leq O\left(\frac{\delta_{n,j}^2 + \epsilon_{\Gcal}}{\alpha}\right)$. Instantiating this result for the function class $\Hcal_M$, which denotes the convex hull when convex-ERM is used, or the set of candidate functions when best-ERM is used, we get that:
+\begin{align*}
+    R(h_{\hat{\theta}},g_0) - R(h_{j_{\alpha}^*},g_0) \leq ~& R(h_{\hat{\theta}},g_0) - R(h_{\theta_{\alpha}^*},g_0)\\
+    \leq ~& \frac{\delta_{n,M}^2 + \epsilon_\Gcal}{\alpha}
+\end{align*} where $\delta_{n,M} = \max\{\delta_{n,\Gcal}, \delta_{n,\Hcal_M}\}$. Since the function classes used to train the candidate functions are typically more complex than the convex hull over $M$ variables, it is safe to assume that $\delta_{n,\Hcal_M}\leq\delta_{n,\Hcal}$.
+Combining, we get:
+\begin{align*}
+    \|h_{\hat{\theta}} - h_0\|^2
+    \leq ~& O\big(\alpha^{\min\{2,\beta\}} + \frac{\delta_{n,j}^2 + \epsilon_{\Gcal}}{\alpha^2}\big) 
+    +\frac{2}{\alpha}\left(R(h_{\alpha, \Hcal_{j}}^*,g_0)-R(h_{\alpha}^*,g_0)\right)\\
+    \leq ~& O\big(\alpha^{\min\{2,\beta\}} + \frac{\delta_{n,j}^2 + \epsilon_{\Gcal}}{\alpha^2}\big) + \frac{2}{\alpha}\left(R(h,g_0)-R(h_{\alpha}^*,g_0)\right) \tag{for any $h\in \Hcal_{j}$}\\ 
+\end{align*} 
+% where in the last inequality we make the safe assumption that $\delta_n$ is greater than $\frac{M}{n}$, which is reasonable as the $\frac{M}{n}$ is the critical radius for the convex combination of $M$ variables, and typically the function classes $\Hcal_j$ that are used have greater complexity, and thus larger critical radius.  
+
+For any function class $\Hcal$, we have:
+\begin{align*}
+    R(h,g_0)-R(h_{\alpha}^*,g_0) = ~& \|\Tcal(h-h_{\alpha}^*)\|^2 + \alpha \|h-h_{\alpha}^*\|^2\\
+    \leq ~& 2\|\Tcal(h-h_0)\|^2 + 2\|\Tcal(h_{\alpha}^*-h_0)\|^2 + 2\alpha\|h-h_0\|^2 + 2\alpha \|h_{\alpha}^* - h_0\|^2\\
+    \leq~& 4\|h-h_0\|^2 + O\big(\|w_0\|^2\alpha^{\min\{\beta+1,2\}}\big) \tag{By Lemma 3 in \cite{bennett2023source}}\\
+\end{align*}
+Hence, for any function class $\Hcal_j$, we can choose $h$ that attains $\min_{\Hcal_j}\|h-h_0\| = \epsilon_{\Hcal_j}$. Combining, we get that: 
+\begin{align*}
+    \|h_{\hat{\theta}} - h_0\|^2 \leq \min_{j}O\big(\alpha^{\min\{\beta+1,2\}-1} + \frac{\delta_{n,j}^2 + \epsilon_\Gcal}{\alpha^2} + \frac{1}{\alpha} \epsilon_{\Hcal_j}^2\big). \tag{$\alpha \leq 1$}
+\end{align*}
+
+Analogously, if $\hat{g}$ is estimated using $\chi^2$-MLE, we have that by Corollary \ref{cor: T-chi2_mle}, Lemma \ref{lem: quadra-lemma} and Assumption \ref{ass:gamma-smooth}:
+\begin{align*}
+    R(h_{j},g_0) -R(h_{\alpha,\Hcal_{j}}^*,g_0) \leq~& O\bigg(\delta_{n}^2+ (\delta_{n}^2 +\epsilon_\Gcal )^{1/2}\|\hat{h} - h_*\|_2^\gamma\bigg)\\
+    \leq~& O\bigg(\delta_{n}^2+ \left(\frac{\delta_{n}^2 +\epsilon_\Gcal}{\alpha^{\gamma}}\right)^{\frac{1}{1-2\gamma}} + \alpha\|\hat{h} - h_*\|_2^2\bigg) \tag{By Young's Inequality}\\
+    \leq~& O\bigg(\alpha \left(\frac{\delta_{n}^2 +\epsilon_\Gcal}{\alpha^{1-\gamma}}\right)^{\frac{1}{1-2\gamma}} + \alpha\bigg(\frac{\delta_{n}^2+\epsilon_\Gcal}{\alpha^2} \bigg)^{1/(2-\gamma)}\bigg) \tag{By Eqn \ref{eqn: misspec_only_G_chi2}}\\
+    \leq~& O\bigg(\alpha\bigg(\frac{\delta_{n}^2+\epsilon_\Gcal}{\alpha^2} \bigg)^{1/(2-\gamma)}\bigg)
+\end{align*}
+By the same argument for the standard MLE case, we get:
+\begin{align*}
+    \|h_{\hat{\theta}} - h_0\|^2 \leq \min_{j}O\left(\alpha^{\min\{\beta+1,2\}-1} + \left(\frac{\delta_{n,M}^2+\epsilon_\Gcal}{\alpha^2} \right)^{1/(2-\gamma)} + \frac{1}{\alpha} \epsilon_{\Hcal_j}^2\right)
+\end{align*}
+
+\end{proof}
+
+\section{Proof of Theorem \ref{thm: mle-nonmisspec} and \ref{thm:chi2-mle-result}}\label{sec: proof-iterative}
+In this section, we prove the convergence rate of iterative RMIV in Section \ref{sec: iterative} under a unified framework. We prove the results of Theorem \ref{thm:chi2-mle-result} and \ref{thm:chi2-mle-result} respectively. Recall that we define \begin{align*}
+    h_{m, *} = &\argmin_{h\in\Hcal} \E[{Y - \Tcal h(Z)}^2]+ \alpha\cdot \E[(h - h_{m-1,*})^2(X)],
+\end{align*}
+by Lemma \ref{lem:iter-tikh-bias} and Assumption \ref{ass:source-cond}, we have $$
+\|h_{m,*} - h_0\|_2^2 \leq \|w_0\|_2^2\alpha^{\min\{\beta,2m\}}.
+$$
+Therefore, we only need to provide a upper bound for $\|\hat{h}_m - h_{m,*}\|_2^2$, and then choose the proper $\alpha$ deliberately. We start by proving the following lemma, and with the different convergence rate of MLE and $\chi^2$-MLE, we conclude the proof of Theorem \ref{thm: mle-nonmisspec} and Theorem \ref{thm:chi2-mle-result} respectively.
+\begin{lemma}\label{lem: iter-quadra}
+   We have the following inequality holds with probability at least $1 - m\exp(n\delta_{n,\Hcal}^2)$: $$\|\hat{h}_{m} - h_{m,*}\|^2 \leq O\big(\delta_{n,\Hcal}^2/\alpha^2 
+\big) + O\bigg(\frac{ \mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|]}{\alpha}\bigg)+ 16\|\hat{h}_{m-1} - h_{m-1,*}\|^2.
+$$
+\end{lemma}
+\begin{proof}
+    Recall that our solution $\hat{h}_{m}$ satisfies $$
+\hat{h}_{m} = \argmin_{h\in\Hcal} L(\hat{\Tcal}h) + \alpha \mathbb{E}_n [\{h - \hat{h}_{m-1}\}^2].
+$$
+We define \begin{align*}
+L_m(\tau) &= \mathbb{E}[\mathbb{E}[h_0 - h_{m,*} - \tau (\hat{h}_{m} - h_{m,*})\mid Z]^2]+\alpha \|h_{m,*} + \tau (\hat{h}_{m} - h_{m,*}) - h_{m-1,*}\|^2,
+\end{align*}
+By definition, $L_m(\tau)$ is minimized by $\tau = 0$. Note that by strong convexity and property of quadratic function, we have $$
+L_m(1) - L_m(0) = L'(0) + L''(0) \geq L''(0),
+$$
+Therefore \begin{align*}
+    &\alpha \|\hat{h}_{m} - h_{m,*}\|^2 + \|\Tcal(\hat{h}_{m} - h_{m,*})\|^2\\
+    & \leq\|\Tcal(h_0 - \hat{h}_{m})\|^2 - \|\Tcal(h_0 - h_{m,*})\|^2 + \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big)\\
+    & =\mathbb{E}[L(\Tcal\hat{h}_{m})] - \mathbb{E}[L(\Tcal h_{m,*})]+ \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big),\\
+    % &\qquad+ \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big).
+    % &\leq\mathbb{E}[-2Y\cdot\Tcal(\hat{h}_{m} - h_{m,*}) + (\Tcal\hat{h}_{m})^2 - (\Tcal h_{m,*})^2] + \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big)\\
+    % &\leq \mathbb{E}[-2Y\cdot\hat{\Tcal}(\hat{h}_{m} - h_{m,*}) + (\hat{\Tcal}\hat{h}_{m})^2 - (\hat{\Tcal} h_{m,*})^2] + \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big) \\
+    % &\qquad + c\cdot\mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|]+ \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big)\\
+    % & = \mathbb{E}[L(\hat{\Tcal}\hat{h}_{m})] - \mathbb{E}[L(\hat{\Tcal} h_{m,*})] + c\cdot\mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|]\\
+    % &\qquad+ \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big).
+\end{align*}
+and thus we have \begin{align*}
+&\alpha \|\hat{h}_{m} - h_{m,*}\|^2 + \|\Tcal(\hat{h}_{m} - h_{m,*})\|^2\\
+    & \leq \mathbb{E}[L(\hat{\Tcal}\hat{h}_{m})] - \mathbb{E}[L(\hat{\Tcal} h_{m,*})] + c\cdot\mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|]\\
+    &\qquad+ \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big)\\
+    & \leq |(\mathbb{E} - \mathbb{E}_n)(L(\hat{\Tcal}\hat{h}_{m}) - L(\hat{\Tcal} h_{m,*}) )| + \EE_n[L(\hat{\Tcal}\hat{h}_{m}) - L(\hat{\Tcal} h_{m,*})] \\
+    &\qquad+ c\cdot\mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|] +  \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big)\\
+    &\leq c_1 (\delta_n\|\hat{\Tcal}(\hat{h}_{m} - h_{m,*})\| + \delta_n^2)+ \EE_n[L(\hat{\Tcal}\hat{h}_{m}) - L(\hat{\Tcal} h_{m,*})] + c \cdot \mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|] \\
+    &\qquad +  \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big),\\
+\end{align*}
+holds for all $m$ simultaneously with probability at least $1- m \exp(n\delta_{n,\Hcal}^2)$, recall that $\delta_{n,\Hcal}^2$ is the critical radius.  Here the second inequality comes from triangular inequality and $L(\cdot)$ being $O(1)$-Lipschitz, the third inequality comes from  Lemma \ref{lem:local-concen}.
+By Eq.~\eqref{eq: emp-iter},  $$
+ \EE_n[L(\hat{\Tcal}\hat{h}_{m}) - L(\hat{\Tcal} h_{m,*})] \leq  \alpha(\|h_{m,*} - \hat{h}_{m-1}\|^2_n - \|\hat{h}_{m} - \hat{h}_{m-1}\|^2_n),
+$$
+therefore we have \begin{align*}
+&\alpha \|\hat{h}_{m} - h_{m,*}\|^2 + \|\Tcal(\hat{h}_{m} - h_{m,*})\|^2\\
+&\leq c_1 (\delta_n\|(\hat{h}_{m} - h_{m,*})\| + \delta_n^2) + \alpha(\|h_{m,*} - \hat{h}_{m-1}\|^2_n - \|\hat{h}_{m} - \hat{h}_{m-1}\|^2_n) + c \cdot \mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|] \\
+&\qquad +  \alpha\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big).
+\end{align*}
+We are now interested in bounding 
+$$
+(\|h_{m,*} - \hat{h}_{m-1}\|^2_n - \|\hat{h}_{m} - \hat{h}_{m-1}\|^2_n) +\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big).
+$$
+We divide it into two terms:\begin{align*}
+    &I_1 := \big(\|h_{m,*} - \hat{h}_{m-1}\|^2 - \|\hat{h}_{m} - \hat{h}_{m-1}\|^2\big) + \big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big),\\
+    &I_2 := (\|h_{m,*} - \hat{h}_{m-1}\|^2_n - \|\hat{h}_{m} - \hat{h}_{m-1}\|^2_n) - (\|h_{m,*} - \hat{h}_{m-1}\|^2 - \|\hat{h}_{m} - \hat{h}_{m-1}\|^2)
+\end{align*}
+Note that $|I_1| = \big|2\langle \hat{h}_{m-1}- h_{m-1,*}, \hat{h}_{m}- h_{m,*} \rangle\big| $, we have $$
+I_1 \leq 2\|\hat{h}_{m-1}- h_{m-1,*}\|_2 \|\hat{h}_{m}- h_{m,*}\|_2,
+$$
+For $I_2$, we divide it into two terms $I_3$ and $I_4$, defined by \begin{align*}
+    &I_3 := \|h_{m,*} - \hat{h}_{m-1}\|_{n}^2 - \|h_{m,*} - h_{m-1,*}\|_n^2 - (\|h_{m,*} - \hat{h}_{m-1}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2),\\
+    &I_4 := \|h_{m,*} - h_{m-1,*}\|_n^2 - \|\hat{h}_{m} - \hat{h}_{m-1}\|_n^2 -(\|h_{m,*} - h_{m-1,*}\|^2 - \|\hat{h}_{m} - \hat{h}_{m-1}\|^2)
+\end{align*}
+Since each of these is the difference of two centered empirical processes, that are also Lipschitz losses (since
+$h_{m,*}, \hat{h}_m, h_{m-1,*}, \hat{h}_{m-1}$ are uniformly bounded) and since $h_{m,*}$ is a population quantity and not dependent on the empirical sample that is used for the $m$-th iterate, we can also upper bound these,
+\begin{align*}
+    &I_3 = O(\delta_{n,\Hcal}^2 \|\hat{h}_{m-1} - h_{m-1,*}\|+ \delta_{n,\Hcal}^2),\\
+    &I_4 = O(\delta_{n,\Hcal}\|\hat{h} - h_{m,*} + h_{m-1,*} - \hat{h}_{m-1}\| +\delta_{n,\Hcal}^2) = O\bigg(\delta_{n,\Hcal}(\|\hat{h} - h_{m,*}\|+ \|h_{m-1,*} - \hat{h}_{m-1}\|+ \delta_{n,\Hcal}^2)\bigg),
+\end{align*}
+combine everything together,  we can prove that  \begin{align*}
+&(\|h_{m,*} - \hat{h}_{m-1}\|^2_n - \|\hat{h}_{m} - \hat{h}_{m-1}\|^2_n) +\big(\|\hat{h}_{m} - h_{m-1,*}\|^2 - \|h_{m,*} - h_{m-1,*}\|^2\big)\\
+&\qquad\qquad\leq O(\delta_n^2 + \delta_n(\|\hat{h}_{m} - h_{m,*}\| + \|\hat{h}_{m-1} - h_{m-1,*}\|)) + 2\|\hat{h}_{m-1} - h_{m-1,*}\|\|\hat{h}_{m} - h_{m,*}\|.
+\end{align*}
+Therefore, we have \begin{align*}
+    &\alpha \|\hat{h}_{m} - h_{m,*}\|^2 \\
+    &\qquad\leq O\bigg(\delta_{n,\Hcal}^2 + \delta_{n,\Hcal}\|\hat{h}_{m} - h_{m,*}\| + c \cdot \mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|] + \alpha\delta_{n,\Hcal}(\|\hat{h}_{m} - h_{m,*}\| + \|\hat{h}_{m-1} - h_{m-1,*}\|))\bigg)\\
+    &\qquad\qquad + 2\alpha\|\hat{h}_{m-1} - h_{m-1,*}\|\|\hat{h}_{m} - h_{m,*}\|.
+\end{align*}
+By applying AM-GM inequality and utilizing $\alpha\leq 1$, we have $$
+\frac{\alpha}{8}\|\hat{h}_{m} - h_{m,*}\|^2 \leq O\big(\delta_n^2/\alpha + \delta_n^2 
++\alpha\delta_n^2\big) + c \cdot \mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|] + 2\alpha\|\hat{h}_{m-1} - h_{m-1,*}\|^2,
+\label{eqn:strong-iterated}$$
+therefore we have $$
+\|\hat{h}_{m} - h_{m,*}\|^2 \leq O\big(\delta_n^2/\alpha^2 + \delta_n^2 /\alpha
+\big) + O\bigg(\frac{ \mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|]}{\alpha}\bigg)+ 16\|\hat{h}_{m-1} - h_{m-1,*}\|^2.
+$$
+\paragraph{Proof for Theorem \ref{thm: mle-nonmisspec}.}
+By Corollary \ref{cor: T-mle}, we have $$
+\mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})|] = \|(\Tcal - \hat{\Tcal})(\hat{h}_{m} - h_{m,*})\|_1 \leq \delta_{n}\cdot\|\hat{h}_{m} - h_{m,*})\|_2,
+$$
+therefore by Lemma \ref{lem: iter-quadra}, we have \begin{align*}
+    \|\hat{h}_{m} - h_{m,*}\|^2 \leq O(\delta_n^2/\alpha^2 + \delta_n\|\hat{h}_{m} - h_{m,*})\|_2)+ 16 \|\hat{h}_{m-1} - h_{m-1,*}\|^2. 
+\end{align*}
+By Lemma \ref{lem:aux-1}, we have \begin{align*}
+    \|\hat{h}_m - h_{m,*}\|^2 &\leq 4O\big(\delta_n^2/\alpha^2\big) + 16\|\hat{h}_{m-1} - h_{m-1,*}\|^2 \\
+&\leq 128^m\cdot\delta_n^2/\alpha^2,
+\end{align*}
+where the second inequality comes from induction. Therefore, by Lemma \ref{lem:iter-tikh-bias}, we have $$
+\|\hat{h}_m - h_{0}\|^2 =O(128^m\cdot\delta_n^2/\alpha^2 + \alpha^{\min\{\beta, 2m\}}).
+$$
+Set $\alpha = \delta_n^{\frac{2}{2+\min\{\beta, 2m\}}}$, and we conclude the proof.
+\paragraph{Proof for Theorem \ref{thm:chi2-mle-result}}
+By Assumption \ref{ass:gamma-smooth}, we have $\|\hat{h}_{m} - h_{m,*}\|_\infty \leq\|\hat{h}_{m} - h_{m,*}\|_2^\gamma $, which implies $$
+\|\hat{h}_{m} - h_{m,*}\|^2 \leq O\big(\delta_n^2/\alpha^2 + \delta_n^2 /\alpha
+\big) + O\bigg({\delta_n}/{\alpha} \cdot\|\hat{h}_{m} - h_{m,*}\|^\gamma\bigg)+ 16\|\hat{h}_{m-1} - h_{m-1,*}\|^2,
+$$
+by Lemma \ref{lem:aux-1}, we have \begin{align*}
+    \|\hat{h}_{m} - h_{m,*}\|^2 &\leq 4\max\big\{O\big(\delta_n^2/\alpha^2 + 16\|\hat{h}_{m-1} - h_{m-1,*}\|^2 
+\big), O\big((\delta_n/\alpha)^{2/(2-\gamma)}\big)\big\}\\
+&\leq O(128^m \max\big\{\delta_n^2/\alpha^2, (\delta_n/\alpha)^{2/(2-\gamma)}\big\}),
+\end{align*}
+where the second inequality comes from induction.  Therefore, by Lemma \ref{lem:iter-tikh-bias}, we have $$
+\|\hat{h}_m - h_{0}\|^2 =O(128^m\cdot\max\big\{\delta_n^2/\alpha^2, (\delta_n/\alpha)^{2/(2-\gamma)}\big\} + \alpha^{\min\{\beta, 2m\}}).
+$$
+Set $\alpha = \delta_n^{\frac{2}{2+ (2-\gamma)\min\{\beta, 2m\}}}$, Then $\delta_n / \alpha = O(\delta_n^{\frac{(2-\gamma)\min\{\beta, 2m\}}{2+ (2-\gamma)\min\{\beta, 2m\}}}) \lesssim 1$, and since $\gamma \in (0,1)$, we have $$
+\max\big\{\delta_n^2/\alpha^2, (\delta_n/\alpha)^{2/(2-\gamma)}\big\} = (\delta_n/\alpha)^{2/(2-\gamma)},
+$$
+and $$
+\|\hat{h}_m - h_{0}\|^2 = O(128^m \cdot \delta_n^{\frac{2\min\{\beta, 2m\}}{2+ (2-\gamma)\min\{\beta, 2m\}}}),
+$$
+and we conclude the proof of Theorem \ref{thm:chi2-mle-result}.
+\end{proof}
+
+\section{Convergence rate of MLE and $\chi^2$-MLE}
+\subsection{Convergence rate of MLE}
+In this section, we aim to characterize the convergence rate of conditional MLE \eqref{eq:mle-est} in terms of the critical radius $\delta_{n,\Gcal}$ of function class $\Gcal$ and model misspecification. Specifically, we prove the following Theorem: 
+\begin{theorem}[Convergence rate for misspecified MLE]\label{thm:mle-conv-rate}
+    Suppose Assumption \ref{ass:lower-bound} and condition in Theorem \ref{thm: mle-nonmisspec-noniter} holds, and there exists $g^{\dagger} \in \Gcal$ such that $\E_{z\sim g_0}[\kl(g_0(\cdot|z), g^{\dag}(\cdot|z))] \leq \epsilon_\Gcal$. Then we have $$
+    \E_{z\sim g(z)}\big[H^2(\hat{g}(\cdot|z)| g_0(\cdot|z))\big] \leq \delta_n^2 + \epsilon_{\Gcal}
+    $$
+    holds with probability at least $1- c_1\exp(c_2 \frac{c_0}{C+c_0}n\delta_n^2)$.
+\end{theorem}
+\begin{proof}
+ We work with the transformed function class $\Fcal = \bigg\{ \sqrt{\frac{g+ g_0}{2g_0}}\biggl\vert g\in \Gcal \bigg\}$, and define $\Lcal_f = -\log f(x)$ for $f\in \Fcal$. Note that $\Fcal$ is a function class whose element maps $\Xcal\times \Zcal$ to $\RR$. We define the population version of localized Rademacher complexity for function class $\Fcal^* := \operatorname{star}((\Fcal - f^*) \cup \{0\})$. By Assumption \ref{ass:lower-bound} and 1-boundedness of $\Gcal$,  $\Fcal$ and $\Fcal^*$ are bounded by a constant $b:= \frac{C_0+C}{2C_0}$ in $\|\cdot\|_\infty$.
+ The critical radius $\delta_{n,\Fcal}$ of function class $\Fcal^*$ is any solution such that \begin{align*}
+    \delta^2 \geq c/n \text{ and }\bar{R}_n (\delta; \Fcal^*)\leq \delta^2/b.
+\end{align*}
+Such critical radius can be easily calculated for a large number of function classes. For example, we can use $$
+\frac{64}{\sqrt{n}}\int_{\delta^2/2b}^{\delta}\sqrt{\log N_n(t, \Bcal(\delta,\Fcal^*))}dt \leq \frac{\delta^2}{b}
+$$
+to calculate $\delta_{n,\Fcal}$, where $\Bcal(\delta,\Fcal^*) := \{f\in\Fcal^*\mid \|f\|_2\leq \delta\}$, $N_n$ is the empirical covering number conditioned on $\{(x_i,z_i)\}_{i\in[n]}$.
+For a cost function $\Lcal : \mathbb{R} \rightarrow \mathbb{R}$, we define $\Lcal_f(x,z):= \Lcal(f(x,z))$.
+We make the following definition. \begin{definition}\label{def:strong-convexity}
+        We say $\Lcal_f$ is $\gamma$-strongly convexity at $f^*$ if $$
+\E_{z\sim g_0(z), x\sim g_0(x\mid z)}\big[\Lcal_f(x,z) - \Lcal_{f^*}(x,z) - \partial\Lcal_{f^*}(x,z) (f - f^*)(x,z) \big] \geq \frac{\gamma}{2} \|f - f^*\|^2_2
+$$ for all $f\in\Fcal$.
+\end{definition} 
+Note that for any $f\in\Fcal$ we have 
+and $|\log f (x) - \log f'(x)|\leq \sqrt{2}|f(x) - f'(x)|$ since $\|f\|_\infty \geq 1/\sqrt{2}$. By the definition of Hellinger distance, we have  $$
+\| f - f^*\|_2^2 = \E_{z\sim g_0(z)}\bigg[H^2\bigg(\frac{g+ g_0}{2}| g_0\bigg)\bigg],
+$$
+and since $H^2(g_1\mid g_2) \leq 2 \kl(f_1\mid f_2)$, we have $\|f- f^*\|_2^2 \leq \PP(\Lcal_f - \Lcal_{f^*})$, thus $\Lcal$ is $2$-strongly convex at $f^*$.
+Utilizing strong convexity and Lemma \ref{lem:local-concen}, we have the following inequality holds with probability $1- \exp(n\delta_{n,\Fcal}^2)$: \begin{align*}
+    \|\hat{f} - f_0\|_2^2 &\leq 2\E_{z\sim g_0(z), x\sim g_0(x|z)}[\Lcal_{\hat{f}}(x,z) - \Lcal_{f_0}(x,z)]\\
+    &= 2\E_{z\sim g_0(z), x\sim g_0(x|z)}[\Lcal_{\hat{f}}(x,z) - \Lcal_{f^{\dagger}}(x,z)] + 2\E_{z\sim g_0(z), }[\kl(g_0(\cdot|z)\mid(g^{\dagger}+g_0)/2(\cdot|z) )]\\
+    &\leq 2(\E_n - \E)[\Lcal_{\hat{f}}(x,z) - \Lcal_{f^\dagger}(x,z)] + 2\E_n[\Lcal_{\hat{f}}(x,z) - \Lcal_{f^\dagger}(x,z)]\\
+    &\quad+ \E_{z\sim g_0(z) }[\kl(g_0(\cdot|z)\mid g^{\dagger}(\cdot|z) )] \\
+    &\leq O(\delta_{n,\Fcal}\|\hat{f} - f^{\dagger}\|_2 +\delta_{n,\Fcal}^2 ) +   \E_{z\sim g_0(z) }[\kl(g_0(\cdot|z)\mid g^{\dagger}(\cdot|z) )]\\
+    &\leq O(\delta_{n,\Fcal}\|\hat{f} - f_0\|_2 +\delta_{n,\Fcal}\|f_0 - f^{\dagger}\|_2 +\delta_{n,\Fcal}^2 ) +   \E_{z\sim g_0(z) }[\kl(g_0(\cdot|z)\mid g^{\dagger}(\cdot|z) )],
+\end{align*}
+here the first inequality comes from strong convexity, the third inequality comes from $\log(\frac{2x}{x+y})\leq \frac{1}{2}\log(\frac{x}{y})$ and the definition of MLE. The forth inequality comes from Lemma \ref{lem:local-concen}. Solve this inequality, and recall that $\|f - h_0\|_2^2 = \E_{z\sim g_0(z)}[H^2((g+g_0)(\cdot|z)/2\mid g_0(\cdot|z))]$, we have \begin{align*}
+\E_{z\sim g_0(z)}[H^2(\hat{g}(\cdot|z)\mid g_0(\cdot|z))]&\leq O(\delta_{n,\Fcal}^2 + \delta_{n,\Fcal}\|f_0 - f^{\dagger}\|_2+ \E_{z\sim g_0(z)}[\kl(g_0(\cdot|z)\mid g^{\dagger}(\cdot|z) )])\\
+&\leq O(\delta_{n,\Fcal}^2 + \delta_{n,\Fcal}\E_{z\sim g_0(z)}[\kl(g_0(\cdot|z), g^{\dagger}(\cdot|z) )]^{1/2}\\
+&\quad+\E_{z\sim g_0(z)}[\kl(g_0(\cdot|z)\mid g^{\dagger}(\cdot|z) )])\\
+&\leq O(\delta_{n,\Fcal}^2+\E_{z\sim g_0(z)}[\kl(g_0(\cdot|z)\mid g^{\dagger}(\cdot|z) )]),
+\end{align*}
+here the first inequality comes from Lemma \ref{lem:weighted-hellinger}, the second inequality comes from Lemma \ref{lem:h-kl}.
+% If  (1) in Lemma \ref{lem:2cond} holds, then our desired result is achieved. Therefore we condition on (2). We consider the case that there exists $\epsilon$ such that $\mathbb{P}_n(\Lcal_{\hat{f}} - \Lcal_{f^*}) \leq \epsilon$, then we have \begin{align*}
+%     |\mathbb{P} (\Lcal_{\hat{f}} - \Lcal_{f^*} )| \leq 10L\delta_{n,\Fcal}\| \hat{f} - f^*\|_2 + \epsilon.
+% \end{align*}
+% We make the following definition. \begin{definition}\label{def:strong-convexity}
+%         We say $\Lcal_f$ is $\gamma$-strongly convexity at $f^*$ if $$
+% \E_{z\sim g_0(z), x\sim g_0(x\mid z)}\big[\Lcal_f(x,z) - \Lcal_{f^*}(x,z) - \partial\Lcal_{f^*}(x,z) (f - f^*)(x,z) \big] \geq \frac{\gamma}{2} \|f - f^*\|^2_2
+% $$ for all $f\in\Fcal$.
+% \end{definition} 
+% When $\Lcal_f$ is $\gamma$-strongly convex at $f^*$, we have $$
+% \frac{\gamma}{2} \| \hat{f} - f^*\|_2^2 \leq 10L \delta_{n,\Fcal^*} \|f - f^*\|_2 + \epsilon,
+% $$
+% solving this inequality and we got \begin{align}\label{eq:diff}
+% \| \hat{f} - f^* \|_2 \leq \frac{20L\delta_{n,\Fcal^*}}{\gamma} + \sqrt{\frac{2 \epsilon}{\gamma}}.
+% \end{align}
+% Note that for any $f\in\Fcal$ we have 
+% and $|\log f (x) - \log f'(x)|\leq \sqrt{2}|f(x) - f'(x)|$ since $\|f\|_\infty \geq 1/\sqrt{2}$. By the definition of Hellinger distance, we have  $$
+% \| f - f^*\|_2^2 = \E_{z\sim g_0(z)}\bigg[H^2\bigg(\frac{g+ g_0}{2}| g_0\bigg)\bigg],
+% $$
+% and since $H^2(g_1\mid g_2) \leq 2 \kl(f_1\mid f_2)$, we have $\|f- f^*\|_2^2 \leq \PP(\Lcal_f - \Lcal_{f^*})$, thus $\Lcal$ is $2$-strongly convex at $f^*$. For every $f= \frac{g+g_0}{2g_0}\in\Fcal$, by Jensehs inequality, we have  \begin{align*}
+% \PP_n \Lcal_f - \PP_n \Lcal_{f^*} &= \frac{1}{n} \sum_{i=1}^n\log\bigg(\frac{2g_0(x_i|z_i)}{({g}+g_0)(x_i|z_i)}\bigg)\\
+% &\leq \frac{1}{2n}\sum_{i=1}^n\log\bigg(\frac{g_0(x_i|z_i)}{{g}(x_i|z_i)}\bigg).
+% \end{align*}
+% Since $\hat{g} = \argmax_{g\in\Gcal} \log(g(x_i|z_i))$, we have  \begin{align*}
+% \PP_n \Lcal_{\hat{f}} - \PP_n \Lcal_{f^*} &\leq \min_{g\in \Gcal}\frac{1}{2n}\sum_{i=1}^n\log\bigg(\frac{g_0(x_i|z_i)}{{g}(x_i|z_i)}\bigg)\\
+% &\leq \frac{1}{2n}\sum_{i=1}^n \log\bigg(\frac{g_0(x_i|z_i)}{{g^{\dagger}}(x_i|z_i)}\bigg)\\
+% &\leq \frac{1}{2}\kl(g_0, g^\dagger) + 
+% \end{align*}
+% By Eq.~\eqref{eq:diff} and specify $\hat{f} = \sqrt{\frac{ \hat{g}+ g_0}{2g_0}}$, we have the following inequality holds : $$
+% \E_{z\sim g_0(z)}\bigg[H^2\bigg(\frac{\hat{g}(\cdot|z)+ g_0(\cdot|z)}{2}\mid g_0(\cdot|z)\bigg)\bigg] \leq \delta_n^2 + \epsilon_{\Gcal}
+% $$
+% with probability at least $1 - c_1\exp(c_2 \frac{c_0}{C+c_0}n\delta_{n,\Fcal^*}^2)$. Here $\epsilon_{\Gcal} := \min_{g\in\Gcal}\|\log(g^{\dagger}(x|z)/g_0(x|z))\|_\infty$.
+% Using Lemma 4.1 in \cite{van1993hellinger}, we can prove that $$
+% \E_{z\sim g_0(z)}\bigg[H^2(\hat{g}(\cdot|z)\mid g_0(\cdot|z))\bigg] \leq \delta_n^2 + \epsilon_{\Gcal}.
+% $$
+Thus we conclude the proof of Theorem \ref{thm:mle-conv-rate}.
+\end{proof}
+We provide the following corollary, which would help characterize the $L_1$ and $L_2$ error of $\Tcal h$ introduced by MLE.
+\begin{corollary}\label{cor: T-mle}
+Under Assumption \ref{ass:lower-bound}, for all $h' \in\Hcal - \Hcal$, we have $\|(\hat \Tcal-\Tcal)h'\|_1 \leq \{1/c_0+1\} \|h'\|_2 \cdot (\delta_{n,\Hcal}^2 + \epsilon_\Gcal)^{1/2}$ and $\|(\hat \Tcal-\Tcal)h'\|_2 \leq (C_{2,4}C)^{1/2}\cdot (C/c_0 +1)\|h'\|_{2}\cdot (\delta_{n,\Gcal}^2 + \epsilon_\Gcal)^{1/4}$
+     with probability at least $1 - c_2\exp(c_3 n\delta_{n,\Gcal}^2 )$.
+\end{corollary}
+\begin{proof}
+We first prove the bound for $L_1$ error $\|(\hat \Tcal-\Tcal)h'\|_1$. We have the following inequality:
+\begin{align*}
+    \|(\hat \Tcal-\Tcal)h'\|_1 &= \EE_{z \sim g_0(z)}\left[|\EE_{x \sim g_0(x|z)}\left [\frac{\hat g(x|z)}{g_0(x|z)}h'(x) - h'(x) \right] | \right]\\
+    &\leq \EE_{z \sim g_0(z),x \sim g_0(x|z)}\left[ |\frac{\hat g(x|z)}{g_0(x|z)}h'(x) - h'(x)  | \right]\\
+    &\leq \EE_{z \sim g_0(z),x \sim g_0(x|z)}\left[\sqrt{\frac{\hat g(x|z)}{g_0(x|z)}}|h'(x)| |\sqrt{\frac{\hat g(x|z)}{g_0(x|z)}} - 1 |\right]\\
+    &\quad + \EE_{z \sim g_0(z),x \sim g_0(x|z)}\left[|h'(x)||\sqrt{\frac{\hat g(x|z)}{g_0(x|z)}} - 1  |\right] \\
+    &\leq \EE[\frac{\hat g(x|z)}{g_0(x|z)}h'^2(x) ]^{1/2} \times \EE[2H^2(\hat g(\cdot|z)\mid g_0(\cdot |z))  ] \\
+    &\quad +\EE[\frac{\hat g(x|z)}{g(^{\star}(x|z)}h'^2(x) ]^{1/2} \cdot \EE[2H^2(\hat g(\cdot|z)\mid g_0(\cdot |z))  ]^{1/2} \tag{CS inequality} \\
+    &\leq  2\{1/c_0+1\} \EE[h^2(x) ]^{1/2} \cdot \EE[2H^2(\hat g(\cdot|z)\mid g_0(\cdot |z))  ]^{1/2}\\
+    & = \{1/c_0+1\} \|h'\|_2 \cdot (\delta_{n,\Gcal}^2 + \epsilon_\Gcal)^{1/2}.
+\end{align*}
+where the second inequality comes from Assumption \ref{ass:lower-bound}.
+Next, we prove the upper bound for $L_2$ error $\|(\hat \Tcal-\Tcal)h'\|_2$. We have 
+\begin{align*}
+    \|(\hat \Tcal-\Tcal)h'\|_2 &= \big\{\E[|(\Tcal - \hat{\Tcal})h'|^2]\big\}^{1/2}\\
+    &\leq 2C_Y \|(\Tcal - \hat{\Tcal})h'\|_1^{1/2}\\
+    &\leq 2C_Y \delta_{n,\Hcal}^{1/2} \|h'\|^{1/2}.
+\end{align*}
+%     \begin{align*}
+%      \|(\hat \Tcal - \Tcal)h'\|_2^2
+%     & = \EE_{z\sim g_0(z)}\bigg[\bigg|\EE_{x\sim g^*(x\mid z)}\bigg[\bigg(\frac{\hat{g}(x\mid z)}{g_0(x\mid z)} - 1\bigg)h'(x)\bigg]\bigg|^2\bigg]\\
+%     &\leq \EE[h'^4(x)]^{1/2}\EE[\{\hat g(x|z)/g_0(x|z)-1\}^4]^{1/2}\\
+%     &\leq C_{2,4}\cdot C(C/c_0 +1)^2\cdot\|h'\|_2^2\cdot \EE_{z\sim g_0(z)}[H(g(\cdot|z),g_0(\cdot|z) )^2]^{1/2}\\
+%     &\leq C_{2,4}\cdot C(C/c_0 +1)^2\cdot\|h'\|_2^2\cdot (\delta_{n,\Gcal}^2 + \epsilon_\Gcal)^{1/2},
+% \end{align*}
+and we conclude the proof.
+\end{proof}
+\subsection{Convergence rate of $\chi^2$-MLE}
+For the convergence rate of $\chi^2$-MLE, we present the following theorem: \begin{theorem}[Convergence rate for $\chi^2$-MLE, Corollary 14.24 of \cite{wainwright2019high} ]
+For $\hat{g}$ generated by \ref{eq:chi2-mle-est}, we have 
+    $$\EE_{z \sim g_0(z)}\left[\{\int |\hat g(x|z)-g_0(x|z)| \mathrm{d}\mu(x)\}^2\right]=O\bigg(\delta_{n,\Gcal}^2+\inf_{g\in \Gcal}\EE_{z \sim g_0(z)}\left[\{\int | g(x|z)-g_0(x|z)| \mathrm{d}\mu(x)\}^2\right]\bigg)$$
+with probability at least $1 - c_1 \exp(c_2n\delta_{n,\Gcal}^2)$.
+\end{theorem}
+\begin{proof}
+    By Theorem 13.13 of \citet{wainwright2019high}, we have $$
+    \E_n\left[\{\int |\hat g(x|z)-g_0(x|z)| \mathrm{d}\mu(x)\}^2\right] = O\bigg(\delta_{n,\Gcal}^2+\inf \E_n\left[\{\int | g(x|z)-g_0(x|z)| \mathrm{d}\mu(x)\}^2\right]\bigg)
+    $$ holds with probability at least $1- \exp(c_1 n\delta^2_{n,\Gcal})$. By Theorem \ref{thm:localization}, we have $$
+    (\E_n - \E)\left[\{\int | g(x|z)-g_0(x|z)| \mathrm{d}\mu(x)\}^2\right] \leq O(\delta_{n,\Fcal}^2)
+    $$
+    holds for all $g\in\Gcal$ with probability at least $1 - c_2\exp(c_3 n\delta_{n,\Gcal}^2 )$, and the proof is done.
+    and the proof is done.
+\end{proof}
+We provide the following corollary, which would help characterize the error introduced by $\chi^2$-MLE.
+\begin{corollary}\label{cor: T-chi2_mle}
+    With $\chi^2$-MLE, we have the following inequality holds for all $h\in\Hcal$ with probability at least $1 - c_2\exp(c_3 n\delta_{n,\Gcal}^2 )$: \begin{align*}
+    \|(\Tcal - \hat{\Tcal}) h\|_2^2 \leq (\delta_{n,\Gcal}^2+\epsilon_\Gcal) \|h\|_\infty^2 .
+\end{align*}
+\end{corollary}
+\begin{proof}
+By
+    \begin{align*}
+    \|(\Tcal - \hat{\Tcal}) h\|_2^2 &= \E_{z\sim g_0(z)}\bigg[\bigg(\int_{\Xcal} \{\hat{g}(x|z) - g_0(x| z)\}h(x)d\mu(x)\bigg)^2\bigg]\\
+    &\leq (\delta_{n,\Gcal}^2+\epsilon_\Gcal) \|h\|_\infty^2 .
+\end{align*}
+We conclude the proof.
+\end{proof}
+\section{Auxiliary Lemma}
+We introduce the following lemma, which gives a uniform convergence rate of loss error.
+\begin{lemma}[Localized Concentration, \cite{foster2019orthogonal}]\label{lem:local-concen}
+For any $f \in \mathcal{F}:=\times_{i=1}^d \mathcal{F}_i$ be a multivalued outcome function, that is almost surely absolutely bounded by a constant. Let $\ell(Z ; f(X)) \in \mathbb{R}$ be a loss function that is $O(1)$-Lipschitz in $f(X)$, with respect to the $\ell_2$ norm. Let $\delta_n=\Omega\left(\sqrt{\frac{d \log \log (n)+\log (1 / \zeta)}{n}}\right)$ be an upper bound on the critical radius of $\operatorname{star}\left(\mathcal{F}_i\right)$ for $i \in[d]$. Then for any fixed $h_0 \in \mathcal{F}$, w.p. $1-\zeta$ :
+$$
+\forall f \in \mathcal{F}:\left|\left(\mathbb{E}_n-\mathbb{E}\right)\left[\ell(Z ; f(X))-\ell\left(Z ; h_0(X)\right)\right]\right|=O\left(d \delta_n \sum_{i=1}^d\left\|f_i-f_{i, 0}\right\|_{2}+d \delta_n^2\right)
+$$
+If the loss is linear in $f(X)$, i.e. $\ell\left(Z ; f(X)+f^{\prime}(X)\right)=\ell(Z ; f(X))+\ell\left(Z ; f^{\prime}(X)\right)$ and $\ell(Z ; \alpha f(X))=$ $\alpha \ell(Z ; f(X))$ for any scalar $\alpha$, then it suffices that we take $\delta_n=\Omega\left(\sqrt{\frac{\log (1 / \zeta)}{n}}\right)$ that upper bounds the critical radius of $\operatorname{star}\left(\mathcal{F}_i\right)$ for $i \in[d]$.
+\end{lemma}
+\begin{proof}
+    For a detailed proof, please refer to \cite{foster2019orthogonal}.
+\end{proof}
+The following lemma is useful when proving the convergence rate of Hellinger distance.
+\begin{lemma}[Lemma 4.1 in \cite{van1993hellinger}]\label{lem:weighted-hellinger}
+    For two density functions $g_1$ and $g_2$, define $g_u = u g_1 + (1-u) g_2$, then we have $$
+    \frac{1}{4(1-u)}H^2(g_1\mid g_u) \leq H^2(g_1\mid g_2) \leq \frac{1}{(1-u)^2} H^2(g_1\mid g_u)
+    $$
+    holds for all $u\in(0,1)$
+\end{lemma}
+\begin{proof}
+    For a detailed proof, see Lemma 4.1 in \cite{van1993hellinger}.
+\end{proof}
+\begin{lemma}[Lemma 5 in \citet{bennett2023source}]\label{lem:iter-tikh-bias}
+    If $h_0$ is the minimum $L_2$-norm solution to the linear inverse problem and satisfies the $\beta$-source condition, then the solution to the $t$-th iterate of Tikhonov
+regularization $h_{m,*}$, defined in Equation \eqref{eq:popu-iter}, with $h_{0,*}= 0$ , satisfies that
+$$
+\|h_{m,*} - h_0\|^2 \leq \|w_0\|^2 \alpha^{\min\{\beta, 2t\}}, \qquad\|\Tcal h_{m,*} - \Tcal h_0\|^2 \leq \|w_0\|^2 \alpha^{\min\{\beta+1, 2t\}}.
+$$
+\end{lemma}
+\begin{proof}
+    For a detailed proof, see Lemma 5 in \cite{bennett2023source}.
+\end{proof}
+The following lemma upper-bounds the bias introduced by Tikhonov regularization.
+\begin{lemma}\label{lem:aux-1}
+    For $$
+    x^2 \leq c_1 + c_2 x^{\gamma_1} + c_3 x^{\gamma_2},
+    $$
+    where $c_1, c_2>0$, $0\leq\gamma\leq 1$, we have $x \leq 3 \max\big\{\sqrt{c_1}, c_2^{1/(2-\gamma_1)},c_3^{1/(2-\gamma_2)}\big\}$. 
+\end{lemma}
+\begin{proof}
+   Since $x^2 - c_2 x^{\gamma_1} -c_3 x^{\gamma_2} -c_1$ is a convex function with negative intercept, we only need to prove that for $x_0 = 3 \max\big\{\sqrt{c_1}, c_2^{1/(2-\gamma_1)},c_3^{1/(2-\gamma_2)}\big\}$, we have $x_0^2 - c_2 x_0^{\gamma_1} -c_3 x_0^{\gamma_2} -c_1 \geq 0$. For simplicity, we consider $\sqrt{c_1} \geq \max\{ c_2^{1/(2-\gamma_1)},c_3^{1/(2-\gamma_2)}\}$, and  we have $$
+   x_0^2 = 9c_1\geq c_1 + c_2\cdot3^{\gamma_1}  c_1^{\gamma_1/2}+c_3\cdot3^{\gamma_2}  c_1^{\gamma_2/2} = c_1+ c_2 x_0^{\gamma_1} + c_3 x_0^{\gamma_2},
+   $$
+   similarly we have the same result when $ c_2^{1/(2-\gamma_1)}\geq \max\{ \sqrt{c_1},c_3^{1/(2-\gamma_2)}\}$ or $c_3^{1/(2-\gamma_2)}\geq \max\{ \sqrt{c_1},c_2^{1/(2-\gamma_1)}\}$,
+   and we conclude the proof.
+\end{proof}
+Next, we introduce the following lemma that gives a uniform convergence rate for function class $\Fcal$, which is adapted from \citet{wainwright2019high}.
+\begin{lemma}[Theorem 14.20 in \cite{wainwright2019high}.]\label{lem:2cond}
+    Suppose we have a $1$-uniformly bounded function class $\Fcal$ that is star-shaped around a population minimizer $f^*$. Let $\delta_n\geq \frac{c}{n}$ be the solution to the inequality $$
+    \bar{R}_n(\delta;\Fcal^*)\leq\delta^2.
+    $$
+    Suppose the loss function $\Lcal_f$ is $L$-Lipschitz, then with probability at least $1 - c_1 \exp(-c_2 n\delta_{n,\Fcal}^2/b)$, either of the following events holds for all $f\in\Fcal$: \begin{itemize}
+        \item[(1)] $\|f - f^*\|_2\leq \delta_n$;
+        \item[(2)] $|\mathbb{P}_n (\Lcal_f - \Lcal_{f^*} ) -\mathbb{P} (\Lcal_f - \Lcal_{f^*} ) | \leq 10L\delta_n\| f - f^*\|_2$.
+    \end{itemize}
+\end{lemma}
+The following lemma is a classical result for localization and uniform laws. 
+\begin{theorem}[Theorem 14.1 of \cite{wainwright2019high}.]\label{thm:localization}
+Given a star-shaped and $b$-uniformly bounded function class $\mathcal{F}$, let $\delta_n$ be any positive solution of the inequality
+$$
+\bar{\mathcal{R}}_n(\delta ; \mathcal{F}) \leq \frac{\delta^2}{b} .
+$$
+
+Then for any $t \geq \delta_n$, we have
+$$
+\left|\|f\|_n^2-\|f\|_2^2\right| \leq \frac{1}{2}\|f\|_2^2+\frac{t^2}{2} \quad \text { for all } f \in \mathcal{F}
+$$
+with probability at least $1-c_1 e^{-c_2 \frac{n \delta_n^2}{b^2}}$. If in addition $n \delta_n^2 \geq \frac{2}{c_2} \log \left(4 \log \left(1 / \delta_n\right)\right)$, then
+$$
+\left|\|f\|_n-\|f\|_2\right| \leq c_0 \delta_n \quad \text { for all } f \in \mathcal{F}
+$$
+with probability at least $1-c_1^{\prime} e^{-c_2^{\prime} \frac{n_0^2}{b^2}}$.
+\end{theorem}
+The next lemma enables us to upper-bound KL divergence by Hellinger distance. 
+\begin{lemma}[Example 14.10 in \citet{wainwright2019high}. ]\label{lem:h-kl}
+    For any two density function $g_1$ and $g_2$, we have $$
+    H^2(g_1\mid g_2) \leq 2 \kl(g_1\mid g_2).
+    $$
+\end{lemma}
+
+\section{Additional Experiment Details}\label{sec:exp-details}
+We follow the data-generating process in \cite{kallus2021causal} and \cite{cui2020semiparametric} to generate multi-dimensional variables $U,S,W,Q,A$ with  $A\in\{0,1\}$ as follows: \begin{itemize}
+    \item[1.]  $S'\sim \Ncal(0, 0.5 I_{d_S})$, where $I_d$ is a $d$-dimension identity matrix.
+    \item[2.] $A|S'\sim \operatorname{Ber}(p(S'))$ where $$
+    p(S')  = \frac{1}{1+ \exp(0.125- 0.125\textbf{1}_d^\top S')},
+    $$
+    where $\textbf{1}_d$ is all-one vector.
+    \item[3.] Draw $W^{\prime}, Q^{\prime}, U$ from
+$$
+W^{\prime}, Q^{\prime}, U \mid A, S^{\prime} \sim \mathcal{N}\left(\left[\begin{array}{c}
+\mu_0+\mu_a A+\mu_s S^{\prime} \\
+\alpha_0+\alpha_a A+\alpha_s S^{\prime} \\
+\kappa_0+\kappa_a A+\kappa_s S^{\prime}
+\end{array}\right],\left[\begin{array}{c}
+\sigma_w^2, \sigma_{w q}^2, \sigma_{w u}^2 \\
+\sigma_{w q}^2, \sigma_q^2, \sigma_{q u}^2 \\
+\sigma_{w u}^2, \sigma_{q u}^2, \sigma_u^2
+\end{array}\right]\right) .
+$$
+Here we set the parameters above as $\mu_0=\alpha_0=\kappa_0=0.2 \mathbf{1}_d, \alpha_a=\kappa_a=\mu_s=\alpha_s=\kappa_s=\mathbb{I}_d$, $\sigma_q^2=\sigma_u^2=\sigma_w^2=0.1\left(\mathbb{I}_d+\mathbf{1}_d \mathbf{1}_d^{\top}\right), \sigma_{w u}^2=\sigma_{z u}^2=0.1 \mathbf{1}_d \mathbf{1}_d^{\top}$. Finally, we choose $\sigma_{w q}^2$ and $\mu_a$ to ensure that $W^{\prime} \perp\left(A^{\prime}, Q^{\prime}\right) \mid U, S^{\prime}$, which is a prerequisite of proximal causal inference \citep[Condition 4 in Assumption 1]{kallus2021causal}. To achieve this, note that
+\begin{align}\label{eq:exp-1}
+\mathbb{E}\left[W^{\prime} \mid U, S^{\prime}, A, Q^{\prime}\right]=\mu_0+\mu_a A+\mu_s S^{\prime}+\Sigma_{w(q, u)} \Sigma_{q, u}^{-1}\left[\begin{array}{c}
+Q^{\prime}-\alpha_0-\alpha_a A-\alpha_s S^{\prime} \\
+U-\kappa_0-\kappa_a A-\kappa_s S^{\prime}
+\end{array}\right]
+\end{align}
+where
+$$
+\Sigma_{w(q, u)}=\left(\sigma_{w q}^2, \sigma_{w u}^2\right), \quad \Sigma_{q, u}=\left[\begin{array}{l}
+\sigma_q^2, \sigma_{q u}^2 \\
+\sigma_{q u}^2, \sigma_u^2
+\end{array}\right] .
+$$
+
+We simply select $\sigma_{w q}^2$ and $\mu_a$ so that Equation \eqref{eq:exp-1} does not depend on $A$ and $Q^{\prime}$.
+\item[4.] Draw $Y$ from
+$$
+Y \mid X^{\prime}, U, W^{\prime} \sim \mathcal{N}\left(A+\mathbf{1}_d^{\top} S^{\prime}+\mathbf{1}_d^{\top} U+\mathbf{1}_d^{\top} W^{\prime}, 1\right) .
+$$
+\item[5.] Set $W' = W'_{[0:d_W]}$. Observe $S = g(S')$, $Q = g(Q')$, $W = g(W')$, where $g(\cdot)$ is a reversible function that operates component-wise on each variable.  
+\end{itemize}

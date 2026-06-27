@@ -1,0 +1,130 @@
+\section{Experiments}
+We evaluate the two variants of our algorithm proposed in Section~\ref{Sec:model} with focus on two questions: 1) What is the effect of imposing imbalance regularization on representations? 2) How do our methods fare against established methods for counterfactual inference? We refer to the variable selection method of Section~\ref{sec:varsel} as \emph{Balancing Linear Regression} ({\sc BLR}) and  the neural network approach as {\sc BNN} for \emph{Balancing Neural Network}.
+
+We report the RMSE of the estimated individual treatment effect, denoted  $\epsilon_{ITE}$, and the absolute error in estimated average treatment effect, denoted $\epsilon_{ATE}$, see Section~\ref{Sec:prob}.
+Further, following~\citet{hill2011bayesian}, we report the \emph{Precision in Estimation of Heterogeneous Effect} (PEHE), $\text{PEHE} = \sqrt{\frac{1}{n} \sum_{i=1}^n \left(\hat{y}_1(x_i) - \hat{y}_0(x_i) - (Y_1(x_i)-Y_0(x_i))\right)^2}$. Unlike for ITE, obtaining a good (small) PEHE requires accurate estimation of both the factual and counterfactual responses, not just the counterfactual.
+Standard methods for hyperparameter selection, including cross-validation, are unavailable when training counterfactual models on real-world data, as there are no samples from the counterfactual outcome. In our experiments, all outcomes are simulated, and we have access to counterfactual samples. To avoid fitting parameters to the test set, we generate multiple repeated experiments, each with a different outcome function and pick hyperparameters once, for all models (and baselines), based on a held-out set of experiments. While not possible for real-world data, this approach gives an indication of the robustness of the parameters.
+
+The neural network architectures used for all experiments consist of fully-connected ReLU layers trained using RMSProp, with a small $l_2$ weight decay, $\lambda=10^{-3}$. We evaluate two architectures. {\sc BNN-4-0} consists of 4 ReLU representation-only layers and a single linear output layer, $d_r = 4, d_o = 0$. {\sc BNN-2-2} consists of 2 ReLU representation-only layers, 2 ReLU output layers after the treatment has been added, and a single linear output layer, $d_r = 2, d_o=2$, see Figure~\ref{fig:neuralnet}. For the IHDP data we use layers of 25 hidden units each. For the News data representation layers have 400 units and output layers 200 units. The nearest neighbor term, see Section~\ref{Sec:model}, did not improve empirical performance, and was omitted for the BNN models. For the neural network models, the hypothesis and the representation were fit jointly.
+
+We include several different linear models in our comparison, including ordinary linear regression ({\sc OLS}) and doubly robust linear regression (DR)~\cite{bang2005doubly}. We also include a method were variables are first selected using LASSO and then used to fit a ridge regression ({\sc Lasso + Ridge}). Regularization parameters are picked based on a held out sample. For DR, we estimate propensity scores using logistic regression and clip weights at 100. For the News dataset (see below), we perform the logistic regression on the first 100 principal components of the data.
+
+Bayesian Additive Regression Trees (BART)~\cite{chipman2010bart} is a non-linear regression model which has been used successfully for counterfactual inference in the past~\cite{hill2011bayesian}. We compare our results to BART using the implementation provided in the BayesTree R-package~\cite{BayesTree}. Like~\cite{hill2011bayesian}, we do not attempt to tune the parameters, but use the default. Finally, we include a standard feed-forward neural network, trained with 4 hidden layers, to predict the factual outcome based on $X$ and $t$, without a penalty for imbalance. We refer to this as {\sc NN-4}.
+
+\subsection{Simulation based on real data -- IHDP}
+\citet{hill2011bayesian} introduced a semi-simulated dataset based on the Infant Health and Development Program (IHDP). The IHDP data has covariates from a real randomized experiment, studying the effect of high-quality child care and home visits on future cognitive test scores. The experiment proposed by \citet{hill2011bayesian} uses a simulated outcome and artificially introduces imbalance between treated and control subjects by removing a subset of the treated population. In total, the dataset consists of 747 subjects (139 treated, 608 control), each represented by 25 covariates measuring properties of the child and their mother. For details, see \citet{hill2011bayesian}. We run 100 repeated experiments for hyperparameter selection and 1000 for evaluation, all with the log-linear response surface implemented as setting ``A" in the NPCI package~\cite{npci}.
+
+\subsection{Simulation based on real data -- News }
+We introduce a new dataset, simulating the opinions of a media consumer exposed to multiple news items. Each item is consumed either on a mobile device or on desktop. The units are different news items represented by word counts $x_i \in \mathbb{N}^V$, and the outcome $y^F(x_i) \in \mathbb{R}$ is the readers experience of $x_i$. The intervention $t \in \{0, 1\}$ represents the viewing device, desktop $(t=0)$ or mobile $(t=1)$.
+We assume that the consumer prefers to read about certain topics on mobile. To model this, we train a topic model on a large set of documents and let $z(x) \in \mathbb{R}^k$ represent the topic distribution of news item $x$. We define two centroids in topic space, $z^c_1$ (mobile), and $z^c_0$ (desktop), and let the readers opinion of news item $x$ on device $t$ be determined by the similarity between $z(x)$ and $z^c_t$,
+$
+y^F(x_i) = C \left(z(x)^\top z^c_0 + t_i\cdot z(x)^\top z^c_1\right) + \epsilon ~
+$,
+where $C$ is a scaling factor and $\epsilon \sim \mathcal{N}(0,1)$. Here, we let the mobile centroid, $z^c_1$ be the topic distribution of a randomly sampled document, and $z^c_0$ be the average topic representation of all documents. We further assume that the assignment of a news item $x$ to a device $t \in \{0,1\}$ is biased towards the device preferred for that item. We model this using the softmax function,
+$
+p(t = 1 \mid x) = \frac{e^{\kappa\cdot z(x)^\top z^c_1}}{e^{\kappa\cdot z(x)^\top z^c_0} + e^{\kappa\cdot z(x)^\top z^c_1}}
+$,
+where $\kappa \geq 0$ determines the strength of the bias. Note that $\kappa = 0$ implies a completely random device assignment.
+
+We sample $n=5000$ news items and outcomes according to this model, based on 50 LDA topics, trained on documents from the NY Times corpus (downloaded from UCI~\cite{bagofwords}). The data available to the algorithms are the raw word counts, from a vocabulary of $k=3477$ words, selected as union of the most $100$ probable words in each topic. We set the scaling parameters to $C=50, \kappa=10$ and sample $50$ realizations for evaluation. Figure~\ref{fig:topic_model_data} shows a visualization of the outcome and device assignments for a  sample of 500 documents. Note that the device assignment becomes increasingly random, and the outcome lower, further away from the centroids.
+
+\begin{figure}[t!]
+  \centering
+  \begin{subfigure}[b]{0.49\columnwidth}
+    \centering
+    \includegraphics[width=1.0\textwidth]{topic_doc_mean_2.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.49\columnwidth}
+    \centering
+    \includegraphics[width=1.0\textwidth]{topic_doc_mean_2_ite.pdf}
+  \end{subfigure}
+  \caption{\label{fig:topic_model_data}Visualization of one of the News sets (left). Each dot represents a single news item $x$. The radius represents the outcome $y(x)$, and the color the treatment $t$. The two black dots represent the two centroids. Histogram of ITE in News (right).}
+\end{figure}
+
+
+\begin{table}[t!]
+  \caption{IHDP. Results and standard errors for 1000 repeated experiments. (Lower is better.)
+  Proposed methods: {\sc BLR, BNN-4-0} and {\sc BNN-2-2}. $\dagger$~\cite{chipman2010bart}}
+  \label{tbl:ihdp_results}
+  \vskip 0.15in
+  \begin{center}
+    \begin{small}
+      \begin{sc}
+      \begin{tabular}{lccc}
+        \hline
+        \abovespace\belowspace
+        & $\epsilon_{ITE}$ & $\epsilon_{ATE}$ & PEHE \\
+        \hline
+        \multicolumn{4}{l}{Linear outcome} \\
+        OLS       & $4.6\pm 0.2$ & $0.7\pm 0.0$ & $5.8\pm 0.3$  \\
+        Doubly Robust   & $3.0\pm 0.1$ & $0.2\pm 0.0$ & $5.7\pm 0.3$  \\
+        Lasso + Ridge  & $2.8\pm 0.1$ & $0.2\pm 0.0$ & $5.7\pm 0.2$ \\
+        BLR      & $2.8\pm 0.1$ & $0.2\pm 0.0$ & $5.7\pm 0.3$   \\
+        BNN-4-0  & $3.0\pm 0.0$ & $0.3\pm 0.0$ & $5.6\pm 0.3$   \\
+        \hline
+        \multicolumn{4}{l}{Non-linear outcome} \\
+        NN-4   & $2.0\pm 0.0$ & $0.5\pm 0.0$ & $1.9\pm 0.1$   \\
+        BART$^\dagger$   & $2.1\pm 0.2$ & $0.2\pm 0.0$ & $1.7\pm 0.2$  \\
+        BNN-2-2   & $\mathbf{1.7\pm 0.0}$ & $0.3\pm 0.0 $ & $\mathbf{1.6\pm 0.1}$  \\
+
+
+        \hline
+      \end{tabular}
+    \end{sc}
+    \end{small}
+  \end{center}
+\end{table}
+
+\begin{table}[t!]
+  \caption{News. Results and standard errors for 50 repeated experiments. (Lower is better.)
+  Proposed methods: {\sc BLR, BNN-4-0} and {\sc BNN-2-2}. $\dagger$~\cite{chipman2010bart} }
+  \label{tbl:topic_results}
+  \vskip 0.15in
+  \begin{center}
+    \begin{small}
+      \begin{sc}
+      \begin{tabular}{lccc}
+        \hline
+        \abovespace\belowspace
+        & $\epsilon_{ITE}$ & $\epsilon_{ATE}$ & PEHE \\
+        \hline
+        \multicolumn{4}{l}{Linear outcome} \\
+        OLS      & $3.1\pm 0.2$ & $0.2\pm 0.0$ & $3.3\pm 0.2$   \\
+        Doubly Robust   & $3.1\pm 0.2$ & $0.2\pm 0.0$ & $3.3\pm 0.2$   \\
+        Lasso + Ridge   & $2.2\pm 0.1$ & $0.6\pm 0.0$ & $3.4\pm 0.2$   \\
+        BLR      & $2.2\pm 0.1$ & $0.6\pm 0.0$ & $3.3\pm 0.2$   \\
+        BNN-4-0  & $2.1\pm 0.0$ & $0.3\pm 0.0$ & $3.4\pm 0.2$   \\
+        \hline
+        \multicolumn{4}{l}{Non-linear outcome} \\
+        NN-4      & $2.8\pm 0.0$ & $1.1\pm 0.0$ & $3.8\pm 0.2$   \\
+        BART$^\dagger$   & $5.8\pm 0.2$ & $0.2\pm 0.0$ & $3.2\pm 0.2$   \\
+        BNN-2-2   & $\mathbf{2.0\pm 0.0}$ & $0.3\pm 0.0$ & $\mathbf{2.0\pm 0.1}$   \\
+
+
+        \hline
+      \end{tabular}
+    \end{sc}
+    \end{small}
+  \end{center}
+\end{table}
+
+
+\begin{figure}[t]
+  \centering
+  \begin{subfigure}[b]{0.49\columnwidth}
+    \centering
+    \includegraphics[width=1.0\textwidth]{ihdp_alpha_sweep_ite.pdf}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.49\columnwidth}
+    \centering
+    \includegraphics[width=1.0\textwidth]{ihdp_alpha_sweep_rmse.pdf}
+  \end{subfigure}
+  \caption{\label{fig:ihdp_alpha_sweep}Error in estimated treatment effect (ITE, PEHE) and counterfactual response (RMSE) on the IHDP dataset. Sweep over $\alpha$ for the BNN-2-2 neural network model.}
+\end{figure}
+
+\subsection{Results}
+The results of the IHDP and News experiments are presented in Table~\ref{tbl:ihdp_results} and Table~\ref{tbl:topic_results} respectively. We see that, in general, the non-linear methods perform better in terms of individual prediction (ITE, PEHE). Further, we see that our proposed balancing neural network {\sc BNN-2-2} performs the best on both datasets in terms of estimating the ITE and PEHE, and is competitive on average treatment effect, ATE. Particularly noteworthy is the comparison with the network without balance penalty, {\sc NN-4}. These results indicate that our proposed regularization can help avoid overfitting the representation to the factual outcome. Figure~\ref{fig:ihdp_alpha_sweep} plots the performance of {\sc BNN-2-2} for various imbalance penalties $\alpha$. The valley in the region $\alpha=1$, and the fact that we don't experience a loss in performance for smaller values of $\alpha$, show that the penalizing imbalance in the representation $\Phi$ has the desired effect.
+
+For the linear methods, we see that the two variable selection approaches, our proposed BLR method and {\sc Lasso + Ridge}, work the best in terms of estimating ITE. We would like to emphasize that \lridge{} is a very strong baseline and it's exciting that our theory-guided method is competitive with this approach.
+
+On News, BLR and \lridge{} perform equally well yet again, although this time with qualitatively different results, as they do not select the same variables. Interestingly, BNN-4-0, BLR and \lridge{} all perform better on News than the standard neural network, NN-4. The performance of BART on News is likely hurt by the dimensionality of the dataset, and could improve with hyperparameter tuning.

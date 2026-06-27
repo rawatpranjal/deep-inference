@@ -1,0 +1,143 @@
+\section{Experimental details}\label{sec:appexp}
+
+\subsection{Hyperparameter selection}
+Standard methods for hyperparameter selection, such as cross-validation, are not generally applicable for estimating the PEHE loss since only one potential outcome is observed (unless the outcome is simulated). For real-world data, we may use the observed outcome $y_{j(i)}$ of the nearest neighbor $j(i)$ to $i$ in the opposite treatment group, $t_{j(i)} = 1 - t_i$ as surrogate for the counterfactual outcome. We use this to define a nearest-neighbor approximation of the PEHE loss, $\epehenn(f) = \frac{1}{n}\sum_{i=1}^n \left((1-2t_i)(y_{j(i)} - y_i) - (f(x_i,1) - f(x_i,0))\right)^2~$. On IHDP, we use the objective value on the validation set for early stopping in CFR, and $\epehenn(f)$ for hyperparameter selection. On the Jobs dataset, we use the policy risk on the validation set.
+
+See Table~\ref{tbl:hypparams} for a description of hyperparameters and search ranges.
+
+\begin{table}[t!]
+  \caption{\label{tbl:hypparams}Hyperparameters and ranges.}
+  \begin{center}
+      \begin{tabular}{ll}
+        Parameter & Range \\ \hline
+        Imbalance parameter, $\alpha$ & $\{10^{k/2}\}_{k=-10}^6$ \\
+        Num. of representation layers & $\{1,2,3\}$ \\
+        Num. of hypothesis layers & $\{1,2,3\}$ \\
+        Dim. of representation layers & $\{20, 50, 100, 200\}$ \\
+        Dim. of hypothesis layers & $\{20, 50, 100, 200\}$ \\
+        Batch size & $\{100, 200, 500, 700\}$ \\
+        \hline
+      \end{tabular}
+    \end{center}
+\end{table}
+
+\subsection{Learned representations}
+Figure~\ref{fig:reps} show the representations learned by our CFR algorithm.
+
+
+
+
+\begin{figure*}[]
+  \centering
+  \begin{subfigure}[b]{0.3\textwidth}
+    \centering
+    \includegraphics[width=0.90\columnwidth]{fig/rep_cfr.png}
+    \caption{Original data}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \centering
+    \includegraphics[width=0.90\columnwidth]{fig/rep_cfr_mmd.png}
+    \caption{Linear MMD}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \centering
+    \includegraphics[width=0.90\columnwidth]{fig/rep_cfr_wass.png}
+    \caption{Wasserstein}
+  \end{subfigure}
+  \caption{\label{fig:reps}t-SNE visualizations of the balanced representations of IHDP learned by our algorithms CFR, CFR MMD and CFR Wass. We note that the nearest-neighbor like quality of the Wasserstein distance results in a strip-like representation, whereas the linear MMD results in a ball-like shape in regions where overlap is small.}
+\end{figure*}
+
+\subsection{Absolute error for increasingly imbalanced data}
+Figure~\ref{fig:ihdp_abs_imb} shows the results of the same experiment as Figure 2 of the main paper, but in absolute terms.
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.90\columnwidth]{fig/Imb_AbsPEHEVsAlpha.pdf}\vspace{-1em}
+  \caption{\label{fig:ihdp_abs_imb}Out-of-sample error in estimated ITE, as a function of IPM regularization parameter for CFR Wass, on 500 realizations of IHDP, with high ($q=1$), medium and low (artificial) imbalance between control and treated. }
+  \vspace{-1em}
+\end{figure}
+
+
+
+%\subsection{General observation}
+%While not visible in the tables due to averaging, for some of the 1000 realizations of the IHDP dataset the imbalance penalty does not have an effect (neither positive nor negative). We believe this is due to these sets already being fairly balanced. We also note that in some cases, methods with linear hypothesis in the treatment, perform the best by removing any influence of the covariates on the model. This is indeed what happens for L+R and BLR on IHDP.
+%
+%\subsection{IHDP and News}
+%\cite{johansson2016counterfactual} introduced another semi-simulated dataset dubbed News, based on topic-modeling of a collection of news articles. Covariates represent counts of words in a pre-specified vocabulary representing words that are significant to at least one of the topics. The outcome and treatment models are based on the topic-distribution of documents. The set comprises 5000 observations (articles) with 3477 covariates (words). The results of both the IHDP and News experiments are presented in Table~\ref{tbl:ihdp_news_results}. For the News data, we train representation layers with 400 units and output layers with 200 units.
+%
+%On News, we see that non-linear methods such as BART, C.Forests, BNN and CFR fair the best, with the neural network methods as the best performers. We don't however see a significant gain from using the proposed imbalance penalty (compare e.g. MMD and $\alpha=0$), but neither does the penalty hurt the performance. A possible explanation is that the dataset is not very imbalanced to begin with.
+%
+%\begin{table*}[t!]
+%  \caption{Results and standard errors on IHDP and News over 1000 and 50 repeated experiments respectively. MMD is the squared linear MMD. ATE is transductive. Lower is better.}
+%  \label{tbl:ihdp_news_results}
+%  \vskip 0.15in
+%  \begin{center}
+%    \begin{small}
+%      \begin{sc}
+%      \begin{tabular}{l|cc||cc}
+%        \hline
+%        & \multicolumn{2}{c||}{IHDP} & \multicolumn{2}{c}{News} \\
+%        & $\epehe$ & $\eate$  & $\epehe$ & $\eate$\\
+%        \hline
+%        OLS  & $5.2\pm 0.3$ & $0.7\pm 0.0$  &
+%           $3.3\pm 0.2$ & $0.2\pm 0.0$    \\
+%        TMLE~\cite{gruber2011tmle}  & $5.0\pm 0.2$ & $0.3\pm 0.0$   &
+%           \multicolumn{2}{c}{N/A}  \\
+%        L + R & $5.7\pm 0.2$ & $0.2\pm 0.0$  &
+%           $3.4\pm 0.2$ & $0.6\pm 0.0$   \\
+%        BLR   & $5.7\pm 0.3$ & $0.2\pm 0.0$   &
+%            $3.3\pm 0.2$ & $0.6\pm 0.0$   \\
+%        BART~\cite{chipman2010bart}   & $1.7\pm 0.2$ & $0.2\pm 0.0$   &
+%           $3.2\pm 0.2$ & $0.2\pm 0.0$  \\
+%        C.Forests~\cite{wager2015estimation}   & $3.7 \pm 0.2$ & $0.2 \pm 0.0$  &
+%            $2.6 \pm 0.1$ & $0.6 \pm 0.0$ \\
+%        BNN-4-0~\cite{johansson2016counterfactual}  & $5.6\pm 0.3$ & $0.3\pm 0.0$ &
+%          $3.6\pm 0.2$ & $0.7\pm 0.0$  \\
+%        BNN-2-2~\cite{johansson2016counterfactual}   & $1.6\pm 0.1$ & $0.3\pm 0.0$ &
+%          $2.0\pm 0.1$ &  $0.3\pm 0.0$ \\
+%        \hline
+%        CFR-2-2 $\alpha=0$  & $1.5 \pm 0.1$ & $0.3 \pm 0.0$ &
+%          $2.2 \pm 0.1$ & $0.3 \pm 0.0$\\
+%        CFR-2-2 Wass  & $1.4 \pm 0.1$ & $0.3 \pm 0.0$ &
+%           $2.0 \pm 0.4$ & $0.3 \pm 0.2$\\
+%        CFR-2-2 MMD & $1.4 \pm 0.1$ & $0.2 \pm 0.0$ &
+%           $2.0 \pm 0.1$ & $0.5 \pm 0.1$ \\
+%        \hline
+%      \end{tabular}
+%    \end{sc}
+%    \end{small}
+%  \end{center}
+%\end{table*}
+%
+%\paragraph{IHDP - Increasing imbalance}
+%In the main paper we introduced variants of the IHDP data with increasing imbalance between treatment groups. T-SNE visualizations of these sets for $q=0$ and $q=1$ respectively can be seen in Figure~\ref{fig:ihdp_imb}.
+%
+%\begin{figure*}[tbp]
+%  \centering
+%  \begin{subfigure}{0.40\textwidth}
+%    \includegraphics[width=1\textwidth]{fig/ihdp_imb500_q0.pdf}
+%    \caption{\label{fig:ihdp_imb_q0}$q=0$}
+%  \end{subfigure}
+%  \begin{subfigure}{0.40\textwidth}
+%    \includegraphics[width=1\textwidth]{fig/ihdp_imb500_q1.pdf}
+%    \caption{\label{fig:ihdp_imb500_q1}$q=1$}
+%  \end{subfigure}
+%  \caption{\label{fig:ihdp_imb}PEHE for the {\sc CFR-2-2} model on 200 subsampled versions of the IHDP with increasing imbalance. Right: subsampled datasets visualized using t-SNE. $q=0$ corresponds to minimum imbalance, and $q=1$ to maximum.}
+%\end{figure*}
+%
+%\paragraph{IHDP - Comparing imbalance measures}
+%In Figure~\ref{fig:ihdp_rel_meas}, we compare results for different distance measures: the MMD and its square (MMD$^2$) with linear and Gaussian-RBF kernels, the Wasserstein distance (Wass), and the linear discrepancy (LinDisc). While the overall behavior is similar, we see that MMD$^2$ (lin) performs the best, and the Wasserstein and MMD (rbf) the worst. We believe the Wasserstein penalty suffers from pessimistic hyperparameters chosen to ensure numerical stability.
+%
+%\begin{figure}[tbp]
+%  \centering
+%  \includegraphics[width=0.9\columnwidth]{fig/IHDP_RelPEHEVsAlpha.pdf}
+%  \caption{\label{fig:ihdp_rel_meas}Error in causal effect as a function of imbalance penalty, relative to $\alpha=0$, on 500 realizations of IHDP, using different distance measures.}
+%\end{figure}
+%
+%\paragraph{Jobs - Value of policy v. treatment threshold}
+%Figure~\ref{fig:policy} shows the value of a policy as a function of treatment threshold. Units are included in the treatment group in order of their predicted effect according to the various models.
+%
+%\begin{figure}[tbp]
+%  \centering
+%  \includegraphics[width=0.9\columnwidth]{fig/PolicyCurve.pdf}
+%  \caption{\label{fig:policy}Value of policy (1-$R_{Pol}$) as a function of treatment threhold. Higher is better.}
+%\end{figure}

@@ -1,0 +1,22 @@
+
+Here, we describe the data generation process for the dSprites dataset experiment. This is an image dataset described via five latent parameters ({\tt shape,  scale, rotation, posX} and {\tt posY}). The images are $64 \times 64 = 4096$-dimensional. In this experiment, we fixed {\tt shape} parameter to {\tt heart}, i.e. we only used the heart-shaped images. The other latent parameters take values of $ \mathtt{scale}\in [0.5, 1],~\mathtt{rotation} \in [0, 2\pi],~\mathtt{posX} \in [0,1],~\mathtt {posY} \in [0, 1]$.
+
+From this dataset, we generate the treatment variable $X$ and outcome $Y$ as follows.
+\begin{enumerate}
+    \item Uniformly samples latent parameters $(\mathtt{scale}, \mathtt{rotation}, \mathtt{posX}, \mathtt{posY})$.
+    \item Generate treatment variable $X$ as
+    \begin{align*}
+        X = \mathtt{Fig}(\mathtt{scale}, \mathtt{rotation}, \mathtt{posX}, \mathtt{posY}) + \vec{\eta}.
+    \end{align*}
+    \item Generate outcome variable $Y$  as
+    \begin{align*}
+        Y = \frac{\|AX\|_2^2 - 5000}{1000} + 32(\mathtt{posY}-0.5) + \varepsilon.
+    \end{align*}
+\end{enumerate}
+
+Here, function $\mathtt{Fig}$ returns the corresponding image to the latent parameters, and $\vec{\eta}, \varepsilon$ are noise variables generated from $\vec{\eta} \sim \mathcal{N}(0.0, 0.1I)$ and $\varepsilon \sim \mathcal{N}(0.0, 0.5)$. Each element of the matrix $A \in \mathbb{R}^{10\times 4096}$ is generated from $\mathrm{Unif}(0.0, 1.0)$ and fixed throughout the experiment. From the data generation process, we can see that $X$ and $Y$ are confounded by {\tt posY}. We use the instrumental variable $Z = (\mathtt{scale},\mathtt{rotation}, \mathtt{posX}) \in \mathbb{R}^3$, and figures with random noise as treatment variable $X$.  The variable $\mathtt{posY}$ is not revealed to the model, and there is no observable confounder. The structural function for this setting is
+\begin{align*}
+    f_{\mathrm{struct}}(X) = \frac{\|AX\|_2^2 - 5000}{1000}.
+\end{align*}
+
+We use 588 test points for measuring out-of-sample error, which is generated from the grid points of latent variables. The grids consist of 7 evenly spaced values for $\mathtt{posX}, \mathtt{posY}$, 3 evenly spaced values for $\mathtt{scale}$, and 4 evenly spaced values for $\mathtt{orientation}$.

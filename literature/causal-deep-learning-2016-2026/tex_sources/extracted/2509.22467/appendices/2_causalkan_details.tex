@@ -1,0 +1,490 @@
+\section{Details on \ours variants}
+\label{sec:app:causalkans_details}
+
+As explained in \cref{sec:causalkans}, the adaptation of causalNNs to \ours consists of changing the MLP backbones by KANs. In \cref{fig:causalkans_architectures}, we include examples of the proposed \ours, with an arbitrary number of layers and summation nodes. 
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/s-kan.drawio.png}
+    \caption{\skan}
+    \label{fig:skan}
+    \end{subfigure}
+     \begin{subfigure}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/t-kan.drawio.png}
+    \caption{\tkan}
+    \label{fig:tkan}
+    \end{subfigure}
+     \begin{subfigure}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/tar-kan-extended.drawio.png}
+    \caption{\tarkan}
+    \label{fig:tarkan}
+    \end{subfigure}
+     \begin{subfigure}{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/dragon-kan-extended.drawio.png}
+    \caption{\dragonkan}
+    \label{fig:dragonkan}
+    \end{subfigure}
+    \caption{\Ours detailed architectures. The number of layers of each model is arbitrary, just to show an example of each one.}
+    \label{fig:causalkans_architectures}
+\end{figure}
+
+From the point of view of interpretability, constructing very complex \ours is harmful for achieving simple and auditable formulas. Therefore, as mentioned in point 2 of \cref{sec:pipeline}, obtain the simplest model is crucial to improve interpretability, and we recommend to minimize the complexity of the network, among the models with similar performance.
+
+We want to illustrate some interesting combinations of hyperparameters, that yield into special interpretable causal effects. In particular, when meta-learners employ additive models, we call them S-KAAM and T-KAAM, and when the heads of \tarkan and \dragonkan are also shallow additive models, we call them TARKAAM and DragonKAAM.
+
+\paragraph{S-KAAM.} When training and \skan, if the hyperparameters selected results into a single-layer KAN, then we have a KAAM \citep{pati25kaam}. We call this model S-KAAM, and a scheme can be found in \cref{fig:skaam}. The interesting point is that, when we have an S-KAAM, the effects on the population are homogeneous, and we have access to the \emph{effect curve} directly. The effect curve defines how the outcome varies with the treatment. Since, in a S-KAAM, the model is additive:
+
+\begin{equation}
+    \hpo(\samplecov, \sampletreati) = \func[\samplecov](\samplecov) + \func[\sampletreati](\sampletreati),
+\end{equation}
+we define the \emph{effect curve}, $\func[\sampletreati]: \treatmentspace \to \R$, as the function that represents the variations of the outcome, depending on the treatment. Therefore, any causal effect of two different values of the treatment, $a,b$ can be computed as the difference along the effect curve:
+
+\begin{equation}
+    \hat{\tau}_{ab}(\samplecov) = \hpo(\samplecov, b) -  \hpo(\samplecov, a)= [\func[\samplecov](\samplecov) + \func[\sampletreati](b)] - [\func[\samplecov](\samplecov) + \func[\sampletreati](a)] = \func[\sampletreati](b) - \func[\sampletreati](a),
+\end{equation}
+
+Note that this model yields homogeneous treatment effects, making the CATE equivalent to the ATE, and removing the covariate dependence.
+
+For a binary treatment, the CATE can be computed as:
+
+\begin{equation}
+    \hat{\tau}(\samplecov) = \func[\sampletreati](1) - \func[\sampletreati](0),
+    \label{eq:cate_skaam}
+\end{equation}
+
+\paragraph{T-KAAM.} In the same fashion, if both subnetworks in a \tkan are KAAMs, we can get a simple analytic solution of the causal effect, that depends on each covariate independently.
+
+Having that each potential outcome can be expresed as:
+
+\begin{equation}
+    \hpo_\sampletreat(\samplecov) = \func[\samplecovi_1]^\sampletreat(\samplecovi_1)
+    +
+    \func[\samplecovi_2]^\sampletreat(\samplecovi_2)
+    + \cdots +
+    \func[\samplecovi_\covsize]^\sampletreat(\samplecovi_\covsize), 
+    \label{eq:tkaam_cate}
+\end{equation}
+
+where $\func[\samplecovi_\indexone]^\sampletreat$ is the activation function corresponding to the covariate $\samplecovi_\indexone$ in the subnetwork of the treatment $\sampletreat$. We can compute the individual contribution of each variable, yielding in an estimation of the causal effect, for a binary treatment, as:
+
+\begin{equation}
+\label{eq:cate_tkaam}
+    \hcate{\samplecov} = 
+    \underbrace{[\func[\samplecovi_1]^1(\samplecovi_1) - \func[\samplecovi_1]^0(\samplecovi_1)]}_{\funcb[\samplecovi_1](\samplecovi_1)}
+    +\underbrace{[\func[\samplecovi_2]^1(\samplecovi_2) - \func[\samplecovi_2]^0(\samplecovi_2)]}_{\funcb[\samplecovi_2](\samplecovi_2)}
+    + \cdots + \underbrace{[\func[\samplecovi_\covsize]^1(\samplecovi_\covsize) - \func[\samplecovi_\covsize]^0(\samplecovi_\covsize)]}_{\funcb[\samplecovi_\covsize](\samplecovi_\covsize)}
+\end{equation}
+
+\begin{figure}
+    \centering
+    \begin{subfigure}{0.25\linewidth}
+        \centering
+    \includegraphics[width=0.9\linewidth]{figs/s-kaam.drawio.png}
+    \caption{S-KAAM scheme.}
+    \label{fig:skaam}
+    \end{subfigure}
+    \begin{subfigure}{0.25\linewidth}
+        \centering
+    \includegraphics[width=0.9\linewidth]{figs/t-kaam.drawio.png}
+    \caption{T-KAAM scheme.}
+    \label{fig:tkaam}
+    \end{subfigure}
+        \caption{Particularly interpretable architectures of \ours. \figleft a single KAAM that predicts the outcome in an additive manner. \figleft two KAAMs, one for each treatment, which leads to an additive CATE function.}
+    \label{fig:causalkaams}
+\end{figure}
+
+As an implementation detail, note that a T-KAAM can be implemented with a single KAN shallow model with two outputs, each one for $\hpoone(\samplecov)$ and $\hpozero(\samplecov)$, respectively.
+
+\paragraph{TARKAAN and DragonKAAM.} We would like to make an observation on the implementation of \tarkan and \dragonkan when the heads are shallow KAAMs. We can observe in \cref{fig:tarkaam_dragonkaam} that, when instantiating a single KAN, with 2 and 3 output nodes, respectively. To construct those figures, we have reordered the last layer of a single KAN with 2/3 outputs, and show that is equivalent to add 2/3 KAAMs that have $\latent(\samplecov)$ as input.
+
+That is an interesting fact because we find, empirically, that TARKAAM and DragonKAAM are between the best-performer TAR-like and Dragon-like networks when evaluating in the IHDP and ACIC datasets. We also note that a KAN can learn identity splines, which could lead to have a representation vector equal to the input: $\latent(\covariates) = \covariates$. If that is the case, the TAARKAM and DragonKAAM can be seen as T-KAAMs, since all the outputs are independent additive functions of the covariates (except for the common regularization term, \regularization). For example, that is the case for the dataset ACIC-7, which cause that \tkan, \tarkan and \dragonkan to have the almost same metrics.
+
+\begin{figure}
+    \begin{subfigure}{0.5\linewidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{figs/tar-kaam.drawio.png}
+        \caption{TARKAAM}
+        \label{fig:tarkaam}
+    \end{subfigure}
+    \begin{subfigure}{0.5\linewidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{figs/dragon-kaam.drawio.png}
+        \caption{DragonKAAM}
+        \label{fig:dragonkaam}
+    \end{subfigure}
+    \caption{\tarkan and \dragonkan with shallow heads. With respect to \cref{fig:causalkans_architectures}, the connections that depart from \latent have been reordered to make the equivalence more noticeable.}
+    \label{fig:tarkaam_dragonkaam}
+\end{figure}
+
+\subsection{\add{1}{Extending \ours to other estimators}}
+\label{app:sec:other_kans}
+
+\add{1}{\Ours can be used as a drop in replacement in many causal estimators by KAN-ifying nuisance components (outcome regressions, propensity scores, CATE regressors) while leaving the estimand unchanged. After pruning and symbolification, these components become analytic expressions that can be inspected and manipulated. Which part should be made interpretable is estimator dependent and also dataset dependent, since different applications emphasize different aspects of the causal mechanism.}
+
+\add{1}{We consider binary treatment $\treatment \in \{0,1\}$, outcome $\outcome$, covariates $\covariates$, propensity score $\propensity(\covariates) = \mathbb{P}(\treatment=1\mid\covariates)$, potential outcome regressions $\pozero(\covariates)$ and $\poone(\covariates)$, and CATE $\cate{\covariates} = \poone(\covariates) - \pozero(\covariates)$ with estimator $\hcate{\covariates}$.}
+
+\add{1}{\paragraph{IPW.}
+Inverse probability weighting (IPW) estimates the ATE using only a propensity model $\propensity(\covariates)$ \citep{rosenbaum1983central, HernanRobins2025}. For a sample $\{(\samplecov_i,\sampletreat_i,\sampleoutcome_i)\}_{i=1}^n$,
+\begin{equation}
+\hat{\ate}_{\text{IPW}}
+=
+\frac{1}{n}\sum_{i=1}^n
+\left(
+\frac{\sampletreat_i \sampleoutcome_i}{\hpropensity(\samplecov_i)}
+-
+\frac{(1-\sampletreat_i)\sampleoutcome_i}{1-\hpropensity(\samplecov_i)}
+\right).
+\end{equation}
+\ours enter through
+\begin{equation}
+\hpropensity(\covariates)
+=
+\sigma\big(f_{\text{KAN}}^{(e)}(\covariates)\big),
+\end{equation}
+so that the log odds
+\begin{equation}
+\log\frac{\hpropensity(\covariates)}{1-\hpropensity(\covariates)}
+=
+f_{\text{KAN}}^{(e)}(\covariates)
+\end{equation}
+is a closed form KAN expression. After pruning and symbolification, this gives an interpretable model of the selection mechanism (which covariates drive treatment assignment and how they interact), while $\hat{\ate}_{\text{IPW}}$ remains the same functional of the weights.}
+
+\add{1}{\paragraph{X learner.}
+The X learner \citep{kunzel2019metalearners} combines outcome regressions and effect regressions. Given $\hpozero(\covariates)$ and $\hpoone(\covariates)$, one constructs pseudo effects for treated and control units and learns two CATE regressors $\hcate{\covariates}^{(1)}$ and $\hcate{\covariates}^{(0}$, which are combined as
+\begin{equation}
+\hcate{\covariates}_{\text{X}}
+=
+g(\covariates)\,\hcate{\covariates}^{(0)}
++
+\big(1-g(\covariates)\big)\,\hcate{\covariates}^{(1)},
+\end{equation}
+with $g(\covariates)$ often chosen as $\hpropensity(\covariates)$.}
+
+\add{1}{\Ours can be used in two complementary ways:
+\begin{itemize}
+    \item \emph{KAN-ified potential outcomes:} set $\hpo_t(\covariates) = f_{\text{KAN}}^{(t)}(\covariates)$ for $t\in\{0,1\}$. After pruning and symbolification, $\hpozero(\covariates)$ and $\hpoone(\covariates)$ are analytic functions, so the practitioner can directly inspect how covariates shape each potential outcome and the induced pseudo effects.
+    \item \emph{KAN-ified CATE:} set $\hcate{\covariates}^{(t)}= g_{\text{KAN}}^{(t)}(\covariates)$ and optionally $g(\covariates)=\hpropensity(\covariates)=\sigma(f_{\text{KAN}}^{(e)}(\covariates))$. Then $\hcate{\covariates}_{\text{X}}$ is an explicit combination of a small number of KAN terms, providing a closed form heterogeneous effect curve.
+\end{itemize}
+Which variant is preferable depends on whether interpretability should focus on the potential outcomes, the CATE, or the selection mechanism, and this is driven by the dataset and scientific question.}
+
+\add{1}{\paragraph{AIPW, DR learners, and R learner.}
+Augmented IPW (AIPW) combines outcome and propensity models and is doubly robust \citep{robins1994estimation,bang2005doubly, tsiatis2006semiparametric}. A standard AIPW ATE estimator is
+\begin{equation}
+\hat{\ate}_{\text{AIPW}}
+=
+\frac{1}{n}\sum_{i=1}^n
+\left[
+\hpoone(\samplecov_i) - \hpozero(\samplecov_i)
++
+\frac{\sampletreat_i\big(\sampleoutcome_i - \hpoone(\samplecov_i)\big)}{\hpropensity(\samplecov_i)}
+-
+\frac{(1-\sampletreat_i)\big(\sampleoutcome_i - \hpozero(\samplecov_i)\big)}{1-\hpropensity(\samplecov_i)}
+\right].
+\end{equation}
+KAN-ifying $\hpozero$, $\hpoone$ and/or $\hpropensity$ yields interpretable models for baseline heterogeneity $\hpoone(\covariates) - \hpozero(\covariates)$ and for the augmentation terms. For applications where the effect structure is primary, \ours on $\hpozero$ and $\hpoone$ are most informative; for settings where selection bias is central, \ours on $\hpropensity$ are more relevant.}
+
+\add{1}{DR learners and R-type learners construct pseudo outcomes and then regress them on $\covariates$ using a flexible CATE model \citep[e.g.][]{kennedy2020drlearner,nie2021quasi}. In these methods, \ours are naturally used as the final CATE regressor, that is
+\begin{equation}
+\hcate{\covariates} = g_{\text{KAN}}^{(\tau)}(\covariates),
+\end{equation}
+trained with an orthogonalized loss. After pruning and symbolification, the resulting $\hcate{\covariates}$ is a closed form expression for the heterogeneous effect that inherits the robustness properties of the underlying DR or R-type learner. If desired, \ours can also parameterize nuisance components such as $\hpropensity$ or $\hpo_t$, but this is optional and should be guided by which functions the practitioner wishes to interpret.}
+
+\add{1}{\paragraph{Summary.}
+These examples illustrate a general pattern: \ours can replace the neural building blocks of many estimators (IPW, meta learners, DR and R learners, etc.) while leaving the estimand (ATE or CATE) unchanged. After pruning and symbolification, the replaced components become analytic, auditable functions of $\covariates$. The most relevant use of \ours is estimator dependent (propensity vs potential outcomes vs CATE) and also dataset dependent, since different applications require understanding different parts of the causal pipeline.}
+
+
+
+% \subsection{Identifiability of causal effects in the additive, well-specified regime}
+% \label{sec:identifiability-additive}
+
+% The S-KAAM and T-KAAM architectures introduced in this sectiojn are designed to capture additive structure in the potential outcomes and in the \cate{\covariates}, respectively. In this subsection we formalize that, under standard causal assumptions, when the data-generating process lies in these additive classes and S-KAAM / T-KAAM are well specified (infinite data, flexible B-splines), the models recover the true causal functions asymptotically. In particular, \cref{prop:s-kaam-ident} shows that S-KAAM recovers additive potential outcomes up to per-coordinate additive constants, and \cref{prop:t-kaam-ident} shows that T-KAAM recovers the true \cate{\covariates} and its additive components exactly.
+
+% % ---------------------------------------------------------------------
+% % Proposition 1: S-KAAM (general treatment)
+% % ---------------------------------------------------------------------
+
+% \begin{proposition}[Asymptotic recovery of additive potential outcomes by S-KAAM]
+% \label{prop:s-kaam-ident}
+% Assume unconfoundedness, positivity and SUTVA so that, for any $\sampletreati \in \treatmentspace$,
+% \begin{equation}
+% \pot(\covariates)
+% \;=\;
+% \E\big[ \outcome(\sampletreati) \mid \covariates \big]
+% \;=\;
+% \E\big[ \outcome \mid \covariates, \treatment = \sampletreati \big].
+% \end{equation}
+% Fix an arbitrary treatment level $\sampletreati \in \treatmentspace$ and suppose:
+% \begin{assumption}
+% \label{assumption:skaam}
+% \begin{enumerate}
+%     \item \textbf{Additive truth.} The potential outcome at $\sampletreati$ is additive,
+%     \begin{equation}
+%     \pot(\covariates)
+%     \;=\;
+%     c_{\sampletreati}
+%     \;+\;
+%     \sum_{\indextwo=1}^{\covsize} \functrue[{\sampletreati,\indextwo}](\covariate_\indextwo),
+%     \end{equation}
+%     where each $\functrue[{\sampletreati, \indextwo}] \in L_2(P_{\covariate\indextwo})$, the marginals of $\covariates$ are non-degenerate, and the joint law of $\covariates$ has a density with respect to a product measure.
+
+%     \item \textbf{Well-specified S-KAAM.} The additive hypothesis class is
+%     \begin{equation}
+%     \functionclass_{\text{additive}}
+%     \;=\;
+%     \left\{
+%         \func(\covariates)
+%         =
+%         \const_{\sampletreati}
+%         +
+%         \sum_{\indextwo=1}^{\covsize} \func[{\sampletreati, \indextwo}](\covariate\indextwo)
+%         \;:\;
+%         \func[{\sampletreati, \indextwo}] \in \mathcal{S}\indextwo
+%     \right\},
+%     \end{equation}
+%     where each $\mathcal{S}\indextwo$ is a B-spline space rich enough that $\functrue[{\sampletreati, \indextwo}] \in \overline{\mathcal{S}\indextwo}$ and, in particular, $\pot(\covariates) \in \functionclass_{\text{additive}}$.
+
+%     \item \textbf{Population risk minimization.} In the infinite-sample limit, additive for treatment $\sampletreati$ minimizes the population squared loss
+%     \begin{equation}
+%     \risk_{\sampletreati}(f)
+%     \;=\;
+%     \E\Big[
+%         \big( \outcome - f(\covariates) \big)^2
+%         \,\Big|\,
+%         \treatment = \sampletreati
+%     \Big]
+%     \end{equation}
+%     over $f \in \functionclass_{\text{additive}}$ and attains a global minimizer $\hpot \in \functionclass_{\text{additive}}$.
+% \end{enumerate}
+% \end{assumption}
+% Then:
+% \begin{enumerate}
+%     \item[\itemi] $\hpot(\covariates) = \pot(\covariates)$ almost surely.
+%     \item[\itemii] Writing the additive decomposition of the minimizer as
+%     \begin{equation}
+%     \hpot(\covariates)
+%     \;=\;
+%     \tilde{\const}_{\sampletreati}
+%     \;+\;
+%     \sum_{\indextwo=1}^{\covsize} \func[{\sampletreati, \indextwo}](\covariate\indextwo),
+%     \end{equation}
+%     there exist constants $\addconst_{\sampletreati, \indextwo} \in \risk$ with
+%     \begin{equation}
+%     \sum_{\indextwo=1}^{\covsize} \addconst_{\sampletreati, \indextwo}
+%     \;=\;
+%     \const_{\sampletreati} - \tilde{c}_{\sampletreati}
+%     \end{equation}
+%     such that
+%     \begin{equation}
+%     \func[{\sampletreati, \indextwo}](\covariate\indextwo)
+%     \;=\;
+%     \functrue[{\sampletreati, \indextwo}](\covariate\indextwo) + \addconst_{\sampletreati, \indextwo}
+%     \quad
+%     \text{for all } j,
+%     \;\text{almost surely}.
+%     \end{equation}
+% \end{enumerate}
+% In particular, S-KAAM recovers the additive components of $\pot(\covariates)$ up to per-coordinate additive constants.
+% \end{proposition}
+
+% \begin{proof}
+% By unconfoundedness and SUTVA, the regression function that minimizes $\risk_{\sampletreati}$ over all square-integrable functions is
+% \begin{equation}
+% \pot(\covariates)
+% \;=\;
+% \E\big[ \outcome \mid \covariates, \treatment = \sampletreati \big].
+% \end{equation}
+% Since $\pot(\covariates) \in \functionclass_{\text{additive}}$ by point 2 of \cref{assumption:skaam}, any global minimizer of $\risk_{\sampletreati}$ over $\functionclass_{\text{additive}}$ must coincide with $\pot(\covariates)$ almost surely, which yields \itemi.
+
+% For \itemii, write the true and estimated additive decompositions
+% \begin{equation}
+% \pot(\covariates)
+% =
+% c_{\sampletreati}
+% +
+% \sum_{\indextwo=1}^{\covsize} \functrue[{\sampletreati, \indextwo}](\covariate\indextwo),
+% \end{equation}
+% \begin{equation}
+% \hpot(\covariates)
+% =
+% \tilde{c}_{\sampletreati}
+% +
+% \sum_{\indextwo=1}^{\covsize} \func[{\sampletreati, \indextwo}](\covariate\indextwo).
+% \end{equation}
+% Equality $\hpot(\covariates) = \pot(\covariates)$ almost surely implies
+% \begin{equation}
+% \sum_{\indextwo=1}^{\covsize} \addresid_{\sampletreati, \indextwo}(\covariate\indextwo)
+% \;\equiv\;
+% \sum_{\indextwo=1}^{\covsize}
+% \Big(
+%     \func[{\sampletreati, \indextwo}](\covariate\indextwo)
+%     -
+%     \functrue[{\sampletreati, \indextwo}](\covariate\indextwo)
+% \Big)
+% =
+% \const_{\sampletreati} - \tilde{c}_{\sampletreati}
+% \quad
+% \text{almost surely}.
+% \end{equation}
+% Subtracting means, define
+% \begin{equation}
+% \addresidc_{\sampletreati, \indextwo}(\covariate\indextwo)
+% \;=\;
+% \addresid_{\sampletreati, \indextwo}(\covariate\indextwo)
+% -
+% \E\big[\addresid_{\sampletreati, \indextwo}(\covariate\indextwo)\big],
+% \end{equation}
+% so that
+% \begin{equation}
+% \sum_{\indextwo=1}^{\covsize} \addresidc_{\sampletreati, \indextwo}(\covariate\indextwo)
+% =
+% 0
+% \quad
+% \text{almost surely}.
+% \end{equation}
+% By standard identifiability of additive models with non-degenerate marginals, the only way a sum of univariate functions of the coordinates is almost surely zero is that each $\addresidc_{\sampletreati, \indextwo}(\covariate\indextwo)$ is almost surely equal to zero. Hence each $\addresid_{\sampletreati, \indextwo}$ is almost surely constant; denote this constant by $\addconst_{\sampletreati, \indextwo}$. This yields
+% \begin{equation}
+% \func[{\sampletreati, \indextwo}](\covariate\indextwo)
+% \;=\;
+% \functrue[{\sampletreati, \indextwo}](\covariate\indextwo) + \addconst_{\sampletreati, \indextwo},
+% \end{equation}
+% with $\sum\indextwo \addconst_{\sampletreati, \indextwo} = c_{\sampletreati} - \tilde{c}_{\sampletreati}$, as claimed.
+% \end{proof}
+
+% % ---------------------------------------------------------------------
+% % Proposition 2: T-KAAM (binary case for CATE)
+% % ---------------------------------------------------------------------
+
+% \begin{proposition}[Asymptotic recovery of additive CATE by T-KAAM]
+% \label{prop:t-kaam-ident}
+% Define the true CATE
+% \begin{equation}
+% \cate{\covariates}
+% \;\equiv\;
+% \E\big[ \outcome(1) - \outcome(0) \mid \covariates \big]
+% \;=\;
+% \poone(\covariates) - \pozero(\covariates).
+% \end{equation}
+% Assume the causal conditions of \cref{prop:s-kaam-ident} (unconfoundedness, positivity, SUTVA) hold for $\sampletreati \in \{0,1\}$, and:
+% \begin{enumerate}
+%     \item \textbf{Additive potential outcomes.} For each $\sampletreati \in \{0,1\}$,
+%     \begin{equation}
+%     \mu_{\sampletreati}(\covariates)
+%     \;=\;
+%     c_{\sampletreati}
+%     +
+%     \sum_{\indextwo=1}^{\covsize} \functrue[{\sampletreati, \indextwo}](\covariate\indextwo).
+%     \end{equation}
+
+%     \item \textbf{Additive CATE.} The CATE is additive,
+%     \begin{equation}
+%     \cate{\covariates}
+%     \;=\;
+%     \const_{\ate}
+%     +
+%     \sum_{\indextwo=1}^{\covsize} \catecomp{\indextwo}(\covariate\indextwo),
+%     \end{equation}
+%     where
+%     \begin{equation}
+%     \catecomp{\indextwo}(\covariate\indextwo)
+%     \;=\;
+%     \functrue[{1, \indextwo}](\covariate\indextwo) - \functrue[{0, \indextwo}](\covariate\indextwo).
+%     \end{equation}
+
+%     \item \textbf{Well-specified T-KAAM.} T-KAAM  uses two KAAM heads, one per treatment, with hypothesis class $\functionclass_{\text{additive}}$ as in \cref{prop:s-kaam-ident}. In the infinite-sample limit, the fitted heads $\hpozero$ and $\hpoone$ are global minimizers of the corresponding risks and therefore satisfy the S-KAAM identifiability result of \cref{prop:s-kaam-ident}.
+% \end{enumerate}
+% Let the estimated CATE be
+% \begin{equation}
+% \hcate{\covariates}
+% \;=\;
+% \hpoone(\covariates) - \hpozero(\covariates).
+% \end{equation}
+% Then:
+% \begin{enumerate}
+%     \item[\itemi] $\hpozero(\covariates) = \pozero(\covariates)$ and $\hpoone(\covariates) = \poone(\covariates)$ almost surely.
+%     \item[\itemii] Consequently,
+%     \begin{equation}
+%     \hcate{\covariates}
+%     \;=\;
+%     \cate{\covariates}
+%     \quad
+%     \text{almost surely}.
+%     \end{equation}
+%     \item[\itemiii] Writing the additive decompositions
+%     \begin{equation}
+%     \hpo(\covariates,\sampletreati)
+%     \;=\;
+%     \tilde{c}_{\sampletreati}
+%     +
+%     \sum_{\indextwo=1}^{\covsize} \func[{\sampletreati, \indextwo}](\covariate\indextwo),
+%     \end{equation}
+%     \cref{prop:s-kaam-ident} implies the existence of constants $\addconst_{\sampletreati, \indextwo}$ such that
+%     \begin{equation}
+%     \func[{\sampletreati, \indextwo}](\covariate\indextwo)
+%     \;=\;
+%     \functrue[{\sampletreati, \indextwo}](\covariate\indextwo) + \addconst_{\sampletreati, \indextwo}.
+%     \end{equation}
+%     Defining the T-KAAM CATE components
+%     \begin{equation}
+%     \hcatecomp{\indextwo}(\covariate\indextwo)
+%     \;\equiv\;
+%     \func[{1, \indextwo}](\covariate\indextwo) - \func[{0, \indextwo}](\covariate\indextwo),
+%     \end{equation}
+%     we have
+%     \begin{equation}
+%     \hcatecomp{\indextwo}(\covariate\indextwo)
+%     \;=\;
+%     \big(\functrue[{1, \indextwo}](\covariate\indextwo) + \addconst_{1, \indextwo}\big)
+%     -
+%     \big(\functrue[{0, \indextwo}](\covariate\indextwo) + \addconst_{0, j}\big)
+%     \;=\;
+%     \catecomp{\indextwo}(\covariate\indextwo) + (\addconst_{1, \indextwo} - \addconst_{0, \indextwo}).
+%     \end{equation}
+%     Since $\hcate{\covariates} = \cate{\covariates}$ almost surely and both admit additive decompositions, additive-model identifiability implies $\addconst_{1 \indextwo} - \addconst_{0 \indextwo} = 0$ for all $\indextwo$ almost surely, so that
+%     \begin{equation}
+%     \hcatecomp{\indextwo}(\covariate_\indextwo)
+%     \;=\;
+%     \catecomp{\indextwo}(\covariate_\indextwo)
+%     \quad
+%     \text{for all } \indextwo,
+%     \;\text{almost surely}.
+%     \end{equation}
+% \end{enumerate}
+% Thus, when the DGP is additive and T-KAAM is well specified, the model recovers the true \cate{\covariates} and its additive components exactly in the infinite-data limit.
+% \end{proposition}
+
+% \begin{proof}
+% By \cref{prop:s-kaam-ident} applied to $\sampletreati = \{0,1\}$ and item~3 above, we have
+% \begin{equation}
+% \hpozero(\covariates)
+% =
+% \pozero(\covariates),
+% \qquad
+% \hpoone(\covariates)
+% =
+% \poone(\covariates)
+% \quad
+% \text{almost surely},
+% \end{equation}
+% which yields \itemi. Taking the difference gives
+% \begin{equation}
+% \hcate{\covariates}
+% \;=\;
+% \hpoone(\covariates) - \hpozero(\covariates)
+% \;=\;
+% \poone(\covariates) - \pozero(\covariates)
+% \;=\;
+% \cate{\covariates},
+% \end{equation}
+% which proves \itemii.
+
+% For \itemiii, the expression for $\hcatecomp{\indextwo}(\covariate_\indextwo)$ in terms of $\functrue[{\sampletreati, \indextwo}](\covariate_\indextwo)$ and constants $\addconst_{\sampletreati, \indextwo}$ follows directly from \cref{prop:s-kaam-ident}. Since both $\hcate{\covariates}$ and $\cate{\covariates}$ admit additive decompositions and coincide almost surely, the same identifiability argument used in \cref{prop:s-kaam-ident} applied to $\hcatecomp{\indextwo} - \catecomp{\indextwo}$ implies that each difference $\addconst_{1 \indextwo} - \addconst_{0, \indextwo}$ must vanish. Hence $\hcatecomp{\indextwo}(\covariate_\indextwo) = \catecomp{\indextwo}(\covariate_\indextwo)$ almost surely for all \indextwo.
+% \end{proof}
+
+
+% These results are function-space statements: they apply to any sequence of S-KAAM/T-KAAM estimators whose population risk converges to the infimum over the corresponding function class. For the parametrized KAN implementations, we do not attempt to prove that the non-convex training dynamics always produce such a sequence; optimization error is treated as a separate source of discrepancy, which we quantify empirically. 
+% The theory guarantees that, in the additive, well-specified regime, any risk-consistent S-KAAM/T-KAAM sequence converges to the true potential outcomes/CATE and achieves the best possible risk within the class. In practice, the only source of deviation from this ideal is optimization error, which we observe to be small in our experiments.

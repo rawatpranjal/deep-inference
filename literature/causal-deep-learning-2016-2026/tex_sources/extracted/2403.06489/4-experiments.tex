@@ -1,0 +1,236 @@
+\section{Experiments}
+\begin{table*}[h]
+\caption{The experimental result on public dataset BlogCatalog. The result of the best performance is in bold and the result of the second best performance is underlined. }
+\centering
+	\label{tab:ate}  
+	\begin{center}	
+		\small
+		\resizebox{\textwidth}{!}{
+			\begin{tabular}{ccccccccccccc}
+				\toprule[1pt]
+				{$\kappa_2$}&{Outcome Type}&{Metric}&GNUM-PL&GNUM-GCN&GNUM-GAT&GNUM-CT&Two-Model&CTM&Uplift-RF&NetDeconf&DML&DRL\\
+				\hline
+				\multirow{4}*\textbf{0.5}
+                & \multirow{2}*\textbf{Continuous} & {$\sqrt{\epsilon_{PEHE}}$}  &   / & /  & / & \textbf{4.164} &  9.215   & 8.448 & 6.760 & \underline{4.496} & 5.312 & 5.407  \\
+				  ~ & ~ & $\epsilon_{ATE}$  &   / & /  & / & \textbf{0.935} &  4.172  & 3.317 & 2.629 & \underline{0.970} & 1.244 & 1.360   \\
+                    ~ & \multirow{2}*\textbf{Binary} & {$\sqrt{\epsilon_{PEHE}}$}  &  \textbf{0.529} & 0.642  & \underline{0.586} & 0.613 &  1.253  & 0.964 & 0.740 & 0.621 & 0.689 & 0.707  
+                    \\
+				~ & ~ & $\epsilon_{ATE}$  &  \textbf{0.121} & 0.147  & \underline{0.129} & 0.138 &  0.470  & 0.364 & 0.210 & 0.135 & 0.159 & 0.172   
+                 \\
+                \multirow{4}*\textbf{2}
+                & \multirow{2}*\textbf{Continuous} & {$\sqrt{\epsilon_{PEHE}}$}  &   / & /  & / & \textbf{9.337} &  23.348   & 17.277 & 15.945 & \underline{9.623} & 12.134 & 13.060  \\
+				  ~ & ~ & $\epsilon_{ATE}$  &   / & /  & / & \textbf{2.102} &  10.920  & 8.624 & 8.004 & \underline{2.243} & 6.530 & 7.191  \\
+                    ~ & \multirow{2}*\textbf{Binary} & {$\sqrt{\epsilon_{PEHE}}$}  &  \textbf{0.353} & 0.430  & \underline{0.392} & 0.411 &  1.047  & 0.820 & 0.699 & 0.423 & 0.554 & 0.598  
+                    \\
+				~ & ~ & $\epsilon_{ATE}$  &  \textbf{0.105} & 0.136  & \underline{0.114} & 0.126 &  0.417  & 0.255 & 0.202 & 0.131 & 0.164 & 0.160
+                 \\
+				\bottomrule[1pt]
+		\end{tabular}}
+	\end{center}
+\end{table*}
+
+In this section, we conduct experimental results to answer the following three questions:
+\begin{itemize}
+    \item \textbf{Q1}: How our method performs compared with all the baseline methods on a public dataset and two industrial datasets? (Answered in Section  \ref{sec:blogcatalog} and Section \ref{sec:uplift_curve}.)
+    \item \textbf{Q2}: How can our proposed estimators generalize to other GNNs? (Answered in Section \ref{sec:gene_GNN}.)
+    \item \textbf{Q3}: What is the relationship between the user uplift and the social relation? (Answered in Section \ref{sec:neigh}.)
+    \item \textbf{Q4}: How do our proposed graph-based methods and comparing methods perform with different amounts of labeled data? (Answered in Section \ref{sec:scarcity}.)
+\end{itemize}
+
+\subsection{Experiment settings}
+\subsubsection{Dataset} 
+We evaluate our method on one public dataset and two real-world industrial datasets. 
+
+Firstly, we follow \cite{guo2020learning} to  build a semi-synthetic dataset base on BlogCatalog: the node features and network structures are collected from the BlogCatalog. The treatments and outcomes are synthesized. There are confounders in this dataset and the control and test datasets are biased. In detail, the node represents a blogger and the edge denotes their social relationships. The node features are bag-of-words representations of keywords to describe the bloggers. We synthesize (1) the outcomes as the rating of readers on the bloggers and (2) the treatments as whether the blog contents are shown on mobile devices or desktops. The detailed synthetic process for the synthetic process can be found in Appendix \ref{appn:dataset}. There are three different parameters $C, \kappa_1, \kappa_2$ that control the synthetic results of the dataset. Following the experimental settings in previous work\cite{guo2020learning}, we set $C=5, \kappa_1=10, \kappa_2 \in\{0.5,2\}$.
+
+The two real-world industrial datasets are collected from an internet company\footnote{The data set does not contain any Personal Identifiable Information. The data set is desensitized and encrypted. Adequate data protection was carried out during the experiment to prevent the risk of data copy leakage, and the data set was destroyed after the experiment. The data set is only used for academic research, it does not represent any real business situation.}, denoted as Industry-A and Industry-B. The company has two products and plans to send discount coupons to users who have not purchased the products. 
+Because the discount coupons are limited,  we need to find the users who are most likely to purchase the product when receiving the coupons.
+This can be regarded as a problem of uplift modeling.
+For each dataset, the users are randomly split into the treatment group and the control group. The users of the treatment group will receive the coupons and the users of the control group will not. Then we observe whether they will purchase the product for the following $30$ days. The nodes represent users and the edges represent users' friendships. The user features mainly consist of statistical features regarding the user's profile and behaviors in our platform. Note that the collection of data removes the user's sensitive information and obtains the user's privacy authorization.
+
+The detail statistics of three datasets are shown in Table \ref{tab:stat}.
+
+\begin{table}
+    \small 
+	\begin{center}
+		\caption{Statistics of datasets. $|V|$ denotes the number of users, $|E|$ denotes the number of edges and $|F|$ denotes the number of attributes. ${V_t}$ and ${V_c}$ represent the set of users in the treatment group and the set of users in the control group, respectively. }
+		\label{tab:stat}
+		\small
+		\resizebox{0.5\textwidth}{!}{
+			\begin{tabular}{cccccc}
+				\toprule[1pt]
+				\textbf{Datasets}&$|V|$&$|E|$&$|F|$&$|V_t|$&$|V_c|$\\
+				\hline
+				\textbf{Industry-A}  &  505.2K  &  2.2M  & 652   &252.6K & 252.6K \\
+				\textbf{Industry-B}  &  573.8K  &  2.6M  & 915   &286.9K & 286.9K \\
+                    \textbf{Blogcatalog}  &  5.2K  &  173.5K  & 8189   & 1.6K & 3.6K \\
+				\bottomrule[1pt]
+		\end{tabular}}
+	\end{center}
+	\label{tabdatasets}
+\end{table}
+
+\subsubsection{Baseline Methods}
+To evaluate the effectiveness of GNUM-PL and GNUM-CT, we compare them with three lines of state-of-the-art uplift methods, including NN-based methods (Two-Model~\cite{radcliffe2007using} and CTM~\cite{jaskowski2012uplift}), a tree-based method (Uplift-RF~\cite{guelman2015uplift}), Causal-effect-based methods (DML~\cite{chernozhukov2018double} and DRL~\cite{zhao2015doubly}) and graph-based uplift methods (NetDeconf~\cite{guo2020learning}). GNUM-GCN and GNUM-GAT are implemented by using the GCN or GAN as the GNN backbones but still use partial-label-based uplift estimator. More details of the comparing methods can be found in Appendix \ref{appn:baseline}. And the parameter settings can be found in Appendix \ref{appn:para}.
+
+\begin{figure*}[htb]
+	\centering
+	\begin{minipage}{0.24\textwidth}  
+		\small
+		\centerline{\includegraphics[width=1\columnwidth]{figures/d1_dw.pdf}}
+		\centerline{(a) Uplift Curve on Industry-A.}
+	\end{minipage}
+	\begin{minipage}{0.24\textwidth}
+		\small
+		\centerline{\includegraphics[width=1\columnwidth]{figures/d2_dw.pdf}}
+		\centerline{(b) Uplift Curve on Industry-B.}
+	\end{minipage}
+	\begin{minipage}{0.24\textwidth}  
+		\small
+		\centerline{\includegraphics[width=1\columnwidth]{figures/Qini_dataset1.pdf}}
+		\centerline{(c) Qini Coefficient on Industry-A.}
+	\end{minipage}
+	\begin{minipage}{0.24\textwidth}
+		\small
+		\centerline{\includegraphics[width=1\columnwidth]{figures/Qini_dataset2.pdf}}
+		\centerline{(d) Qini Coefficient on Industry-B.}
+	\end{minipage}
+	\caption{The uplift curve on (a) Industry-A and (b) Industry-B: The ordinate represents the uplift value defined in Eq. \ref{eqn:exp_uplift}, and the abscissa represents users with top $k$\% largest predicted uplift values. The Qini Coefficient on (c) Industry-A and (d) Industry-B.}
+	\label{fig:cum_uplift}	
+\end{figure*}
+
+\begin{table*}[h]
+	\caption{The detailed comparison of the uplift curve. The result of the best performance is in bold and the result of the second best performance is underlined. }
+	\centering
+	\label{tab:up}  
+	\begin{center}	
+		\small
+		\resizebox{\textwidth}{!}{
+			\begin{tabular}{cccccccccccc}
+				\toprule[1pt]
+				{Datasets}&{Quantiles}&GNUM-PL&GNUM-GCN&GNUM-GAT&GNUM-CT&Two-Model&CTM&Uplift-RF&NetDeconf&DML&DRL\\
+				\hline
+				\multirow{2}*\textbf{Industry-A}  & {Top10\%}  &   \textbf{6.92\%}  & 6.58\%  & \underline{6.79\%} & 6.67\% & 4.18\%  &5.50\% & 6.00\% & 6.54\% & 6.50\% & 6.44\%  \\
+				~ & {Top20\%}  &   \textbf{5.52\%}  & 5.22\%  & \underline{5.45\%} & 5.34\% & 3.12\% & 3.63\% & 4.19\% & 5.19\% & 5.02\% & 4.86\% \\
+				\multirow{2}*\textbf{Industry-B}  & {Top10\%}  &  \textbf{8.72\%} & 8.38\%  & \underline{8.51\%} & 8.47\% & 6.44\%   & 6.92\% & 7.51\% & 8.35\% & 8.21\% & 7.98\% \\
+				~ & {Top20\%}  & \textbf{8.20\%} & 7.85\% & \underline{8.11\%}  & 7.97\%  & 5.95\%  & 6.21\% & 6.58\%  & 7.74\% & 7.67\%  & 7.32\%\\
+				\bottomrule[1pt]
+		\end{tabular}}
+	\end{center}
+\end{table*}
+
+\subsection{Overall Performance}
+
+\subsubsection{Results on BlogCatalog}
+\label{sec:blogcatalog}
+
+Since we have both factual and counterfactual outcomes for each user in BlogCatalog, we can measure the performance of different methods by comparing the predicted average treatment effect (ATE) with the ground-truth ATE, where ATE is defined as the average uplift over the users as $ATE=\frac{1}{n} \sum_{i=1}^n \tau_i$. Specifically, we use two evaluation metrics, i.e. the Rooted Precision in Estimation of Heterogeneous Effect ($\epsilon_{P E H E}=\sqrt{\frac{1}{n} \sum_{i=1}\left(\hat{\tau}_i-\tau_i\right)^2}$) and Mean Absolute Error on ATE ($\epsilon_{A T E}=\left|\frac{1}{n} \sum_{i=1}\left(\hat{\tau}_i\right)-\frac{1}{n} \sum_{i=1}\left(\tau_i\right)\right|$). Furthermore, we also extend the setting to the scenario of the discrete outcome, by setting the outcome of each sample greater than the mean ATE value as $1$, otherwise as $0$. It is worth noting that these two metrics require both factual and counterfactual outcomes. Therefore, we only report the results on semi-synthetic dataset BlogCatalog in Table \ref{tab:ate}. Then we have the following observations:
+\begin{itemize}
+    \item In the regression setting, our proposed method GNUM-CT outperforms other baseline methods by $5$\% to $10$\%, which demonstrates that the proposed class-transformed target is able to utilize the graph-based data more effectively. 
+    \item In the classification setting, our proposed method GNUM-PL outperforms GNUM-CT and other baseline methods by $12$\% to $25$\%, which demonstrates that the proposed partial-label learning can further utilize the labeled graph data to improve the overall performance. 
+    \item All the graph-based methods achieve a substantial gain over non-graph-based methods, which demonstrates the importance of graph data for uplift modeling. 
+    \item The result that the Two-Model achieves bad results demonstrates that it is very important to use a common uplift estimator to utilize the treatment and control group of data together. 
+\end{itemize}
+
+\subsubsection{Results on Industrial Datasets}
+\label{sec:uplift_curve}
+Without the counterfactual outcome, we use commonly accepted metrics, i.e. uplift curve and the Qini Coefficient value to evaluate the performance of different methods on our industrial datasets. 
+
+In detail, we sort all users in the treatment group and control group based on their predicted uplift values. Then we will select the top-$k$\% users to get their uplift $Y_k$ as: 
+
+\begin{equation} 
+	Y_k=\sum\limits_{i \in V^k_t}{\hat{\tau}_i}/|V^k_t| - \sum\limits_{i \in V^k_c}{\hat{\tau}_i}/|V^k_c|
+\label{eqn:exp_uplift}
+\end{equation}
+where $V^k_t$ and $V^k_c$ are the set of the top $k$\% samples of the treatment and control group, and $\hat{\tau}_i$ is the predicted uplift value by the model. By changing the $k$ from $10$\% to $100$\%, we can obtain the curve on $Y_k$. Note that the leftmost point corresponds to the top $10$\% users which the models predict as the most sensitive to the treatment and the following right part corresponds to the  top $20$\% users. Since the ATE of the dataset is fixed, all the curves will converge to the same value. A well-performing model will show a curve with a larger slope. The left part has larger values than other methods. The results of uplift curve is shown in Figure \ref{fig:cum_uplift}(a)(b). In addition, we introduce the Qini metric to measure the overall performance of uplift methods \cite{radcliffe2007using}. Similar to the AUC value, the Qini metric measures the distance between the Qini curve and the random curve. The detail of the calculation process of Qini curve and Qini Coefficient can be referred in \cite{radcliffe2007using}. We show the results of the Qini Coefficient in Figure \ref{fig:cum_uplift}(c)(d). 
+
+From Figure \ref{fig:cum_uplift}, we find that the proposed method GNUM-PL and GNUM-CT consistently outperform the baseline methods on two metrics. Specifically, GNUM-PL improves the best performing baseline method NetDeconf by an improvement of $21$\% and $14$\% on two datasets in terms of Qini Coefficient. It demonstrates that our proposed methods have a better ranking performance regarding the user's uplift. Additionally, the result that GNUM-PL performs better than GNUM-CT demonstrates that in the classification scenario, the proposed uplift estimators based on partial label learning can further improve the overall performance because partial label learning can utilize the labeled data more effectively. The result that CTM outperforms Two-Model demonstrates that a common uplift estimator to model both the treatment and control group data is very essential. 
+
+In many real-world scenarios, we only focus on samples with uplift values ranking ahead because we will only give actions to users with larger uplift values. Therefore, we give a detailed comparison of the users with the largest $20$\% uplift values in Table \ref{tab:up}. We can find that GNUM-CT and GNUM-PL also achieve better results than other baseline methods, which demonstrates that our proposed methods with the two estimators can find users with larger uplift.
+
+\begin{table*}
+	\caption{The mean-squared error of the inferred uplift between different users.}
+	\label{tab:ana}
+	\begin{center}	
+		\small
+		\resizebox{\textwidth}{!}{
+			\begin{tabular}{cccccccccccc}
+				\toprule[1pt]
+				{Datasets}&{Sampling strategy   }&GNUM-PL&GNUM-GCN&GNUM-GAT&GNUM-CT&NetDeconf&Two-Model&CTM&Uplift-RF&DML&DRL\\
+				\hline
+				\multirow{2}*\textbf{Industry-A} & Neighbors & ${1.05*10^{-3}}$ & ${0.97*10^{-3}}$ & ${1.07*10^{-3}}$ & ${1.11*10^{-3}}$ & ${1.07*10^{-3}}$ & ${1.29*10^{-3}}$   &${1.30*10^{-3}}$  & ${1.22*10^{-3}}$ &  ${1.14*10^{-3}}$ & ${1.18*10^{-3}}$  \\
+				~ & Random  & ${1.40*10^{-3}}$ & ${1.38*10^{-3}}$& ${1.40*10^{-3}}$ & ${1.39*10^{-3}}$ & ${1.37*10^{-3}}$
+				& ${1.35*10^{-3}}$  &${1.41*10^{-3}}$  & ${1.39*10^{-3}}$  & ${1.36*10^{-3}}$ & ${1.38*10^{-3}}$\\
+				\multirow{2}*\textbf{Industry-B} & Neighbors  &  ${1.44*10^{-3}}$ & ${1.32*10^{-3}}$  & ${1.42*10^{-3}}$ & ${1.49*10^{-3}}$ & ${1.48*10^{-3}}$ & ${1.75*10^{-3}}$   & ${1.68*10^{-3}}$ & ${1.63*10^{-3}}$  & ${1.50*10^{-3}}$ & ${1.55*10^{-3}}$\\
+				~ & Random  & ${1.95*10^{-3}}$ & ${1.94*10^{-3}}$  & ${1.93*10^{-3}}$ & ${1.95*10^{-3}}$ & ${1.91*10^{-3}}$  & ${1.87*10^{-3}}$   & ${1.90*10^{-3}}$ & ${1.88*10^{-3}}$  & ${1.93*10^{-3}}$ & ${1.92*10^{-3}}$ \\
+				\bottomrule[1pt]
+		\end{tabular}}
+	\end{center}
+\end{table*}
+
+\begin{figure*}[htb]
+	\centering
+	\begin{minipage}{0.24\textwidth}  
+		\small
+		\centerline{\includegraphics[width=1\columnwidth]{figures/d1_rob.pdf}}
+		\centerline{(a) Industry-A.}
+	\end{minipage}
+	\begin{minipage}{0.24\textwidth}
+		\small
+		\centerline{\includegraphics[width=1\columnwidth]{figures/d2_rob.pdf}}
+		\centerline{(b) Industry-B.}
+	\end{minipage}
+	\begin{minipage}{0.24\textwidth}  
+		\small
+		\centerline{\includegraphics[width=1\columnwidth]{figures/d1_robg.pdf}}
+		\centerline{(c) Industry-A.}
+	\end{minipage}
+	\begin{minipage}{0.24\textwidth}
+		\small
+		\centerline{\includegraphics[width=1\columnwidth]{figures/d2_robg.pdf}}
+		\centerline{(d) Industry-B.}
+	\end{minipage}
+	\caption{The Qini Coefficient of the different uplift methods under different percentage of labeled users. The ordinate represents the value of Qini Coefficient, and the abscissa represents different percentage of labeled users. (c)(d) More comparisons by replacing the GNN layers in GNUM-PL with GCN/GAT.  }
+	\label{fig:cum_rob}	
+\end{figure*}
+
+\subsection{In-Depth Analysis}
+\subsubsection{Generality to different backbones of GNN models}
+\label{sec:gene_GNN}
+We further replace our GNN models with GAT and GCN to demonstrate the generality of our proposed uplift estimators. The results are shown in Figure \ref{fig:cum_uplift2}. We find in most cases, our proposed graph-based methods GNUM-PL, GNUM-GCN and GNUM-GAT perform better than NetDeconf and DML. It demonstrates that our proposed uplift estimators can be adapted to different GNN-based representation learning methods effectively. Furthermore, GNUM-PL still achieves the best performance because our breadth and depth aggregators can utilize more informative information from the social graph. 
+
+\begin{figure}[htb]
+	\centering
+	\begin{minipage}{0.23\textwidth}  
+		\small
+		\centerline{\includegraphics[width=1\columnwidth]{figures/d1_dwg.pdf}}
+		\centerline{(a) Industry-A.}
+	\end{minipage}
+	\begin{minipage}{0.23\textwidth}
+		\small
+		\centerline{\includegraphics[width=1\columnwidth]{figures/d2_dwg.pdf}}
+		\centerline{(b) Industry-B.}
+	\end{minipage}
+	\caption{The uplift curve of different graph-based methods. }
+	\label{fig:cum_uplift2}	
+\end{figure}
+
+\subsubsection{Correlation between Uplift and Social Relationship}
+\label{sec:neigh}
+Previously, we claim that the uplift difference between users with social relationships is smaller than the uplift difference between random users. To verify this, for each user we first calculate the average of the inferred uplift value of his neighbors. Then, according to the number of his neighbors, we randomly sample the same number of users to calculate the average of their inferred uplift values. Finally, we compare the uplift difference between the above two averaged values and the user’s own inferred uplift value. Specifically, we use mean-squared error (MSE) as the evaluation metric.
+
+The result of the uplift analysis is shown in Table \ref{tab:ana}.
+We can see that for the graph-based methods, the uplift difference between neighbors is significantly smaller than the difference between random users compared with non-graph-based methods. 
+Compared with the random sampling strategy, the MSE of inferred uplift calculated from neighbors drops by more than 30\%.
+It demonstrates that the graph-based method can indeed learn the similarity information from neighbors which is useful for uplift modeling. It is worth mentioning that the smaller difference of uplift is not representing that the model performs better necessarily. The result of GNUM-GCN is worse than that of GNUM-PL and GNUM-GAT because GNUM-GCN does not capture the attentional weight of different neighbors.
+The uplift differences between the neighbors of Two-Model and CTM are largest, since they can not capture structural information at all. Therefore, this result demonstrates that it is very essential to utilize social relations to do the uplift estimation. And the performance gain can be achieved by proposing the graph-based model to mine the social relationships between users. 
+
+\subsubsection{Data Scarcity Analysis}
+\label{sec:scarcity}
+Due to the labeled data scarcity problem for uplift modeling, we propose GNUM-PL and GNUM-CT in this paper to alleviate the problem. To prove this point, we randomly sample $10\%$ to $90\%$  of the labeled users to train different uplift models and compare their performance on the same test set. Note that we will not sample the edges of the graph. We use the Qini Coefficient to evaluate the performance and note that the uplift curve is consistent with the Qini coefficient. The experimental results are shown in Figure ~\ref{fig:cum_rob}(a)(b) and we have the following observations: 
+\begin{itemize}
+    \item The performance of GNUM-PL and GNUM-CT are consistently above the curves of baseline methods, which demonstrates that both the partial-label-based uplift estimator and the class-transformed uplift estimator are robust to the label scarcity. Furthermore, in the classification setting, the partial-label-based uplift estimator can further improve the performance by utilizing more labeled data explicitly. 
+    \item Comparing Netdeconf and other baseline methods, we find that NetDeconf drops more quickly than other baseline methods, which proves our assumption that data scarcity is a more severe problem for the graph-based uplift method because of the more parameters. Therefore, our solution for alleviating the labeled data scarcity problem is very critical. 
+\end{itemize}
+
+Moreover, as is shown in Figure ~\ref{fig:cum_rob}(c)(d), GNUM-GCN and GNUM-GAT are still robust to the data scarcity problem. It demonstrates that our partial-label-based uplift estimator can alleviate the data scarcity problem when using different types of GNN-based models. 

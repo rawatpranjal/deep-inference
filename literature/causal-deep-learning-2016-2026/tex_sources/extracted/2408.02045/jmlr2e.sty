@@ -1,0 +1,673 @@
+%
+% File:    Macros for Journal of Machine Learning Research
+%      Very minor modification of macros for Journal of Artificial 
+%      Intelligence Research (jair.sty) 
+%
+% Suggestions: Submit an issue or pull request to 
+%   https://github.com/JournalMLR/jmlr-style-file
+%
+%   Last edited October 9, 2000 by Leslie Pack Kaelbling
+%   Last edited January 23, 2001 by Alex J. Smola (we should set up RCS or CVS)
+%   Last edited March 29, 2004 Erik G. Learned-Miller
+%   Last edited January 17, 2016 Charles Sutton 
+%   Last edited January 9, 2017 Charles Sutton 
+%    (We have now set up GIT, good thing that we waited for it to
+%     be invented.)
+%
+%          The name of this file should follow the article document
+%          type, e.g. \documentstyle[jmlr]{article}
+
+%          Copied and edited from similar file for Machine Learning Journal.
+% Original Author:  Jeff Schlimmer
+% Edited by: Kevin Thompson, Martha Del Alto, Helen Stewart, Steve Minton \& Pandu Nayak.
+% Last edited: Mon  May  3 20:40:00 1993 by kthompso (Kevin Thompson) on muir
+
+\typeout{Document Style `jmlr' -- January 2016.}
+
+\newif\if@abbrvbib\@abbrvbibfalse
+\DeclareOption{abbrvbib}{\@abbrvbibtrue}
+
+\newif\if@usehyper\@usehypertrue
+\DeclareOption{nohyperref}{\@usehyperfalse}
+\DeclareOption{hyperref}{\@usehypertrue}
+
+\DeclareOption*{\PackageWarning{jmlr}{Unknown â€˜\CurrentOptionâ€™}}
+\ProcessOptions\relax
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                             REQUIRED PACKAGES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\RequirePackage{epsfig}
+\RequirePackage{amsmath, amsfonts, amsthm, amssymb, bm, bbm, verbatim, dsfont, mathtools, mathrsfs}
+\RequirePackage{natbib}
+\RequirePackage{graphicx}
+\RequirePackage{enumitem}
+
+\RequirePackage{algorithm}
+\RequirePackage{algorithmicx}
+% \usepackage[noend]{algorithmic}
+\RequirePackage{subcaption}
+
+\if@usehyper
+\RequirePackage[colorlinks=false,allbordercolors={1 1 1}]{hyperref}
+\fi
+
+\if@abbrvbib
+\bibliographystyle{abbrvnat}
+\else
+\bibliographystyle{plainnat}
+\fi
+
+\bibpunct{(}{)}{;}{a}{,}{,}
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                             P A G E   S I Z E
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+% Change the overall width of the page.  If these parameters are
+%       changed, they will require corresponding changes in the
+%       maketitle section.
+%
+\renewcommand{\topfraction}{0.95}   % let figure take up nearly whole page
+\renewcommand{\textfraction}{0.05}  % let figure take up nearly whole page
+
+% Specify the dimensions of each page
+
+\oddsidemargin .25in    %   Note \oddsidemargin = \evensidemargin
+\evensidemargin .25in
+\marginparwidth 0.07 true in
+%\marginparwidth 0.75 true in
+%\topmargin 0 true pt           % Nominal distance from top of page to top of
+%\topmargin 0.125in
+\topmargin -0.5in
+\addtolength{\headsep}{0.25in}
+\textheight 8.5 true in       % Height of text (including footnotes & figures)
+\textwidth 6.0 true in        % Width of text line.
+\widowpenalty=10000
+\clubpenalty=10000
+\@twosidetrue \@mparswitchtrue \def\ds@draft{\overfullrule 5pt}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                               S E C T I O N S
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Definitions for nicer (?) sections, etc., ideas from Pat Langley.
+% Numbering for sections, etc. is taken care of automatically.
+
+\def\@startsiction#1#2#3#4#5#6{\if@noskipsec \leavevmode \fi
+   \par \@tempskipa #4\relax
+   \@afterindenttrue
+   \ifdim \@tempskipa <\z@ \@tempskipa -\@tempskipa \@afterindentfalse\fi
+   \if@nobreak \everypar{}\else
+     \addpenalty{\@secpenalty}\addvspace{\@tempskipa}\fi \@ifstar
+     {\@ssect{#3}{#4}{#5}{#6}}{\@dblarg{\@sict{#1}{#2}{#3}{#4}{#5}{#6}}}}
+
+\def\@sict#1#2#3#4#5#6[#7]#8{\ifnum #2>\c@secnumdepth
+     \def\@svsec{}\else
+     \refstepcounter{#1}\edef\@svsec{\csname the#1\endcsname}\fi
+     \@tempskipa #5\relax
+      \ifdim \@tempskipa>\z@
+        \begingroup #6\relax
+          \@hangfrom{\hskip #3\relax\@svsec.\hskip 0.1em}
+                    {\interlinepenalty \@M #8\par}
+        \endgroup
+       \csname #1mark\endcsname{#7}\addcontentsline
+         {toc}{#1}{\ifnum #2>\c@secnumdepth \else
+                      \protect\numberline{\csname the#1\endcsname}\fi
+                    #7}\else
+        \def\@svsechd{#6\hskip #3\@svsec #8\csname #1mark\endcsname
+                      {#7}\addcontentsline
+                           {toc}{#1}{\ifnum #2>\c@secnumdepth \else
+                             \protect\numberline{\csname the#1\endcsname}\fi
+                       #7}}\fi
+     \@xsect{#5}}
+
+\def\@sect#1#2#3#4#5#6[#7]#8{\ifnum #2>\c@secnumdepth
+     \def\@svsec{}\else 
+     \refstepcounter{#1}\edef\@svsec{\csname the#1\endcsname\hskip 0.5em }\fi
+     \@tempskipa #5\relax
+      \ifdim \@tempskipa>\z@ 
+        \begingroup #6\relax
+          \@hangfrom{\hskip #3\relax\@svsec}{\interlinepenalty \@M #8\par}
+        \endgroup
+       \csname #1mark\endcsname{#7}\addcontentsline
+         {toc}{#1}{\ifnum #2>\c@secnumdepth \else
+                      \protect\numberline{\csname the#1\endcsname}\fi
+                    #7}\else
+        \def\@svsechd{#6\hskip #3\@svsec #8\csname #1mark\endcsname
+                      {#7}\addcontentsline
+                           {toc}{#1}{\ifnum #2>\c@secnumdepth \else
+                             \protect\numberline{\csname the#1\endcsname}\fi
+                       #7}}\fi
+     \@xsect{#5}}
+
+\def\thesection {\arabic{section}}
+\def\thesubsection {\thesection.\arabic{subsection}}
+\def\section{\@startsiction{section}{1}{\z@}{-0.24in}{0.10in}
+             {\large\bf\raggedright}}
+\def\subsection{\@startsection{subsection}{2}{\z@}{-0.20in}{0.08in}
+                {\normalsize\bf\raggedright}}
+\def\subsubsection{\@startsection{subsubsection}{3}{\z@}{-0.18in}{0.08in}
+                {\normalsize\sc\raggedright}}
+\def\paragraph{\@startsiction{paragraph}{4}{\z@}{1.5ex plus
+  0.5ex minus .2ex}{-1em}{\normalsize\bf}}
+\def\subparagraph{\@startsiction{subparagraph}{5}{\z@}{1.5ex plus
+  0.5ex minus .2ex}{-1em}{\normalsize\bf}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                              F O O T N O T E S
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Change the size of the footnote rule
+%
+% \renewcommand{\footnoterule}{\vspace{10pt}\hrule width 0mm}
+
+\long\def\@makefntext#1{\@setpar{\@@par\@tempdima \hsize 
+             \advance\@tempdima-15pt\parshape \@ne 15pt \@tempdima}\par
+             \parindent 2em\noindent \hbox to \z@{\hss{\@thefnmark}. \hfil}#1}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                               A B S T R A C T
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% use \begin{abstract} .. \end{abstract} for abstracts.
+\renewenvironment{abstract}
+{\centerline{\large\bf Abstract}\vspace{0.7ex}%
+  \bgroup\leftskip 20pt\rightskip 20pt\small\noindent\ignorespaces}%
+{\par\egroup\vskip 0.25ex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                               KEYWORDS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% use \begin{keywords} .. \end{keywords} for keywordss.
+\newenvironment{keywords}
+{\bgroup\leftskip 20pt\rightskip 20pt \small\noindent{\bf Keywords:} }%
+{\par\egroup\vskip 0.25ex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                        FIRST PAGE, TITLE, AUTHOR
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Author information can be set in various styles:
+% For several authors from the same institution:
+% \author{Author 1 \and ... \and Author n \\
+%         \addr{Address line} \\ ... \\ \addr{Address line}}
+% if the names do not fit well on one line use
+%         Author 1 \\ {\bf Author 2} \\ ... \\ {\bf Author n} \\
+% To start a seperate ``row'' of authors use \AND, as in
+% \author{Author 1 \\ \addr{Address line} \\  ... \\ \addr{Address line}
+%         \AND
+%         Author 2 \\ \addr{Address line} \\ ... \\ \addr{Address line} \And
+%         Author 3 \\ \addr{Address line} \\ ... \\ \addr{Address line}}
+
+% Title stuff, borrowed in part from aaai92.sty
+
+\newlength\aftertitskip     \newlength\beforetitskip
+\newlength\interauthorskip  \newlength\aftermaketitskip
+
+%% Changeable parameters.
+\setlength\aftertitskip{0.1in plus 0.2in minus 0.2in}
+\setlength\beforetitskip{0.05in plus 0.08in minus 0.08in}
+\setlength\interauthorskip{0.08in plus 0.1in minus 0.1in}
+\setlength\aftermaketitskip{0.3in plus 0.1in minus 0.1in}
+
+%% overall definition of maketitle, @maketitle does the real work
+\def\maketitle{\par
+ \begingroup
+   \def\thefootnote{\fnsymbol{footnote}}
+   \def\@makefnmark{\hbox to 0pt{$^{\@thefnmark}$\hss}}
+   \@maketitle \@thanks
+ \endgroup
+\setcounter{footnote}{0}
+ \let\maketitle\relax \let\@maketitle\relax
+ \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+
+\def\@startauthor{\noindent \normalsize\bf}
+\def\@endauthor{}
+\def\@starteditor{\noindent \small {\bf Editor:~}}
+\def\@endeditor{\normalsize}
+\def\@maketitle{\vbox{\hsize\textwidth
+ \linewidth\hsize \vskip \beforetitskip
+ {\begin{center} \Large\bf \@title \par \end{center}} \vskip \aftertitskip
+ {\def\and{\unskip\enspace{\rm and}\enspace}%
+  \def\addr{\small\it}%
+  \def\email{\hfill\small\sc}%
+  \def\name{\normalsize\bf}%
+  \def\AND{\@endauthor\rm\hss \vskip \interauthorskip \@startauthor}
+  \@startauthor \@author \@endauthor}
+
+  \vskip \aftermaketitskip
+  \noindent \@starteditor \@editor \@endeditor
+  \vskip \aftermaketitskip
+}}
+
+\def\editor#1{\gdef\@editor{#1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%
+%%% Pagestyle
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Defines the pagestyle for the title page.
+%% Usage: \jmlrheading{1}{1993}{1-15}{8/93}{9/93}{14-115}{Jane Q. Public and A. U. Thor}
+%%        \jmlrheading{vol}{year}{pages}{Submitted date}{published date}{paper id}{authors}
+%%
+%% If your paper required revisions that were reviewed by the action editor, then indicate
+%%  this by, e.g.
+%%   \jmlrheading{1}{1993}{1-15}{8/93; Revised 10/93}{12/93}{14-115}{Jane Q. Public and A. U. Thor}
+
+\def\firstpageno#1{\setcounter{page}{#1}}
+
+\def\jmlrheading#1#2#3#4#5#6#7{\def\ps@jmlrtps{\let\@mkboth\@gobbletwo%
+\def\@oddhead{\scriptsize Journal of Machine Learning Research #1 (#2) #3 \hfill Submitted #4; Published #5}%
+\def\@oddfoot{\parbox[t]{\textwidth}{\raggedright \scriptsize \copyright #2 #7.\\[5pt] 
+License: CC-BY 4.0, see \url{https://creativecommons.org/licenses/by/4.0/}. Attribution requirements
+are provided at \url{http://jmlr.org/papers/v#1/#6.html}.\hfill}}%
+
+\def\@evenhead{}\def\@evenfoot{}}%
+\thispagestyle{jmlrtps}}
+
+%% Defines the pagestyle for the rest of the pages
+%% Usage: \ShortHeadings{Minimizing Conflicts}{Minton et al}
+%%        \ShortHeadings{short title}{short authors}
+
+\def\ShortHeadings#1#2{\def\ps@jmlrps{\let\@mkboth\@gobbletwo%
+\def\@oddhead{\hfill {\small\sc #1} \hfill}%
+\def\@oddfoot{\hfill \small\rm \thepage \hfill}%
+\def\@evenhead{\hfill {\small\sc #2} \hfill}%
+\def\@evenfoot{\hfill \small\rm \thepage \hfill}}%
+\pagestyle{jmlrps}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                               MISCELLANY
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Define macros for figure captions and table titles
+
+% Figurecaption prints the caption title flush left.
+% \def\figurecaption#1#2{\noindent\hangindent 42pt
+%                        \hbox to 36pt {\sl #1 \hfil}
+%                        \ignorespaces #2}
+% \def\figurecaption#1#2{\noindent\hangindent 46pt
+%                        \hbox to 41pt {\small\sl #1 \hfil}
+%                        \ignorespaces {\small #2}}
+\def\figurecaption#1#2{\noindent\hangindent 40pt
+                       \hbox to 36pt {\small\sl #1 \hfil}
+                       \ignorespaces {\small #2}}
+% Figurecenter prints the caption title centered.
+\def\figurecenter#1#2{\centerline{{\sl #1} #2}}
+\def\figurecenter#1#2{\centerline{{\small\sl #1} {\small #2}}}
+
+%
+%  Allow ``hanging indents'' in long captions
+%
+\long\def\@makecaption#1#2{
+   \vskip 10pt 
+   \setbox\@tempboxa\hbox{#1: #2}
+   \ifdim \wd\@tempboxa >\hsize               % IF longer than one line:
+       \begin{list}{#1:}{
+       \settowidth{\labelwidth}{#1:}
+       \setlength{\leftmargin}{\labelwidth}
+       \addtolength{\leftmargin}{\labelsep}
+        }\item #2 \end{list}\par   % Output in quote mode
+     \else                                    %   ELSE  center.
+       \hbox to\hsize{\hfil\box\@tempboxa\hfil}  
+   \fi}
+
+
+% Define strut macros for skipping spaces above and below text in a
+% tabular environment.
+\def\abovestrut#1{\rule[0in]{0in}{#1}\ignorespaces}
+\def\belowstrut#1{\rule[-#1]{0in}{#1}\ignorespaces}
+
+% Acknowledgments
+\long\def\acks#1{\vskip 0.3in\noindent{\large\bf Acknowledgements}\vskip 0.2in
+\noindent #1}
+
+% Research Note
+\long\def\researchnote#1{\noindent {\LARGE\it Research Note} #1}
+
+\renewcommand{\appendix}{\par
+  \setcounter{section}{0}
+  \setcounter{subsection}{0}
+  \def\thesection{\Alph{section}}
+\def\section{\@ifnextchar*{\@startsiction{section}{1}{\z@}{-0.24in}{0.10in}%
+             {\large\bf\raggedright}}%
+{\@startsiction{section}{1}{\z@}{-0.24in}{0.10in}
+             {\large\bf\raggedright Appendix\ }}}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                               PROOF, THEOREM, and FRIENDS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\BlackBox}{\rule{1.5ex}{1.5ex}}  % end of proof
+\ifdefined\proof
+    \renewenvironment{proof}{\par\noindent{\bf Proof\ }}{\hfill\BlackBox\\[2mm]}
+\else
+    \newenvironment{proof}{\par\noindent{\bf Proof\ }}{\hfill\BlackBox\\[2mm]}
+\fi
+\newtheorem{example}{Example} 
+\newtheorem{example1}{Example} 
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma} 
+\newtheorem{proposition}[theorem]{Proposition} 
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{assumption}[theorem]{Assumption}
+
+\newcommand{\dTV}{d_{\rm TV}}
+\newcommand{\tb}{\widetilde{b}}
+\newcommand{\tr}{\widetilde{r}}
+\newcommand{\tc}{\widetilde{c}}
+\newcommand{\tu}{{\widetilde{u}}}
+\newcommand{\tv}{{\widetilde{v}}}
+\newcommand{\tx}{{\widetilde{x}}}
+\newcommand{\ty}{{\widetilde{y}}}
+\newcommand{\tz}{{\widetilde{z}}}
+\newcommand{\tA}{{\widetilde{A}}}
+\newcommand{\tB}{{\widetilde{B}}}
+\newcommand{\tC}{{\widetilde{C}}}
+\newcommand{\tD}{{\widetilde{D}}}
+\newcommand{\tE}{{\widetilde{E}}}
+\newcommand{\tF}{{\widetilde{F}}}
+\newcommand{\tG}{{\widetilde{G}}}
+\newcommand{\tH}{{\widetilde{H}}}
+\newcommand{\tI}{{\widetilde{I}}}
+\newcommand{\tJ}{{\widetilde{J}}}
+\newcommand{\tK}{{\widetilde{K}}}
+\newcommand{\tL}{{\widetilde{L}}}
+\newcommand{\tM}{{\widetilde{M}}}
+\newcommand{\tN}{{\widetilde{N}}}
+\newcommand{\tO}{{\widetilde{O}}}
+\newcommand{\tP}{{\widetilde{P}}}
+\newcommand{\tQ}{{\widetilde{Q}}}
+\newcommand{\tR}{{\widetilde{R}}}
+\newcommand{\tS}{{\widetilde{S}}}
+\newcommand{\tT}{{\widetilde{T}}}
+\newcommand{\tU}{{\widetilde{U}}}
+\newcommand{\tV}{{\widetilde{V}}}
+\newcommand{\tW}{{\widetilde{W}}}
+\newcommand{\tX}{{\widetilde{X}}}
+\newcommand{\tY}{{\widetilde{Y}}}
+\newcommand{\tZ}{{\widetilde{Z}}}
+
+\newcommand{\sfa}{{\mathsf{a}}}
+\newcommand{\sfb}{{\mathsf{b}}}
+\newcommand{\sfc}{{\mathsf{c}}}
+\newcommand{\sfd}{{\mathsf{d}}}
+\newcommand{\sfe}{{\mathsf{e}}}
+\newcommand{\sff}{{\mathsf{f}}}
+\newcommand{\sfg}{{\mathsf{g}}}
+\newcommand{\sfh}{{\mathsf{h}}}
+\newcommand{\sfi}{{\mathsf{i}}}
+\newcommand{\sfj}{{\mathsf{j}}}
+\newcommand{\sfk}{{\mathsf{k}}}
+\newcommand{\sfl}{{\mathsf{l}}}
+\newcommand{\sfm}{{\mathsf{m}}}
+\newcommand{\sfn}{{\mathsf{n}}}
+\newcommand{\sfo}{{\mathsf{o}}}
+\newcommand{\sfp}{{\mathsf{p}}}
+\newcommand{\sfq}{{\mathsf{q}}}
+\newcommand{\sfr}{{\mathsf{r}}}
+\newcommand{\sfs}{{\mathsf{s}}}
+\newcommand{\sft}{{\mathsf{t}}}
+\newcommand{\sfu}{{\mathsf{u}}}
+\newcommand{\sfv}{{\mathsf{v}}}
+\newcommand{\sfw}{{\mathsf{w}}}
+\newcommand{\sfx}{{\mathsf{x}}}
+\newcommand{\sfy}{{\mathsf{y}}}
+\newcommand{\sfz}{{\mathsf{z}}}
+\newcommand{\sfA}{{\mathsf{A}}}
+\newcommand{\sfB}{{\mathsf{B}}}
+\newcommand{\sfC}{{\mathsf{C}}}
+\newcommand{\sfD}{{\mathsf{D}}}
+\newcommand{\sfE}{{\mathsf{E}}}
+\newcommand{\sfF}{{\mathsf{F}}}
+\newcommand{\sfG}{{\mathsf{G}}}
+\newcommand{\sfH}{{\mathsf{H}}}
+\newcommand{\sfI}{{\mathsf{I}}}
+\newcommand{\sfJ}{{\mathsf{J}}}
+\newcommand{\sfK}{{\mathsf{K}}}
+\newcommand{\sfL}{{\mathsf{L}}}
+\newcommand{\sfM}{{\mathsf{M}}}
+\newcommand{\sfN}{{\mathsf{N}}}
+\newcommand{\sfO}{{\mathsf{O}}}
+\newcommand{\sfP}{{\mathsf{P}}}
+\newcommand{\sfQ}{{\mathsf{Q}}}
+\newcommand{\sfR}{{\mathsf{R}}}
+\newcommand{\sfS}{{\mathsf{S}}}
+\newcommand{\sfT}{{\mathsf{T}}}
+\newcommand{\sfU}{{\mathsf{U}}}
+\newcommand{\sfV}{{\mathsf{V}}}
+\newcommand{\sfW}{{\mathsf{W}}}
+\newcommand{\sfX}{{\mathsf{X}}}
+\newcommand{\sfY}{{\mathsf{Y}}}
+\newcommand{\sfZ}{{\mathsf{Z}}}
+
+\newcommand{\sfPi}{\mathsf{\Pi}}
+
+\newcommand{\calA}{{\mathcal{A}}}
+\newcommand{\calB}{{\mathcal{B}}}
+\newcommand{\calC}{{\mathcal{C}}}
+\newcommand{\calD}{{\mathcal{D}}}
+\newcommand{\calE}{{\mathcal{E}}}
+\newcommand{\calF}{{\mathcal{F}}}
+\newcommand{\calG}{{\mathcal{G}}}
+\newcommand{\calH}{{\mathcal{H}}}
+\newcommand{\calI}{{\mathcal{I}}}
+\newcommand{\calJ}{{\mathcal{J}}}
+\newcommand{\calK}{{\mathcal{K}}}
+\newcommand{\calL}{{\mathcal{L}}}
+\newcommand{\calM}{{\mathcal{M}}}
+\newcommand{\calN}{{\mathcal{N}}}
+\newcommand{\calO}{{\mathcal{O}}}
+\newcommand{\calP}{{\mathcal{P}}}
+\newcommand{\calQ}{{\mathcal{Q}}}
+\newcommand{\calR}{{\mathcal{R}}}
+\newcommand{\calS}{{\mathcal{S}}}
+\newcommand{\calT}{{\mathcal{T}}}
+\newcommand{\calU}{{\mathcal{U}}}
+\newcommand{\calV}{{\mathcal{V}}}
+\newcommand{\calW}{{\mathcal{W}}}
+\newcommand{\calX}{{\mathcal{X}}}
+\newcommand{\calY}{{\mathcal{Y}}}
+\newcommand{\calZ}{{\mathcal{Z}}}
+\newcommand{\orbit}{O}
+
+\newcommand{\comp}[1]{{#1^{\rm c}}}
+\newcommand{\Leb}{{\rm Leb}}
+\newcommand{\Th}{{\rm th}}
+
+\newcommand{\PDS}{{\sf PDS}\xspace}
+\newcommand{\PC}{{\sf PC}\xspace}
+\newcommand{\BPDS}{{\sf BPDS}\xspace}
+\newcommand{\BPC}{{\sf BPC}\xspace}
+\newcommand{\DKS}{{\sf DKS}\xspace}
+\newcommand{\ML}{{\rm ML}\xspace}
+\newcommand{\SDP}{{\rm SDP}\xspace}
+\newcommand{\SBM}{{\sf SBM}\xspace}
+
+\newcommand{\ER}{Erd\H{o}s-R\'enyi\xspace}
+\def\Multinom{\mathsf{Multinom}}
+
+\def\Primal{\mathsf{P}}
+\def\Dual{\mathsf{D}}
+
+\def\TB{\mathsf{TB}}
+
+\newcommand{\Tr}{\mathsf{Tr}}
+
+\renewcommand{\tilde}{\widetilde}
+\renewcommand{\hat}{\widehat}
+\newcommand{\mmse}{\mathrm{mmse}}
+
+\newcommand{\overlap}{\mathsf{overlap}}
+\newcommand{\Api}{A^{\pi}}
+\newcommand{\tpi}{{\widetilde{\pi}}}
+\newcommand{\hpi}{{\pi'}}
+\newcommand{\harmonic}{{h}}
+\newcommand{\fixedpoint}{{e_{A\wedge B^{\pi}}(F)}}
+\newcommand{\iii}{{i}}
+
+\newcommand{\stepa}[1]{\overset{\rm (a)}{#1}}
+\newcommand{\stepb}[1]{\overset{\rm (b)}{#1}}
+\newcommand{\stepc}[1]{\overset{\rm (c)}{#1}}
+\newcommand{\stepd}[1]{\overset{\rm (d)}{#1}}
+\newcommand{\stepe}[1]{\overset{\rm (e)}{#1}}
+\def\alg{\mathsf{alg}}
+\def\reg{\mathsf{regret}}
+
+\newcommand{\bma}{{\bm{a}}}
+\newcommand{\bmb}{{\bm{b}}}
+\newcommand{\bmc}{{\bm{c}}}
+\newcommand{\bmd}{{\bm{d}}}
+\newcommand{\bme}{{\bm{e}}}
+\newcommand{\bmf}{{\bm{f}}}
+\newcommand{\bmg}{{\bm{g}}}
+\newcommand{\bmh}{{\bm{h}}}
+\newcommand{\bmi}{{\bm{i}}}
+\newcommand{\bmj}{{\bm{j}}}
+\newcommand{\bmk}{{\bm{k}}}
+\newcommand{\bml}{{\bm{l}}}
+\newcommand{\bmm}{{\bm{m}}}
+\newcommand{\bmn}{{\bm{n}}}
+\newcommand{\bmo}{{\bm{o}}}
+\newcommand{\bmp}{{\bm{p}}}
+\newcommand{\bmq}{{\bm{q}}}
+\newcommand{\bmr}{{\bm{r}}}
+\newcommand{\bms}{{\bm{s}}}
+\newcommand{\bmt}{{\bm{t}}}
+\newcommand{\bmu}{{\bm{u}}}
+\newcommand{\bmv}{{\bm{v}}}
+\newcommand{\bmw}{{\bm{w}}}
+\newcommand{\bmx}{{\bm{x}}}
+\newcommand{\bmy}{{\bm{y}}}
+\newcommand{\bmz}{{\bm{z}}}
+
+\newcommand{\bmA}{{\bm{A}}}
+\newcommand{\bmB}{{\bm{B}}}
+\newcommand{\bmC}{{\bm{C}}}
+\newcommand{\bmD}{{\bm{D}}}
+\newcommand{\bmE}{{\bm{E}}}
+\newcommand{\bmF}{{\bm{F}}}
+\newcommand{\bmG}{{\bm{G}}}
+\newcommand{\bmH}{{\bm{H}}}
+\newcommand{\bmI}{{\bm{I}}}
+\newcommand{\bmJ}{{\bm{J}}}
+\newcommand{\bmK}{{\bm{K}}}
+\newcommand{\bmL}{{\bm{L}}}
+\newcommand{\bmM}{{\bm{M}}}
+\newcommand{\bmN}{{\bm{N}}}
+\newcommand{\bmO}{{\bm{O}}}
+\newcommand{\bmP}{{\bm{P}}}
+\newcommand{\bmQ}{{\bm{Q}}}
+\newcommand{\bmR}{{\bm{R}}}
+\newcommand{\bmS}{{\bm{S}}}
+\newcommand{\bmT}{{\bm{T}}}
+\newcommand{\bmU}{{\bm{U}}}
+\newcommand{\bmV}{{\bm{V}}}
+\newcommand{\bmW}{{\bm{W}}}
+\newcommand{\bmX}{{\bm{X}}}
+\newcommand{\bmY}{{\bm{Y}}}
+\newcommand{\bmZ}{{\bm{Z}}}
+
+\newcommand{\bba}{{\mathbb{a}}}
+\newcommand{\bbb}{{\mathbb{b}}}
+\newcommand{\bbc}{{\mathbb{c}}}
+\newcommand{\bbd}{{\mathbb{d}}}
+\newcommand{\bbe}{{\mathbb{e}}}
+\newcommand{\bbf}{{\mathbb{f}}}
+\newcommand{\bbg}{{\mathbb{g}}}
+\newcommand{\bbh}{{\mathbb{h}}}
+\newcommand{\bbi}{{\mathbb{i}}}
+\newcommand{\bbj}{{\mathbb{j}}}
+\newcommand{\bbk}{{\mathbb{k}}}
+\newcommand{\bbl}{{\mathbb{l}}}
+\newcommand{\bbm}{{\mathbb{m}}}
+\newcommand{\bbn}{{\mathbb{n}}}
+\newcommand{\bbo}{{\mathbb{o}}}
+\newcommand{\bbp}{{\mathbb{p}}}
+\newcommand{\bbq}{{\mathbb{q}}}
+\newcommand{\bbr}{{\mathbb{r}}}
+\newcommand{\bbs}{{\mathbb{s}}}
+\newcommand{\bbt}{{\mathbb{t}}}
+\newcommand{\bbu}{{\mathbb{u}}}
+\newcommand{\bbv}{{\mathbb{v}}}
+\newcommand{\bbw}{{\mathbb{w}}}
+\newcommand{\bbx}{{\mathbb{x}}}
+\newcommand{\bby}{{\mathbb{y}}}
+\newcommand{\bbz}{{\mathbb{z}}}
+
+\newcommand{\bbA}{{\mathbb{A}}}
+\newcommand{\bbB}{{\mathbb{B}}}
+\newcommand{\bbC}{{\mathbb{C}}}
+\newcommand{\bbD}{{\mathbb{D}}}
+\newcommand{\bbE}{{\mathbb{E}}}
+\newcommand{\bbF}{{\mathbb{F}}}
+\newcommand{\bbG}{{\mathbb{G}}}
+\newcommand{\bbH}{{\mathbb{H}}}
+\newcommand{\bbI}{{\mathbb{I}}}
+\newcommand{\bbJ}{{\mathbb{J}}}
+\newcommand{\bbK}{{\mathbb{K}}}
+\newcommand{\bbL}{{\mathbb{L}}}
+\newcommand{\bbM}{{\mathbb{M}}}
+\newcommand{\bbN}{{\mathbb{N}}}
+\newcommand{\bbO}{{\mathbb{O}}}
+\newcommand{\bbP}{{\mathbb{P}}}
+\newcommand{\bbQ}{{\mathbb{Q}}}
+\newcommand{\bbR}{{\mathbb{R}}}
+\newcommand{\bbS}{{\mathbb{S}}}
+\newcommand{\bbT}{{\mathbb{T}}}
+\newcommand{\bbU}{{\mathbb{U}}}
+\newcommand{\bbV}{{\mathbb{V}}}
+\newcommand{\bbW}{{\mathbb{W}}}
+\newcommand{\bbX}{{\mathbb{X}}}
+\newcommand{\bbY}{{\mathbb{Y}}}
+\newcommand{\bbZ}{{\mathbb{Z}}}
+
+\newcommand{\sfzbar}{\bar{\sfz}}
+\newcommand{\sfvbar}{\bar{\sfv}}
+\newcommand{\sfZbar}{\bar{\sfZ}}
+\newcommand{\sfVbar}{\bar{\sfV}}
+\newcommand{\Id}{\mathrm{Id}}
+
+\newcommand{\metric}{\text{\almendra{d}}}
+
+\newcommand{\piML}{\hat{\pi}_{\sf ML}}
+
+\newcommand{\dis}{\mathsf{dis}}
+\newcommand{\pre}{\mathsf{pre}}
+\newcommand{\nd}{\mathsf{nd}}
+\newcommand{\mb}{\mathsf{mb}}
+\newcommand{\mpillow}{\mathsf{mp}}
+\newcommand{\opt}{\mathsf{opt}}
+
+\newcommand{\CATE}{\mathsf{CATE}}
+
+\def\infl{\mathsf{if}}
+\def\IF{\mathrm{IF}}
+\def\diff{\mathrm{d}}
+
+\def\proj{\text{proj}}
+\def\Holderr{\text{H\"{o}lder}_{r}}
+
+\makeatletter
+\def\ubar#1{\underline{\sbox\tw@{$#1$}\dp\tw@\z@\box\tw@}}
+\makeatother
+
+\newcommand*\mycirc[1]{%
+\begin{tikzpicture}[baseline=(C.base)]
+\node[draw,circle,inner sep=1pt,minimum size=1ex](C) {#1};
+\end{tikzpicture}}
+
+\newcommand\indep{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+\def\ci{\perp\!\!\!\perp} 

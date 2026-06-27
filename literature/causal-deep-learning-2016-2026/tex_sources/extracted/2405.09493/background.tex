@@ -1,0 +1,192 @@
+\section{Background}\label{sec:background}
+In the following, we illustrate the C-Learner in the context of the average treatment effect (ATE). We discuss extensions to other estimands in  \cref{sec:other_estimands}.
+
+\subsection{Average Treatment Effect and Missing Outcomes}
+\label{sec:ate}
+
+\looseness=-1 Consider binary treatments (actions) $A\in\{0,1\}$, covariates $X\in \mathbb R^d$, and potential outcomes $Y(1), Y(0)\in \R$ under treatment ($A=1$) and control ($A=0$), respectively. 
+The key difficulty in causal inference is that we do not observe counterfactuals:  
+we only observe the outcome $Y := Y(A)$ corresponding to the observed binary treatment. %
+Let $Z:=(X,A,Y)$. Based on i.i.d. observations $Z \sim P$, our goal is to estimate the average treatment effect $\psi(P) = P[Y(1) - Y(0)]:=\int [Y(1) - Y(0)]dP$. Here $P$ denotes both the joint probability measure and the expectation operator under this measure. %
+We require standard identification conditions that make this goal feasible: 
+(i) $Y=Y(A)$ (SUTVA), (ii) $(Y(1),Y(0))\perp A \mid X$ (ignorability), and (iii) for some $\eta>0$, $\;\eta\leq P(A=1\mid X)\leq 1-\eta$ a.s. (overlap) \citep{ding2023course}. 
+
+
+To simplify our exposition, we assume $Y(0):=0$ throughout so that we are estimating the mean of a censored outcome (censored when $A=0$). 
+This setting is also known as mean missing outcome \citep{Kennedy22}, which is the focus of some of our experiments. In this case, we can write the ATE as a functional of the joint measure $P$, as
+\begin{equation}
+    \label{eqn:ate}
+\psi(P) := P[Y(1)]=P\left[P[Y\mid A=1, X]\right].
+\end{equation}
+The outcome model $\mu(X):=P[Y\mid A=1, X]$ (shorthand for $\mu(A,X):=P[Y\mid A, X]$ with $\mu(0,X):=0$)
+and propensity (treatment) model $\pi(X) := P(A=1\mid X)$ are key nuisance parameters; notably, they are high-dimensional in contrast to the single-dimensional ATE~\eqref{eqn:ate}. 
+Note that we can write $\psi(P)=P[\mu(1,X)-\mu(0,X)]=P[\mu(1,X)]=P[\mu(X)]$ in this setting. 
+The corresponding nuisance estimators $\what \mu(X)$ and $\what \pi(X)$ can be implemented as ML models that are trained on held-out data; we will discuss data splits in \Cref{sec:data_splitting}. %
+
+\subsection{First-Order Correction and Asymptotic Optimality} 
+\label{sec:optimality_background}
+By analyzing the error from blindly trusting an ML-based estimate of the nuisance parameters to estimate the ATE~\eqref{eqn:ate}, we can develop better estimation methods. %
+We sketch intuition here and leave a more rigorous treatment to \cref{sec:theory_text}. 
+\ifdefined\pnas
+    Consider a statistical functional $Q \mapsto \psi(Q)$, with $\varphi$ its canonical gradient (a.k.a. efficient influence function) 
+    with respect to $Q$; 
+    without loss of generality, $Q[\varphi(Z; Q) | X] =0$ for all $Q$. 
+    Then, a (distributional) first-order Taylor expansion gives
+    \begin{align}
+        \psi(\what{P}) 
+        -  \psi(P)
+        & = \int \varphi(Z; \what{P}) d (\what{P} - P)  + R_2(\what{P}, P) \nonumber \\
+        & = - P [ \varphi(Z; \what{P}) ] 
+        + R_2(\what{P}, P)
+        \label{eqn:taylor}
+    \end{align}
+    where $R_2$ is a second-order remainder term.
+    Conclude that the first-order error term of the plug-in approach $\psi(\what P)=\what P[\what{\mu}(X)]$ is given by $-P [ \varphi(Z; \what{P}) ]$.
+
+\else
+    We begin by noting that the joint distribution over the observed data can be decomposed as $P= P_{Y, A | X} \times P_X$.
+    Since the marginal $P_X$ can be simply estimated with an empirical distribution (plug-in), we focus on the error induced by approximating $P_{Y, A | X}$ using an estimate 
+    $\what{P}_{Y, A | X}$.
+    \begin{align*}
+        P_X[\what{\mu}(X)] - P_X [\mu(X)]
+        & =     P_X [\what{P}[Y \mid A = 1, X]]
+        - P_X [P[Y \mid A = 1, X]] \\
+        & = \psi(P_X \times \what{P}_{Y, A | X}) - 
+    \psi(P_X \times P_{Y, A | X}).
+    \end{align*}
+    \looseness=-1 For the statistical functional $Q \mapsto \psi(Q)$, let $\varphi$ be its canonical gradient (a.k.a. efficient influence function) 
+    with respect to $Q_{Y, A|X}$; 
+    without loss of generality, we require 
+    $Q[\varphi(Z; Q) | X] =0$ for all $Q$. 
+    Then, a (distributional) first-order Taylor expansion gives
+    \begin{align}
+        \psi(P_X \times \what{P}_{Y, A | X}) 
+        -  \psi(P_X \times P_{Y, A | X})
+        & = \iint \varphi(Z; \what{P}) d (\what{P}_{Y, A|X} - P_{Y, A|X}) dP_X + R_2(\what{P}, P) \nonumber \\
+        & = - \iint \varphi(Z; \what{P}) dP_{Y, A|X} dP_X + R_2(\what{P}, P) \nonumber \\
+        & = - P [ \varphi(Z; \what{P}) ] 
+        + R_2(\what{P}, P)
+        \label{eqn:taylor}
+    \end{align}
+    where $R_2$ is a second-order remainder term.
+    Conclude that the first-order error term of the plug-in approach $P_X[\what{\mu}(X)]$ is given by $-P [ \varphi(Z; \what{P}) ]$.
+\fi
+
+A common approach in semiparametric statistics to better estimate $\psi(P)$ is to explicitly correct for this first-order error term. 
+As we discuss later in \cref{sec:theory_text}, the first-order correction leads to asymptotic optimality properties like semiparametric efficiency---providing the shortest possible confidence interval---and double robustness---achieving estimator consistency even if only one of $\what\mu(X), \what\pi(X)$ is consistent. 
+
+We let $\varphi_X$ denote a \emph{projected} version of the canonical gradient, 
+where we keep only the component that remains when the distribution of $X$ is fixed. Practically speaking, the methods below that empirically correct for this projected version produce the same guarantees as empirically correcting for the full canonical gradient \cite{VanDerLaanRo11,van2006targeted}.\ifdefined\msom\else\ifdefined\pnas\yf{footnote with broken reference}\footnote{We also discuss this briefly in \cref{sec:projected_if}.}. 
+\else\fi\fi
+\paragraph{First-Order Correction for the ATE} For the ATE~\eqref{eqn:ate}, it is well-known that 
+\begin{equation}
+\label{eqn:ate-pathwise}
+\varphi_X(Z; P)
+= \frac{A}{P[A =1 | X]} (Y - P[Y | A = 1, X])
+= \frac{A}{\pi(X)} (Y - \mu(X))
+\end{equation}
+which we do not derive in this work. %
+For an accessible primer on such derivations, see~\citep{Kennedy22}. 
+
+\paragraph{One-Step Estimation (Augmented Inverse Propensity Weighting, AIPW)~\cite{Bang2005DoublyRE}} 
+One of the most prominent first-order correction approaches modifies the plug-in estimator by moving the first-order error term to the left-hand side in the Taylor expansion~\eqref{eqn:taylor}. The resulting estimator achieves second-order error rates:
+\vspace{-0.3em}
+\begin{align*}
+    P\left[ \what{\mu}(X)
+    + \varphi_X(Z; \what{P})\right]
+    - P[\mu(X)] = R_2(\what{P}, P).
+\end{align*}
+Using the empirical distribution with samples $Z_1,\ldots,Z_N$ to approximate $P$ in 
+the one-step debiased estimator, we arrive at the augmented inverse propensity weighted estimator
+\begin{align}
+    \what\psi^{\textrm{\rm AIPW}} 
+     & := \frac{1}{n} \sum_{i=1}^n 
+    \left(\what{\mu}(X_i)
+    + \varphi_X(Z_i; \what{P}) \right) %
+     = \frac{1}{n} \sum_{i=1}^n 
+    \what{\mu}(X_i)
+    + \frac{1}{n} \sum_{i=1}^n \frac{A_i}{\what{\pi}(X_i)} 
+    (Y_i - \what{\mu}(X_i)) .
+        \label{eqn:debiased}
+\end{align}
+
+\paragraph{Targeting (Targeted Maximum Likelihood Estimation)~\cite{VanDerLaanRo11,van2006targeted}} 
+Targeting takes an alternative and more general approach to first-order correction. It commits to the use of the plug-in estimator, and constructs a tailored adjustment (``fluctuation'') to the existing 
+nuisance parameter estimate %
+to set the 
+first-order error to zero, where the magnitude of the adjustment is solved by maximizing likelihood (hence the name). The fluctuation takes place in the 
+direction of a task-specific random variable (``clever covariate''),  which takes 
+different forms depending on the estimand. For illustrative purposes, in this discussion, we use focus on a formulation of targeting for unbounded outcomes under the squared loss function. %
+In our experiments, we also include a commonly used variant of targeting that increases the stability of the estimator by assuming bounded outcomes, and modeling the outcomes with a logistic link.
+\footnote{The literature on targeting is large, with variants including regularization techniques and adaptive versions \citep{VanDerLaanRo11,van2011cross,van2006targeted,van2024adaptive}. 
+We choose to focus on the formulation in Equation~\eqref{eqn:targeting} for its simplicity. See %
+the discussion on TMLE for bounded outcomes in \cref{sec:ks}, and \cref{sec:tmle_comparison} for additional discussion.
+}
+We defer a deeper discussion of TMLE to \Cref{sec:tmle_comparison}.
+
+We begin by using standard notation for TMLE, which has notation for both $A=0$ and $A=1$. We apply it to our setting with $Y(0):=0$ (so that $\what\mu(X)\defeq \what\mu(1,X)$, as in \Cref{sec:ate}) and consider general outcomes $Y$
+(including unbounded continuous $Y$). The form of the canonical gradient~\eqref{eqn:ate-pathwise} motivates the use of $H(A,X):=\frac{A}{ \what{\pi}(X)}$ as the clever covariate: %
+targeting uses an adjusted nuisance estimate
+$\what{\mu}(A,X)+\epsilon^\star H(A,X)$ %
+in place of $\what{\mu}(A,X)$
+in the plug-in for $\psi(P)=P[\mu(1,X)]$, 
+where $\epsilon^\star$ is chosen to solve the targeted maximum likelihood problem
+\vspace{-0.3em}
+\begin{equation}
+    \label{eqn:targeting}
+    \epsilon^\star:=\argmin_{\epsilon \in \R} 
+    ~~\frac{1}{n}\sum_{i=1}^n  A_i \left( 
+    Y_i - \what{\mu}(A_i,X_i) - \epsilon \frac{A_i}{\what\pi(X_i)}\right)^2.
+\end{equation}
+From the KKT conditions, %
+the solution
+removes the 
+finite-sample estimate of the first-order error term~\eqref{eqn:taylor} of the plug-in estimator using $\what{\mu}(A,X) + \epsilon^\star \frac{A}{ \what{\pi}(X)}$. Solving for $\epsilon\opt$, we obtain
+\vspace{-0.3em}
+\begin{equation}
+    \label{eqn:tmle-eps}
+    \epsilon^\star = 
+    \left(
+    \frac{1}{n}\sum_{i=1}^n \frac{A_i}{\what{\pi}(X_i)^2}
+    \right)^{-1}
+    \frac{1}{n} \sum_{i=1}^n 
+    \frac{A_i}{\what{\pi}(X_i)} (Y_i - \what{\mu}(X_i)).
+\end{equation}
+Thus, we arrive at an explicit formula for the targeted maximum likelihood estimator
+\vspace{-0.3em}
+\begin{align}
+    \what{\psi}^{\rm TMLE}
+    & \defeq \frac{1}{n} \sum_{i=1}^n \Big(\what\mu(1,X_i)+\epsilon^\star H(1,X_i)\Big) %
+    =
+    \frac{1}{n} \sum_{i=1}^n \left(\what{\mu}(X_i)
+    + \epsilon^\star \frac{1}{\what{\pi}(X_i)}\right) \nonumber \\
+    & = \frac{1}{n} \sum_{i=1}^n \what{\mu}(X_i)
+    + \frac{\sum_{i=1}^n \frac{1}{\what{\pi}(X_i)}}{\sum_{i=1}^n \frac{A_i}{\what{\pi}(X_i)^2}}
+    \cdot \frac{1}{n} \sum_{i=1}^n 
+    \frac{A_i}{\what{\pi}(X_i)} (Y_i - \what{\mu}(X_i)).
+        \label{eqn:tmle}   
+\end{align}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\paragraph{Targeted Regularization~\cite{chernozhukov2022riesznet,shi2019adapting}}
+Instead of modifying the outcome model in the direction of the clever covariate in a post-processing step~\eqref{eqn:targeting},
+we can instead regularize the usual training objective for the outcome model using a similar adjustment term throughout training, an approach referred to as \emph{targeted regularization}, %
+where it is demonstrated on e.g. neural networks learned via stochastic gradient-based optimization. %
+\ifdefined\msom\else\footnote{An additional difference between TMLE and targeted regularization is the data splits involved. In TMLE, the targeting objective~\eqref{eqn:targeting} for calculating $\epsilon^*$ uses the same data that is used for plug-in estimation (the first line in \eqref{eqn:tmle}),while in targeted regularization, the targeting objective is applied to the dataset used for training $\what\mu$, which has not explicitly described above, as so far, $\what\mu, \what\pi$ are taken as given. These data splits are often different; see \cref{sec:data_splitting} for more discussion on data splits.}\fi %

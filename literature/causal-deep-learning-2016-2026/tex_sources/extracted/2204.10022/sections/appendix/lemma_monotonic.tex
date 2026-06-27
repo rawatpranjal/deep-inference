@@ -1,0 +1,106 @@
+\begin{lemma}
+    \label{lem:monotonic}
+    The sensitivity bounds given in \Cref{def:CAPO_bounds} have the following equivalent expressions:
+    \begin{equation*}
+        \begin{split}
+            \overline{\mu}(\x, \tf; \Lambda) &= \sup_{w(\y) \in \Wnd} \mut(\x, \tf) + \frac{\int_\Ycal w(\y) (\y - \mut(\x, \tf)) p(\y \mid \tf, \x)d\y}{(\Lambda^2 - 1)^{-1} + \int_\Ycal w(\y)p(\y \mid \tf, \x)d\y}, \\
+            \underline{\mu}(\x, \tf; \Lambda) &= \inf_{w(\y) \in \Wni} \mut(\x, \tf) + \frac{\int_\Ycal w(\y) (\y - \mut(\x, \tf)) p(\y \mid \tf, \x)d\y}{(\Lambda^2 - 1)^{-1} + \int_\Ycal w(\y)p(\y \mid \tf, \x)d\y},
+        \end{split}
+    \end{equation*}
+    where 
+    \begin{equation*}
+        \begin{split}
+            \Wnd &= \left\{ w:\Ycal \to [0, 1] \mid w(\y) \text{ is non-decreasing w.r.t. } \y \text{ at } \X=\x \right\}, \\
+            \Wni &= \left\{ w:\Ycal \to [0, 1] \mid w(\y) \text{ is non-increasing w.r.t. } \y \text{ at } \X=\x \right\},
+        \end{split}
+    \end{equation*}
+    and $\mut(\x, \tf) = \E[\Y \mid \X=\x, \Tf=\tf]$.
+    \begin{proof}
+        We follow the argument of \cite{kallus2019interval} and show that our alternative formulations of $\alpha(\cdot, \Lambda)$ and $\beta(\cdot, \Lambda)$ do not change the conclusions of their linear program solution. 
+        Starting from $\mu(\x, \tf) = \frac{\int_{\Ycal} \yt \frac{p(\tf, \yt \mid \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\tf, \yt \mid \x)}{p(\tf \mid \yt, \x)}d\yt},$ and applying a one-to-one change of variables, $\frac{1}{p(\tf \mid \yt, \x)} = \alpha(\x; \tf, \Lambda) + w(\y) (\beta(\x; \tf, \Lambda) - \alpha(\x; \tf, \Lambda))$ with $w:\Ycal \to [0, 1]$, $\alpha(\x; \tf, \Lambda) = 1 / \Lambda p(\tf \mid \x)$, $\beta(\x; \tf, \Lambda) = \Lambda / p(\tf \mid \x)$, we arrive at:
+        \begin{equation}
+            \label{eq:upper_capo_app}
+            \overline{\mu}(\x, \tf; \Lambda) 
+            = \sup_{w: \Ycal \to [0, 1]} \frac{\int_{\Ycal} \y p(\y \mid \tf, \x)d\y + (\lambda^2 - 1)\int_{\Ycal} \y w(\y)p(\y \mid \tf, \x)d\y}{1 + (\lambda^2 - 1)\int_{\Ycal} w(\y)p(\y \mid \tf, \x)d\y},
+        \end{equation}
+        and
+        \begin{equation}
+            \label{eq:lower_capo_app}
+            \underline{\mu}(\x, \tf; \Lambda) 
+            = \inf_{w: \Ycal \to [0, 1]} \frac{\int_{\Ycal} \y p(\y \mid \tf, \x)d\y + (\lambda^2 - 1)\int_{\Ycal} \y w(\y)p(\y \mid \tf, \x)d\y}{1 + (\lambda^2 - 1)\int_{\Ycal} w(\y)p(\y \mid \tf, \x)d\y},
+        \end{equation}
+        after some cancellations.
+        Duality can be used to prove that the $w^*(\y)$ which achieves the supremum in \Cref{eq:upper_capo_app} belongs to $\Wnd$. 
+        The analogous proof for \Cref{eq:lower_capo_app} can be shown similarly.
+        
+        The optimization problem in \Cref{eq:upper_capo_app} can be rewritten as a linear-fractional program:
+        \begin{subequations}
+            \label{eq:lfp}
+            \begin{align}
+                \text{maximize}\quad & \frac{a\langle \y, w(\y) \rangle_{p(\y \mid \tf, \x)} + c}{b\langle 1, w(\y) \rangle_{p(\y \mid \tf, \x)} + d} \\
+                \text{subject to}\quad & 0 \leq w(\y) \leq 1: \forall\y \in \Ycal,
+            \end{align}
+        \end{subequations}
+        where $\langle \cdot, \cdot \rangle_{p(\y \mid \tf, \x)}$ is the inner product with respect to $p(\y \mid \tf, \x)$, $a = b = \lambda^2 - 1$, $c = \int_{\Ycal} \y p(\y \mid \tf, \x) d\y$, and $d = \int_{\Ycal} p(\y \mid \tf, \x) d\y$.
+        
+        The linear-fractional program of \Cref{eq:lfp} is equivalent to the following linear program:
+        \begin{subequations}
+            \begin{align}
+                \text{maximize}\quad &a\langle \y, \widetilde{w}(\y) \rangle_{p(\y \mid \tf, \x)} + c \widetilde{v}(\x) \\
+                \text{subject to}\quad &\widetilde{w}(\y) \leq \widetilde{v}(\x): \forall\y \in \Ycal \label{eq:p_cnstrnt}\\
+                &-\widetilde{w}(\y) \leq 0: \forall\y \in \Ycal \label{eq:q_cnstrnt}\\
+                & b\langle 1, \widetilde{w}(\y) \rangle_{p(\y \mid \tf, \x)} + d \widetilde{v}(\x) = 1 \label{eq:lambda_cnstrnt}\\
+                & \widetilde{v}(\x) \geq 0,
+            \end{align}
+        \end{subequations}
+        where
+        \begin{equation*}
+            \widetilde{w}(\y) = \frac{w(\y)}{b\langle 1, w(\y) \rangle_{p(\y \mid \tf, \x)} + d} 
+            \quad \text{and}
+            \quad \widetilde{v}(\x) = \frac{1}{b\langle 1, w(\y) \rangle_{p(\y \mid \tf, \x)} + d}
+        \end{equation*}
+        by the Charnes-Cooper transformation.
+        
+        Let the dual function $\rho(\y)$ be associated with the primal constraint \cref{eq:p_cnstrnt}, the dual function $\eta(\y)$ be associated with the primal constraint \cref{eq:q_cnstrnt}, and $\gamma$ be the dual variable associated with the primal constraint \cref{eq:lambda_cnstrnt}. 
+        The dual program is then:
+        \begin{subequations}
+            \begin{align}
+                \text{minimize}\quad &\gamma \label{eq:dual_a} \\
+                \text{subject to}\quad & \rho(\y) - \eta(\y) + \gamma b p(\y \mid \tf, \x) = a \y p(\y \mid \tf, \x): \forall\y \in \Ycal \label{eq:dual_b} \\
+                & -\langle 1, \rho(\y) \rangle + \gamma d \geq c \label{eq:dual_c} \\
+                & \rho(\y) \in \mathbb{R}_+, \eta(\y) \in \mathbb{R}_+, \gamma \in \mathbb{R}
+            \end{align}
+        \end{subequations}
+        \andrew{Why doesn't $\eta(\y)$ introduce an additional constraint analogous to \cref{eq:dual_c}}? 
+        At most one of $\rho(\y)$ or $\eta(\y)$ is non-zero by complementary slackness \andrew{why?}; therefore, condition \cref{eq:dual_b} implies that
+        \begin{equation*}
+            \begin{split}
+                \rho(\y) &= (\lambda^2 - 1)p(\y \mid \tf, \x) \max\{\y - \gamma, 0\} \text{ when $\eta=0$,} \\
+                \eta(\y) &= (\lambda^2 - 1)p(\y \mid \tf, \x) \max\{\gamma - \y, 0\} \text{ when $\rho=0$.} 
+            \end{split}
+        \end{equation*}
+        \cite{kallus2019interval} argue that constraint \cref{eq:dual_c} ought to be tight (an equivalence) at optimality, otherwise there would exist a smaller, feasible $\gamma$ that satisfies the linear program \andrew{why?}. 
+        Therefore,
+        \begin{equation}
+            \begin{split}
+                -\langle 1, \rho(\y) \rangle + \gamma d &= c, \\
+                -\int_{\Ycal} (\lambda^2 - 1)p(\y \mid \tf, \x) \max\{\y - \gamma, 0\}d\y + \gamma \int_{\Ycal} p(\y \mid \tf, \x) d\y &=  \int_{\Ycal} \y p(\y \mid \tf, \x) d\y, \\
+                (\lambda^2 - 1)\int_{\Ycal} \max\{\y - \gamma, 0\} p(\y \mid \tf, \x)d\y  &= \int_{\Ycal} (\gamma - \y) p(\y \mid \tf, \x) d\y.
+            \end{split}
+        \end{equation}
+        Letting $C_{\Y} > 0$ such that $|\Y| \leq C_{\Y}$, it is impossible that either $\gamma > C_{\Y}$ (the r.h.s. would be $0$ and the l.h.s. would be $>0$) or $\gamma < -C_{\Y}$ (the r.h.s. would be $>0$ and the l.h.s. would be $<0$). 
+        Thus, $\exists \y^{*} \in [-C_{\Y}, C_{\Y}]$ such that when $\y < \y^{*}$, $\eta > 0$ so $w = 0$ and when $\y \geq \y^{*}$, $\rho > 0$ so $w = 1$ \andrew{why? Moreover, does this actually imply that the optimal $w$ is in a set of step functions, not just non-decreasing functions}. 
+        Therefore, the optimal $w^*(\y)$ that achieves the supremum in \Cref{eq:upper_capo_app} is in $\Wnd$. 
+        
+        This result holds under
+        \begin{subequations}
+            \begin{align}
+                \mu(\x, \tf) 
+                &= \frac{\int_{\Ycal} \y p(\y \mid \tf, \x)d\y + (\lambda^2 - 1)\int_{\Ycal} \y w(\y)p(\y \mid \tf, \x)d\y}{1 + (\lambda^2 - 1)\int_{\Ycal} w(\y)p(\y \mid \tf, \x)d\y},\\
+                &= \frac{\int_{\Ycal} \yt \frac{p(\tf, \yt \mid \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\tf, \yt \mid \x)}{p(\tf \mid \yt, \x)}d\yt}, \label{eq:equivalence_b}\\
+                &= \mut(\x, \tf) + \frac{\int_\Ycal w(\y) (\y - \mut(\x, \tf)) p(\y \mid \tf, \x)d\y}{(\Lambda^2 - 1)^{-1} + \int_\Ycal w(\y)p(\y \mid \tf, \x)d\y} \label{eq:equivalence_c},
+            \end{align}
+        \end{subequations}
+        thus concluding the proof (\cref{eq:equivalence_b}-\cref{eq:equivalence_c} by \Cref{lem:capo}).
+    \end{proof}
+\end{lemma}

@@ -1,0 +1,202 @@
+\section{Proofs of Asymptotic Properties for Dual C-Learner}
+\label{sec:proofs_dual}
+In this section we formally define the dual C-Learner and show that it is semiparametrically efficient (\Cref{sec:asymptotics_dual}) and doubly robust (\cref{sec:double_robustness_dual}).
+
+First, we define the dual C-Learner. We use cross-fitting, as in \Cref{sec:theory_text}. 
+Consider $K$ even data splits in a dataset of size $n$. 
+For each $k=1,\ldots,K$, on the training fold $P_{-k, n}$, we train an outcome model $\what{\mu}_{-k,n}(x)$ to estimate $P[Y\mid X=x, A=1]$. The C-Learner optimizes the prediction loss evaluated under $P_{-k, n}$,  subject to the first-order correction constraint evaluated on the evaluation fold $P_{k, n}$:
+\begin{align}
+\label{eq:constraint_dual}
+\what \pi^{C'}_{-k,n}\in \argmin_{\tilde \pi\in \mathcal F_\pi} \left\{
+P_{-k,n}[ \tilde \pi(X)^A (1-\tilde \pi(X))^{1-A}] : 
+P_{k,n}\left[ {n}\sum_{i=1}^n \left(1-\frac{A_i}{\tilde \pi(X_i)}\right) \what\mu_{-k,n}\right](X_i)=0
+    \right\}
+\end{align}
+The final dual C-Learner estimator is given by
+\begin{align}
+    \what\psi^{C'}_n :=\frac{1}{K}\sum_{k=1}^K P_{k,n}\left[\frac{A}{\what\pi_{-k,n}^{C'}(X)}Y\right].
+\label{eq:c_learner_def_dual}
+\end{align}
+
+
+
+
+
+In this section we show the counterpart of the asymptotic properties for the C-Learner, but for the dual C-Learner. 
+As before, we use cross-fitting with $K$ folds. For brevity we write $\what \psi^{C'}_n$ to denote the cross-fitted dual C-Learner estimator. 
+\subsection{Asymptotic variance of dual C-Learner}
+\label{sec:asymptotics_dual}
+We require the following additional assumptions to show asymptotic variance for the dual C-Learner. Assumptions~\ref{ass:consistency_dual} and~\ref{ass:empirical_proc_mean_dual} are the dual versions of Assumptions~\ref{ass:consistency} and~\ref{ass:empirical_proc_mean}. 
+\begin{assumption}[Convergence rates of propensity and constrained outcome models]
+\label{ass:consistency_dual}
+For all~$k \in \{1,\ldots,K\}$, 
+both $\what\pi^{C'}, \what\mu$ are consistent,
+    $$
+    \|\what\pi^{C'}_{-k,n} - \pi\|_{L_2(P)}=o_P(1), \quad  \|\what\mu_{-k,n} - \mu\|_{L_2(P)}=o_P(1)
+    $$ 
+and also     $$    \|\what\pi^{C'}_{-k,n} - \pi\|_{L_2(P)} \cdot  \|\what\mu_{-k,n}^C - \mu\|_{L_2(P)}=o_P(n^{-\frac{1}{2}}).$$
+\end{assumption}
+\begin{assumption}[Empirical process assumption]%
+\label{ass:empirical_proc_mean_dual}\
+$$(P_{k,n}-P)(YA\cdot (  \what\pi_{-k,n}^{C'}(X)^{-1}- \pi(X)^{-1}) )=o_P(n^{-1/2}).$$
+\end{assumption}
+Like Assumption~\ref{ass:empirical_proc_mean}, Assumption~\ref{ass:consistency_dual} may need to be shown on a case-by-case basis for different settings and model classes. 
+Under these assumptions,
+the dual C-Learner has the following asymptotics:
+\begin{theorem}[Asymptotic variance of dual C-Learner]
+\label{thm:asymp_dual}
+ Under Assumptions~\ref{ass:overlap}, \ref{ass:consistency_dual}, 
+ \ref{ass:bounded_outcomes}, and
+\ref{ass:empirical_proc_mean_dual},
+ \begin{equation*}
+    \sqrt{n} 
+    (\what{\psi}_{n}^{C'} - \psi(P))
+    \cd N(0, \sigma^2)~~~\mbox{where}~~~
+    \sigma^2 \defeq 
+    \var_P\left( \frac{A}{\pi(X)}(Y - \mu(X))
+    +\mu(X)
+    \right).
+ \end{equation*}
+\end{theorem}
+The proof of this theorem is very similar to the proof for Theorem~\ref{thm:asymp} with proof in \Cref{sec:asymptotics}. %
+
+
+\begin{proof}
+Let $Z=(X,A,Y)$ as defined in \cref{sec:ate}. Let $P$ denote the true population distribution of $Z$. 
+Let $\psi$ be the ATE as before, but this time, write \begin{align}
+\label{eq:psi_ipw_def_dual}
+\psi(P)=P\left[\frac{A}{P(A=1\mid X)}   Y\right].  
+\end{align}
+Note that this $\psi$ is equivalent to $\psi$ as defined in \Cref{sec:ate}:
+$$P\left[\frac{A}{P(A=1\mid X)}Y\right]=P\left[\frac{\mathbf 1(A=1)}{P(A=1\mid X)} P(Y\mid X)\right]=P[P[Y\mid A=1,X]].$$
+Functionals $\psi$ may admit a distributional Taylor expansion, also known as a von Mises expansion \citep{fernholz2012mises}, where for any distributions $P,\wb P$ on $Z$, we can write
+\begin{align}
+\label{eq:taylor_dual}
+    \psi(\wb P)-\psi(P)=-\int \varphi(z;\wb P)dP(z)+R_2(\wb P, P)
+\end{align}
+where 
+$\varphi(z;P)$ which can be thought of as a ``gradient'' satisfying the directional derivative formula 
+$\frac{\partial}{\partial t}\psi(P+t(\wb P-P))\mid_{t=0}=\int \varphi(z;P)d(\wb P-P)(z)$. (W.l.o.g. we assume $\varphi(z;P)$ is centered so that
+$\int \varphi(z;P)dP(z)=0$.)
+Here, $-\int \varphi(z;\wb P)dP(z)$ is the first-order term, and $R_2(\wb P, P)$
+is the second-order remainder term, which only depends on products or squares of differences between $P,\wb P$.
+
+When $\psi$ is the ATE as in our setting, $\psi$ admits such an expansion~\citep{HiranoImRi03} 
+\begin{align}
+\label{eq:full_if_dual}
+\varphi(Z;\wb P):=\frac{A}{\wb \pi(X)}(Y-\wb \mu(X))+\wb \mu(X)-\psi(\wb P),
+\end{align}
+where $\wb\pi(x):=\wb P[A=1\mid X]$
+and $\wb \mu(x):=\wb P[Y\mid A=1,X]$. In particular, we get the following explicit formula for the second-order term
+\begin{align}
+R_2(\wb P,P) := \int \pi(x) \left( \frac{1}{\wb\pi(x)} - \frac{1}{\pi(x)} \right) \left( \wb \mu (x) - \mu(x) \right) dP(x).
+\end{align}
+We will apply this to our C-Learner estimator as defined in \cref{sec:theory_text}. Recall that
+$\what \mu_{-k,n}$ is trained to predict outcome given $X$ and $A=1$ on $P_{-k,n}$, and 
+$\what \pi_{-k,n}^{C'}$ is trained to predict treatment $A$ given $X$ using $P_{-k,n}$
+under the constraint that $P_{k,n}\left[\left(1-\frac{A}{\what\pi_{-k,n}^{C'}(X)}\right)\what\mu_{-k,n}(X) \right]=0$.
+Our dual C-Learner estimator is the mean of plug-in estimators across folds: for each fold, write $\what\psi^{C'}_{k,n}=\psi(\what P_{k,n}^{C'})$ so the C-Learner estimate is the average $\what\psi^{C'}_n=\frac{1}{K}\sum_{k=1}^K \what\psi^{C'}_{k,n}$.
+
+
+Noting that any distribution decomposes $\wb{P}=\wb{P}_X\times \wb{P}_{A\mid X}\times \wb{P}_{Y\mid A,X}$ and $\psi(\wb{P})=\wb{P}_X[\mu(X)]$, the following definitions
+\begin{align*}
+\what P^{C'}_{X;k,n}&:=P_{X;k,n} \\
+\what P^{C'}_{A\mid X ;k,n}[A=1\mid X=x]&:=\what \pi_{-k,n}^{C'}(x) \\ 
+\what P^{C'}_{Y\mid A,X ;k,n}[Y\mid A=1, X=x]&:=\what \mu_{-k,n}(x)
+\end{align*}
+provide a well-defined joint distribution  $\what P^C_{k,n}$.
+
+For each data fold $k$, we use the distributional Taylor expansion above, where we replace $\wb P$ with the joint distribution $\what P^{C'}_{k,n}$
+\begin{align}
+\label{eq:taylor_c_learner_dual}
+\psi(\what P^{C'}_{k,n}) - \psi(P) &= - P \varphi(Z;\what P^{C'}_{k,n}) + R_2(\what P^{C'}_{k,n},P) \nonumber\\ 
+&= (P_{k,n}-P)\varphi(Z;P)\nonumber
+-P_{k,n} \varphi(Z;\what P^{C'}_{k,n})
+\\&\quad  +(P_{k,n}-P)
+(\varphi(Z;\what P^{C'}_{k,n})-\varphi(Z;P))
++R_2(\what P^{C'}_{k,n},P). 
+\end{align}
+Observe that by using Equation~\eqref{eq:full_if_dual} and the definition of the dual C-Learner,
+\begin{align*}
+    P_{k,n}\varphi(Z;\what P^{C'}_{k,n})
+&=P_{k,n}\left[\frac{A}{\what\pi_{-k,n}^{C'}(X)}(Y-\what \mu_{-k,n}(X))+\what\mu_{-k,n}(X)-\psi(\what P^{C'}_{k,n})\right]
+\\&=
+\underbrace{
+P_{k,n}\left[\left(1-\frac{A}{\what\pi_{-k,n}^{C'}(X)}\right)
+\what \mu_{-k,n}(X)\right]}_{=0\text{ by dual C-Learner constraint}}
++\underbrace{P_{k,n}\left[\frac{A}{\what\pi_{-k,n}^{C'}(X)}Y
+-\psi(\what P^{C'}_{k,n})
+\right]}_{=0\text{ by \eqref{eq:psi_ipw_def_dual}}}.
+\end{align*}
+Taking the average of Equation~\eqref{eq:taylor_c_learner_dual} over $k=1,\ldots,K$,
+we can write the error $\what\psi^{C'}_n-\psi$ as the sum of three terms.
+    \begin{align}   
+     \what \psi^{C'}_{n} - \psi  
+    & = \frac{1}{K}\sum_{k=1}^K\underbrace{(P_{k,n}-P)\varphi(Z;P)}_{S^*_k} \nonumber \\
+    &  \qquad + \frac{1}{K}\sum_{k=1}^K\underbrace{(P_{k,n}-P) \left(\varphi(Z;\what P^{C'}_{k,n})-\varphi(Z;P)\right)}_{T_{1k}} + \frac{1}{K}\sum_{k=1}^K\underbrace{R_2(\what P^{C'}_{k,n},P)}_{T_{2k}}. \label{eq:S+T1+T2_dual}
+\end{align}
+Using the decomposition~\eqref{eq:S+T1+T2_dual}, we write 
+\begin{align}
+S^*=\frac{1}{K}\sum_{k=1}^K S^*_k,  \hspace{1em}
+T_1=\frac{1}{K}\sum_{k=1}^K T_{1k},  \hspace{1em}
+T_2=\frac{1}{K}\sum_{k=1}^K T_{2k},
+\end{align}
+so that
+$\what \psi^C_{n} - \psi = S^* + T_1 + T_2$.
+We address the terms $S^*,T_1$ and $T_2$ separately. The first term can be rewritten as
+$$
+S^* = \frac{1}{K}\sum_{i=1}^K (P_{k,n}-P)\varphi(Z;P) = (P_n-P)\varphi(Z;P)
+$$
+so that by the central limit theorem, 
+$$
+\sqrt{n}S^* \cd {N}\left(0, \var_P(\varphi(Z;P))\right).
+$$ 
+Observe that this quantity depends only on $\psi$ and $P$, so that it cannot be made smaller by choice of estimator. 
+If the variance of an estimator for $\psi$ is $\var_P(\varphi(Z;P))$, then it is semiparametrically efficient in the local asymptotic minimax sense (Theorem 25.21 of \cite{van2000asymptotic}). 
+Thus,  it suffices to show that the rest of the terms, $T_1$ and $T_2$, are $o_P(n^{-1/2})$, so that
+$$
+\sqrt{n}(\what \psi^C_n - \psi)=\sqrt{n} S^*+o_P(1)\cd {N}\left(0, \var_P (\varphi(Z;P))\right)
+.$$
+For a fixed $k$,
+$|T_{1k}|=o_P(n^{-1/2})$ 
+by Assumption~\ref{ass:empirical_proc_mean_dual}
+so that $|T_1|=o_P(n^{-1/2})$ as desired. 
+The second-order remainder term in the distributional Taylor expansion \eqref{eq:taylor_dual} where
+we replace $\wb P$ with $\what{P}^{C'}_{k,n}$
+is
+$$
+T_{2k} = \int \pi(x) \left( \frac{1}{\what\pi^{C'}_{-k,n}(x)} - \frac{1}{\pi(x)} \right) \left( \what\mu_{-k,n}(x) - \mu(x) \right) \, dP(x)
+.$$
+Under the overlap assumption (Assumption~\ref{ass:overlap}) and  Cauchy-Schwarz, 
+\begin{align}
+    |T_{2k}| &\leq \frac{1}{\eta} \int \left| \what\pi^{C'}_{-k,n}(x) - \pi(x) \right| \left| \what\mu_{-k,n}(x) - \mu(x) \right| \, dP(x) \nonumber \\
+    &\leq \frac{1}{\eta} \left\|\what \pi^{C'}_{-k,n} -\pi\right\|_{L_2(P)} \left\|\what \mu_{-k,n} - \mu\right\|_{L_2(P)}. \label{eq:T2_cauchy_schwarz_dual}
+\end{align}
+By Assumption~\ref{ass:consistency_dual},
+$|T_{2k}|=o_P(n^{-1/2})$
+so that 
+$|T_{2}|=o_P(n^{-1/2})$ as desired. 
+\end{proof}
+\subsection{Double robustness of dual C-Learner}
+\label{sec:double_robustness_dual}
+We state assumptions for double robustness for the dual C-Learner, as well as the theorem. 
+Assumption~\ref{ass:risk_decay_dual} is the counterpart to \Cref{ass:risk_decay}, and \Cref{thm:dr_dual} is the counterpart to \Cref{thm:dr}.
+\begin{assumption}[At least one of $\what\pi^{C'},\what\mu$ is consistent]\label{ass:risk_decay_dual}
+For all $k$, the product of the errors for the outcome and propensity
+models decays as
+    $$\|\what\pi^{C'}_{-k,n} - \pi\|_{L_2(P)}
+    \cdot \|\what\mu_{-k,n} - \mu\|_{L_2(P)}=o_P(1).$$
+\end{assumption}
+Using Assumption~\ref{ass:risk_decay_dual} in place of Assumption~\ref{ass:consistency}, we arrive at the following result:
+\begin{theorem}[Dual C-Learner is doubly robust]
+\label{thm:dr_dual}
+The dual C-Learner~\eqref{eq:c_learner_def_dual} is consistent under Assumptions~\ref{ass:overlap}, \ref{ass:bounded_outcomes}, \ref{ass:empirical_proc_mean_dual}, and 
+\ref{ass:risk_decay_dual}.
+\end{theorem}
+
+
+
+
+Showing double robustness of the dual C-Learner is completely analogous to \Cref{sec:double_robustness}.
+
+\label{sec:proofs_dual-end}

@@ -1,0 +1,204 @@
+\section{Methodology}
+\label{sec:methodology}
+
+The constrained learning framework can be instantiated in many ways depending on the function class $\mc{F}$ for outcome models. %
+We 
+present approximate solution methods to the constrained optimization problem~\eqref{eq:c-learner}
+for linear models, gradient boosted regression trees, and deep neural networks. We empirically demonstrate these instantiations in Section~\ref{sec:experiments}.\footnote{Other frameworks~\citep{Nabi2024StatisticalLF} exist for constructing constrained outcome models, but do not restrict outcome models to $\mathcal F$; we exclude these from our analysis.}
+
+\subsection{Data Splitting}
+\label{sec:data_splitting}
+We recommend sample splitting, where we split the data so
+that nuisance estimators (e.g. $\what \pi, \what \mu, \what \mu^C$) are fitted on a training (auxiliary) fold and evaluated to form a
+causal estimator on an evaluation (main) fold. 
+Let $P_{\rm train}$ be the split on which nuisance parameters
+such as the outcome model or the propensity score $\what{\pi}(\cdot)$ are trained, and let $P_{\rm val}$ be the split on which we perform model selection on them. 
+We use a separate split $P_{\rm eval}$ to evaluate
+our final causal estimators. %
+Our constrained learning framework~\eqref{eq:c-learner} can thus be rewritten as
+\vspace{-.2cm}
+\begin{align}
+& \what{\psi}^{\textrm {C-Learner}} := 
+P_{\rm eval}\left[
+\what{\mu}^C(X)
+\right]~~~~~\mbox{where}  \nonumber\\
+\label{eq:c-learner-datasets}
+& \what{\mu}^C\in \argmin_{\wt\mu\in\mathcal F} \left\{
+P_{\rm train}[ A (Y - \wt{\mu}(X))^2] : P_{\rm eval}
+\left[\frac{A}{\what{\pi}(X)}
+(Y-\wt\mu(X))\right]=0
+\right\}.
+\end{align}
+For simplicity, we let $P_{\rm eval}=P_{\rm val}$ except where otherwise specified. 
+
+\paragraph{Cross-fitting with $K$ folds}
+\emph{Cross-fitting} with $K$ folds \citep{ChernozhukovChDeDuHaNeRo18} refers to the following sample splitting setup designed to utilize all of the data: 
+first, we split the data into $K$ folds. Then, to evaluate on the $k$th fold in $P_{\rm eval}[\what \mu^C(X)]$, we train nuisance parameters on all but the $k$th fold in the data. We repeat this for all $K$ folds and average the results, so that the final estimator utilizes model evaluations over the entire dataset. 
+Assuming $K$ evenly divides $n$ for simplicity, let $P_{k,n}$ be the empirical measure over data from the $k$-th fold, and $P_{-k,n}$ be the empirical measure over data from all other folds. 
+Let $P_{\rm train}=P_{-k,n}$, and $P_{\rm val}=P_{\rm eval}=P_{k,n}$. 
+For each $k=1,\ldots,K$, on the training fold $P_{-k, n}$, we train a propensity score model $\what{\pi}_{-k,n}(x)$ to estimate $P[A\mid X=x]$, as well as an unconstrained outcome model $\what{\mu}_{-k,n}(x)$, and a constrained outcome model $\what{\mu}_{-k,n}^C(x)$ to estimate $P[Y\mid A=1,X=x]$.  
+
+Then, the AIPW and TMLE estimators from \Cref{sec:background} can be written as 
+\begin{align*}
+   \what\psi^{\rm AIPW}_{k,n}&=P_{k,n}[\what\mu_{-k,n}(X)]+P_{k,n}\left[\frac{A}{\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))\right]\\ 
+   \what\psi^{\rm TMLE}_{k,n}&=P_{k,n}[\what\mu_{-k,n}(X)]+\frac{P_{k,n}[1/\pi_{-k,n}(X)]}{P_{k,n}[A/\pi_{-k,n}(X)^2]}P_{k,n}\left[\frac{A}{\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))\right].
+\end{align*}
+
+The C-Learner can be written as follows: the constrained outcome model optimizes the prediction loss evaluated under $P_{-k, n}$,  subject to the first-order correction constraint evaluated on the evaluation fold $P_{k, n}$, with final estimator $\what \psi_n^C$:
+\vspace{-0.3em}
+\begin{align}
+\label{eq:constraint}
+\what{\mu}_{-k, n}^C 
+&\in \argmin_{\tilde{\mu} \in \mc{F}}
+\left\{ P_{-k, n} [ A (Y - \tilde{\mu}(X))^2]:
+P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\tilde{\mu}(X))\right]=0
+\right\}\\
+    \what\psi^C_n &:=\frac{1}{K}\sum_{k=1}^K P_{k,n}[\what\mu_{-k,n}^C(X)].
+\label{eq:c_learner_def}
+\end{align}
+
+In contrast to standard cross-fitting, in which nuisance parameters are learned only on the training split $P_{-k,n}$, 
+the constraint~\eqref{eq:constraint} is over the eval split $P_{k,n}$. 
+
+\subsection{Linear Models}
+\label{sec:methods_linear}
+When outcome models are linear functions of $X$, the
+constrained learning problem~\eqref{eq:c-learner-datasets} 
+has an analytic solution.
+Using $\vec{\cdot}$ to denote stacked observations, define
+\vspace{-0.3em}
+\begin{equation*}
+\begin{bmatrix}
+\vec{Y}_{\rm train}  \\
+\vec{X}_{\rm train} \\
+\vec{H}_{\rm train} 
+\end{bmatrix}
+:= \begin{bmatrix}
+\{Y_i\}_{i \in \mc{I}_{\rm train}}  \\
+\{X_i\}_{i \in \mc{I}_{\rm train}} \\
+\left\{ \frac{A_i}{\what{\pi}(X_i)} 
+\right\}_{i \in \mc{I}_{\rm train}}
+\end{bmatrix}
+\qquad \mbox{and} \qquad
+\begin{bmatrix}
+\vec{Y}_{\rm eval}  \\
+\vec{X}_{\rm eval} \\
+\vec{H}_{\rm eval} 
+\end{bmatrix}
+:= \begin{bmatrix}
+\{Y_i\}_{i \in \mc{I}_{\rm eval}}  \\
+\{X_i\}_{i \in \mc{I}_{\rm eval}} \\
+\left\{ \frac{A_i}{\what{\pi}(X_i)} 
+\right\}_{i \in \mc{I}_{\rm eval}}
+\end{bmatrix}
+\end{equation*}
+where $\mc{I}_{\rm train} = \{i \in \mbox{train}: A_i = 1\}$
+and $\mc{I}_{\rm eval} = \{i \in \mbox{eval}: A_i = 1\}$ 
+are indices with observations in each data split.
+The constrained learning problem~\eqref{eq:c-learner-datasets} 
+can be rewritten as \vspace{-1.5em}\begin{align*}
+\what\theta^C 
+    = \argmin_\theta \left\{
+\frac{1}{2}\|\vec{Y}_{\rm train} - \vec{X}_{\rm train} \theta\|^2:\; 
+\vec{H}_{\rm eval}^\top (\vec{Y}_{\rm eval} - \vec{X}_{\rm eval} \theta)=0 \right\}.
+\end{align*}
+The KKT conditions characterize the primal-dual optimum $(\what{\theta}^C, \what{\lambda})$
+\vspace{-0.7em}
+$$
+\what{\theta}^C = (\vec{X}_{\rm train}^\top \vec{X}_{\rm train})^{-1} \vec{X}_{\rm train}^\top (\vec{Y}_{\rm train}+ \what{\lambda} \vec{H}_{\rm train})
+~~\mbox{where}~~
+\what{\lambda} = \frac{\vec{H}_{\rm eval}^\top
+(\vec{Y}_{\rm eval} - \vec{Y}_{\rm ols})}{\vec{H}_{\rm eval}^\top \vec{X}_{\rm eval}
+(\vec{X}_{\rm train}^\top \vec{X}_{\rm train})^{-1}
+\vec{X}_{\rm train}^\top \vec{H}_{\rm train}}
+$$
+and $\vec{Y}_{\rm ols} := \vec{X}_{\rm train} (\vec{X}_{\rm train}^\top \vec{X}_{\rm train})^{-1}
+\vec{X}_{\rm train}^\top \vec{Y}_{\rm train}$. %
+Note that $\what \theta^C$ is the OLS with respect to the pseudo-label $\vec{Y}_{\rm train}+ \what{\lambda} \vec{H}_{\rm train}$ and the dual variable shifts the observed outcomes in the direction of $\vec{H}_{\rm train}$ similar to targeting~\eqref{eqn:targeting}, but with additional reweighting using covariates. 
+When using our framework restricted to linear function classes, we obtain a new estimator that, to the best of our knowledge, cannot be recovered by existing methods. In \Cref{sec:ks}, we demonstrate that this new estimator improves upon existing methods.
+
+
+\subsection{Gradient Boosted Regression Trees}
+\label{sec:methods_boosting}
+We consider outcome models that are gradient boosted regression trees. %
+The gradient boosting framework~\cite{friedman2001greedy} iteratively estimates the functional gradient $g_j$ 
+of the loss function evaluated on the current function estimate $\what\mu_{j}$.
+For the standard  MSE loss $\ell(\mu;X,A,Y):=A(Y-\mu(X))^2$, 
+we use weak learners in $\mc{G}$ (e.g., shallow decision trees) to compute
+$$
+\what{g}_{j+1} \in \argmin_{g \in \mathcal G} P_{\rm train} [(A(g_{j}(X,Y)-g(X)))^2]~~~\mbox{where}~~~g_{j}(X,Y;\what\mu_j) := \frac{\partial}{\partial \mu}\ell(\mu;X,Y)\Big|_{\mu = \what\mu_{j}}
+$$
+and set $\what \mu_{j+1} = \what\mu_j - \eta \what{g}_{j+1}$ for some step size $\eta$. 
+For notational simplicity, since we assume $Y(0):=0$, let $\mu(X)$, $g_j(X,Y)$, $g(X,Y)$
+be shorthand for $\mu(A,X)$, $g_j(X,A,Y)$, $g(X,A,Y)$ when $A=1$, and we let $\mu(0,X),g_j(0,X),g(0,X)=0$. 
+The process repeats $J$ times until a maximum number of weak learners are fitted or an early stopping criterion is met. 
+
+\begin{algorithm}[t]
+\caption{C-Learner with Gradient Boosted Regression Trees}
+\begin{algorithmic}[1]
+\State \textbf{Input:} learning rate $\eta$, max trees $J$ and $K$, $\what \mu_0 := 0$
+\For{$j = 0, 1, \dots, J-1$}
+    \State Modify functional gradient $g_j = Y - \what{\mu}_j(X)$ to $\wt{g}_j = g_j + \epsilon^\star_j \cdot 1/\what{\pi}(X)$ where 
+  $\epsilon_j^\star := \tfrac{P_{\rm train} [(Y - \what{\mu}_j(X)) \cdot A / \what{\pi}(X)]}{P_{\rm train} [A / \what{\pi}(X)^2]}$ as in~\eqref{eq:epsilon_xgb}
+    \State Compute $\what{g}_{j} = \argmin_{g\in \mathcal G} P_{\rm train}[A( \wt{g}_j - g(X))^2]$ and update  $\what\mu_{j+1} = \what \mu_j - \eta \what{g}_{j}$
+\EndFor
+\For{$k = 0, 1, \dots, K-1$}
+    \State Compute gradient $\wt g_k = \epsilon^\star_{J+k} \cdot 1 / \what{\pi}(X)$ where $\epsilon_{J+k}^\star =  \tfrac{P_{\rm eval} [(Y - \what\mu_{J+k}(X)) \cdot A / \what{\pi}(X)]}{P_{\rm eval}[A / \what{\pi}(X)^2]}$ 
+    \State Compute $\what{g}_{k} = \argmin_{g\in \mathcal G} P_{\rm eval}[A( \wt{g}_k - g(X))^2]$ and update  $\what\mu_{J+k+1} = \what \mu_{J+k} - \eta \what{g}_{k}$
+\EndFor
+\State Return final outcome model $\what\mu^C_{\rm XGB} := \what\mu_{J+K}$
+\end{algorithmic}
+\label{alg:boosting}
+\end{algorithm}
+
+
+\looseness=-1 \paragraph{Constrained Gradient Boosting}
+We want to minimize the squared loss subject to the constraint~\eqref{eq:c-learner} and propose a two-stage procedure. First, we perform gradient boosting where instead of the functional gradient of the loss $g_j$, we use a modified version 
+\vspace{-0.3em}
+\begin{align}
+    \label{eq:epsilon_xgb}
+    \wt{g}_{j} := g_{j} + \epsilon^\star_j \cdot \frac{1}{\what{\pi}(X)}~~~\mbox{where}~~~
+\epsilon_j^\star = \argmin_\epsilon 
+\left\{ P_{\rm train}\left[A\left(Y-\what \mu_j(X)-\epsilon \cdot \frac{A}{\what{\pi}(X)}\right)^2\right]\right\}
+    \end{align}
+\looseness=-1 given by the targeting objective~\eqref{eqn:targeting} applied to $\what\mu_j$ on the dataset $P_{\rm train}$. 
+The modification $\wt g_j$ allows subsequent weak learners to be fit in a direction that reduces the loss \emph{and} makes the plug-in estimator closer to satisfying our constraint on $P_{\rm train}$. To ensure the constraint~\eqref{eq:c-learner-datasets} is satisfied on $P_{\rm eval}$, the second stage fits weak learners  to the gradient of constraint violation below:
+\vspace{-0.3em}
+\begin{equation*}
+    \wt{g}_k := \epsilon^\star_{J+k} \cdot \frac{1}{\what{\pi}(X)}~~\mbox{where}~~
+    \epsilon^\star_{J+k} = \argmin_{\epsilon} \left\{ P_{\rm eval}\left[A\left(Y-\what{\mu}_{J+k}(X)-\epsilon \cdot \frac{A}{ \what{\pi}(X)}\right)^2\right]\right\}.
+\end{equation*}
+We summarize the method above in pseudo-code in Algorithm~\ref{alg:boosting}, which we implement using the XGBoost package with custom objectives~\citep{xgb}. Hyperparameters for the first stage (learning rate $\eta$, and other properties of the weak learners such as max tree depth) are selected to have the lowest MSE loss on $P_{\rm val}$.  Other hyperparameters such as max number of trees $J$ and $K$, may be set on $P_{\rm val}$, or alternatively, by early stopping, with evaluation on different folds within $P_{\rm train}$. 
+These hyperparameters are re-used in the second stage. 
+
+
+
+
+\subsection{Neural Networks}
+\label{sec:methods_nn}
+When outcome models are 
+neural networks $\what\mu_\theta(x)$
+with weights $\theta$,
+we consider the usual MSE loss with a Lagrangian regularizer for the constraint~\eqref{eq:c-learner-datasets}
+\vspace{-0.1cm}
+\begin{align*}
+    L(\theta) = P_{\rm train}\left[A(Y-\what\mu_\theta(X))^2\right] +
+\lambda\cdot P_{\rm eval}\left[\frac{A}{\what\pi(X)}(Y-\what\mu_\theta(X))\right]^2.
+\vspace{-0.3cm}
+\end{align*}
+\looseness=-1 We optimize the objective using stochastic gradient methods, where we take mini-batches of the training set to approximate the gradient of the first term and take a full-batch gradient on the evaluation set for the second term. At the end of every training epoch, the constraint on $P_{\rm eval}$ is enforced \emph{exactly} by
+adjusting the constant bias term $\theta_{\rm bias}$ in the neural network:
+\vspace{-0.1cm}
+\begin{align}
+\label{eq:const_shift}
+    \theta_{\rm bias} \gets \theta_{\rm bias} +
+    \left( P_{\rm eval}\left[\frac{A}{\what\pi(X)}\right] \right)^{-1} P_{\rm eval}\left[\frac{A}{\what\pi(X)}(Y-\what\mu_\theta(X))\right].
+    \vspace{-0.3cm}
+\end{align}
+\looseness=-1 We choose to stop training at the epoch that minimizes $P_{\rm val}  \left[ A(Y-\what\mu_\theta(X))^2\right]$, the MSE loss on the validation split. We consider two options for choosing  hyperparameters (e.g. learning rate, $\lambda$).
+The first option is to minimize MSE on $P_{\rm val}$. Second,
+ since a small bias shift indicates a regularizer that is successful,
+ we choose
+  among hyperparameters with reasonable MSE loss on $P_{\rm val}$ the one that minimizes the size of the bias shift \eqref{eq:const_shift} in the first epoch. 
+While the first method is more standard, the second encourages satisfying the constraint over the course of training, to avoid big jumps in optimization. 
+Model selection for nuisance parameters is an active area of research \citep{hahn2019bayesian,rolling2013,setodji2017right}; we explore these in Section~\ref{sec:civilcomments}. 

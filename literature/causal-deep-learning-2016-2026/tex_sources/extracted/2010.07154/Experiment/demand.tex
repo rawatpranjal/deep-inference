@@ -1,0 +1,41 @@
+The demand design dataset is a synthetic dataset introduced by \citet{Hartford2017} that is now a standard benchmarking dataset for testing nonlinear IV methods. In this dataset, we aim to predict the demands on airplane tickets $Y$ given the price of the tickets $P$. The dataset contains two observable confounders, which are the time of year $T\in[0,10]$ and customer groups $S \in \{1,...,7\}$ that are categorized by the levels of price sensitivity. Further, the noise in $Y$ and $P$ is correlated, which indicates the existence of an unobserved confounder. The strength of the correlation is represented by $\rho \in [0,1]$. To correct the bias caused by this hidden confounder, the fuel price $C$ is introduced as an instrumental variable. Details of the data generation process can be found in Appendix~\ref{sec:data-generation-process-demand}. In
+DFIV notation, the treatment is $X=P$, the instrument is $Z=C$, and $(T, S)$ are the observable confounders.
+
+We compare the DFIV method to three leading modern competitors, namely  KIV \citep{Singh2019}, DeepIV \citep{Hartford2017}, and DeepGMM \citep{Bennett2019}. We used the DFIV method with observable confounders, as introduced in Appendix~\ref{sec:observable-confounder}. Note that DeepGMM does not have an explicit mechanism for incorporating observable confounders. The solution we use, proposed by \citet[p. 2]{Bennett2019}, is to incorporate these observables in both instrument {\em and} treatment;  
+hence we apply DeepGMM with treatment $X=(P, T, S)$ and instrumental variable $Z=(C, T, S)$. 
+Although this approach is theoretically sound, this makes the problem unnecessary difficult since it ignores the fact that we only need to consider the conditional expectation of $P$ given $Z$.
+
+We used a network with a similar number of parameters to DeepIV as the feature maps in DFIV and models in DeepGMM. We tuned the regularizers $\lambda_1,\lambda_2$ as discussed in Appendix~\ref{sec:hyper-param}, with the data evenly split for stage 1 and stage 2.  We varied the correlation parameter $\rho$ and dataset size, and ran 20 simulations for each setting. Results are summarized in Figure~\ref{fig:demand}. We also evaluated the performance via the estimation of average treatment effect and conditional average treatment effect, which is presented in Appendix~\ref{sec:demand-causal-experiments}
+\begin{figure}[t]
+    \begin{small}
+        \begin{center}
+            \includegraphics[width=1.0\textwidth]{Experiment/demand_box_plot.pdf}
+        \end{center}
+        \caption{MSE for demand design dataset with low dimensional confounders.}
+        \label{fig:demand}
+    \end{small}
+\end{figure}
+
+Next, we consider a case, introduced by \citet{Hartford2017}, where the customer type $S \in \{1,\dots,7\}$ is replaced with an image of the corresponding handwritten digit from the MNIST dataset \citep{mnist}. This reflects the fact that we cannot know the exact customer type, and thus we need to estimate it from noisy high-dimensional data. Note that although the confounder is high-dimensional, the treatment variable is still real-valued, i.e. the price $P$ of the tickets. Figure~\ref{fig:demand-high-dim} presents the results for this high-dimensional confounding case. Again, we train the networks with a similar number of learnable parameters to DeepIV in DFIV and DeepGMM, and hyper-parameters are set in the way discussed in Appendix~\ref{sec:hyper-param}. We ran 20 simulations with data size $n+m=5000$ and report the mean and standard error. 
+
+
+\begin{figure}[t]
+    \begin{minipage}{0.48\hsize}
+    \centering
+    \includegraphics[width=1.0\textwidth]{Experiment/demand_high_dim_box_plot.pdf}
+    \caption{MSE for demand design dataset with high dimensional observed confounders.}
+    \label{fig:demand-high-dim}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \includegraphics[width=0.8\textwidth]{Experiment/dsprite_box_plot_2.pdf}
+        \caption{MSE for dSprite dataset. DeepIV did not yield meaningful predictions for this experiment.}
+        \label{fig:dsprite}
+        \end{minipage}
+\end{figure}
+
+Our first observation from Figure~\ref{fig:demand}~and~\ref{fig:demand-high-dim} is that the level $\rho$ of correlation has no significant impact on the error under any of the IV methods, indicating that all approaches correctly account for the effect of the hidden confounder. This is consistent with earlier results on this dataset using DeepIV and KIV \citep{Hartford2017,Singh2019}. We note that DeepGMM does not perform well in this demand design problem.
+%\adcomment{also it seems that the amount of confounding has essentially no impact on the performance, this should be mentioned and also noted that this was observed in the DeepIV paper}.
+%AG: done
+This may be due to the current DeepGMM approach to handling observable confounders, which might not be optimal. KIV performed reasonably well for small sample sizes and low-dimensional data, but it did less well in the high-dimensional MNIST case due to its less expressive features. In high dimensions, DeepIV performed well, since the treatment variable is unidimensional. However, DFIV performed consistently better than all other methods in both low and high dimensions, which suggests it can learn a flexible structural function in a stable manner.

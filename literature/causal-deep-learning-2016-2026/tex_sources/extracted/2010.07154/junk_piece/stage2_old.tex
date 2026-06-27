@@ -1,0 +1,9 @@
+As in stage 1, we can update $\theta_X$ based on loss $\tilde{\mathcal{L}}^{(n)}_2$ defined as
+\begin{align*}
+    \tilde{\mathcal{L}}^{(n)}_2 &= \frac1n \sum_{i=1}^n (\tilde y_i -(\hat{\vec{f}}^{(n)})^\top \hat{E}^{(m)} \vec{\phi}_{\theta_Z}(\tilde z_i))^2 + \lambda_2 \|\vec{f}^{(n)}\|^2\\
+    %&= \frac1n \|\vec{y}\|^2 -\frac1n \vec{y}^\top \Phi_2(\hat{E}^{(m)})^\top \left(\hat{E}^{(m)}\Phi_2 ^\top \Phi_2 (\hat{E}^{(m)})^\top + n\lambda_2 I\right)^{-1}\hat{E}^{(m)}\Phi_2^\top \vec{y}\\
+    &= \frac1n \|\vec{y}_2\|^2 - \frac1n \vec{y}_2^\top A \Psi_1(\Psi^\top_1 A^\top A \Psi_1 + n\lambda_2 I)^{-1} \Psi_1^\top A^\top \vec{y}_2,
+\end{align*}
+where $A = \Phi_2(\Phi_1^\top \Phi_1 + \lambda_1I)^{-1}\Phi_1^\top \in \mathbb{R}^{n\times m}$. The second equation holds from the definition of $\hat{f}^{(n)}$ and $\hat{E}^{(m)}$ given in \eqref{eq:stage1-sol} and \eqref{eq:stage2-sol}, respectively. Recall that $\Psi_1$ is a feature matrix of treatment variable $X$, which explicitly depends on $\theta_X$. Therefore, we can update $\theta_X$ based on the gradient of $\tilde{\mathcal{L}}_2^{(n)}$, which can be computed by off-the-shelf auto-differentiation libraries.
+ 
+One might attempt to tune $\theta_Z$ as well to minimize the $\tilde{\mathcal{L}}_2^{(m)}$. However, this is inappropriate since the goal of IV regression is not to regress $Z$ instrumental variable to $Y$. In experiments, we observed that if we tune $\theta_Z$ in stage 2, we could achieve the lower value of loss $\tilde{\mathcal{L}}^{(m)}_2$, while the structural function learned separately.\adcomment{i am not sure what you are trying to say here, only made sense after reading appendix and looking at Figure 7}

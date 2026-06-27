@@ -1,0 +1,92 @@
+\section{VCNet: Varying Coefficient Network Structure}\label{sec:structure}
+\begin{figure}
+    \centering
+    \includegraphics[width=.8\linewidth]{structure.pdf}
+    \caption{Comparison of network structure between DRNet and VCNet.}
+    \label{fig:structure}
+\end{figure}
+
+Under Assumption \ref{assump}, we have
+\[
+\psi(t)=\E\left[\E(Y\mid\X,T=t)\right].
+\]
+Thus, a naive estimator for $\psi$ is to obtain an estimator $\hat\mu$ of $\mu$, and use $\hat\psi(t)=\frac{1}{n}\sum_{i=1}^n\hat \mu(t,\x_i)$. Here $\mu(t,\x):=\E(Y\mid\X=\x,T=t)$ and $\hat{\mu}$ is its estimator. Following \cite{shi2019adapting}, we utilize the sufficiency of
+the generalized propensity score $\pi(t\mid \X)$ for estimating $\psi$ \citep{hirano2004propensity}:
+\[
+\psi(t)
+=\E\left[\E(Y\mid\pi(t\mid\X),T=t)\right].
+\]
+It indicates that learning $\pi(t\mid\X)$ helps the removal of noise and distillation of useful information in $\X$ for estimating $\psi$. %only those parts in $\X$ useful for predicting $\pi(t\mid \X)$ are informative in estimating $\psi$, and the parts in $\X$ irrelevant for $\pi(t\mid \X)$ are noise. 
+Similar to \cite{shi2019adapting}, we add a separate head for estimating $\pi(t\mid\X)$, and use the feature $\boldsymbol{z}$ extracted by it for downstream estimation of $\mu(t,\x)$ (see Figure \ref{fig:structure}). Our contribution here is to propose the varying coefficient structure of the prediction head for $\mu(t,\x)$, which addresses difficulties confronting continuous treatment as discussed in the following paragraph.
+
+%{\color{red} cite paper to justify the hypothesis that curve is continuous/smooth}
+
+\subsection{The Varying Coefficient Prediction Head}
+Our aim is to predict $\mu(t,\x)=\E(Y\mid T=t,\X=\x)$. 
+A naive method is to train a neural network which takes $(t,\x)$ as input in the first layer and outputs $\mu(t,\x)$ in the last layer. However, the role of treatment $t$ is different from that of $\x$ and the influence of $t$ might be lost in the high-dimensional hidden features \citep{shalit2017estimating}. Aware of this problem, previous work \citep{schwab2019learning} divides the range of treatment into blocks, and then use separate prediction heads for each block (see Figure \ref{fig:structure}). To further strengthen the influence of treatment $t$, \cite{schwab2019learning} appends $t$ to each hidden layer. One problem of this structure is that it destroys the continuity of $\mu$ 
+by using different prediction heads for each block of treatment levels.
+In practice, DRNet indeed produces discontinuous curve (see Figure \ref{fig:discontinuity}).  %Second, the sample size available for training each prediction head is reduced. Intuitively, samples lying outside but close to a block also carry useful information. 
+
+In order to simultaneously emphasize the influence of treatment while preserving the continuity of ADRF, we propose a varying coefficient neural network (VCNet). In VCNet, the prediction head for $\mu$ is defined as
+\[
+\mu^{\nn}(t,\x)=f_{\th(t)}(\z),
+\]
+where input $\z$ is the feature extracted by the conditional density estimator,  and $f_{\th(t)}$ is a (deep) neural network with parameter $\th(t)$ instead of a fixed $\th$. It means that the nonlinear function defined by the neural network depends on the varying treatment level $t$, and thus we call this structure the varying coefficient structure \citep{hastie1993varying, fan1999statistical, chiang2001smoothing}. For example, if $f$ is an one-hidden-layer ReLU network, we have $f_{\th(t)}(\z) = \sum_{i=1}^Da_{i}(t)\text{ReLU}(\boldsymbol{b}_i(t)^{\top}\z)$, where $a_{i}(t)$ and $\boldsymbol{b}_i(t)$ are weights of the neural network, and $\th(t)=[(a_1(t),\boldsymbol{b}_1(t)),\cdots,(a_D(t),\boldsymbol{b}_D(t))]^\top$. Here we use splines to model $\th(t)$. Suppose that $\th(t)=[\theta_{1}(t),...,\theta_{d_{\th}}(t)]^\top\in\R^{d_{\th(t)}}$,
+where $d_{\th(t)}$ is the dimension of $\th(t)$. We have 
+\[
+\theta_{i}(t)=\sum_{l=1}^{L}a_{i,\ell}\varphi^{\nn}_{\ell}(t),
+\]
+where $\{\varphi^{\nn}_{l}\}_{\ell=1}^{L}$ are the spline basis and $a_{i,\ell}$'s are the coefficients. Thus, we
+have 
+\begin{align*}
+\th(t) & =\A\bp(t)\quad\text{where}\quad
+\A  =\left[\begin{array}{ccc}
+a_{1,1} & \cdots & a_{1,L}\\
+\vdots & \ddots & \vdots\\
+a_{d_{\th},1} & \cdots & a_{d_{\th},L}
+\end{array}\right]\quad\text{and}\quad
+\bp(t) =\left[\varphi^{\nn}_{1}(t),\cdots, \varphi^{\nn}_{L}(t)\right]^\top.
+\end{align*}
+
+It is worth mentioning that by choosing spline basis of the form $\mathbb{I}(t_0\le t< t_1)$ with different $t_0,t_1$, we recover the structure in \cite{schwab2019learning}, which has a separate prediction head for each block. It indicates that DRNet can also be viewed as a special case of VCNet (under a suboptimal choice of basis functions). 
+
+In VCNet, the influence of treatment effect $t$ on the outcome directly enters through parameters $\th(t)$ of the neural network, which distinguishes treatment from the other covariates and avoids the treatment information from being lost. Under typical choices of spline basis such as B-spline, once the activation function is continuous, VCNet will automatically produce continuous ADRF estimators.
+%Discussion: We can instead of using more complicated method to model the nonlinear mapping by using, i.e. Hypernetworks. But we focus simple for now.
+
+
+\subsection{Conditional Density Estimator} 
+Recall that the input feature $\z$ to $\mu^{\nn}$ is extracted by the conditional density estimator for $\pi(t\mid\x)$. Here we propose a simple network to estimate $\pi$, which is a direct generalization of the conditional probability estimating head in \cite{shi2019adapting}. 
+Notice that $t\in[0,1]$ and the conditional density $\pi(t\mid\x)$ is continuous with respect to treatment $t$ for any given $\x$. A continuous function can be effectively approximated by piecewise linear functions. Thus, we divide $[0,1]$ equally into $B$ grids, estimate the conditional density $\pi(\cdot\mid\x)$ on the $(B+1)$ grid points, and the conditional density for other $t$'s are calculated via linear interpolation. To be more specific, we define the network $\pi^{\nn}_{\text{grid}}$ as
+\begin{align*}
+\pi^{\nn}_{\text{grid}}(\x) & =\text{softmax}(\w_{2}\z)\in\R^{B+1},
+\quad
+\text{where}
+\quad
+\z  =f_{\w_{1}}(\x).
+\end{align*}
+Here $\z\in\R^{h}$ is the hidden feature extracted by the
+network, $\w_{1}$ is the parameter for the nonlinear mapping $f_{\w_{1}}$,
+$\w_{2}\in\R^{(B+1)\times h}$, $\pi_{\grid}^{\nn}(\x)=[\pi_{\grid}^{0,\nn}(\x),....,\pi_{\grid}^{B,\nn}(\x)]$ and  $\pi_{\grid}^{i,\nn}(\x)$ is the estimated conditional density of $T=i/B$ given $\X=\x$. This structure is analogous to a classification network by removing the last layer which outputs the class with highest softmax score.
+Estimation of conditional density at other $t$'s given $\X=\x$ are obtained via linear interpolation:
+\[
+\pi^{\nn}(t\mid\x)=\pi_{\grid}^{t_{1},\nn}(\x)+B\left(\pi_{\grid}^{t_{2},\nn}(\x)-\pi_{\grid}^{t_{1},\nn}(\x)\right)\left(t-t_{1}\right),\quad\text{where}\quad t_1=\lfloor Bt\rfloor,\,t_2=\lceil Bt\rceil.
+\]
+This estimator $\pi^{\nn}$ is continuous with respect to $t$ for any given $\x$ and we finally rescale it to yield a valid  density, i.e., $\pi^{\nn}(t\mid\x)\geq 0,\,\forall t,\x$ and $\int_{t=0}^{1}\pi^{\nn}(t\mid\x)dt=1,\,\forall\x$. 
+
+There are other options to estimate the conditional density. Popular methods include the mixture density network  (\cite{bishop1994mixture}), the kernel mixture network (\cite{ambrogioni2017kernel}) and normalizing flows (\cite{rezende2015variational}, \cite{dinh2016density}, \cite{trippe2018conditional}). Here treatment levels are bounded, and thus Gaussian mixtures are not applicable. In current estimator, the linear interpolation for estimating conditional density on non-grid points can be replaced by kernel smoothing, which is more computationally intensive due to the calculation of normalizing constant. Other techniques including smoothness regularization and data normalization (\cite{rothfuss2019conditional}) can be implemented to further enhance the performance. However, density estimation is not the main focus of this paper. Thus, for simplicity, in all experiments we use the aforementioned method without other techniques and it works quite well on datasets we tried.
+
+%Add discussion on: 1. why not use kernel: for simplicity of calculating normalizing constant. also enables us to use KL instead of more complicated Fisher divergence for estimation; 2. The treatment is generally bounded and thus many gaussian based method is not applicable; 3. More advanced technique such as normalizing flows can be plugged into. but for simplicity, we use this easy one.
+
+\subsection{Training}
+Notice that our model requires $\pi^\nn$ to extract good latent features $\z$ as the input for $\mu^\nn$ to predict. This can be achieved by training $\pi^\nn$ to estimate the conditional density, which motivates us to train $\pi^{\nn}$ and ${\mu}^{\nn}$ simultaneously by minimizing the following loss:
+\begin{equation}\label{eq:loss_without_tr}
+    \mathcal{L}[\mu^{\text{NN}}, \pi^{\text{NN}}] = \frac{1}{n}\sum_{i=1}^n
+    \left(y_i-\mu^{\nn}(t_i,\x_i)\right)^2 -\frac{\alpha}{n}\sum_{i=1}^n{\log(\pi^{\nn}(t_i\C \x_i))}.
+\end{equation}
+In loss (\ref{eq:loss_without_tr}), the first term measures the prediction loss from $\mu^{\nn}$. The second term measures the loss from $\pi^{\nn}$ and is the negative log likelihood. And $\alpha$ controls the relative weights of the two losses. 
+
+Denote $\hat \mu$, $\hat\pi$ as the optimal solution of the above empirical risk minimization problem (\ref{eq:loss_without_tr}). After getting $\hat\mu$, one can estimate $\psi(\cdot)$ by $\hat\psi(\cdot)=\frac{1}{n}\sum_{i=1}^n\hat \mu(\cdot,\x_i)$. The correctness of this naive estimator relies on whether the truth $\mu$ is in the function space defined by the neural network model. However, we can plug $\hat \mu$ and $\hat\pi$ into the non-parametric estimating equation (to be introduced later) to obtain a doubly robust estimator of $\psi(t)$. In this way, we are able to produce an (asymptotically) correct estimator if any one of $\mu$ or $\pi$ is in the model space of neural network. The next section discusses challenges in obtaining such a doubly robust estimator and provides our solution.
+
+
+
+%{\color{red} what is the goal for training? What is the naive estimator? Why train is related to this naive estimator. What is the role of alpha}

@@ -1,0 +1,54 @@
+
+Consider a Markov decision process of state space $\mathcal{S}$, action space $\mathcal{A}$, and discount factor $\gamma \in [0,1)$  where $p(s'|s,a)$ denotes the probability of making a transition to state $s'$ when taking action $a$ in state $s$ while $\mu(r|s,a,s')$ denotes the probability density of reward $r$ when having moved to $s'$ from $s$ after having taken action $a$. For the policy $\pi$ where $\pi(a|s)$ denotes the probability of taking action $a$ in state $s$, the Q-function is given by
+
+\begin{equation}
+    Q(s,a)=\mathbb{E}\left[\sum_{t=0}^\infty \gamma^t r_t | s_0=s, a_0=a\right],
+\end{equation}
+where the expectation is w.r.t.
+\begin{equation}
+    \prod_{t=1}^\infty p(s_t|s_{t-1},a_{t-1})\mu(r_{t}|s_{t-1},a_{t-1},s_{t})\pi(a_t|s_t).
+\end{equation}
+This Q-function satisfies the following Bellman equation
+\begin{equation}\label{eq:BellmanQ}
+    Q(s,a)=R(s,a)+\gamma \int\int p(s'|s,a)\pi(s'|a') Q(s',a')\textrm{d}s'\textrm{d}a',
+\end{equation}
+where the average reward is given by
+\begin{equation}
+    R(s,a)=\int r~p(s'|s,a)\mu(r|s,a,s') \textrm{d}r \textrm{d}s'.
+\end{equation}
+We typically cannot compute in closed-form the Q-function as we can only sample from $p(s'|s,a)$ and $\mu(r|s,a,s')$ but do not have access to their expressions. However, when we have access to tuples of the form $(s_t,a_t,r_t,s_{t+1})$ having been obtained using any policy, we will show that, for any policy $\pi$, we can obtain a neural network approximation of the $Q$ function using IV regression. This generalizes the Least Squares Temporal Difference (LSTD) approach of \cite{bradtke1996linear} which uses the standard 2SLS method to approximate a linearly parameterized value function.
+
+The key is to rewrite (\ref{eq:BellmanQ}) using the following decomposition
+\begin{align}
+    r&=Q(s,a)-\gamma Q(s',a')\nonumber\\
+    &+\gamma\left(Q(s',a') - \int p(s'|s_t,a_t)\pi(a'|s')Q(s',a')ds'da'\right)\nonumber\\
+    &+r-R(s,a).\label{eq:Keydecomposition}
+\end{align}
+This can be rewritten as a structural causal model \eqref{eq:structuralcausalmodel} where $Y=r$ is the outcome, $X=(s,a,s',a')$ the treatment and $Z=(s,a)$ the instrument while the structural function is 
+\begin{align*}
+      f_\mathrm{str}(a,s,a',s')=Q(a,s)-\gamma Q(a',s') 
+\end{align*}
+and the confounder $\varepsilon$ is
+\begin{align}\label{eq:Noise}
+    \varepsilon&=\gamma\left(Q(s',a') - \int p(s'|s_t,a_t)\pi(a'|s')Q(s',a')ds'da'\right)\nonumber\\
+    &+r_t-R(s,a),\nonumber\\
+\end{align}
+which is indeed such that $\expect{\varepsilon}= 0$, $\expect{\varepsilon | X}\neq 0$ if, for any available tuple $(s,a,r,s')=(s_t,a_t,r_t,s_{t+1})$, we sample $a'=a_{t+1}\sim \pi(a'|s')$. We also have $\expect{\varepsilon | Z}=0$ as required.
+
+In this context, we want here to model $Q(s,a)=\vec{f}^\top \vec{\psi}_{\theta_X}(s,a)$ so 
+\begin{align}\label{eq:SCMforQ}
+    f_\mathrm{str}(s,a,s',a') = \vec{f}^\top (\vec{\psi}_{\theta_X}(s,a) - \gamma \vec{\psi}_{\theta_X}(s',a')).
+\end{align}
+It follows that 
+\begin{align*}
+\expect[X|z]{f(X)} = \vec{f}^\top(\vec{\psi}_{\theta_X}(s,a)- \gamma \expect[s',a'|s,a]{\vec{\psi}(s',a')}).
+\end{align*}
+We will model $\expect[s',a'|s,a]{\vec{\psi}(s',a')}=E \vec{\phi}(s,a)$.
+In this case, given data $(s_t,a_t,s_{t+1},a_{t+1})$, stage 1 is not modified and requires solving 
+\begin{align}
+    \hat{E}^{(m)}, \hat{\theta}_Z = \argmin_{E \in \mathbb{R}^{d_1 \times d_2}, \theta_Z} \mathcal{L}_1^{(m)}, \quad \mathcal{L}_1^{(m)} = \frac1m \sum_{t=1}^m \|\vec{\psi}_{\theta_X}(s_t,a_t) - E\vec{\phi}_{\theta_Z}(s_{t+1},a_{t+1})\|^2 + \lambda_1 \|E\|^2. \label{eq:stage1-empirical-loss_Q}
+\end{align}
+However, given the specific form \eqref{eq:SCMforQ} of the structural function, stage 2 is slightly modified and requires minimizing for data $(r_t,s_t,a_t)$ the loss
+\begin{align}
+    \hat{\vec{f}}^{(n)}, \hat{\theta}_X = \argmin_{\vec{f} \in \mathbb{R}^{d_1}, \theta_X}\mathcal{L}^{(n)}_2, \quad \mathcal{L}^{(n)}_2 = \frac1n \sum_{t=1}^n (r_t - \vec{f}^\top (\vec{\psi}_{\theta_X}(s_t,a_t)-\gamma\hat{E}^{(m)} \vec{\phi}_{\theta_Z}(s_t,a_t)))^2 + \lambda_2 \|\vec{f}\|^2. \label{eq:stage2-empirical-loss_Q}
+\end{align}

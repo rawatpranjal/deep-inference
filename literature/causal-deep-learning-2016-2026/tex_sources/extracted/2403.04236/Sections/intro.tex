@@ -1,0 +1,70 @@
+\vspace{-2mm}
+\section{Introduction}\label{sec:intro}
+\vspace{-2mm}
+
+Instrumental variable (IV) estimation is an important problem in various fields, such as causal inference \citep{angrist1995identification, newey2003instrumental,deaner2018proxy,cui2020semiparametric,kallus2021causal,kallus2022causal}, missing data problems \citep{miao2018confounding,wang2014instrumental}, dynamic discrete choice models \cite{kalouptsidi2021linear}  and reinforcement learning \citep{liao2021instrumental,uehara2022future,uehara2022provably,shi2022minimax,wang2021provably,yu2022strategic}. 
+
+In this paper, we focus on nonparametric IV (NPIV) regression \citep{newey2003instrumental}.  NPIV concerns three random variables $X \in \RR^d$ (covariate), $Y \in \RR$ (outcome variable), and $Z \in \RR^d$ (instrumental variables). 
+%%%%%, which all take values in three bounded subsets $\Xcal$, $\Ycal$, and $\Zcal$ of three Euclidean spaces. 
+We are interested in finding a solution $h_0$ of the following conditional moment equation \citep{dikkala2020minimax, chernozhukov2019inference}:   $$
+\E[Y - h(X)|Z] = 0.
+$$
+This is equivalently written as $\Tcal f=r_0$ where $\Tcal: L_2(X)\ni f(X) \mapsto \E[f(X)|Z]\in L_2(Z)$ and $r_0(Z) = \E[Y|Z]$ by denoting $L_2(X), L_2(Z)$ to be the $L_2$ space defined on $X$ and $Z$ with respect to the underlying distribution. Both the operator $\Tcal$ and $\E[Y|Z]$ remain unknown. Hence, we aim to solve $\Tcal f=r_0$ by harnessing an identically independent distributed (i.i.d.) dataset $\{X_i, Y_i, Z_i\}_{i\in[n]}$. 
+
+\iffalse 
+We define $L_2(X), L_2(Z)$ to be the $L_2$ space defined on $X$ and $Z$ with respect to the underlying probability distribution.
+We adopt the notation of $\Tcal: L_2(X) \rightarrow L_2(Z)$, defined by $\Tcal f(Z) = \E[f(X)|Z]$, and $r_0(Z) = \E[Y|Z]$, the aforementioned equation can then be expressed as $\Tcal h = r_0$. Note that here both the operator $\Tcal$ and $\E[Y|Z]$ remain unknown, and we only have access to an identically independent distributed dataset $\{X_i, Y_i, Z_i\}_{i\in[n]}$.
+\fi 
+
+
+There has been a surge in interest in NPIV regressions that try to integrate general function approximation such as deep neural networks beyond classical nonparametric models \citep{hartford2017deep,singh2019kernel,xu2021deep,zhang2023instrumental,dikkala2020minimax,bennett2020variational,bennett2023minimax,bennett2023source,kallus2022causal,singh2020kernel}. 
+%%%%Several classical works have proposed sieve or kernel-based estimators for NPIV \citep{singh2020kernel,newey2003instrumental,newey2013nonparametric,horowitz2011applied,carrasco2007linear}.
+Despite these extensive efforts, existing approaches encounter several challenges. The first challenge is the ill-posedness of the inverse problem. Many existing works \citep{liao2020provably,newey2003instrumental,florens2011identification,kato2021learning} require that the NPIV solution $h_0$ is unique, and further impose quantitative bounds on measures of ill-posedness.
+However, it is known that the uniqueness assumption is easily violated in practical scenarios, such as weak IV \citep{andrews2005inference, andrews2019weak} or proximal causal inference \citep{kallus2021causal}.
+The second challenge involves the reliance on minimax optimization oracles in many methods \citep{bennett2023minimax,dikkala2020minimax,liao2020provably,bennett2023source,zhang2023instrumental}, which results in minimax non-convex non-concave optimization when invoking deep neural networks. However, currently, such an optimization can be notoriously unstable and may fail to converge \citep{lin2020near,jin2020local,lin2020gradient,diakonikolas2021efficient,razaviyayn2020nonconvex}. Instead, our approach seeks to address this challenge by proposing a computationally efficient estimator that relies on standard supervised learning oracles rather than minimax oracles. The third challenge is the absence of clear procedures for model selection in existing works \citep{xu2021deep,zhang2023instrumental,cui2020semiparametric,hartford2017deep}. This issue is problematic, because model selection, including techniques like cross-validation, has played a pivotal role in the practical success of machine learning algorithms \citep{bartlett2002model,gold2003model,guyon2010model,cawley2010over,raschka2018model,emmert2019evaluation,mcallester2003pac}. Model selection becomes essential particularly in scenarios where the true NPIV solution $h_0$ lies outside the chosen function classes optimized by the algorithm, which has been seldom explored in prior works. 
+
+\begin{table*}[!t]
+    \centering
+      \caption{Summary of IV regression literature with general function approximation such as neural networks. ``Model Selection'' means allowing model selection methods. ``No Minimax'' means no need of minimax oracle.  ``No Uniquness'' means unique solution is not assumed.}
+    \begin{tabular}{cccccc}
+    \toprule
+         & Model Selection & No Minimax  & No Uniqueness & RMSE rates\\ \midrule
+   \citet{hartford2017deep}      &   & \checkmark  &  & \\  
+   \citet{DikkalaNishanth2020MEoC} &  & & & \\ 
+   \citet{liao2020provably} &  & & & \checkmark  \\ 
+   \citet{xu2021deep} &  & \checkmark  & \\ 
+\citet{bennett2023minimax} &  & & \checkmark & \checkmark \\ 
+   \citet{bennett2023source} &  & & \checkmark & \checkmark \\ 
+\rowcolor{lightgray}
+ Ours & \checkmark  &  \checkmark  & \checkmark  & \checkmark \\
+   \bottomrule
+    \end{tabular}
+
+    \label{tab:all_summary}
+\end{table*}
+
+To address aforementioned challenges, we propose a two-stage method, which we refer to as the \emph{Regularized DeepIV (RDIV)}. This approach consists of two steps. First, we learn the operator $\Tcal$ by maximum likelihood estimation (MLE). Secondly, we obtain an estimator for $h_0$ by solving a loss incorporating the learned $\Tcal$ and Tikhonov regularization \citep{ito2014inverse} to handle scenarios where solutions of the conditional moment constraint are nonunique. While our method can be viewed as a regularized variant of the DeepIV method of \cite{hartford2017deep} with a non-parametric MLE first-stage, no prior theoretical convergence guarantees exist for the DeepIV method. We show that our estimators can converge to the least norm IV solution (even if solutions are nonunique) and derive its $L_2$ error rate guarantee based on critical radius. Subsequently, we introduce model selection procedures for our estimators. Particularly, we provide theoretical guarantees for model selection via out-of-sample validation approaches, and show an oracle result in our context. Finally, we further illustrate that our method can be easily generalized to an iterative estimator that more effectively leverages the well-posedness of $h_0$. 
+
+% \masa{I think we shouldn't talk more about repeteive estimator cuz this part doesn't have any model selection guarantee. }
+% \masa{Probally, more add meat in this paragraph}
+
+Our contribution is to propose the first estimator for NPIV that (a) operates in the absence of the uniqueness assumption, (b) does not rely on the minimax computational oracle, and (c) allows for model selection. Subsequently, we demonstrate that our estimator can be extended to an iterative estimator, which achieves a state-of-the-art convergence rate in terms of $L_2$ error analogous to  \citet{bennett2023source}, while \citet{bennett2023source} requires a minimax computational oracle and does not permit us to perform model selection. Therefore, our estimator can be seen as an estimator with a strong theoretical guarantee due to the property (a) while it is practical due to properties (b) and (c). Notably, none of the existing works can enjoy such a guarantee, as shown in Table~\ref{tab:all_summary}. 
+
+%%%%%Our contributions are threefold: (1) We target the least norm solution $h_0$. This is a standard approach for inverse problems with non-unique solutions \cite{florens2011identification,bennett2023source,bennett2023minimax}, and allows us to dismiss the uniqueness assumption. (2) By learning the operator $\Tcal$ with density estimation methods, our estimator does not require a minimax computation oracle. (3) By XXX, we illustrate that our method allows the model selection procedure.... To justify our method from an empirical standpoint, we further conduct numerical simulation, with neural network as the general function class. To the best of our knowledge, our method is the first one that is uniqueness assumption and minimax-oracle free, and allows model selection approaches.
+%%%MU: I delete the above 
+
+
+
+% (Fourth problem: explain our papers in detail. ) 
+% To solve the above problems, we propose..... 
+
+
+% (Fifth paragraph: Summarize our contribution brifely, following the table. We propose the first approach that does not require a minimax oracle without the uniqueness assumption. Then, we propose the first model-selection approach.)  
+
+
+
+
+
+
+
+

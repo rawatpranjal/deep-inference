@@ -1,0 +1,431 @@
+\documentclass[11pt]{article}
+\usepackage[margin = 2.5cm]{geometry}
+\usepackage{amsmath, amssymb, amsfonts, amsthm, bm}
+\usepackage{enumerate}
+\usepackage{graphicx, float, subcaption, pdflscape, afterpage}
+\usepackage[labelfont={sf,bf}]{caption}
+\usepackage{threeparttable, booktabs, placeins}
+\usepackage[]{xcolor}
+\usepackage{adjustbox, multirow, setspace, url}
+\usepackage[super]{nth}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[colorlinks=true, linkcolor = BrickRed, urlcolor = blue, citecolor = PineGreen]{hyperref}
+\usepackage{minted}
+\allowdisplaybreaks
+
+\newcommand{\mm}{\frac{1}{n}\sum_{i=1}^n}
+
+\definecolor{LightGray}{gray}{0.9}
+
+\makeatletter
+\renewcommand{\paragraph}{%
+  \@startsection{paragraph}{4}%
+  {\z@}{1ex \@plus 1ex \@minus .2ex}{-1em}%
+  {\normalfont\normalsize\bfseries\sffamily}%
+}
+\makeatother
+
+\usepackage{natbib}
+\bibliographystyle{aer}
+
+\title{Automatic Debiased Machine Learning for
+Generalized Linear Regression --- Monte Carlo Experiments}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Binary Treatment}
+\subsection{Synthetic Data}
+\subsubsection{Separate NNs}
+DGP: $Y = f(T,X) + \epsilon$, $\epsilon \sim \mathcal{N}(0,1)$, $f(T,X) = T + \mathrm{expit}(10 X_1)$, $X_j \sim \text{iid } \mathcal{U}(-1,1), j = 1, \ldots, 10$, $P(T = 1 | X) = 0.5 + 0.3 \, \mathrm{expit}(10 X_1)$.
+
+Settings:
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize
+]
+{python}
+agmm.fit(Xt, Xval=Xt_test, earlystop_rounds=earlystop_rounds,
+         learner_lr=1e-2,
+         learner_l2=1e-3,
+         n_epochs=20, bs=100,
+         logger=None, model_dir=str(Path.home()), device=device, verbose=1)
+\end{minted}
+
+Results:
+\begin{figure}[H]
+    \centering
+    \caption{Estimated vs. true Riesz representer}
+    \includegraphics[width = 0.5\textwidth]{figures/actvsestriesz_bin.png}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \caption{ATE results with synthetic data (separate NNs)}
+    \includegraphics[width = 0.5\textwidth]{figures/ATE_sim.png}
+\end{figure}
+
+\subsubsection{RieszNet}
+Settings:
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize
+]
+{python}
+agmm.fit(Xt, yt, Xval=Xt_test, yval=yt_test,
+         earlystop_rounds=20,
+         learner_lr=1e-3,
+         learner_l2=0,
+         n_epochs=n_epochs, bs=bs, target_reg=.5, optimizer='adam',
+         logger=None, model_dir=str(Path.home()), device=device, verbose=1)
+\end{minted}
+\begin{figure}[H]
+    \centering
+    \caption{Estimated vs. true functions}
+    \includegraphics[width = \textwidth]{figures/actvsestriesz_bin_joint.png}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \caption{ATE results with synthetic data (RieszNet)}
+    \includegraphics[width = 0.5\textwidth]{figures/ATE_sim_joint.png}
+\end{figure}
+
+\subsection{IHDP}
+\subsubsection{RieszNet}
+Settings:
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize
+]
+{python}
+# Fast training
+agmm.fit(X_train, y_train, Xval=X_test, yval=y_test,
+    earlystop_rounds=2, earlystop_delta=1e-4,
+    learner_lr=1e-4,
+    learner_l2=1e-3, learner_l1=0.0,
+    n_epochs=100, bs=bs, target_reg=1.0,
+    riesz_weight=0.1,
+    optimizer='adam',
+    model_dir=str(Path.home()), device=device, verbose=0)
+# Fine tune
+agmm.fit(X_train, y_train, Xval=X_test, yval=y_test,
+    earlystop_rounds=40, earlystop_delta=1e-4,
+    learner_lr=1e-5,
+    learner_l2=1e-3, learner_l1=0.0,
+    n_epochs=600, bs=bs, target_reg=1.0,
+    riesz_weight=0.1,
+    optimizer='adam',
+    warm_start=True,
+    model_dir=str(Path.home()), device=device, verbose=0)
+\end{minted}
+
+Results:
+\begin{itemize}
+    \item DR: MAE = 0.110
+    \item Reg: MAE = 0.123
+    \item SRReg: MAE = 0.808
+    \item IPS: MAE = 0.122
+\end{itemize}
+
+For comparison, from the dragonnet paper:
+\begin{table}[H]
+    \centering
+    \caption{IHDP Results in Shi et al. (2019)}
+    \begin{tabular}{cc}
+    \toprule
+     Method & $\Delta_{in}$ (MAE) \\ \midrule
+    BNN [Joh+16] & 0.37 $\pm$ .03 \\
+TARNET [Sha+16] & 0.26 $\pm$ .01 \\
+CFR Wass[Sha+16] & 0.25 $\pm$ .01 \\
+CEVAEs [Lou+17] & 0.34 $\pm$ .01 \\
+GANITE [Yoo+18] & 0.43 $\pm$ .05 \\
+\midrule
+baseline (TARNET) & 0.16 $\pm$ .01 \\
+baseline + t-reg & 0.15 $\pm$ .01 \\
+Dragonnet & 0.14 $\pm$ .01 \\
+Dragonnet + t-reg & 0.14 $\pm$ .01 \\ \bottomrule
+    \end{tabular}
+    
+\end{table}
+
+\section{Average Derivative}
+\subsection{Synthetic Data}
+DGP: $Y = f(T,X) + \epsilon$, $\epsilon \sim \mathcal{N}(0,1)$, $$f(T,X) = \left(X_1^2/2 + 0.5\right) T^3/3 + \mathrm{expit}(10 X_1),$$ $X_j \sim \text{iid } \mathcal{U}(-1,1), j = 1, 2$, $T = 1 + 2 \, \mathrm{expit}(10 X_1) + \eta$, $\eta \sim \mathcal{N}(0,1)$.
+
+Settings:
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize
+]
+{python}
+agmm.fit(Xt, Xval=Xt_test, earlystop_rounds=earlystop_rounds,
+         learner_lr=1e-2,
+         learner_l2=1e-3,
+         n_epochs=20, bs=100,
+         logger=None, model_dir=str(Path.home()), device=device, verbose=1)
+\end{minted}
+
+Results:
+\begin{figure}[H]
+    \centering
+    \caption{Estimated vs. true Riesz representer}
+    \includegraphics[width = 0.8\textwidth]{figures/actvsestriesz_cont.png}
+\end{figure}
+
+\subsection{BHP}
+Data trimmed as in BHP (2017): $p \geq 1.2, \text{ income} > 15,000$.
+\subsubsection{RieszNet}
+Settings:
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize
+]
+{python}
+# Fast training
+agmm.fit(X_train, y_train, Xval=X_test, yval=y_test,
+        earlystop_rounds=2, earlystop_delta=1e-4,
+        learner_lr=1e-4,
+        learner_l2=1e-3, learner_l1=0.0,
+        n_epochs=100, bs=bs, target_reg=1, riesz_weight=0.1,
+        optimizer='adam',
+        model_dir=str(Path.home()), device=device, verbose=0)
+# Fine tune
+agmm.fit(X_train, y_train, Xval=X_test, yval=y_test,
+        earlystop_rounds=40, earlystop_delta=1e-4,
+        learner_lr=1e-5,
+        learner_l2=1e-3, learner_l1=0.0,
+        n_epochs=300, bs=bs, target_reg=1, riesz_weight=0.1,
+        optimizer='adam',
+        warm_start=True,
+        model_dir=str(Path.home()), device=device, verbose=0)
+\end{minted}
+Results:
+\begin{itemize}
+    \item DR: $-0.516$ ($-0.636$, $-0.396$)
+    \item Reg: $-0.501$ ($-0.508$, $-0.493$)
+    \item IPS: $1.779$ ($0.236$, $3.321$)
+\end{itemize}
+
+\subsubsection{RFRiesz, Multitasking}
+Settings:
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize
+]
+{python}
+est = RFRiesz(reg_feature_fns=poly_feature_fns(4),
+              riesz_feature_fns=poly_feature_fns(4),
+              moment_fn=moment_fn, l2=0.0001,
+              criterion='mse', n_estimators=1000, min_samples_leaf=50,
+              min_var_fraction_leaf=0.1, min_var_leaf_on_val=True,
+              min_impurity_decrease = 0.0001, max_samples=.65, max_depth=None,
+              warm_start=False, inference=False, subforest_size=1,
+              honest=True, verbose=0, n_jobs=-1, random_state=123)
+\end{minted}
+Results:
+\begin{itemize}
+    \item DR: $-0.308$ ($-0.681$, $-0.065$)
+    \item Reg: $-0.395$ ($-0.419$, $-0.371$)
+    \item IPS: $-0.384$ ($-0.772$, $0.005$)
+\end{itemize}
+
+\subsubsection{RFRiesz, No Multitasking}
+Settings:
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize
+]
+{python}
+# Regression
+reg = RFreg(reg_feature_fns=poly_feature_fns(1),
+              l2=0.0001,
+              criterion='mse', n_estimators=1000, min_samples_leaf=50,
+              min_var_fraction_leaf=0.1, min_var_leaf_on_val=True,
+              min_impurity_decrease = 0.001, max_samples=.65, max_depth=None,
+              warm_start=False, inference=False, subforest_size=1,
+              honest=True, verbose=0, n_jobs=-1, random_state=123)
+# RR
+rr_est = RFrr(riesz_feature_fns=poly_feature_fns(4),
+              moment_fn=moment_fn, l2=0.0001,
+              criterion='mse', n_estimators=1000, min_samples_leaf=50,
+              min_var_fraction_leaf=0.1, min_var_leaf_on_val=True,
+              min_impurity_decrease = 0.001, max_samples=.65, max_depth=None,
+              warm_start=False, inference=False, subforest_size=1,
+              honest=True, verbose=0, n_jobs=-1, random_state=123)
+\end{minted}
+Results:
+\begin{itemize}
+    \item DR: $-0.557$ ($-0.911$, $-0.203$)
+    \item Reg: $-0.633$ ($-0.646$, $-0.620$)
+    \item IPS: $-0.383$ ($-0.772$, $-0.005$)
+\end{itemize}
+
+\subsection{Semi-synthetic Data Based on BHP}
+Controls $X$ from BHP data. 
+$T | X \sim \mathcal{N}(\widehat{\mu}(X), \widehat{\sigma}^2(X))$, where $\widehat{\mu}$ and $\widehat{\sigma}^2$ are learnt from the real BHP data using RFs. $Y = f(T, X) + \epsilon$, $\epsilon \sim \mathcal{N}(0, 5.6 \mathrm{Var}(f(T,X)))$, where $5.6$ is the ratio of residual to explained variation after training a RF of $Y$ on $(T,X)$ in the real BHP data. 
+
+We try 6 different $f$:
+\begin{enumerate}
+    \item Simple $f$: $f(T,X) = -0.6T$
+    \item Simple $f$ with linear counfounders: $f(T,X) = -0.6T + X_{1:20}' b$, $b_j \sim \mathcal{U}[-0.5, 0.5]$ (drawn once per design, try 10 different random seeds).
+    \item Simple $f$ with linear and non-linear counfounders:$f(T,X) = -0.6T + X_{1:20}' b + 1.5 \Lambda(10 * X_7) + 1.5\Lambda(10 * X_8)$ ($\Lambda$ is the expit function).
+    \item Complex $f$: $f(T,X) = -(0.25 + X_1^2/20) T^3/3$
+    \item Complex $f$ with linear confounders: $f(T,X) = -(0.25 + X_1^2/20 + X_{1:8}' c) T^3/3 + X_{1:20}' b$, $c_j \sim \mathcal{U}[-0.2, 0.2]$ (drawn once per design, try 10 different random seeds).
+    \item Complex $f$ with linear and non-linear confounders: $f(T,X) = -(0.25 + X_1^2/20 + X_{1:8}' c) T^3/3 + X_{1:20}' b + 1.5 \Lambda(10 * X_7) + 1.5\Lambda(10 * X_8)$
+\end{enumerate}
+
+Settings:
+\begin{itemize}
+    \item Multitasking:
+    \begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize
+]
+{python}
+# RFRiesz Settings
+RFRiesz_opt = {
+    'reg_feature_fns': poly_feature_fns(1),
+    'riesz_feature_fns': poly_feature_fns(3),
+    'moment_fn': moment_fn,
+    'l2': 1e-3,
+    'criterion': 'mse', 
+    'n_estimators': 100,
+    'min_samples_leaf': 50,
+    'min_var_fraction_leaf': 0.1, 
+    'min_var_leaf_on_val': True,
+    'min_impurity_decrease': 0.001, 
+    'max_samples': .65, 
+    'max_depth': None,
+    'warm_start': False,
+    'inference': False,
+    'subforest_size': 1,
+    'honest': True,
+    'verbose': 0,
+    'n_jobs': -1,
+    'random_state': 123
+}
+\end{minted}
+\item No multitasking:
+\begin{minted}
+[
+frame=lines,
+framesep=2mm,
+baselinestretch=1.2,
+bgcolor=LightGray,
+fontsize=\footnotesize
+]
+{python}
+# RFreg Settings
+RFreg_opt = {
+    'reg_feature_fns': poly_feature_fns(1),
+    'l2': 1e-3,
+    'criterion': 'mse', 
+    'n_estimators': 100,
+    'min_samples_leaf': 50,
+    'min_var_fraction_leaf': 0.1, 
+    'min_var_leaf_on_val': True,
+    'min_impurity_decrease': 0.001, 
+    'max_samples': .65, 
+    'max_depth': None,
+    'warm_start': False,
+    'inference': False,
+    'subforest_size': 1,
+    'honest': True,
+    'verbose': 0,
+    'n_jobs': -1,
+    'random_state': 123
+}
+
+# RFrr Settings
+RFrr_opt = {
+    'riesz_feature_fns': poly_feature_fns(3),
+    'moment_fn': moment_fn, 
+    'l2': 1e-3,
+    'criterion': 'mse', 
+    'n_estimators': 100,
+    'min_samples_leaf': 50,
+    'min_var_fraction_leaf': 0.1, 
+    'min_var_leaf_on_val': True,
+    'min_impurity_decrease': 0.001, 
+    'max_samples': .65, 
+    'max_depth': None,
+    'warm_start': False,
+    'inference': False,
+    'subforest_size': 1,
+    'honest': True,
+    'verbose': 0,
+    'n_jobs': -1,
+    'random_state': 123
+}
+\end{minted}
+\end{itemize}
+Results:
+\begin{table}[]
+    \centering
+    \caption{Semi-synthetic BHP simulation results}
+    \resizebox{\textwidth}{!}{\input{figures/summary_table}}
+\end{table}
+
+\begin{figure}
+    \centering
+    \caption{Results distribution: Complex $f$ with linear and non-linear counfounders}
+    \begin{subfigure}{0.45\textwidth}
+    \caption{No x-fit, multitasking}
+    \includegraphics[width=\textwidth]{figures/avgder_sim_res/compl_f_nonlin_conf/noxfit_multitask_seed9.pdf}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+    \caption{No x-fit, no multitasking}
+    \includegraphics[width=\textwidth]{figures/avgder_sim_res/compl_f_nonlin_conf/noxfit_nomultitask_seed9.pdf}
+    \end{subfigure}
+    
+    \begin{subfigure}{0.45\textwidth}
+    \caption{Simple x-fit, multitasking}
+    \includegraphics[width=\textwidth]{figures/avgder_sim_res/compl_f_nonlin_conf/xfit_multitask_seed9.pdf}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+    \caption{Simple x-fit, no multitasking}
+    \includegraphics[width=\textwidth]{figures/avgder_sim_res/compl_f_nonlin_conf/xfit_nomultitask_seed9.pdf}
+    \end{subfigure}
+    
+    \begin{subfigure}{0.45\textwidth}
+    \caption{Threeway x-fit}
+    \includegraphics[width=\textwidth]{figures/avgder_sim_res/compl_f_nonlin_conf/3wayxfit_seed9.pdf}
+    \end{subfigure}
+\end{figure}
+\end{document}

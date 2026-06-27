@@ -1,0 +1,63 @@
+\section{Introduction} \label{section:Introduction}
+
+The rise of massive datasets that provide fine-grained information about human beings and their behavior provides unprecedented opportunities for evaluating the effectiveness of treatments. Researchers want to exploit these large and heterogeneous datasets, and they often seek to estimate how well a given treatment works for individuals conditioning on their observed covariates. This problem is important in medicine (where it is sometimes called personalized medicine) \citep{Henderson2016,powers2018some}, digital experiments \citep{taddy2016nonparametric}, economics \citep{Athey2016}, political science \citep{green2012modeling}, statistics
+\citep{tian2014simple}, and many other fields. A large number of articles are being written on this topic, but many outstanding questions remain. We present the first paper that applies transfer learning to this problem.
+
+%The rise of massive datasets that provide fine-grained information about human beings and their behavior provides unprecedented opportunities for evaluating the effectiveness of treatments in a wide-variety of fields ranging from clinical medicine to political science to online digital experiments. Given the large and heterogeneous datasets, researchers and practitioners are increasingly unsatisfied with estimating how well treatments work on \textit{average}. Instead, they often seek to estimate how well a given treatment works for individuals conditioning on their observed covariates. This allows them to personalize treatment recommendations.
+
+% Classical only one experiment, but a lot of information left on the table. It is different from prediction, and one has to leverage information already. We need to use this information
+In the simplest case, treatment effects are estimated by splitting a training set into a treatment and a control group. The treatment group receives the treatment, while the control group does not. The outcomes in those groups are then used to construct an estimator for the Conditional Average Treatment Effect (CATE), which is defined as the expected outcome under treatment minus the expected outcome under control given a particular feature vector \citep{athey2015machine}. This is a challenging task because, for every unit, we either observe its outcome under treatment or control, but never both. Assumptions, such as the random assignment of treatment and additional regularity conditions, are needed to make progress. Even with these assumptions, the resulting estimates are often noisy and unstable because the CATE is a vector parameter. Recent research has shown that it is important to use estimators which consider both treatment groups simultaneously %and leverage information between the treated and control groups 
+(\cite{kunzel2017meta, wager2015estimation, nie2017learning, hill2011bayesian}). Unfortunately, these recent advances are often still insufficient to train robust CATE estimators because of the large sample sizes required when the number of covariates is not small.
+
+%Introduce the idea of transfer learning. 
+However, researchers usually fail to use ancillary datasets that are available to them in applications. This is surprising, given the need for additional data to estimate CATE reliably. These ancillary datasets are related to the causal mechanism under investigation, but they are also partially distinct so they cannot be pooled naively, which explains why researches often do not use them. Examples of such ancillary datasets include observations from: experiments in different locations on different populations, different treatment arms, different outcomes, and non-experimental observational studies. The key idea underlying our contributions is that one can substantially improve CATE estimators by transferring information from other data sources.
+
+\textbf{Our contributions are as follows:}
+
+\begin{enumerate}
+
+\item \textbf{We introduce the new problem of transfer learning for estimating heterogeneous treatment effects.}
+
+\item \textbf{We develop the Y-learner for CATE estimation.} We consider the problem of CATE estimation with deep neural networks. We propose the Y-Learner, a CATE estimator designed from the ground up to take advantage of deep neural networks' ability to easily share information across layers. The Y-Learner often achieves state-of-the-art performance on CATE estimation. The Y-learner does not use transfer learning.
+
+%\item \textbf{We introduce the new problem of transfer learning for CATE estimation and propose several solutions.} \textbf{We show that it works in a difficult data problem.}
+
+%\item \textbf{We adapt the Reptile transfer learning method to CATE estimation}. It is not immediately obvious how one should use Reptile for CATE estimation, as CATE estimation usually requires simultaneously estimating two quantities of interest and Reptile typically adapts on a per-task basis. We provide multiple sets of instructions for overcoming these difficulties. In adapting Reptile to our problem, we discovered a slight modification to the original algorithm. To distinguish this modification, we refer to it in this paper as \textbf{SF Reptile}, Slow-Fast Reptile. 
+
+\item \textbf{MLRW Transfer for CATE Estimation} adapts the idea of meta-learning regression weights (MLRW) to CATE estimation. Using these learned weights, regression problems can be optimized much more quickly than with random initializations. Though a variety of MLRW algorithms exist, it is not immediately obvious how one should use these methods for CATE estimation. The principle difficulty is that CATE estimation requires the simultaneous estimation of outcomes under both treatment and control, when we only observe one of the outcomes for any individual unit. However, most MLRW transfer methods optimize on a per-task basis to estimate a single quantity. We show that one can overcome this problem with clever use of the Reptile algorithm \citep{reptile}.%%PA.5.17: this citation is off, should be Nichol, Achiam, Schulman, 2018?
+While adapting Reptile to work with our problem, we discovered a slight modification to the original algorithm. To distinguish this modification, we refer to it in this paper as \textbf{SF Reptile}, Slow-Fast Reptile. 
+
+\item \textbf{We provide several additional methods for transfer learning for CATE estimation:} warm start, frozen-features, multi-head, and joint training.
+
+\item \textbf{We apply our methods to difficult data problems and show that they perform better than existing benchmarks.} We reanalyze a set of large field experiments that evaluate the effect of a mailer on voter turnout in the 2014 U.S. midterm elections \citep{gerber2017generalizability}. This includes 17 experiments with 1.96 million individuals in total. We also simulate several randomized controlled trials using image data of handwritten digits found in the MNIST database \citep{lecun1998mnist}. We show that our methods, \textbf{MLRW} in particular, obtain better than state-of-the-art performance in estimating CATE, and that they require far fewer observations than extant methods.
+
+\item \textbf{We provide open source code for our algorithms.}\footnote{The software will be released once anonymity is no longer needed. We can also provide an anynomized copy to reviewers upon request.} 
+\end{enumerate}
+
+%We transfer learn to CATE estimation. Though a variety of methods for MLIW transfer exist, it is not immediately obvious how one should use these methods for CATE estimation. The principle difficulty is CATE estimation requires the simultaneous estimation of both outcome under treatment and outcome under control. However, most MLIW transfer methods adapt on a per-task basis to estimate a single quantity. We show that one can overcome this problem by adapting the MLIW algorithm Reptile. In adapting Reptile to our problem, we discovered a slight modification to the original algorithm. To distinguish this modification, we refer to it in this paper as \textbf{SF Reptile}, Slow-Fast Reptile.
+
+%Statement of contributions. 
+%In this paper, we consider the problem of transfer learning for CATE estimation. We will be particularly interested in transfer across different CATE estimation experiments that share similar units. This is a well studied and perennial problem in the literature, spanning several fields such as computer vision \cite{tuning}, semi-supervised learning \cite{zemmel, prognets, bunchofstuff}, and reinforcement learning \cite{MAML, Reptile}. Recent advances in transfer learning have typically exploited the structure of deep neural networks. Therefore, we will first need to consider the problem of CATE estimation with deep neural networks. This will lead to the development of the Y-Learner, a CATE estimator designed from the ground up to take advantage of deep neural network's ability to easily share information across layers. The Y-Learner often achieves state-of-the art performance on CATE estimation. Subsequently, we will investigate a variety of techniques for transfer learning across CATE estimators. Several of the techniques such as fine tuning, using previously trained features, and using networks with shared base layers and multiple heads are well-studied in neural network literature but new to this problem. Other techniques, such as SF Reptile, are novel contributions to the transfer learning literature.  
+
+% We use the self-treatment to show how well it works.
+%Our lead example aims to estimate the treatment effect of a mailer which is sent to potential voters to increase the election turnout for the primary election in Michigan 2006 \cite{GerberGreenLarimer}.
+%The sample size is here with 229,461 units relatively large, but CATE estimation still turns out to be difficult.  
+%In this case, we want to use two different data sets to improve the CATE estimation. First of all, in the same election, three other mailers have been tested to increase the voter turnout for the same election. Those mailers are different, but we still believe that there are communalities in the mechanism how those mailers work. 
+%The mailer of interest is very popular, and we have found seven studies where this mailer was used. In all of these studies, the election was different from the one we are interested in, but the mailer was almost identical to the one we are interested in. 
+%We will show how both additional data sources can significantly improve the final CATE estimator. 
+
+%While our lead example seems to be very special for voter persuasion, similar situations exist on a much larger scale when targeting online advertisements with thousands of experiments, medical studies where the sample sizes are generally very small, and one has to use external data sources to construct good CATE estimators. To assuage any concerns that our methods are over-fit to this example, results are also presented on an example using MNIST digits extended from \cite{Yu2013stability}. Code for this project is available to reviewers upon request, and will be fully released along with the conference version of this paper.  %BCS 05/12: potentially MNIST Stuff. Do want to ease fears that we are not over-fitting to one problem. 
+
+%BCS: Introduction may be long enough already. 
+%The contributions of this paper are as follows 
+%\begin{enumerate}
+%	\item jjj
+%\end{enumerate}
+
+% Contributions of our paper (Neural Network Learners, Y Learner, Transfer Learning for Causal Inference, SF Reptile) and the setup
+
+%BCS: Paragraphs like the below tend not to work well for NIPS submissions. The reviewers have very small attention spans and prefer that the contributions are explicitly listed. What I'm saying is the below paragraph will not even be read by 90 percent of reviewers. They need the contributions more explicitly stated in a list format. 
+
+%In this paper, we start by introducing the problem formally and applying ideas of CATE estimation which already exist in the literature to neural networks. Here we introduce a new CATE estimator, the Y-Learner which performs extremely well for our data set. 
+%Then we discuss different transfer learning strategies which have widely been used in the deep learning community, and we show how those ideas can use outside data sources to significantly improve the CATE estimators. 
+%We then compare our estimators in an exhaustive simulation study before we apply them to real data. 

@@ -1,0 +1,855 @@
+\section{Detailed results}
+\label{sec:app:results}
+
+\subsection{Details of the datasets}
+\label{sec:app:datasets}
+\add{1}{We have conducted a systematic process of experiments on several datasets. We include here some details of the datasets, and their procedence, for completeness.}
+
+\add{1}{\textbf{IHDP. } \citep{hill11bayesian} The Infant Health and Development Program (IHDP) is a semi-synthetic benchmark derived from a real observational study on the effect of early childhood intervention. The publicly used version was constructed by \citet{hill11bayesian}, who retained 25 pre-treatment covariates and simulated potential outcomes to enable pointwise ground truth for individual treatment effects. Following standard practice, we use the canonical 100 replications that define settings A and B. Setting A yields homogeneous treatment effects via linear outcome surfaces, while setting B introduces nonlinear relationships and heterogeneous effects. The dataset contains 747 units with a binary treatment and substantial treatment imbalance, since all treated units from one site were removed in the construction. Covariates include demographic, prenatal, and birth-related variables. All outcomes in the benchmark are synthetic and do not correspond to clinical endpoints.}
+
+\add{1}{\textbf{ACIC 2016. } \citep{Dorie2017} The ACIC 2016 causal inference challenge provides a large collection of semi-synthetic datasets derived from real covariates in the Louisiana Medicaid program. Each instance consists of approximately 
+$N\approx4800$ units and 58 covariates, including demographic, socioeconomic, and healthcare-related variables. Treatments and potential outcomes are generated through complex nonlinear mechanisms with covariate-dependent assignment, enabling rigorous benchmarking of estimation procedures under realistic confounding. We focus on the nonlinear polynomial and exponential outcome regimes (for example, settings 2, 7, and 26), which are commonly used in prior work. For each selected setting, we use the 77 replications released as part of the competition, each providing a distinct draw of treatment assignment and potential outcomes while keeping covariates fixed across replications. As in other semi-synthetic benchmarks, the outcomes are simulated and have no policy or medical interpretation.}
+
+\add{1}{\textbf{NSLM. } The dataset contains covariables from the national study of learning mindset \citep{yeager2019national}. We used the DGP followed by \citet{carvalho2019assessing}, where there are 10000 datapoints (10000 students across 76 schools), with 3 categorical variables and 6 continuous variables, and the treatment and the outcome are simulated with no meaning.}
+
+\add{1}{\textbf{TCGA. }The Cancer Genomic Atlas (TCGA) \citep{weinstein2013cancer}. The TCGA project collected gene expression data fromvarious types of cancers in 9659 individuals. In this case, we conducted the data generating process proposed by \citet{zhang2023exploring}, which keeps only the data from 100 covariates of the RNA sequence. The outcome is simulated and does not have physical meaning. Although in the paper of \citet{zhang2023exploring}, they explore several treatments and dosage, we restrict only a binary treatment without dosage, to have a fair comparison between all the models evaluated.}
+
+\add{1}{\textbf{NEWS. } The NEWS dataset \citep{johansson16learning} was created to perform causal inference. The covariates come from a text database, of 5000 documents, and they represent the count of each word. In total, there are 3477 possible words in each datapoint. The treatment is the device in which the users read, and the outcome is simluated and represent the reader experience. However, we followed the DGP from \citet{crabbe2022benchmarking}, that employs 100 components of the principal component analysis of the covariates to generate the potential outcomes.}
+
+\subsection{Ablation studies}
+\label{sec:app:ablation}
+
+\textbf{Complexity. }
+We further analyze the relationship between model complexity and the precision in estimation of heterogeneous effects (PEHE). To this end, we define a \emph{complexity score} that aggregates the contributions of different architectural and regularization choices. Specifically, hidden dimensions contribute $0$ if no hidden layers are used, $2$ if a single hidden layer of size $5$ is used, and $3$ otherwise. The weight penalty $\lambda$ contributes $0$ if set to $0.01$ and $1$ \add{1}{if set to $0.001$, since more regularization yields simpler models}. The spline grid contributes $1$, $2$, or $3$ for grid sizes $\{1,3,5\}$, respectively. Similarly, the polynomial order $k$ contributes $1$, $2$, or $3$ for $k \in \{1,3,5\}$, and sparse initialization reduces the score by one unit. Hence, the complexity score captures the combined effect of the number of hidden units, regularization strength, spline resolution, polynomial order, and initialization strategy. In addition, we compute the number of hidden layers directly from the hidden dimensions: $0$ layers (no hidden units, corresponding to KAAM), $1$ layer (single hidden layer), and $2$ layers (deeper networks).
+
+We then represent the correlation between both complexity and number of hidden layers against PEHE, using linear regression fits and Pearson correlation coefficients across all hyperparameter configurations (\cref{fig:all_datasets_pehe_vs_complexity,fig:all_datasets_pehe_vs_layers}). The results indicate that the correlation is weak: the fitted slopes are close to zero and the Pearson coefficients are generally small. Interestingly, increasing the number of hidden layers often leads to slightly higher PEHE values, although the effect is minor and not consistent across all datasets. Similarly, increasing the overall complexity score does not systematically reduce PEHE. 
+
+These findings suggest that, in general, simple KAN architectures achieve competitive PEHE performance, and that increasing architectural or regularization complexity does not yield clear improvements. \add{1}{However, note that this score is a purely descriptive simple heuristic designed to summarize hyperparameter choices and also prioritize more interpretable models.}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{figs/all_datasets_pehe_vs_complexity.png}
+    \caption{Correlation between model complexity and PEHE across datasets. 
+    Each point corresponds to a trained model with a given complexity score. 
+    Regression fits (with slopes annotated) and Pearson correlation coefficients are shown. 
+    The weak correlations indicate that increasing complexity does not improve PEHE.}
+    \label{fig:all_datasets_pehe_vs_complexity}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{figs/all_datasets_pehe_vs_layers.png}
+    \caption{Correlation between the number of hidden layers and PEHE across datasets. 
+    The number of layers is computed from the hidden dimensions: 
+    $0$ (no hidden layers, i.e., KAAM), $1$ (single hidden layer), and $2$ (two hidden layers). 
+    Regression fits and Pearson correlations show that deeper models tend to slightly increase PEHE, 
+    although the effect is minor.}
+    \label{fig:all_datasets_pehe_vs_layers}
+\end{figure}
+
+\textbf{Hyperparameter selection with Loss.}
+The hyperparameter selection is made based on the validation loss. We want to show that the predictive test loss (\ie the loss of the KAN model without including sparsity regularizations) is a good proxy for selecting hyperparameters, since the PEHE cannot be computed during evaluation because the real ITE is not known in real-world data and can only be computed with (semi)synthetic data. We can observe in \cref{fig:pehe_vs_testloss} that these quantities are linearly correlated. However, the study of other surrogate metrics for model selection is still a topic for future work.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\linewidth]{figs/all_datasets_pehe_vs_test_loss.png}
+    \caption{Regression plots of PEHE and Test predictive loss (logarithmic scale) for each dataset with all \ours. Slope (in boxes), Pearson coefficient, $r$, (in bottom right corners) and 95$\%$ CI (translucent bands) reported. We can observe a clear linear correlation between PEHE and Test loss for all models and all datasets.}
+    \label{fig:pehe_vs_testloss}
+\end{figure}
+
+\add{1}{Despite this correlation, we acknowledge that outcome-prediction loss is not, in general, a perfect proxy for CATE accuracy, but all models evaluated in our work are potential-outcome regressors trained solely on factual losses. For this family of estimators, the standard practice is to select hyperparameters using validation prediction loss, since these methods do not expose orthogonalized or doubly robust objectives \citep{shalit2017estimating, shi2019adapting}. To ensure a fair comparison, \ours use the same training and selection rules.}
+
+\add{1}{In \cref{fig:pehe_vs_testloss}, the plateau reflects intrinsic properties of outcome-regression methods, not an issue introduced by \ours. Still, we observe strong correlations (typically r $> 0.8$) between factual test loss and PEHE, indicating that loss remains a model-selection proxy for this class of learners. The slight flattening for the models is consistent with known behavior of non-orthogonalized estimators \citep{shalit2017estimating, curth2021nonparametric}, where outcome prediction can improve faster than CATE error. }
+
+
+\subsection{Interpretability visualizations}
+\label{app:sec:results_visualizations}
+
+First of all, let us explain in detail the different visualization tools, in addition to the formula analysis \emph{per se}, that will help us to understand outcome variations, depending of the model used.
+
+\paragraph{Probability Radar Plots (PRPs).}
+Probability Radar Plots (PRPs)~\citep{saary2008radar} provide an interpretable visualization of generalized additive models (GAMs) by mapping the isolated contribution of each covariate into a radial plot. In our setting, each component function depends on a single covariate, which enables a decomposition of the prediction into additive terms. We denote this decomposition by \representationspace.
+
+\begin{equation}
+\representationspace = 
+    \begin{bmatrix}
+\func[\covariate_{1,1}] & \func[\covariate_{1,2}] & \cdots & \func[\covariate_{1,\covsize}] \\
+\func[\covariate_{2,1}] & \func[\covariate_{2,2}] & \cdots & \func[\covariate_{2,\covsize}] \\
+\vdots & \vdots & \ddots & \vdots \\
+\func[\covariate_{\samplesize,1}] & \func[\covariate_{\samplesize,2}] & \cdots & \func[\covariate_{\samplesize,\covsize}]
+\end{bmatrix},
+\end{equation}
+
+where $\func[\covariate_{\indexone,\indextwo}]$ denotes the contribution of the feature $\indextwo$ for individual \indexone.  
+
+To construct a PRP, we first compute the average contribution of each covariate across all individuals, providing a baseline that reflects the average outcome (for S-KAAM) or the average conditional average treatment effect (for T-KAAM). Then, for a given individual $\indexone,$ we plot the vector of deviations
+\begin{equation}
+    \big( \func[\covariate_{\indexone,1}] - \tfrac{1}{\samplesize}\textstyle\sum_{\ell=1}^{\samplesize}\func[\covariate_{\ell,1}], \; \ldots,\;
+       \func[\covariate_{\indexone,\covsize}] - \tfrac{1}{\samplesize}\textstyle\sum_{\ell=1}^{\samplesize}\func[\covariate_{\ell,\covsize}] \big),
+\end{equation}
+
+which highlights how the contribution of each covariate for individual $\indexone$ differs from the population average. By arranging these deviations radially, PRPs enable intuitive comparison across covariates and between individuals.
+
+
+\paragraph{Partial dependence plots (PDPs).}
+
+We employ partial dependence plots (PDPs) \citep{friedman2001greedy} as visualization tools for interpreting \ours. Unlike their conventional use in a ``black-box'' fashion—where the model is queried without access to its internals—KAN-based PDPs \citep{pati25kaam} directly exploit the analytic equations of the learned model, displaying the underlying splines that constitute the predictors. This provides more faithful and transparent representations of the learned dependencies.  
+
+As noted by \citet{loftus2024causal}, PDPs that vary one covariate in isolation may be misleading in settings with mediators, since they ignore induced changes in other covariates. In our case, however, the assumptions in \cref{sec:background} guarantee that the covariates form a valid adjustment set, excluding mediators. Under these conditions, PDPs are valid tools to represent causal dependencies \citep{zhao2021causal}, and in fact rely on the same backdoor adjustment formula \citep{pearl2009causality} when the effect is homogeneous.  
+
+Formally, PDPs display the average variation in the predicted outcome as one covariate is varied, marginalizing over the remaining covariates. Their individual-level counterpart, individual conditional expectation (ICE) curves \citep{goldstein2015peeking}, provide counterfactual explanations for specific samples. Under additivity, PDPs and ICE coincide; under non-additivity, PDPs correspond to averages of the heterogeneous ICE curves.
+
+
+\subsubsection{Heteogeneous CATE with T-KAAM} 
+\label{app:sec:results_visualizations_tkaam}
+We show an example of how T-KAAM captures the CATE as a closed formula that can be interpreted. For the dataset \emph{ACIC 7}, the T-KAAM model is one of the best-performers, and we can observe that the CATE can be represented as an addition of functions of each variable independently (see \cref{eq:tkaam_cate}). An example obtained with one realization of the dataset can be observed in the following equation.
+
+\begin{samepage}
+\begin{align*}
+\hcate{\covariates}
+&= \; 0.09\,\covariate_{1}^{2} + 0.19\,\covariate_{1}
+- 0.74\,\covariate_{10}^{2} + 5.30\,\covariate_{10}
++ 0.01\,\covariate_{12}^{3} - 0.05\,\covariate_{12}^{2} - 0.09\,\covariate_{12} \\
+&\quad + 0.03\,\covariate_{13}^{3} - 0.13\,\covariate_{13}^{2} - 0.21\,\covariate_{13}
+- 0.06\,\covariate_{14}^{2} + 0.33\,\covariate_{14}
+- 0.06\,\covariate_{15}^{2} + 0.13\,\covariate_{15} \\
+&\quad + 0.19\,\covariate_{16}^{2} - 0.22\,\covariate_{16}
+- 0.59\,\covariate_{17}
+- 0.03\,\covariate_{18}^{3} - 0.14\,\covariate_{18}^{2} - 0.47\,\covariate_{18} \\
+&\quad + 0.03\,\covariate_{19}^{4} - 0.10\,\covariate_{19}^{3} - 0.33\,\covariate_{19}^{2} + 0.42\,\covariate_{19}
++ 0.14\,\covariate_{20}^{3} - 0.29\,\covariate_{20}^{2} - 0.30\,\covariate_{20} \\
+&\quad + 0.01\,\covariate_{21}^{3} + 0.05\,\covariate_{21}^{2} + 0.28\,\covariate_{21}
++ 0.25\,\covariate_{23}^{3} - 0.50\,\covariate_{23}^{2} - 0.83\,\covariate_{23}
+- 0.16\,\covariate_{24} \\
+&\quad - 0.07\,\covariate_{25}^{2} + 0.14\,\covariate_{25}
+- 1.42\,\covariate_{26}
+- 0.01\,\covariate_{27}^{4} + 0.04\,\covariate_{27}^{3} - 0.06\,\covariate_{27}^{2} + 0.06\,\covariate_{27} \\
+&\quad - 0.12\,\covariate_{28}^{2} - 0.32\,\covariate_{28}
++ 0.00\,\covariate_{29}^{4} + 0.08\,\covariate_{29}^{3} + 0.07\,\covariate_{29}^{2} + 0.01\,\covariate_{29} \\
+&\quad - 0.16\,\covariate_{3}
+- 0.17\,\covariate_{30}
+- 0.01\,\covariate_{31}^{2} - 0.08\,\covariate_{31}
++ 0.54\,\covariate_{33} \\
+&\quad - 0.03\,\covariate_{34}^{2} - 0.17\,\covariate_{34}
++ 0.02\,\covariate_{35}^{3} + 0.23\,\covariate_{35}^{2} + 0.84\,\covariate_{35} \\
+&\quad + 0.03\,\covariate_{36}^{3} - 0.14\,\covariate_{36}^{2} + 0.22\,\covariate_{36}
+- 0.30\,\covariate_{38}
+- 0.15\,\covariate_{39}^{2} - 0.20\,\covariate_{39} \\
+&\quad - 0.03\,\covariate_{4}^{2} + 0.12\,\covariate_{4}
+- 0.13\,\covariate_{40}^{3} - 0.31\,\covariate_{40}^{2} - 0.18\,\covariate_{40} \\
+&\quad + 0.04\,\covariate_{41}^{3} - 0.39\,\covariate_{41}^{2} + 0.02\,\covariate_{41}
++ 0.25\,\covariate_{42}^{2} + 0.18\,\covariate_{42} \\
+&\quad + 0.01\,\covariate_{43}^{4} - 0.03\,\covariate_{43}^{3} - 0.09\,\covariate_{43}^{2} + 0.08\,\covariate_{43} \\
+&\quad - 0.41\,\covariate_{44}^{3} - 2.42\,\covariate_{44}^{2} - 0.92\,\covariate_{44}
+- 0.06\,\covariate_{45}^{3} - 0.29\,\covariate_{45}^{2} - 0.32\,\covariate_{45} \\
+&\quad - 0.09\,\covariate_{46}^{2} - 0.04\,\covariate_{46}
+- 1.10\,\covariate_{49}
+- 0.10\,\covariate_{5}^{4} + 0.56\,\covariate_{5}^{3} + 1.27\,\covariate_{5}^{2} - 1.30\,\covariate_{5} \\
+&\quad - 0.02\,\covariate_{50}^{2} + 0.01\,\covariate_{50}
+- 0.12\,\covariate_{51}
++ 0.14\,\covariate_{52}^{2} - 0.71\,\covariate_{52}
+- 0.57\,\covariate_{53}
++ 0.42\,\covariate_{54} \\
+&\quad - 0.02\,\covariate_{56}^{3} + 0.01\,\covariate_{56}^{2} + 0.52\,\covariate_{56}
+- 0.02\,\covariate_{57}^{3} + 0.09\,\covariate_{57}^{2} + 0.23\,\covariate_{57} \\
+&\quad - 0.02\,\covariate_{58}^{3} - 0.17\,\covariate_{58}^{2} - 0.34\,\covariate_{58}
+- 0.06\,\covariate_{7}^{2} + 0.41\,\covariate_{7}
+- 0.21\,\covariate_{8}
++ 0.21\,\covariate_{9}^{2} - 0.25\,\covariate_{9} \\
+&\quad + 9.47 \, .
+\end{align*}
+\end{samepage}
+
+This formula is long, due to the high number of covariates. Therefore, although the contribution of each variable has a polynomial form, analyzing the formula alone could be tricky. To help to gain intuitions about the contribution of each variable to the CATE variation, we present three useful plots in \cref{fig:tkaam_visualization}. In the plots, we can obtain the contributions of each feature to the causal effect. However, those visualizations should not be used to intervene in any feature except the treatment, since the variations presented in \cref{fig:tkaam_visualization} cannot be interpreted as causal effect following our assumptions.
+
+\begin{figure}[ht]
+    \begin{subfigure}{0.49\linewidth}
+        \centering
+        % Two radar plots stacked vertically
+        \begin{subfigure}{\linewidth}
+            \centering
+        \includegraphics[width=0.6\linewidth]{figs/radar_tkaam.pdf}
+            \caption{CATE variations Radar plot on all variables.}
+            \label{fig:radar_tkaam}
+        \end{subfigure}
+        \vfill
+        \begin{subfigure}{\linewidth}
+            \centering
+            \includegraphics[width=0.6\linewidth]{figs/radar_tkaam_potential.pdf}
+            \caption{Potential outcome Radar plot for Individual 11.}
+            \label{fig:radar_tkaam_potential}
+        \end{subfigure}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.49\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/formulas_tkaam.pdf}
+        \caption{Partial dependence plots on CATE for some important variables.}
+        \label{fig:pdp_tkaam}
+    \end{subfigure}
+    \caption{Visualization plots employing T-KAAM with ACIC-7. \captiona \emph{Radar plot} of the contribution of each variable to the CATE. In \textcolor{blue}{blue}, the average predicted CATE in all the dataset. In \textcolor{red}{red} and \textcolor{orange}{orange}, the respective contributions of each variable of individuals 10 and 11. \captionb \emph{Radar plot} of the potential outcomes of the individual 10. We can observe the contribution of each variable to the potential outcomes. Only the variables that have not been pruned in both subnetworks have been added to the plot. \captionc \emph{Partial dependence plots} of the CATE variation, given variations on the most important variables in the PRP. Particular values of CATE variation for the individuals 10 and 11 shows their contribution.}
+    \label{fig:tkaam_visualization}
+\end{figure}
+
+Lastly, we want to show that our \emph{inductive bias} for simplicity of the atom selection is useful to improve interpretability. The formula below is provided by the standard auto-symbolic function (native of pyKAN \citep{liu2024kan}). We observe polynomial relations with some covariates, but the nonlinear complex functions that follow are less interpretable than simple polynomials.
+{\small
+\begin{align*}
+\hcate{\covariates}
+&= -0.59\,\covariate_{17}
+- 0.16\,\covariate_{20}
++ 0.26\,\covariate_{21}
+- 1.41\,\covariate_{26}
++ 0.10\,\covariate_{27}
++ 0.28\,\covariate_{29} \\
+&\quad - 0.25\,\covariate_{31}
++ 0.54\,\covariate_{33}
++ 0.15\,\covariate_{34}
++ 0.34\,\covariate_{35}
++ 0.22\,\covariate_{36}
+- 0.30\,\covariate_{38} \\
+&\quad - 0.32\,\covariate_{40}
++ 0.02\,\covariate_{43}
+- 1.67\,\covariate_{44}
+- 0.40\,\covariate_{45}
++ 0.65\,\covariate_{5}
+- 0.12\,\covariate_{51} \\
+&\quad - 0.57\,\covariate_{53}
++ 0.42\,\covariate_{54}
+- 0.02\,\covariate_{55}
+- 0.40\,\covariate_{58} \\
+&\quad - 0.00\,(1.17 - 9.05\,\covariate_{50})^{2}
++ 0.01\,(3.95 - 3.98\,\covariate_{16})^{2} \\
+&\quad - 0.00\,(5.62 - 7.80\,\covariate_{41})^{2}
+- 0.19\,(6.55 - 1.78\,\covariate_{10})^{2} \\
+&\quad - 0.02\,(7.66 - 2.42\,\covariate_{10})^{2}
++ 0.01\,(9.47 - 3.82\,\covariate_{52})^{2} \\
+&\quad + 0.00\,(9.80 - 4.97\,\covariate_{46})^{2}
++ 0.00\,(-2.05\,\covariate_{16} - 5.95)^{2} \\
+&\quad - 0.00\,(-9.30\,\covariate_{23} - 2.38)^{2}
++ 0.12\,\sqrt{5.29\,\covariate_{31} + 2.54} \\
+&\quad - 0.00\,(-8.38\,\covariate_{39} - 5.79)^{2}
+- 1.03\,\exp(0.60\,\covariate_{18})
+- 0.23\,\exp(0.97\,\covariate_{24}) \\
+&\quad - 0.53\,\exp(0.56\,\covariate_{34})
++ 0.47\,\exp(0.87\,\covariate_{35})
++ 1.12\,\sin(0.63\,\covariate_{1} - 7.20) \\
+&\quad - 0.40\,\sin(0.81\,\covariate_{1} - 0.81)
+- 0.24\,\sin(4.88\,\covariate_{12} + 1.30) \\
+&\quad - 0.40\,\sin(0.83\,\covariate_{13} - 1.02)
++ 1.09\,\sin(5.19\,\covariate_{13} + 5.19) \\
+&\quad - 0.33\,\sin(1.81\,\covariate_{14} + 2.36)
++ 2.42\,\sin(9.01\,\covariate_{15} + 7.79) \\
+&\quad - 0.56\,\sin(1.35\,\covariate_{19} - 2.19)
+- 0.26\,\sin(1.14\,\covariate_{20} + 1.39) \\
+&\quad + 0.51\,\sin(1.80\,\covariate_{23} - 10.00)
+- 0.50\,\sin(0.63\,\covariate_{25} - 8.42) \\
+&\quad - 0.86\,\sin(0.48\,\covariate_{28} - 4.36)
++ 2.25\,\sin(0.52\,\covariate_{28} + 1.99) \\
+&\quad + 1.09\,\sin(0.22\,\covariate_{3} + 8.43)
+- 1.02\,\sin(4.20\,\covariate_{30} + 1.41) \\
+&\quad + 0.58\,\sin(7.77\,\covariate_{41} - 3.80)
++ 0.74\,\sin(1.04\,\covariate_{42} - 8.42) \\
+&\quad + 0.75\,\sin(5.35\,\covariate_{42} + 0.85)
++ 1.29\,\sin(9.59\,\covariate_{46} + 3.61) \\
+&\quad + 0.53\,\sin(4.58\,\covariate_{49} + 2.43)
+- 4.78\,\sin(4.79\,\covariate_{49} - 0.60) \\
+&\quad + 0.88\,\sin(4.21\,\covariate_{56} + 7.78)
+- 1.94\,\sin(5.59\,\covariate_{56} - 7.58) \\
+&\quad + 0.41\,\sin(0.88\,\covariate_{57} - 7.16)
++ 1.03\,\sin(3.20\,\covariate_{7} + 7.20) \\
+&\quad + 0.72\,\sin(0.40\,\covariate_{8} + 2.00)
++ 1.07\,\sin(9.06\,\covariate_{9} + 1.76) \\
+&\quad + 0.53\,\tanh(0.98\,\covariate_{18} - 1.40)
++ 7.14
+- 0.11\,\exp(-0.93\,\covariate_{4}) \, .
+\end{align*}
+
+\subsubsection{Homogeneous CATE with S-KAAM}
+\label{app:sec:results_visualizations_skaam}
+
+In this section, we illustrate how we obtain the \emph{homogeneous} CATE (or, equivalently, the ATE) in the IHDP A dataset, where the causal effect of the treatment is known to be homogeneous and linear.
+
+Therefore, we instantiate an S-KAAM, which yields the following formula in the potential outcome estimation.
+
+\begin{align*}
+\hpo(\covariates,\treatment)
+&= \underline{3.74\,\treatment}
++ 0.53\,\covariate_{1}
++ 0.16\,\covariate_{10}
++ 0.59\,\covariate_{11}
+- 0.11\,\covariate_{12}
++ 0.34\,\covariate_{13}
++ 0.11\,\covariate_{16}
+- 0.17\,\covariate_{18}
++ 1.28\,\covariate_{19} \\
+&\quad
++ 0.01\,\covariate_{2}^{3}
+- 0.01\,\covariate_{2}^{2}
+- 0.23\,\covariate_{20}
+- 0.08\,\covariate_{21}
++ 0.11\,\covariate_{24}
++ 0.18\,\covariate_{3}^{2}
++ 1.29\,\covariate_{3}
++ 0.28\,\covariate_{5} \\
+&\quad
++ 0.01\,\covariate_{6}^{4}
+- 0.03\,\covariate_{6}^{3}
++ 0.03\,\covariate_{6}
++ 1.47\,\covariate_{8}
++ 0.32\,\covariate_{9}
++ 1.88 \, .
+\end{align*}}
+
+As presented in \cref{eq:cate_skaam}, the CATE can be computed exclusively with the terms relative to \treatment. In this case, the CATE can be directly extracted from the formula: 3.74.
+
+We also represent in \cref{fig:skaam_visualization} some visualizations that we find interesting. First, for two given individuals, we present a PRP with the contribution of each variable to the variation of the predicted outcome, $\hpo(\covariates, \treatment)$, compared with the average of the predicted outcomes, $\E_{\covariates, \treatment}[\hpo(\covariates, \treatment)]$. On the right, we present the predicted potential outcomes for a given individual. As the effect is homogeneous (does not depend on the covariates), the contribution of each feature for both potential outcomes is the same, and the only difference is the causal effect of the treatment. Lastly, we present PDPs for treatment and other three variables (based on the radar plot), which present the variations of the predicted outcome with each variable. Following our assumptions, only the treatment curve can be seen as a causal effect, while the other curves can be used only to gain intuition of outcome behavior.
+
+\begin{figure}[ht]
+
+        \begin{subfigure}{0.45\linewidth}
+            \centering
+        \includegraphics[width=0.85\linewidth]{figs/radar_skaam.pdf}
+            \caption{Outcome variations Radar plot on all variables.}
+            \label{fig:radar_skaam}
+        \end{subfigure}
+        \begin{subfigure}{0.45\linewidth}
+            \centering
+            \includegraphics[width=0.6\linewidth]{figs/radar_skaam_potential.pdf}
+            \caption{Potential outcome Radar plot for Individual 0.}
+            \label{fig:radar_skaam_potential}
+        \end{subfigure}
+    \centering
+    \begin{subfigure}{0.49\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/pdps_skaam.pdf}
+        \caption{Partial dependence plots on CATE for some important variables.}
+        \label{fig:pdp_skaam}
+    \end{subfigure}
+    \caption{Visualization plots employing S-KAAM with IHDP A. \captiona \emph{Radar plot} of the contribution of each variable to the outcome. In \textcolor{blue}{blue}, the average predicted outcome in all the dataset. In \textcolor{red}{red} and \textcolor{orange}{orange}, the respective contributions of each variable of individuals 0 and 1. \captionb \emph{Radar plot} of the potential outcomes of the individual 0. We can observe the contribution of each variable to the potential outcomes. \captionc \emph{Partial dependence plots} of the outcome variation, given variations on the most important variables in the PRP. Particularized for the individuals 0 and 1.}
+    \label{fig:skaam_visualization}
+\end{figure}
+
+In this case, the standard symbolic substitution provides a similar formula as our proposal, due to the linearity of the dataset, and we omit its expression.
+
+
+% \subsubsection{Formula extraction for other datasets}
+% \label{app:sec:other_datasets}
+
+% For the ACIC-2 and IHDP B datasets, we carried out all the process of the pipeline. We can analyze the formula yielded by the process, but visualization tools for interaction terms need still to be developed.
+
+% Here, we include the extracted CATE formula from DragonKAAM in IHDP B. Unfortunately, the extracted formula is too complex to be analyzed directly. We obtained a similar formula for the dataset ACIC-2, and we omit the presentation of the formula.
+
+% {\small
+% \begin{align*}
+% \hcate{\covariates}
+% &= \; 0.03\,\covariate_{1}
+% + 0.89\,\covariate_{10}
+% - 0.64\,\covariate_{11}
+% - 0.78\,\covariate_{12}
+% + 0.51\,\covariate_{13}
+% + 0.11\,\covariate_{14}
+% - 0.89\,\covariate_{15}
+% - 0.69\,\covariate_{16}
+% - 0.71\,\covariate_{17} \\
+% &\quad
+% - 0.89\,\covariate_{18}
+% - 1.55\,\covariate_{19} 
+% + 0.61\,\covariate_{2}
+% + 0.07\,\covariate_{20}
+% - 1.36\,\covariate_{21}
+% + 0.31\,\covariate_{22}
+% - 1.50\,\covariate_{24}
+% + 0.85\,\covariate_{25}
+% - 0.18\,\covariate_{6}\\
+% &\qquad\qquad
+% + 1.14\,\covariate_{7}
+% + 1.54\,\covariate_{8}
+% - 0.38\,\covariate_{9} \\[4pt]
+% &\quad
+% - 0.91\,
+% \Bigl(
+%   0.02\,\covariate_{2}
+% - 0.15\,\covariate_{21}
+% + 0.04\,\covariate_{5}
+% - 0.03\,\covariate_{6}
+% - 0.13\,\sin(0.68\,\covariate_{3} - 7.58)
+% - 0.45
+% \Bigr)\\
+% &\qquad\qquad
+% \Bigl(
+%   0.33\,\covariate_{14}
+% + 0.21\,\covariate_{21}
+% - 0.65\,\covariate_{22} 
+% - 0.14\,\covariate_{5}
+% - 0.20\,\covariate_{7}
+% - 0.27\,\covariate_{8}
+% + 0.20\,\sin(4.58\,\covariate_{4} - 2.41)\\[4pt]
+% &\quad
+% - 0.18\,\tanh(1.02\,\covariate_{1} - 0.93)
+% - 0.24
+% \Bigr) \\[4pt]
+% &\quad
+% - 0.30\,
+% \Bigl(
+%   0.37\,\covariate_{11}
+% - 0.42\,\covariate_{20}
+% + 0.25\,\covariate_{21}
+% + 0.37\,\covariate_{24}
+% - 0.31\,\covariate_{7}
+% + 0.35\,\tanh(0.78\,\covariate_{5} - 1.03)
+% + 0.56
+% \Bigr) \\
+% &\qquad\qquad \times
+% \Bigl(
+%  - 0.19\,\covariate_{11}
+%  - 0.23\,\covariate_{14}
+%  - 0.24\,\covariate_{21}
+%  - 0.40\,\covariate_{24}
+%  + 0.20\,\covariate_{7}
+%  - 0.14\,\sin(0.97\,\covariate_{3} + 5.20) \\
+% &\qquad\qquad\qquad
+%  - 0.49\,\sin(6.42\,\covariate_{4} - 2.19)
+%  - 0.40\,\tanh(0.51\,\covariate_{5} - 0.70)
+%  - 1.15
+% \Bigr) \\[4pt]
+% &\quad
+% - 0.20\,
+% \Bigl(
+%   0.22\,\covariate_{10}
+% + 0.10\,\covariate_{12}
+% + 0.23\,\covariate_{14}
+% + 0.51\,\covariate_{15}
+% + 0.20\,\covariate_{16}
+% + 0.18\,\covariate_{17}
+% - 0.06\,\covariate_{19}
+% + 0.21\,\covariate_{21} \\
+% &\qquad\qquad
+% + 0.25\,\covariate_{22}
+% - 0.07\,\covariate_{24}
+% + 0.15\,\covariate_{25}
+% + 0.32\,\covariate_{7}
+% + 0.18\,\covariate_{9}
+% - 0.49\,\sin(0.58\,\covariate_{1} + 2.58) \\
+% &\qquad\qquad
+% + 0.24\,\sin(0.81\,\covariate_{2} - 0.79)
+% + 0.38\,\sin(0.69\,\covariate_{5} + 5.01)
+% + 1.69\,\sin(0.23\,\covariate_{6} - 7.34) \\
+% &\qquad\qquad
+% - 0.10\,\tan(2.58\,\covariate_{4} + 6.01)
+% + 3.35
+% \Bigr)
+% \Bigl(
+%   0.06\,\covariate_{1}
+% + 0.18\,\covariate_{10}
+% + 0.18\,\covariate_{11}
+% + 0.09\,\covariate_{12}
+% + 0.08\,\covariate_{13} \\
+% &\qquad\qquad
+% + 0.09\,\covariate_{14}
+% + 0.52\,\covariate_{15}
+% + 0.34\,\covariate_{17}
+% + 0.21\,\covariate_{18}
+% + 0.06\,\covariate_{19}
+% + 0.08\,\covariate_{22}
+% + 0.35\,\covariate_{25}
+% + 0.02\,\covariate_{3}
+% + 0.14\,\covariate_{7} \\
+% &\qquad\qquad
+% + 0.13\,\covariate_{8}
+% + 0.06\,\covariate_{9}
+% + 0.00\,(-3.38\,\covariate_{6} - 8.92)^{2}
+% - 0.12\,\sin(0.73\,\covariate_{2} + 8.56) \\
+% &\qquad\qquad
+% + 0.58\,\sin(0.76\,\covariate_{5} + 5.39)
+% - 0.11\,\tan(8.61\,\covariate_{4} - 4.40)
+% + 1.54
+% \Bigr) \\[4pt]
+% &\quad
+% - 0.04\,
+% \Bigl(
+%   0.14\,\covariate_{10}
+% + 0.08\,\covariate_{11}
+% + 0.09\,\covariate_{12}
+% + 0.15\,\covariate_{13}
+% - 0.18\,\covariate_{14}
+% - 0.05\,\covariate_{15}
+% - 0.22\,\covariate_{17} \\
+% &\qquad\qquad
+% + 0.13\,\covariate_{19}
+% + 0.21\,\covariate_{20}
+% - 0.09\,\covariate_{21}
+% + 0.31\,\covariate_{22}
+% - 0.31\,\covariate_{25}
+% - 0.05\,\covariate_{5}
+% + 0.22\,\covariate_{8}
+% - 0.14\,\covariate_{9} \\
+% &\qquad\qquad
+% - 0.01\,(-1.48\,\covariate_{1} - 1.91)^{2}
+% - 0.01\,(-2.04\,\covariate_{6} - 6.95)^{2}
+% - 1.78\,\sin(0.23\,\covariate_{2} + 5.02) \\
+% &\qquad\qquad
+% + 1.02\,\sin(0.43\,\covariate_{3} - 4.16)
+% - 0.16\,\sin(0.63\,\covariate_{4} + 8.60)
+% - 2.44
+% \Bigr) \\
+% &\qquad\qquad \times
+% \Bigl(
+%   0.04\,\covariate_{10}
+% + 0.13\,\covariate_{11}
+% - 0.22\,\covariate_{12}
+% + 0.05\,\covariate_{13}
+% + 0.32\,\covariate_{15}
+% + 0.17\,\covariate_{17}
+% + 0.14\,\covariate_{19} \\
+% &\qquad\qquad\qquad
+% - 0.24\,\covariate_{20}
+% + 0.14\,\covariate_{21}
+% - 0.47\,\covariate_{22}
+% - 0.20\,\covariate_{23}
+% - 0.11\,\covariate_{24}
+% + 0.30\,\covariate_{25}
+% - 0.22\,\covariate_{8}
+% + 0.06\,\covariate_{9} \\
+% &\qquad\qquad\qquad
+% + 0.15\,\sin(0.73\,\covariate_{1} + 5.53)
+% + 1.05\,\sin(0.30\,\covariate_{2} - 1.12)
+% + 1.24\,\sin(0.43\,\covariate_{3} - 7.38) \\
+% &\qquad\qquad\qquad
+% - 0.54\,\sin(6.39\,\covariate_{4} + 1.00)
+% - 0.06\,\sin(0.97\,\covariate_{5} - 3.63)
+% - 0.86\,\sin(0.29\,\covariate_{6} - 4.05)
+% + 4.07
+% \Bigr) \\[4pt]
+% &\quad
+% + 0.20\,
+% \Bigl(
+%   0.34\,\covariate_{10}
+% + 0.20\,\covariate_{11}
+% + 0.03\,\covariate_{13}
+% - 0.08\,\covariate_{14}
+% + 0.06\,\covariate_{15}
+% + 0.38\,\covariate_{17}
+% + 0.06\,\covariate_{19}
+% + 0.11\,\covariate_{20} \\
+% &\qquad\qquad
+% - 0.19\,\covariate_{21}
+% + 0.13\,\covariate_{22}
+% + 0.09\,\covariate_{23}
+% - 0.25\,\covariate_{24}
+% + 0.47\,\covariate_{25}
+% + 0.23\,\covariate_{6}
+% + 0.37\,\covariate_{7}
+% + 0.54\,\covariate_{8}
+% + 0.04\,\covariate_{9} \\
+% &\qquad\qquad
+% + 0.44\,\exp(0.33\,\covariate_{4})
+% + 0.36\,\sin(0.74\,\covariate_{1} - 6.00)
+% - 0.81\,\sin(0.57\,\covariate_{2} + 8.57) \\
+% &\qquad\qquad
+% + 0.75\,\sin(0.37\,\covariate_{3} + 1.79)
+% - 0.63\,\sin(0.61\,\covariate_{5} + 1.78)
+% + 1.99
+% \Bigr) \\
+% &\qquad\qquad \times
+% \Bigl(
+%   0.51\,\covariate_{10}
+% + 0.18\,\covariate_{11}
+% + 0.18\,\covariate_{12}
+% + 0.17\,\covariate_{13}
+% - 0.06\,\covariate_{14}
+% + 0.06\,\covariate_{15}
+% + 0.34\,\covariate_{17}
+% + 0.25\,\covariate_{20} \\
+% &\qquad\qquad\qquad
+% - 0.04\,\covariate_{21}
+% + 0.19\,\covariate_{22}
+% + 0.05\,\covariate_{23}
+% - 0.25\,\covariate_{24}
+% + 0.46\,\covariate_{25}
+% + 0.28\,\covariate_{6}
+% + 0.38\,\covariate_{7}
+% + 0.46\,\covariate_{8}
+% + 0.24\,\covariate_{9} \\
+% &\qquad\qquad\qquad
+% - 0.33\,\sin(0.91\,\covariate_{1} - 2.39)
+% - 0.79\,\sin(0.63\,\covariate_{2} + 8.63)
+% + 0.25\,\sin(0.63\,\covariate_{3} + 1.79) \\
+% &\qquad\qquad\qquad
+% - 0.68\,\sin(0.68\,\covariate_{5} + 8.02)
+% - 0.06\,\tan(2.41\,\covariate_{4} - 9.41)
+% + 2.14
+% \Bigr) \\[4pt]
+% &\quad
+% + 0.05\,\sin(0.70\,\covariate_{1} - 0.31)
+% + 0.41\,\sin(0.76\,\covariate_{1} + 0.40)
+% + 0.21\,\sin(1.02\,\covariate_{1} + 1.37) \\
+% &\quad
+% + 0.03\,\sin(0.84\,\covariate_{2} - 6.75)
+% - 0.16\,\sin(1.15\,\covariate_{2} + 2.99)
+% - 0.07\,\sin(0.63\,\covariate_{3} - 3.98)
+% + 1.43\,\sin(0.65\,\covariate_{3} + 2.23) \\
+% &\quad
+% + 0.33\,\sin(0.99\,\covariate_{3} + 0.79)
+% - 0.16\,\sin(6.42\,\covariate_{4} - 5.19)
+% + 0.68\,\sin(6.76\,\covariate_{4} + 1.83) \\
+% &\quad
+% - 0.10\,\sin(0.69\,\covariate_{5} - 4.36)
+% - 0.06\,\sin(0.70\,\covariate_{5} + 1.82)
+% + 0.70\,\sin(0.75\,\covariate_{5} - 1.42) \\
+% &\quad
+% + 0.02\,\tan(9.59\,\covariate_{4} - 8.20)
+% + 0.69\,\tanh(0.56\,\covariate_{5} - 0.36)
+% + 3.79 \, .
+% \end{align*}}
+
+
+\subsubsection{Metric variations following the pipeline}
+\label{app:sec:metrics_pipeline}
+
+We also show how the metrics---both observed (test loss) and unobserved (PEHE) in real data--- vary when we perform the pruning and the symbolic substitution in the examples that we develop in \cref{app:sec:results_visualizations}.
+
+We can observed in \cref{fig:metrics_pipeline}, for each dataset (with its respective model), the variation in performance when \itemi we prune the network, \itemii we substitute the splines by symbolic formulas and \itemiii we truncate the formulas to have 2 decimals.
+
+The conclusion of this experiment is that the metric variation in the different steps is high, so a practitioner should be careful when setting the budgets of step acceptance. MSE still show signs of being a good proxy of the PEHE, representing the variations of the PEHE relatively well.
+
+% \begin{table}[t]
+% \small
+% \centering
+% \setlength{\tabcolsep}{6pt}
+% \begin{tabular}{lllrrrr|r}
+% \toprule
+% Dataset & Model & Metric & Original & Pruned & Formula & Truncated & \multicolumn{1}{c}{\;\;causalNN}\\
+% \midrule
+% \multirow{3}{*}{IHDP-A} & \multirow{3}{*}{S-KAAM}
+% & MSE      & 1.34 & 2.82 &   2.76   &  2.75 &  1.49 \\
+% & & ATE err &  0.23 &  0.23 & 0.23 &  0.23 &  0.39 \\
+% & & PEHE    &  1.15 &  1.15 & 1.15 &  1.15 &  1.01 \\
+% \midrule
+% \multirow{3}{*}{ACIC-7} & \multirow{3}{*}{T-KAAM}
+% & MSE      & 4.84 & 73.77 &   73.93   & 74.21 & 18.80 \\
+% & & ATE err &  0.66 &  2.03 & 2.32 &  2.31 &  0.55 \\
+% & & PEHE    &  5.12 &  5.45 & 7.70 &  7.67 &  7.33 \\
+% \midrule
+% \multirow{3}{*}{IHDP-B} & \multirow{3}{*}{Dragon-KAAM}
+% & MSE      & 23.82 & 27.87 & 26.79 & 27.40 & 25.94 \\
+% & & ATE err &  0.27 &   0.50   & 0.65 &  0.59 &  0.42 \\
+% & & PEHE    &  2.72 &  2.70 & 4.82 &  4.27 &  2.46 \\
+% \midrule
+% \multirow{3}{*}{ACIC-2} & \multirow{3}{*}{Dragon-KAAM}
+% & MSE      & 11.20 &   9.69   &  9.45 & 10.53 &  8.32 \\
+% & & ATE err &  0.28 &   2.10   &  2.16 &  2.83 &  0.26 \\
+% & & PEHE    &  2.54 &   2.70   &  2.74 &  3.07 &  1.35 \\
+% \bottomrule
+% \end{tabular}
+% \caption{Pipeline metrics variation across datasets and models. Metrics are rounded to 2 decimals.}
+% \label{tab:kaam_results}
+% \end{table}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{figs/pipeline_metrics.pdf}
+    \caption{Variation of the metrics in each step of the pipeline: original (Or.), pruned (Pr.), Formula (For.) and 2-decimal truncation (Tr.).}
+    \label{fig:metrics_pipeline}
+\end{figure}
+
+\add{1}{Note that, when following the pipeline, large errors can occur (\eg when pruning S-KAN). A practitioner would either adjust the pruning threshold to limit changes in the estimated ITEs or simply reject pruning when it induces excessive error. For these experiments, we used the default pruning and symbolic substitution criteria ($\threshold=3\cdot 10^{-2}$, $\threshold_{R^2} = 0.98$) because the goal is to evaluate pruning uniformly across all benchmark datasets; tuning it per-dataset would create an unfair comparison.}
+
+\subsection{Experiments of expression recovery}
+\label{app:sec:recoverability}
+
+\add{1}{In this section, we add details about the experiments of CATE recovery, explained in \cref{sec:identifiability}. There, we have shown that for some expressions that can be captured by S-KAAM and T-KAAM respectively, the pipeline of \ours achieves better approximations of the true data-generating functions, than MLP or KANs without simplification steps. Those steps act as inductive biases towards a simpler representation.}
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}{0.49\linewidth}
+     \includegraphics[width=0.97\linewidth]{figs/metrics_skaam.png}
+    \caption{S-KAAM experiment}
+    \label{fig:skaam_metrics}  
+    \end{subfigure}
+        \begin{subfigure}{0.49\linewidth}
+     \includegraphics[width=\linewidth, trim={0, 0, 0, 0.6cm}, clip]{figs/metrics_tkaam.png}
+    \caption{T-KAAM experiment}
+    \label{fig:tkaam_metrics}  
+    \end{subfigure}
+
+    \caption{Metrics of the synthetic experiments that show function recovery: ATE error, PEHE, MSE and MAE. ATE error and PEHE can only be computed observing the counterfactual, while MAE and MSE are functions of observational data. \textbf{Lower is better.}}
+    \label{app:fig:recovery_metrics}
+\end{figure}
+
+\add{1}{We can observe in \cref{app:fig:recovery_metrics} that all metrics decrease (improve) while computing the simplification steps, specially the symbolic substitution. That information is complementary to the curves observed in \cref{fig:identifiability_main}, that show a better fit of the symbolic curves. After symbolic substitution, the PEHE and the ATE error are much lower than the achieved by the causalNN counterpart in each case.}
+
+\subsection{Time consumption}
+
+We are interested in comparing training and inference time of \ours with their respective causalNNs. It is well known that KANs take more time to train than MLPs, for networks with the same number of parameters. However, KANs usually require less parameters than MLPs to achieve similar performance \citep{liu2024kan}. For the tasks analyzed in this paper, \ours requires greater computational effort during both training and inference than existing causal neural networks. We consider this additional cost justified by the interpretability that \ours provides, which we regard as a central advantage for causal analysis. We report the relative training and inference times in \cref{tab:kan_vs_mlp_times_ratio}.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabular}{c l cc cc c}
+
+& & \multicolumn{2}{c}{KAN} & \multicolumn{2}{c}{MLP} & Ratio (Train) \\
+Dataset & Model Name & Training (s) & Inference (s) & Training (s) & Inference (s) & KAN/MLP \\
+ \hline
+\multirow{4}{*}{IHDP A}
+& S-Learner  & 23.62\textsubscript{19.25} & 0.12\textsubscript{0.02} & 1.98\textsubscript{2.05} & 0.00\textsubscript{0.00} & 12 \\
+& T-Learner  & 97.89\textsubscript{75.57} & 0.03\textsubscript{0.01} & 29.00\textsubscript{29.19} & 0.00\textsubscript{0.00} & 7/2 \\
+& TarNet     & 67.21\textsubscript{52.39} & 0.01\textsubscript{0.00} & 8.02\textsubscript{9.27} & 0.00\textsubscript{0.00} & 8 \\
+& DragonNet  & 62.92\textsubscript{48.39} & 0.01\textsubscript{0.00} & 9.74\textsubscript{10.28} & 0.00\textsubscript{0.00} & 6/1 \\
+\hline
+\multirow{4}{*}{IHDP B}
+& S-Learner  & 56.24\textsubscript{22.13} & 0.06\textsubscript{0.01} & 2.61\textsubscript{1.24} & 0.00\textsubscript{0.00} & 22 \\
+& T-Learner  & 58.49\textsubscript{14.10} & 0.03\textsubscript{0.00} & 45.81\textsubscript{18.08} & 0.00\textsubscript{0.00} & 9/7 \\
+& TarNet     & 31.39\textsubscript{10.88} & 0.03\textsubscript{0.00} & 42.37\textsubscript{16.43} & 0.00\textsubscript{0.00} & 3/4 \\
+& DragonNet  & 157.82\textsubscript{38.35} & 0.01\textsubscript{0.00} & 187.26\textsubscript{31.89} & 0.00\textsubscript{0.00} & 5/6 \\
+\hline
+\multirow{4}{*}{ACIC 2}
+& S-Learner  & 120.96\textsubscript{54.54} & 0.05\textsubscript{0.01} & 23.13\textsubscript{15.77} & 0.00\textsubscript{0.00} & 5 \\
+& T-Learner  & 368.94\textsubscript{153.74} & 0.22\textsubscript{0.03} & 162.59\textsubscript{28.60} & 0.01\textsubscript{0.00} & 9/4 \\
+& TarNet     & 135.38\textsubscript{83.87} & 0.05\textsubscript{0.01} & 55.08\textsubscript{62.84} & 0.01\textsubscript{0.00} & 5/2 \\
+& DragonNet  & 92.83\textsubscript{55.77} & 0.04\textsubscript{0.01} & 63.17\textsubscript{70.06} & 0.01\textsubscript{0.00} & 3/2 \\
+\hline
+\multirow{4}{*}{ACIC 7}
+& S-Learner  & 147.31\textsubscript{110.57} & 0.23\textsubscript{0.03} & 4.56\textsubscript{7.80} & 0.00\textsubscript{0.00} & 32 \\
+& T-Learner  & 377.66\textsubscript{177.18} & 0.04\textsubscript{0.01} & 39.90\textsubscript{43.24} & 0.01\textsubscript{0.00} & 9 \\
+& TarNet     & 236.88\textsubscript{109.75} & 0.03\textsubscript{0.00} & 40.38\textsubscript{50.22} & 0.01\textsubscript{0.00} & 6 \\
+& DragonNet  & 272.19\textsubscript{127.14} & 0.03\textsubscript{0.00} & 51.86\textsubscript{65.79} & 0.01\textsubscript{0.00} & 5 \\
+\hline
+\multirow{4}{*}{ACIC 26}
+& S-Learner  & 141.11\textsubscript{96.81} & 0.17\textsubscript{0.02} & 4.46\textsubscript{7.54} & 0.00\textsubscript{0.00} & 32 \\
+& T-Learner  & 145.50\textsubscript{70.85} & 0.03\textsubscript{0.00} & 39.36\textsubscript{42.07} & 0.01\textsubscript{0.00} & 7/2 \\
+& TarNet     & 111.13\textsubscript{53.19} & 0.02\textsubscript{0.00} & 39.89\textsubscript{49.73} & 0.01\textsubscript{0.00} & 8/3 \\
+& DragonNet  & 147.49\textsubscript{70.45} & 0.03\textsubscript{0.05} & 48.26\textsubscript{58.27} & 0.01\textsubscript{0.00} & 3 \\
+\hline
+\multirow{4}{*}{NSLM}
+& S-Learner  & 75.62\textsubscript{44.37} & 0.38\textsubscript{0.09} & 73.57\textsubscript{29.65} & 0.01\textsubscript{0.00} & 1 \\
+& T-Learner  & 12.14\textsubscript{3.92} & 0.06\textsubscript{0.01} & 155.73\textsubscript{89.40} & 0.01\textsubscript{0.00} & 1/13 \\
+& TarNet     & 10.70\textsubscript{2.46} & 0.07\textsubscript{0.01} & 130.49\textsubscript{63.07} & 0.00\textsubscript{0.00} & 1/12 \\
+& DragonNet  & 19.61\textsubscript{3.92} & 0.06\textsubscript{0.01} & 214.24\textsubscript{34.63} & 0.00\textsubscript{0.00} & 1/11 \\
+\hline
+\multirow{4}{*}{NEWS}
+& S-Learner  & 40.28\textsubscript{18.32} & 0.24\textsubscript{0.04} & 2.53\textsubscript{0.43} & 0.01\textsubscript{0.00} & 16 \\
+& T-Learner  & 227.39\textsubscript{94.20} & 0.23\textsubscript{0.28} & 147.36\textsubscript{77.26} & 0.00\textsubscript{0.00} & 3/2 \\
+& TarNet     & 45.75\textsubscript{17.19} & 0.08\textsubscript{0.17} & 5.87\textsubscript{0.50} & 0.00\textsubscript{0.00} & 8 \\
+& DragonNet  & 19.32\textsubscript{5.97}  & 0.06\textsubscript{0.01} & 6.54\textsubscript{0.41} & 0.00\textsubscript{0.00} & 3 \\
+\hline
+\multirow{4}{*}{TCGA}
+& S-Learner  & 122.09\textsubscript{37.81} & 0.31\textsubscript{0.23} & 48.05\textsubscript{18.54} & 0.01\textsubscript{0.00} & 5/2 \\
+& T-Learner  & 269.33\textsubscript{101.08} & 0.19\textsubscript{0.12} & 778.61\textsubscript{338.08} & 0.00\textsubscript{0.01} & 1/3 \\
+& TarNet     & 285.42\textsubscript{117.24} & 0.10\textsubscript{0.06} & 246.19\textsubscript{109.33} & 0.01\textsubscript{0.00} & 6/5 \\
+& DragonNet  & 185.98\textsubscript{100.10} & 0.09\textsubscript{0.02} & 31.35\textsubscript{2.40} & 0.01\textsubscript{0.00} & 6 \\
+\bottomrule
+
+\end{tabular}
+\caption{Comparison of training and inference times (in seconds) for KAN and MLP across datasets. The last column shows the ratio of KAN to MLP training time, approximated as simple fractions. Values are reported as mean\textsubscript{std}.}
+\label{tab:kan_vs_mlp_times_ratio}
+\end{table}
+
+
+In average, \ours train slower than causalNNs: $\text{KAN training time} \approx 8\times \text{MLP training time}$. \add{1}{However, note that the time consumption depends largely on the dataset, since we can observe that, for the NSLM dataset, \ours trains much faster than MLP.}
+
+% \begin{wrapfigure}{r}{0.5\linewidth}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.5\linewidth]{figs/pipeline_kan_times.pdf}
+    \caption{Training of original network (Or.), pruning (Pr.) and symbolic (Sym.) time consumption in seconds for IHDP and ACIC datasets.  Logarithmic scale. Boxplots represent the distribution of times in all realizations. Markers and lines represent the medians of each distribution.}
+    \label{fig:pipeline_times}
+% \end{wrapfigure}
+\end{figure}
+\add{1}{\paragraph{Pipeline time consumption.} Besides training, the rest of the interpretability pipeline (Pruning and symbolic substitution) also introduces complexity in terms of computation. We include in \cref{fig:pipeline_times} the distribution of training (Or.), pruning (Pr.) and symbolic substitution (Sym.) times for the best \ours in the ACIC and IHDP datasets. All these training times have been measured in a CPU AMD Ryzen Threadripper 7970X 32-Cores. We can observe that the symbolic substitution time is comparable or even higher than training time in some datasets. On the other hand, pruning time is negligible.}
+
+
+
+
+\subsection{Comparison visualizations}
+
+In the same fashion, we have compared each causalNN with its respective \our, in \cref{fig:boxplots_grid}.
+
+\begin{figure*}[ht]
+  \centering
+  % --- Shared legend on top ---
+  \includegraphics[width=\textwidth]{figs/boxplots_2x5_shared_legend.pdf}
+  \caption{Comparison of KAN vs MLP across datasets. Top row: PEHE, bottom row: ATE err. The trend of the difference is not constant across datasets. For example, we can observe that \ours achieve better PEHE metrics in IHDP A and ACIC 2/7/26, but worse in IHDP B, than their respective causalNNs.}
+  \label{fig:boxplots_grid}
+\end{figure*}
+
+We also include, in \cref{tab:kan_vs_mlp_pvalues_consistent}, p-values for transparency, as they provide a more nuanced understanding of the evidence against the null hypothesis than a binary significant/non-significant determination at a fixed \significancelevel level.
+
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{c l cc cc}
+& & \multicolumn{2}{c}{KAN} & \multicolumn{2}{c}{MLP} \\
+Dataset & Architecture & $p$ (ATE err) & $p$ (PEHE) & $p$ (ATE err) & $p$ (PEHE) \\
+\hline
+\multirow{4}{*}{IHDP A}
+& S-Learner  & \textbf{0.781} &\textbf{0.121} & \textbf{0.132} & $<10^{-3}$ \\
+& T-Learner  & \textbf{0.889} & \underline{\textbf{1.000}} & $<10^{-3}$ & $<10^{-3}$ \\
+& TarNet     & \underline{\textbf{1.000}} & \textbf{1.000} & \textbf{0.906} & \textbf{1.000} \\
+& DragonNet  & \textbf{0.906} & \textbf{1.000} & \textbf{1.000} & \textbf{1.000} \\
+\hline
+\multirow{4}{*}{IHDP B}
+& S-Learner  & 0.006 & $<10^{-3}$ & 0.012 & $<10^{-3}$ \\
+& T-Learner  & 0.007 & $<10^{-3}$ & \textbf{0.388} &  \textbf{0.189} \\
+& TarNet     & 0.003 & $<10^{-3}$ & \underline{\textbf{1.000}} & \textbf{0.189} \\
+& DragonNet  & \textbf{0.388} & \textbf{0.006} & \textbf{0.436} & \underline{\textbf{1.000}} \\
+\hline
+\multirow{4}{*}{ACIC 2}
+& S-Learner  & \underline{\textbf{1.000}} & \underline{\textbf{1.000}} & $<10^{-3}$ & $<10^{-3}$ \\
+& T-Learner  & $<10^{-3}$ & $<10^{-3}$ & $<10^{-3}$ & $<10^{-3}$ \\
+& TarNet     & 0.013 & $<10^{-3}$ & $<10^{-3}$ & $<10^{-3}$ \\
+& DragonNet  & \textbf{0.157} & $<10^{-3}$ & $<10^{-3}$ & $<10^{-3}$ \\
+\hline
+\multirow{4}{*}{ACIC 7}
+& S-Learner  & 0.020 & $<10^{-3}$ & $<10^{-3}$ & $<10^{-3}$ \\
+& T-Learner  & \textbf{0.908} & \textbf{0.788} & $<10^{-3}$ & $<10^{-3}$ \\
+& TarNet     & \underline{\textbf{1.000}} & \textbf{0.788} & 0.020 & $<10^{-3}$ \\
+& DragonNet  & \textbf{0.706} & \underline{\textbf{1.000}} & $<10^{-3}$ & $<10^{-3}$ \\
+\hline
+\multirow{4}{*}{ACIC 26}
+& S-Learner  & \textbf{0.838} & 0.022 & $<10^{-3}$ & $<10^{-3}$ \\
+& T-Learner  & \textbf{1.000} & \textbf{0.511} & $<10^{-3}$ & $<10^{-3}$ \\
+& TarNet     & \underline{\textbf{1.000}} & \textbf{0.511} & 0.011 & $<10^{-3}$ \\
+& DragonNet  & \textbf{1.000} & \underline{\textbf{1.000}} & $<10^{-3}$ & $<10^{-3}$ \\
+\hline
+\multirow{4}{*}{NSLM}
+& S-Learner  & \underline{\textbf{1.000}} & \underline{\textbf{1.000}} & $< 10^{-3}$  & $< 10^{-3}$ \\
+& T-Learner  & \textbf{0.15} & \underline{\textbf{1.000}} & \textbf{0.52} & $< 10^{-3}$\\
+& TarNet     & 0.01 & \underline{\textbf{1.000}} & \textbf{0.44} & $< 10^{-3}$ \\
+& DragonNet  & $< 10^{-3}$ & \textbf{0.104} & \textbf{0.196} & $< 10^{-3}$ \\
+\hline
+\multirow{4}{*}{NEWS}
+& S-Learner  & \textbf{0.621} & {\textbf{0.406}} &  $< 10^{-3}$ &  $< 10^{-3}$ \\
+& T-Learner  &  \textbf{0.506} &  $< 10^{-3}$ &  $< 10^{-3}$& 0.006\\
+& TarNet & \underline{\textbf{1.000}} & 0.006 &  \textbf{0.101} & \underline{\textbf{1.000}} \\
+& DragonNet  & \textbf{0.621} & 0.003 & $< 10^{-3}$ & \textbf{0.488} \\
+\hline
+\multirow{4}{*}{TCGA}
+& S-Learner  & $< 10^{-3}$ & $< 10^{-3}$ & $< 10^{-3}$ & 0.039 \\
+& T-Learner  & $< 10^{-3}$ & $< 10^{-3}$ & \underline{\textbf{1.000}} & $< 10^{-3}$\\
+& TarNet     & $< 10^{-3}$ & $< 10^{-3}$ & $< 10^{-3}$ & \underline{\textbf{1.000}} \\
+& DragonNet  & $< 10^{-3}$ & $< 10^{-3}$ & $< 10^{-3}$ & 0.001\\
+\bottomrule
+\end{tabular}
+\caption{Friedman post-hoc \emph{corrected} $p$-values per dataset and metric, arranged to mirror \cref{tab:kan_vs_mlp_full}. Baselines are \underline{underlined} (reported as $p=1.000$) and methods not significantly different from the baseline at $\significancelevel=0.05$ are in \textbf{bold}. Very small $p$-values are reported as $<10^{-3}$.}
+\label{tab:kan_vs_mlp_pvalues_consistent}
+\end{table}
+
+
+%  \paragraph{Effect of pruning and symbolic substitution in metrics.}
+
+% For the two previous examples, we show in \cref{fig:pehe_pipeline} how PEHE increasses in the pruning and formula substitution steps, while, for the IHDP A dataset, it remains constant in those steps. The actions of completing these steps are controlled by $\budget_{\text{prune}}$/$\budget_{\text{symb}}$, which measures the MSE and evaluate if we should accept or not the taken step. In this case, we accepted all the steps to give complete interpretability, but the trade-off should be adjusted carefully by the practitioner, since the variations can be high.
+
+% \begin{wrapfigure}{r}{0.45\linewidth}
+% \vspace{-20pt}
+%     \centering
+%     \includegraphics[width=\linewidth]{figs/plot_PEHE.pdf}
+    
+%     \caption{PEHE variation in each step of the pipeline: original (Or.), pruned (Pr.), formula (For.) and 2-decimal truncation (Tr.). Separate axes for each dataset.}
+    
+%     \label{fig:pehe_pipeline}
+%     \vspace{-20pt}
+% \end{wrapfigure}
+
+% We present in \cref{app:sec:metrics_pipeline} the variation of all the metrics (MSE, ATE and PEHE) for the selected model of each dataset.
+
+% These results illustrate that \ours can provide closed-form CATE formulas and, in additive cases, complementary visualizations that reveal heterogeneous or homogeneous effects. Importantly, the interpretability pipeline exposes the trade-off between accuracy and simplification, allowing practitioners to adjust it explicitly to their needs.

@@ -1,0 +1,211 @@
+\section{Preliminaries}
+\label{sec:background}
+
+We consider an observational dataset $\dataset = \{\samplecov_\indexone, \sampletreat_\indexone, \sampleoutcomei_\indexone\}_{\indexone = 1}^{\samplesize}$ of \samplesize i.i.d.\ samples from an unknown distribution $\distribution(\covariates, \treatment, \outcome)$, where $\covariates \in \covspace \subset \R^\covsize$ are covariates, $\treatment \in \treatmentspace = \{0,1\}$\footnote{We focus on binary treatments for clarity, though the derivations extend to multi-valued and in some cases continuous treatments; see \cref{sec:app:multitreatment}.} is the treatment, and $\outcome \in \R$ is the outcome. Our goal is to estimate the causal effect of the treatment on the outcome and provide a closed-form, interpretable formula for it.
+
+Following the Neyman--Rubin potential outcomes framework \citep{neyman1990application,rubin1974estimating}, each individual $\indexone$ has potential outcomes $\outcome_\indexone(\sampletreat)$ for $\sampletreat \in \{0,1\}$. Only the outcome corresponding to the received treatment is observed, which constitutes the \emph{fundamental problem of causal inference}. The target estimand is the individual treatment effect (ITE):
+$
+\ite \;=\; \outcome_\indexone(1) - \outcome_\indexone(0).
+$
+
+Since $\ite$ is not observable, we estimate instead the conditional average treatment effect (CATE):
+\begin{equation}
+\cate{\samplecov} \;\defeq\; \E[\outcome(1)\mid \covariates=\samplecov] - \E[\outcome(0)\mid \covariates=\samplecov], \quad \text{denoting} \quad \pot(\samplecov) \;\defeq\; \E[\outcome(\treatment)\mid \covariates=\samplecov].
+\end{equation}
+
+We assume the standard conditions of causal inference: \itemi \emph{positivity}, $0 < P(\treatment=\sampletreat \mid \covariates) < 1$; \itemii \emph{conditional ignorability}, $\outcome(\sampletreat) \indep \treatment \mid \covariates$, which requires a valid adjustment set blocking all backdoor paths\footnote{An adjustment set must block all backdoor paths between treatment and outcome, avoid selection bias, and not block front-door paths.}; \itemiii \emph{consistency}, $\outcome_\indexone(\sampletreat_\indexone) = \sampleoutcomei_\indexone$; and \itemiv \emph{no interference}, $\outcome_\indexone \indep \outcome_\indextwo$ for $\indexone \neq \indextwo$. Under these assumptions, it follows that
+$
+\E[\outcome \mid \covariates, \treatment]
+$
+\replace{1}{is an unbiased estimator of}{equals} $\pot(\covariates)$ \citep{HernanRobins2025}. The challenge is that this conditional expectation becomes increasingly difficult to estimate with high-dimensional, multimodal covariates and complex covariate--treatment--outcome relations, motivating the use of flexible function approximators such as neural networks.
+
+\subsection{Causal neural networks}
+\label{sec:causalNN}
+
+Neural networks are flexible function approximators \citep{hornik1989multilayer} and often provide state-of-the-art potential–outcome and CATE estimates \citep{alaa2018limits,curth2021nonparametric,tesei2023learning}. We summarize the canonical architectures used in our experiments (see \cref{fig:causalNN}); all perform potential–outcome regression, $\pot(\samplecov)$, and obtain the CATE by difference, $\hcate{\samplecov}=\hpoone(\samplecov)-\hpozero(\samplecov)$. Our replacement of neural backbones by KANs is orthogonal to these designs and can also be applied to methods that target CATE directly (e.g., X-, R-learners, MRIV-Net; \citealp{kunzel2019metalearners,nie2021quasi,frauen2022estimating}).
+
+\textbf{Meta-learners} \citep{kunzel2019metalearners} are model-agnostic. The \emph{S-learner} fits a single regressor $\pot(\samplecov,\sampletreat)$ of the factual outcome and obtains potential outcomes by toggling $\sampletreat$. Its simplicity and ability to handle continuous treatments are appealing, but it may underuse $\sampletreat$ when the treatment signal is weak relative to $\samplecov$. The \emph{T-learner} trains two separate regressors, $\hpozero(\samplecov)$ and $\hpoone(\samplecov)$, one per arm. This allows treatment-specific fits but splits the data, which can increase variance and yield sharp CATE estimates in small samples.
+
+\textbf{TARNet} \citep{shalit2017estimating} introduces a shared representation $\latent(\samplecov)$ feeding two heads, combining the strengths above: shared structure across arms (mitigating data inefficiency) with treatment-specific outcome mappings (reducing treatment ignorance). Its CFRNet variant changes only the loss to encourage balanced representations, while the architecture remains identical. TARNet has shown robust performance and is widely used as a baseline \citep{shalit2017estimating,schwab2018perfect,curth2021inductive,yao2018representation,curth2021nonparametric}.
+
+\textbf{DragonNet} \citep{shi2019adapting} extends TARNet with a third head for the propensity score, $\hpropensity(\samplecov)$, encouraging $\latent(\samplecov)$ to capture confounding structure through multitask learning. Originally paired with targeted regularization for doubly robust average treatment effect (ATE) estimation \citep{van2011targeted}, the base network already yields accurate potential outcomes and thus CATEs \citep{curth2021nonparametric,lolak2025application,ling2023emulate}. Intuitively, predicting both outcomes and treatment forces the representation to retain covariates that co-determine assignment and response, which benefits counterfactual prediction. 
+
+\cref{fig:causalNN} illustrates the corresponding schematics; we keep the architectures unchanged when replacing neural components by KANs.
+
+
+\tikzset{
+  layer/.style={draw, minimum width=2mm, minimum height=8mm}, % sharp corners
+    hlayer/.style={draw, minimum width=1mm, minimum height=4mm}, % sharp corners
+  dotsep/.style={inner sep=0pt, minimum width=0pt},
+  skip/.style  = {dotted, line cap=round, ->}, 
+  >=Stealth
+}
+
+
+\newcommand{\hgap}{5mm}   % horizontal gaps
+\newcommand{\vgap}{5mm}   % vertical offset
+\begin{figure}[t]
+\centering
+\begin{subfigure}{0.18\textwidth}
+\includegraphics[width=\linewidth]{figs/slearner.pdf}
+% ---------- S-learner ----------
+% \begin{subfigure}[t]{0.12\textwidth}
+% \centering
+% \begin{tikzpicture}[transform shape, scale=0.75]
+%   \node (x1) at (0,2mm) {$\covariates$};
+%   \node (t1) at (0,-2mm) {$\treatment$};
+%   \node[layer, right=\hgap of x1, yshift=-2mm] (sL1) {};
+%   % \node[dotsep, right=3mm of sL1] (sdots) {$\cdots$};
+%   \node[layer, right=6mm of sL1] (sL2) {};
+%   \draw[->] (x1.east) -- ($(sL1.west)+(0,+2mm)$);
+%   \draw[->] (t1.east) --  ($(sL1.west)+(0,-2mm)$);
+%   \draw[skip] (sL1.east) -- (sL2.west); 
+%   \draw[->] (sL2.east) -- ++(4mm,0) node[right] {$\hpo(\covariates,\treatment)$};
+% \end{tikzpicture}
+\subcaption{S-learner}
+\end{subfigure}
+% \hfill
+% % ---------- T-learner ----------
+% \begin{subfigure}[t]{0.12\textwidth}
+% \centering
+% \begin{tikzpicture}[transform shape, scale=0.75]
+%   \node (x2) {\covariates};
+%   % top branch
+%   \node[layer, right=\hgap of x2, yshift=\vgap] (tL1a) {};
+%   % \node[dotsep, right=3mm of tL1a] (tdotsa) {$\cdots$};
+%   \node[layer, right=6mm of tL1a] (tL2a) {};
+%   % bottom branch
+%   \node[layer, right=\hgap of x2, yshift=-\vgap] (tL1b) {};
+%   % \node[dotsep, right=3mm of tL1b] (tdotsb) {$\cdots$};
+%   \node[layer, right=6mm of tL1b] (tL2b) {};
+%   \draw[->] (x2.east) -- (tL1a.west);
+%   \draw[->] (x2.east) -- (tL1b.west);
+%   % \draw[->] (tL1a.east) -- (tdotsa.west);
+%   % \draw[->] (tdotsa.east) -- (tL2a.west);
+%   \draw[skip] (tL1a.east) -- (tL2a.west); 
+%   % \draw[->] (tL1b.east) -- (tdotsb.west);
+%   % \draw[->] (tdotsb.east) -- (tL2b.west);
+%   \draw[skip] (tL1b.east) -- (tL2b.west); 
+%   \draw[->] (tL2a.east) -- ++(4mm,0) node[right] {$\hpozero(\covariates)$};
+%   \draw[->] (tL2b.east) -- ++(4mm,0) node[right] {$\hpoone(\covariates)$};
+% \end{tikzpicture}
+\begin{subfigure}{0.18\textwidth}
+\includegraphics[width=\textwidth]{figs/tlearner.pdf}
+\subcaption{T-learner}
+\end{subfigure}
+% \hfill
+% ---------- TARNet (shared trunk -> two heads) ----------
+% \begin{subfigure}[t]{0.25\textwidth}
+% \centering
+% \begin{tikzpicture}[transform shape, scale=0.75]
+%   \node (x3) {$\covariates$};
+%   % shared subnetwork (trunk)
+%   \node[layer, right=\hgap of x3] (sh1) {};
+%   % \node[dotsep, right=3mm of sh1] (sdots2) {$\cdots$};
+%   \node[layer, right=\hgap of sh1] (sh2) {};
+%   \node[right = 1.5mm of sh2.west, yshift=3mm](z1){$\latent$};
+%   % two outputs of the trunk feeding two subnetworks (heads)
+%   \node[hlayer, right=\hgap of sh2, yshift=\vgap] (h0a) {};
+%   % \node[dotsep, right=3mm of h0a] (h0dots) {$\cdots$};
+%   \node[hlayer, right=\hgap of h0a] (h0b) {};
+%   \node[hlayer, right=\hgap of sh2, yshift=-\vgap] (h1a) {};
+%   % \node[dotsep, right=3mm of h1a] (h1dots) {$\cdots$};
+%   \node[hlayer, right=\hgap of h1a] (h1b) {};
+%   % connections
+%   \draw[->] (x3.east) -- (sh1.west);
+%   % \draw[->] (sh1.east) -- (sdots2.west);
+%   % \draw[->] (sdots2.east) -- (sh2.west);
+%   \draw[skip] (sh1.east) -- (sh2.west);
+%   \draw[->] (sh2.east) -- (h0a.west);
+%   \draw[->] (sh2.east) -- (h1a.west);
+%   % \draw[->] (h0a.east) -- (h0dots.west);
+%   % \draw[->] (h0dots.east) -- (h0b.west);
+%    \draw[skip] (h0a.east) -- (h0b.west);
+%   % \draw[->] (h1a.east) -- (h1dots.west);
+%   % \draw[->] (h1dots.east) -- (h1b.west);
+%   \draw[skip] (h1a.east) -- (h1b.west);
+%   \draw[->] (h0b.east) -- ++(4mm,0) node[right] {$\hpozero(\covariates)$};
+%   \draw[->] (h1b.east) -- ++(4mm,0) node[right] {$\hpoone(\covariates)$};
+% \end{tikzpicture}
+\begin{subfigure}{0.3\textwidth}
+\includegraphics[width=\linewidth]{figs/tarnet.pdf}
+\subcaption{TARNet}
+\end{subfigure}
+% ---------- DragonNet (shared trunk -> three heads) ----------
+% \begin{subfigure}[t]{0.3\textwidth}
+% \centering
+% \begin{tikzpicture}[transform shape, scale=0.75]
+%   \node (x4) {$\covariates$};
+%   % shared subnetwork (trunk)
+%   \node[layer, right=\hgap of x3] (sh1) {};
+%   % \node[dotsep, right=3mm of sh1] (sdots2) {$\cdots$};
+%   \node[layer, right=\hgap of sh1] (sh2) {};
+%   \node[right = 1.5mm of sh2.west, yshift=3mm](z2){$\latent$};
+%   % two outputs of the trunk feeding two subnetworks (heads)
+%   \node[hlayer, right=\hgap of sh2, yshift=\vgap] (h0a) {};
+%   % \node[dotsep, right=3mm of h0a] (h0dots) {$\cdots$};
+%   \node[hlayer, right=\hgap of h0a] (h0b) {};
+%   \node[hlayer, right=\hgap of sh2, yshift=-\vgap] (h1a) {};
+%   % \node[dotsep, right=3mm of h1a] (h1dots) {$\cdots$};
+%   \node[hlayer, right=\hgap of h1a] (h1b) {};
+%   \node[hlayer, right=\hgap of sh2] (h3a) {};
+%   % \node[dotsep, right=3mm of h3a] (h3dots) {$\cdots$};
+%   \node[hlayer, right=\hgap of h3a] (h3b) {$\sigma$};
+%   % connections
+%   \draw[->] (x3.east) -- (sh1.west);
+%   % \draw[->] (sh1.east) -- (sdots2.west);
+%   % \draw[->] (sdots2.east) -- (sh2.west);
+%   \draw[skip] (sh1.east) -- (sh2.west);
+%   \draw[->] (sh2.east) -- (h0a.west);
+%   \draw[->] (sh2.east) -- (h1a.west);
+%   \draw[->] (sh2.east) -- (h3a.west);
+%   % \draw[->] (h0a.east) -- (h0dots.west);
+%   % \draw[->] (h0dots.east) -- (h0b.west);
+%   \draw[skip] (h0a.east) -- (h0b.west);
+%   % \draw[->] (h1a.east) -- (h1dots.west);
+%   % \draw[->] (h1dots.east) -- (h1b.west);
+%     \draw[skip] (h1a.east) -- (h1b.west);
+%   % \draw[->] (h3a.east) -- (h3dots.west);
+%   % \draw[->] (h3dots.east) -- (h3b.west);
+%     \draw[skip] (h3a.east) -- (h3b.west);
+%   \draw[->] (h0b.east) -- ++(4mm,0) node[right] {$\hpozero(\covariates)$};
+%   \draw[->] (h1b.east) -- ++(4mm,0) node[right] {$\hpoone(\covariates)$};
+%   \draw[->] (h3b.east) -- ++(4mm,0) node[right] {$\hpropensity(\covariates)$};
+% \end{tikzpicture}
+\begin{subfigure}{0.3\textwidth}
+\includegraphics[width=\linewidth]{figs/dragonnet.pdf}
+\subcaption{DragonNet}
+\end{subfigure}
+\caption{Architectures used for \emph{potential outcome regression}. Boxes denote layers or backbones (neural networks or KANs); dotted arrows indicate optional hidden layers.}
+\label{fig:causalNN}
+\end{figure}
+
+
+
+\subsection{Kolmogorov--Arnold networks}
+\label{sec:kans}
+
+We employ KANs as our backbones. Kolmogorov--Arnold Networks (KANs) \citep{liu2024kan} are deep models that replace fixed node-wise activations with \emph{learnable univariate functions on edges}, using \emph{addition}---and, in extensions, multiplication \citep{liu2024kan2}---as the only explicit multivariate operations. Their design is motivated by the Kolmogorov--Arnold representation theorem (KART), which guarantees that any continuous $\func:\R^\covsize\!\to\!\R$ can be expressed as
+\begin{equation}
+\label{eq:ka}
+f(\samplecov) \;=\; \sum_{\indexthree=1}^{2\covsize+1} \kanoutlayer_\indexthree\!\Big(\sum_{\indexfour=1}^{\covsize} \kanlayer_{\indexthree,\indexfour}(\samplecovi_\indexfour)\Big),
+\end{equation}
+where all nonlinearities are one-dimensional \citep{kolmogorov56,kolmogorov1957representations,braun2009constructive,Arnold1957}. This motivates stacked architectures where multivariate structure emerges from compositions of simple univariate transformations and aggregations.
+Formally, a depth-\nLayers KAN with widths $\{n_\indexlayer\}$ and coordinates $\samplekan_{\indexlayer,\indexfive}$ replaces the linear map and fixed activation at layer $\indexlayer$ by
+\begin{equation}
+\label{eq:kan-layer}
+\samplekan_{\indexlayer+1,\indexsix} \;=\; \sum_{\indexfive=1}^{n_\indexlayer} \phi_{\indexlayer,\indexsix,\indexfive}\big(\samplekan_{\indexlayer,\indexfive}\big), \quad \indexsix=1,\dots,n_{\indexlayer+1},
+\end{equation}
+so that the whole network computes: $
+\text{KAN}(\samplecov) \;=\; \big(\kan_{\nLayers-1}\!\circ\kan_{\nLayers-2}\!\circ\cdots\circ\kan_{0}\big)(\samplecov)$.
+Each $\kanlayer_{\indexlayer,\indexsix,\indexfive}$ is parameterized as a smooth B-spline,
+\[
+\kanlayer(\samplekan) \;=\; \splinebiascoef\,b(\samplekan) + \splinecoef\,\text{spline}(\samplelatenti),
+\]
+with $b(\samplekan)$ a fixed baseline (e.g., identity or SiLU), and $\splinecoef, \splinebiascoef$ are learnable weights. This construction is fully differentiable and trainable with standard backpropagation. While the shallow KART decomposition may involve irregular univariates, stacking layers yields smooth, accurate approximations \citep{liu2024kan}.
+
+KANs retain universal approximation: refining spline grids (internal degrees of freedom) and stacking layers (external degrees of freedom) expands expressivity while exposing interpretable one-dimensional components. Compared to MLPs with fixed nonlinearities, complexity shifts from dense weight matrices to a small number of spline coefficients per edge, making the active graph (which edges matter) separable from the functional form of each transformation. Training follows standard optimizers and losses, with sparsity encouraged by $\ell_1$ or group penalties that prune low-contribution edges. The pruned networks are compact, with remaining splines straightforward to inspect or approximate symbolically. The \emph{MultKAN} extension \citep{liu2024kan2} further augments summation nodes with parameter-free multiplication nodes, explicitly representing interactions without forcing splines to emulate them.
+
+In summary, KANs are deep models built from learnable one-dimensional splines composed through sums (and optionally products). They preserve universal approximation, train with off-the-shelf methods, admit effective pruning, and expose interpretable building blocks at the level of univariate functions and explicit interactions. These properties make them natural candidates to replace neural backbones in \ours.
+
+

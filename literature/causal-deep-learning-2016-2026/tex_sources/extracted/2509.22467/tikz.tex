@@ -1,0 +1,90 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% LIBRARIES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usetikzlibrary{
+    shapes,
+    pgfplots.groupplots,
+    shadings,
+    calc,
+    arrows,
+    backgrounds,
+    colorbrewer,
+    shadows.blur,
+    external,
+    shapes,
+    shapes.arrows,
+    shapes.symbols,
+    arrows.meta,
+    positioning, 
+    decorations.pathreplacing,
+    intersections,
+    cd,
+    scopes,
+    babel, % otherwise there is an error when importing spanish in babel
+    fit % For extending the bounding box
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% STYLES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%\tikzset{every picture/.style={->, shorten >=1pt, thick}}
+
+% in preamble
+\tikzcdset{
+    nodes={anchor=center},
+    arrow style=tikz,
+    diagrams={>={Stealth[scale=0.8]}},
+%    diagrams={>={Straight Barb[scale=0.8]}},
+}
+
+% \tikzstyle{main node}=[circle,draw,font=\sffamily\Large\bfseries]
+\tikzstyle{main node}=[circle,draw,font=\sffamily\small,inner sep=0pt, outer sep=0pt, minimum size=5mm]
+\tikzstyle{observed}=[style=main node, fill=gray!25]
+\tikzstyle{hidden}=[style=main node, fill=white, dashed, draw=black!40, text=black!60]
+\tikzstyle{hiddenarrow}=[dashed, draw=black!40]
+\tikzstyle{realobs}=[style=main node,  ellipse]
+\tikzstyle{realhidden}=[style=hidden, ellipse]
+\tikzstyle{fairnessobs} = [style=main node, ellipse, minimum height=5mm,minimum width=10mm] %Ellipse for fairness
+\tikzstyle{fairnesshidden} = [style=main node, ellipse, fill=white, dashed, draw=black!60, text=black!60, minimum height=5mm,minimum width=10mm] %Ellipse for fairness
+\tikzset{
+    given variable/.style = {
+        draw=none, outer sep=0pt, inner sep=0pt, "#1"{yshift=-5pt}
+    }
+}
+
+\tikzstyle{identifiable}=[draw=idcolor, very thick]
+\tikzstyle{nonidentifiable}=[draw=unidcolor, very thick]
+
+
+\tikzstyle{block} = [rectangle, draw, minimum width=0.5 cm, minimum height=1.5cm]
+\tikzstyle{cir} = [circle, draw, minimum size=0.3cm]
+\tikzstyle{startstop} = [rectangle, rounded corners, minimum width=3cm, minimum height=1cm,text centered, draw=black]
+\tikzstyle{process} = [rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black]
+\tikzstyle{decision} = [diamond, aspect=2.5, minimum width=3cm, text centered, draw=black]
+\tikzstyle{arrow} = [thick,->,>=stealth]
+\tikzstyle{hexa} = [trapezium, trapezium left angle=60, trapezium right angle=120, draw,  
+      minimum width=2cm, minimum height=0.5cm]
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Other commands
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand\irregularcircle[2]{% radius, irregularity
+    \pgfextra {\pgfmathsetmacro\len{(#1)+rand*(#2)}}
+    +(0:\len pt)
+    \foreach \a in {10,20,...,350}{
+        \pgfextra {\pgfmathsetmacro\len{(#1)+rand*(#2)}}
+        -- +(\a:\len pt)
+    } -- cycle
+}
+
+
+\pgfdeclareplotmark{mystar}{
+    \node[star,star point ratio=2.25,minimum size=6pt,
+    inner sep=0pt,draw=black,solid,fill=red] {};
+}
+
+% Optional: tighter spacing inside nodes
+\newcommand{\nodew}{50mm}  % tweak node width

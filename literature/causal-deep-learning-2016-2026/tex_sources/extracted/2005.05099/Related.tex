@@ -1,0 +1,44 @@
+\section{Related work\label{sec:related}}
+%We review related work in terms of treatment effect estimation and semi-supervised learning.
+\subsection{Treatment effect estimation}
+Treatment effect estimation has been one of the major interests in causal inference and widely studied in various domains.
+Matching~\cite{rubin1973matching,abadie2006large} is one of the most basic and commonly used treatment effect estimation techniques. 
+It estimates the counterfactual outcomes using its nearby instances, whose idea is similar to that of graph-based semi-supervised learning. 
+Both methods assume that similar instances in terms of covariates have similar outcomes.   
+% To mitigate the curse of dimensionality problem in matching, the propensity matching method relying on one-dimensional propensity score was proposed~\cite{rosenbaum1983central}. 
+% The propensity score is the probability of an instance to get treatment, and is also used for debiasing the treatment biases~\cite{}.
+To mitigate the curse of dimensionality and selection bias in matching, the propensity matching method relying on the one-dimensional propensity score was proposed~\cite{rosenbaum1983central,rosenbaum1985constructing}. 
+The propensity score is the probability of an instance to get a  treatment, which is modeled using probabilistic models like logistic regression, and has been successfully applied in various domains to estimate treatment effects unbiasedly~\cite{lunceford2004stratification}. 
+% Tree-based methods can build an expressive model based on many weak learners~\cite{chipman2010bart,wager2018estimation}.
+Tree-based methods such as regression trees and random forests have also been well studied for this problem~\cite{chipman2010bart,wager2018estimation}.
+%and they make many subsets of instances and learn propensity tree. 
+%They use regression trees divide the covariate space into 
+%The leaves of trained trees are uzed to estimate treatment effect~\cite{wager2018estimation}. 
+One of the advantages of such models is that they can build quite expressive and flexible models to estimate treatment effects.
+% Recently, deep learning-based methods have been successfully applied for treating the effect estimation~\cite{shalit2017estimating,johansson2016learning}. 
+Recently, deep learning-based methods have been successfully applied to treatment effect estimation~\cite{shalit2017estimating,johansson2016learning}. 
+Balancing neural networks~(BNNs)~\cite{johansson2016learning} aim to obtain balanced representations of a treatment groups and a control group by minimizing the discrepancy between them, such as the Wasserstein distance~\cite{shalit2017estimating}. 
+Most recently, some studies have addressed causal inference problems on network-structured data~\cite{guo2020learning,alvari2019less,veitch2019using}.  
+Alvari et al. applied the idea of manifold regularization using users activities as causality-based features to detect harmful users in social media~\cite{alvari2019less}. 
+Guo et al. considered treatment effect estimation on social networks using graph convolutional balancing neural networks~\cite{guo2020learning}. 
+In contrast with their work assuming the network structures are readily available, we do not assume them and considers matching network defined using covariates.
+
+% knn~\cite{lunceford2004stratification}
+
+\subsection{Semi-supervised learning}
+% Semi-supervised learning have been a very popular method. Thus it is impossible to cover all works, we explain 
+Semi-supervised learning, which exploits both labeled and unlabeled data, is one of the most popular approaches, especially in scenarios when only limited labeled data can be accessed~\cite{bengio2007greedy,hinton2006fast}.
+Semi-supervised learning has many variants, and because it is almost impossible to refer to all of them, we mainly review the graph-based regularization methods, known as label propagation or manifold regularization~\cite{zhu2002learning,belkin2006manifold,weston2012deep}. 
+Utilizing a given graph or a graph constructed based on instance proximity, graph-based regularization encourages the neighbor instances to have similar labels or outcomes~\cite{zhu2002learning,belkin2006manifold}. 
+%This technique is called {\it label propagation} because the key idea behind this technique is that the neighbors of each instance are regularized to have the same label. 
+Such idea is also applied to representation learning in deep neural networks~\cite{weston2012deep,yang2016revisiting,kipf2016semi,iscen2019label,bui2018neural}; they encourage nearby instances not only to have similar outcomes, but also have similar intermediate representations, which results in remarkable improvements from ordinary methods. 
+One of the major drawbacks of semi-supervised approaches is that label noises in training data can be quite harmful; therefore, a number of studies managed to mitigate the performance degradation~\cite{vahdat2017toward,pal2018label,du2018robust,liu2012robust}.
+
+One of the most related work to our present study is graph-based semi-supervised prediction under sampling biases of labeled data~\cite{zhou2019graph}.
+%The graph-based semi-supervised problem under the sampling biases of labeled data is one of the most related works~\cite{zhou2019graph}.
+The important difference between this work and ours is that they do not consider intervention and we do not consider the sampling biases of labeled data. 
+
+
+
+
+

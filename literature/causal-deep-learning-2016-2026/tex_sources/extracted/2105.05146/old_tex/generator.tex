@@ -1,0 +1,180 @@
+\documentclass{article}
+\usepackage{arxiv}
+% For french
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsthm,amsmath,natbib}
+\usepackage{amsfonts,amssymb}
+\RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[toc,page]{appendix}
+
+% For tikz pictures
+\usepackage{tikz}
+\usetikzlibrary{matrix,chains,positioning,decorations.pathreplacing,arrows}
+\usepackage{neuralnetwork}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+\usepackage{algorithm}
+\usepackage[]{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{afterpage}
+\usepackage{bbm}
+\usepackage{setspace}
+\usepackage{comment}
+\usepackage[normalem]{ulem}
+%\doublespacing
+
+\newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+
+% Additional definitions
+\def\qadj{\hat{q}_{\mathrm{adj}}}
+\def\tt{\mathbf t}
+\def\z{\mathbf z}
+\def\X{\mathbf X}
+\def\inv{^{-1}}
+\def\H{\mathbf H}
+\def\x{\mathbf x}
+\def\xs{\underline {\mathbf x}}
+\def\Xs{\underline { \mathbf X} }
+\def\r{\mathbf r}
+\def\s{\mathbf s}
+\def\y{\mathbf y}
+\def\u{\mathbf u}
+\def\v{\mathbf v}
+\def\lmax{\lambda_\mathrm{max}}
+\def\emax{\mathbf{e}_\mathrm{max}}
+\def\emin{\mathbf{e}_\mathrm{min}}
+\def\lmin{\lambda_\mathrm{min}}
+\def\bbeta{\boldsymbol \beta}
+\def\ggamma{\boldsymbol \gamma}
+\def\intinf{\int_\infty^\infty}
+\def\sumi{\sum_{i=1}^n}
+\def\t{^\top}
+\def\eps{\boldsymbol \varepsilon}
+\def\KL{\mathbb {KL}}
+\def\E{\mathbb E}
+\def\V{\mathbb V}
+\def\N{\mathcal N}
+\def \real{\rm I\!R}
+\def \I{\mathbf I}
+\def \L {\mathcal{L}}
+
+% define alphabetical enumeration in \bgin{enumerate}
+\renewcommand{\theenumi}{\alph{enumi}}
+\renewcommand{\labelenumi}{\theenumi)}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclareMathOperator*{\argmax}{argmax~} % for subscripts and superscripts
+\DeclareMathOperator*{\argmin}{argmin~} % for subscripts and superscripts
+\DeclareMathOperator{\sign}{sign} % for functions
+
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+%\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+%\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.} }{\ \rule{0.5em}{0.5em}}
+
+
+\title{Generating Synthetic Data for Treatment Effect Estimation}
+
+\author{
+  Mouloud Belbahri \\
+  mouloud.belbahri@tdassurance.com \\
+  Department of Analytics and Modeling\\
+  Advanced Projects
+}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This short report develops a method to evaluate different treatment estimation models using synthetic data generated in a similar way to the simulation studies of \cite{tian2014simple}.
+\end{abstract}
+
+\keywords{causal inference \and simulations}
+
+
+%\section{Data generation}
+
+Synthetic data generation depends on the following four elements.
+
+\begin{enumerate}
+    \item The number $n$ of observations in the sample, and the number $p$ of predictors observed for each observation.
+    \item The distribution of the predictors. We draw predictors from a multivariate Gaussian distribution.
+    \item The mean effect function $\mu(\X)$ and the treatment effect function $\tau(\X)$. We vary the size of main effects relative to treatment effects.
+    \item The noise level $\sigma^2$. This corresponds to the conditional variance of the outcome given $\X$ and $T$. 
+\end{enumerate}
+
+Given the elements above, our data generation model is, for $i=1,...,n$ :
+
+\begin{align*}
+    &\X_i \sim \mathcal{N}_p (0, \Sigma) \\
+    &T_i \sim \mathrm{Bernoulli}(\theta)\\
+    &Y_i^* \mid \X_i, T_i \sim \mathcal{N}(\mu(\X_i) + T_i\tau(\X_i), \sigma^2).
+\end{align*}
+
+Define $Y_i$ to be the binary outcome as
+
+\begin{align*}
+    Y_i \mid \X_i, T_i = \mathbbm{1}(Y_i^* > 0 \mid \X_i, T_i).
+\end{align*}
+
+Hence, $Y_i$ follows a Bernoulli distribution with parameter $\mathrm{Pr}(Y_i^* > 0 \mid \X_i, T_i)$ and it is easy to recover the ``true'' treatment effect $u_i^*$ as follows
+
+\begin{align*}
+    u_i^* &= \mathrm{Pr}(Y_i^* > 0 \mid \X_i, T_i = 1) - \mathrm{Pr}(Y_i^* > 0 \mid \X_i, T_i = 0)\\
+    u_i^* &= \Phi \Bigl( \frac{\mu(\X_i) + \tau(\X_i)}{\sigma} \Bigr) - \Phi \Big( \frac{\mu(\X_i)}{\sigma} \Big) 
+\end{align*}
+where $\Phi(.)$ is the standard Gaussian cumulative distribution function. Note that $\mu(.)$ is a nuisance function and $\tau(.)$ is the function that controls the treatment effect. In fact, the sign of $\tau(.)$ and the sign of the treatment effect for a given observation coincide.
+
+We set $\theta$ to $0.5$, which is the case in our real data. For observational data settings, one can define $\theta$ as a function of a subset of the covariates, e.g. $\theta= 1 / \{1 + e^{-(X_1 + X_2)} \}$. 
+
+The variance-covariance matrix elements $\Sigma_{ij}$ are defined as follows:
+
+\[\Sigma_{ij} = \begin{cases} 
+      \rho & i\neq j \\
+      1 & i=j
+   \end{cases}.
+\]
+
+Finally, the mean and treatment effects functions are defined as follows:
+
+$$\mu(\X) = \sum_{j=1}^J \beta_j X_j + \sum_{j=1}^{p-1} \omega_j X_j X_{j+1},$$ 
+
+
+$$\tau(\X) = \sum_{j=1}^K \gamma_j X_j$$
+
+where $J\leq p$ and $K \leq p$. We set $\beta_j = \beta (-1)^{j}$, $\omega_j = \omega (-1)^j$ and we draw $\gamma_j$ independently from $\mathcal{N}(0,\gamma)$. The constants $\beta$, $\omega$ and $\gamma$ are hyper-parameters.
+
+
+
+
+
+\bibliographystyle{plainnat}
+\bibliography{mybib}
+
+
+
+\end{document}

@@ -8,6 +8,10 @@ Generated on 2026-06-27 for a high-recall treatment-effect and neural semiparame
 - `papers.txt`: batch input for `websource`.
 - `downloads/`: local PDFs downloaded by `websource` (ignored by the repo-wide `downloads/` gitignore rule).
 - `download_status.csv`: retrieval status after the `websource` run.
+- `markdown_docling/`: Docling Markdown extracted from the 79 downloaded PDFs.
+- `tex_sources/`: public arXiv source bundles, filtered to searchable text-like files.
+- `searchable_catalog.csv` / `searchable_catalog.json`: one row per manifest record with Markdown and TeX paths.
+- `SEARCH.md`: quick `rg` search commands for the extracted text.
 - `search_notes.md`: source queries, inclusion rules, and unresolved checks.
 
 ## Scope
@@ -63,12 +67,31 @@ The strict current-date ten-year window starts on 2016-06-27. Two May/June 2016 
 - downloaded: 79
 - missing: 7
 
+## Searchable Text
+
+- Docling Markdown files: 79
+- Docling extraction status: 79 ok, 0 failed
+- arXiv source rows attempted: 78
+- arXiv source bundles with TeX-like files: 75
+- arXiv e-print endpoints that returned only PDFs: 3
+- TeX-like files retained: 476
+- Text-like source files retained: 830
+
+Search both extracted layers with `rg`:
+
+```bash
+rg -n "Riesz" markdown_docling tex_sources/extracted
+```
+
 ## Rebuild
 
 ```bash
 python3 build_manifest.py
 websource papers.txt -o downloads -v --limit 8 --max-downloads 1 --timeout 30
 python3 build_manifest.py --sync-downloads
+./run_docling_extract.sh
+python3 fetch_arxiv_sources.py --sleep 3 --timeout 45
+python3 build_search_catalog.py
 ```
 
 The manifest is curated, while arXiv title/date/author metadata is refreshed from `https://export.arxiv.org/api/query` when available.

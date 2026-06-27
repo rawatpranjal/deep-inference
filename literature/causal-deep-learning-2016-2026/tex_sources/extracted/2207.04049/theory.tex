@@ -1,0 +1,39 @@
+\subsection{Theory}
+In this subsection, we give theoretic analysis for the identifiability of the individual treatment effect under the existence of spillover effect in hypergraphs. First, we list some definitions and necessary assumptions in this work.
+
+% the list may be repeated
+First, we denote the set of all the hyperedges which have interference to node $i$ (e.g., the hyperedges which contains node $i$, i.e., $\mathcal{E}_i$) as $\mathcal{E}^s_i$, and denote the set of nodes contained in at least one of the hyperedges in $\mathcal{E}^s_i$ as $\mathcal{V}^s_i$ (e.g., the set of node $i$'s neighboring nodes). We use  $\mathcal{V}^s_i-\{i\}$ to denote the set of nodes in $\mathcal{V}^s_i$ except $i$ itself. 
+We denote a summary function $\mathtt{SMR}(\cdot)$ which takes $\mathcal{E}^s_i$, the treatment assignment of nodes in $\mathcal{V}^s_i-\{i\}$ (denoted by $\mathbf{T}_{\mathcal{V}^s_i-\{i\}}$), and the instance features of these nodes (denoted by $\mathbf{X}_{\mathcal{V}^s_i-\{i\}}$) as input, and maps them into a vector $\mathbf{o}_i$: 
+%For simplicity, we denote the list of nodes which influence node $i$ as $\mathcal{N}_i$ (not including node $i$ itself), and 
+%We denote the summary function $\mathtt{SMR}(\cdot): \mathcal{X}^{|\mathcal{N}_i| \times d} \times \{0,1\}^{|\mathcal{N}_i|} \rightarrow \mathcal{S}$ over their covariates and treatment assignments is denoted by:
+% \begin{equation}
+%     \mathbf{s}_i = \mathtt{SMR}(\mathbf{X}_{\mathcal{N}_i}, \mathbf{T}_{\mathcal{N}_i})
+% \end{equation}
+\begin{equation}
+     \mathbf{o}_i = \mathtt{SMR}(\mathcal{E}^s_i, \mathbf{X}_{\mathcal{V}^s_i-\{i\}}, \mathbf{T}_{\mathcal{V}^s_i-\{i\}})
+ \end{equation}
+%Then the potential outcome under treatment $t_i$, $\mathbf{x}_i$ and summary $\mathbf{s}_i$ is denoted by $Y_i(t_i,\mathbf{x}_i,\mathbf{s}_i)$. 
+
+\begin{assumption}
+(Summary function) 
+For any node $i\in[n]$, any values of $\mathcal{E}^s_i, {X}_{\mathcal{V}^s_i-\{i\}}$, and ${T}_{\mathcal{V}^s_i-\{i\}}$, if the output of summary function $\mathbf{o}_i$ is determined, then the value of the potential outcomes $y_i^{1}$ and $y_i^{0}$ with feature $\mathbf{x}_i$ are also determined. 
+%For all the node $\forall i=1,...,n, \forall \mathbf{T}, \mathbf{T}' \in \{0,1\}^{n}, \forall \mathbf{X}, \mathbf{X}' \in \mathcal{X}^{n}$, if the summary function  $\mathtt{SMR}(\mathbf{X}_{\mathcal{N}_i},\mathbf{T}_{\mathcal{N}_i}, \mathcal{E}_i)=\mathtt{SMR}(\mathbf{X}'_{\mathcal{N}_i},\mathbf{T}'_{\mathcal{N}_i},\mathcal{E}_i)$, then the potential outcome $Y_i(t_i, \mathbf{T}, \mathbf{X})=Y_i(t_i, \mathbf{T}', \mathbf{X}')$.
+\label{assumption:summary}
+\end{assumption}
+
+\begin{assumption}
+(Unconfoundedness) For any node $i\in[n]$, given the features, the potential outcomes are independent with the treatment assignment and summary of neighbors, i.e., $Y_i^1,Y_i^0 \bigCI T_i, O_i | {X}_i$. \label{assumption:unconfoundeness}
+\end{assumption}
+
+Based on the above assumptions, the identification of potential outcomes $Y_i^{1}$ and $Y_i^{0}$ for each node $i$ can be proved (here we take $Y_i^{1}$ as an example):
+% \begin{align}
+% \mathbb{E}[Y_i|T_i = t_i, \mathbf{S}_i = \mathbf{s}_i, \mathbf{X}_i] &\overset{Asm. 1}{=} \mathbb{E}[Y_i(t_i,  \mathbf{s}_i)|T_i = t_i, \mathbf{S}_i = \mathbf{s}_i, \mathbf{X}_i]\\
+% &\overset{Asm. 2}{=} \mathbb{E}[Y_i(t_i, \mathbf{s}_i))|\mathbf{X}_i]
+% \end{align}
+\begin{align}
+Y_i^{1} \overset{(0)}{=}&\mathbb{E}[\Phi_Y(T_i=1, X_i=\mathbf{x}_i, T_{-i}=\mathbf{T}_{-i},{X}_{-i}=\mathbf{X}_{-i},H=\mathbf{H})] \\\overset{(1)}{=}& \mathbb{E}[\Phi_Y(T_i=1, X_i=\mathbf{x}_i, O_i=\mathbf{o}_i)) \\
+\overset{(2)}{=} &\mathbb{E}[\Phi_Y(T_i=1, X_i=\mathbf{x}_i, O_i=\mathbf{o}_i)|X_i=\mathbf{x}_i] \\
+\overset{(3)}{=} &\mathbb{E}[\Phi_Y(T_i=1, X_i=\mathbf{x}_i, O_i=\mathbf{o}_i)|X_i=\mathbf{x}_i, T_i=1,O_i=\mathbf{o}_i] \\
+\overset{(4)}{=} &\mathbb{E}[Y_i|X_i, T_i=1,O_i=\mathbf{o}_i].
+\end{align}
+Here, the equation $(0)$ is based on the definition of potential outcome in this setting; equation $(1)$ is inferred from Assumption (1); equation (2) is a straightforward derivation; equation (3) is based on Assumption (2); and equation (4) is based on the widely used consistency assumption \cite{rubin1980randomization}. Based on the above proof for the identification of potential outcomes, the identification of ITE can be straightforwardly derived.

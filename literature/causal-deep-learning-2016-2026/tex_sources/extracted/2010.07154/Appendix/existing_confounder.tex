@@ -1,0 +1,79 @@
+In this appendix, we formulate the DFIV method when observable confounders are available. Here, we consider the causal graph given in Figure~\ref{fig:observable_confounder}.  In addition to treatment $X \in \mathcal{X}$, outcome $Y \in \mathcal{Y}$, and instrument $Z \in \mathcal{Z}$, we have an observable confounder $O \in \mathcal{O}$. The structural function $f_\mathrm{struct}$ we aim to learn is now $\mathcal{X} \times \mathcal{O} \to \mathcal{Y}$, and the structural causal model is represented as
+\begin{align*}
+    Y = f_\mathrm{struct}(X, O) + \varepsilon, \quad \expect{\varepsilon} = 0, \quad \expect{\varepsilon | X} \neq 0.
+\end{align*}
+
+
+\begin{figure}
+    \centering
+        \begin{tikzpicture}
+            % x node set with absolute coordinates
+            \node[state, fill=yellow] (x) at (0,0) {$X$};
+        
+            % y node set relative to x.
+            % Locations can be:
+            % right,left,above,below,
+            % above left,below right, etc
+            \node[state, fill=yellow] (y) [right =of x] {$Y$};
+            \node[state, fill=yellow] (z) [left =of x] {$Z$};
+            \node[state] (eps) [above  =of y] {$\varepsilon$};
+            \node[state, fill=yellow] (o) [above  =of x] {$O$};
+            % Directed edge
+            \path (x) edge (y);
+            \path (z) edge (x);
+            \path (o) edge (x);
+            \path (o) edge (y);
+            \path (eps) edge (y);
+            \path (eps) edge (x);
+        \end{tikzpicture}   
+    \caption{Causal graph with observable confounder}
+    \label{fig:observable_confounder}
+\end{figure}
+
+
+For hidden confounders, we rely on Assumption~\ref{assum:iv}. For observable confounders, we introduce a similar assumption.
+\begin{assum}\label{assum:iv-observable}
+    The conditional distribution $P(X | Z, O)$ is not constant in $Z, O$ and $\expect{\varepsilon | Z,O} = 0$.
+\end{assum}
+Following a similar reasoning as in Section \ref{sec:preliminary}, we can estimate the structural function $\hat{f}_{\mathrm{struct}}$ by minimizing the following loss:
+\begin{align*}
+    \hat{f}_{\mathrm{struct}} = \argmin_{f \in \mathcal{F}} \tilde{\mathcal{L}}(f), \quad \tilde{\mathcal{L}}(f) = \expect[YZO]{(Y - \expect[X|Z,O]{f(X,O)})^2} + \Omega(f). 
+\end{align*}
+One universal way to deal with the observable confounder is to augment both the treatment and instrumental variables. Let us introduce the new treatment $\tilde{X} = (X,O)$ and instrument $\tilde{Z} = (Z,O)$, then  the loss $\tilde{\mathcal{L}}$ becomes 
+\begin{align*}
+    \tilde{\mathcal{L}}(f) = \expect[Y\tilde Z]{\left(Y - \expect[\tilde X|\tilde Z]{f(\tilde X)}\right)^2} + \Omega(f),
+\end{align*}
+which is equivalent to the original loss $\mathcal{L}$. This approach is adopted in KIV \citep{Singh2019}, and we used it here for DeepGMM method \citep{Bennett2019} in the demand design experiment. However, this ignores the fact that we only have to consider the conditional expectation of $X$ given $\tilde Z= (Z,O)$. Hence, we introduce another approach which is to model $f(X,O) = \vec{u}^\top (\vec{\psi}(X) \otimes \vec{\xi}(O))$, where  $\vec{\psi}(X)$ and $\vec{\xi}(O)$ are feature maps and $\otimes$ denotes the tensor product defined as $\vec{a} \otimes \vec{b} = \mathrm{vec}(\vec{a}\vec{b}^\top)$. It follows that $\expect[X|Z,O]{f(X,O)} = \vec{u}^\top (\expect[X|Z,O]{\vec{\psi}(X)} \otimes \vec{\xi}(O))$, which yields the following two-stage regression procedure.
+
+In stage 1, we learn the matrix $\hat{\vec{V}}$ that 
+\begin{align*}
+    \hat{\vec{V}} = \argmin_{\vec{V} \in \mathbb{R}^{d_1 \times d_2}} \mathcal{L}_1(\vec{V}) \quad \mathcal{L}_1(\vec{V}) = \expect[X,Z,O]{\|\vec{\psi}(X) - \vec{V}\vec{\phi}(Z, O) \|^2} + \lambda_1 \|\vec{V}\|^2, 
+\end{align*}
+which estimates the conditional expectation $\expect[X|Z,O]{\vec{\psi}(X)}$. 
+Then, in stage 2, we learn $\hat{\vec{u}}$ using
+\begin{align*}
+    \hat{\vec{u}} = \argmin_{\vec{u} \in \mathbb{R}^{d_1}} \mathcal{L}_2(w) \quad \mathcal{L}_2(w) = \expect[Y,Z,O]{\|Y - \vec{u}^\top (\hat{\vec{V}} \vec{\phi}(Z,O) \otimes \vec{\xi}(O))\|^2} + \lambda_2 \|\vec{u}\|^2.
+\end{align*}
+Again, both stages can be formulated as ridge regressions, and thus enjoy closed-form solutions. We can further extend this to learn deep feature maps. Let $\vec{\phi}_{\theta_{Z}}(Z,O), \vec{\psi}_{\theta_{X}}(X), \vec{\xi}_{\theta_{O}}(O)$ be the feature maps parameterized by $\theta_{Z}, \theta_{X}, \theta_{O}$, respectively. Using notation similar to Section \ref{sec:algorithm}, the corresponding DFIV algorithm with observable confounders is shown in Algorithm~\ref{algo2}. Note that in this algorithm, steps 3, 5, 6 are run until convergence, unlike for Algorithm~\ref{algo}.  
+
+
+\begin{algorithm}
+    \caption{Deep Feature Instrumental Variable with Observable Confounder}
+    \begin{algorithmic}[1]  \label{algo2}
+    \renewcommand{\algorithmicrequire}{\textbf{Input:}}
+    \renewcommand{\algorithmicensure}{\textbf{Output:}}
+    \REQUIRE Stage 1 data $(x_i, z_i, o_i)$, Stage 2 data $(\tilde y_i, \tilde z_i, \tilde o_i)$. Initial values $\hat{\theta}_O,\hat{\theta}_X,\hat{\theta}_Z$. Regularizing parameters $(\lambda_1, \lambda_2)$
+    \ENSURE Estimated structural function $\hat{f}_\mathrm{struct}(x)$.
+     \WHILE{$\tilde{\mathcal{L}}^{(n)}_2$ has not converged}
+     \WHILE{$\tilde{\mathcal{L}}^{(m)}_1$ has not converged}
+       \STATE Update $\hat{\theta}_Z$ by $\hat{\theta}_Z \leftarrow \hat{\theta}_Z - \alpha\nabla_{\theta_{Z}} \tilde{\mathcal{L}}^{(m)}_1(\hat{\vec{V}}^{(m)}(\hat{\theta}_O,\hat{\theta}_X,\theta_Z),\theta_Z)|_{\theta_{Z}=\hat{\theta}_Z}$ \hspace{1mm}\textit{$\backslash\backslash$ Stage 1}
+     \ENDWHILE
+       %\STATE Compute $\hat{\vec{V}}^{(m)}$ from \eqref{eq:stage1-sol}
+       \STATE Update $\hat{\theta}_X$ by $\hat{\theta}_X \leftarrow \hat{\theta}_X - \alpha\nabla_{\theta_X} \tilde{\mathcal{L}}^{(n)}_2(\hat{\vec{u}}^{(n)}(\hat{\theta}_O,\theta_X,\hat{\theta}_Z),\hat{\theta}_O,\theta_X)|_{\theta_X=\hat{\theta}_X}$ \hspace{1mm}\textit{$\backslash\backslash$ Stage 2}
+       \STATE Update $\hat{\theta}_O$ by $\hat{\theta}_O \leftarrow \hat{\theta}_O - \alpha\nabla_{\theta_O} \tilde{\mathcal{L}}^{(n)}_2(\hat{\vec{u}}^{(n)}(\theta_O,\hat{\theta}_X,\hat{\theta}_Z),\theta_O,\hat{\theta}_X)|_{\theta_O=\hat{\theta}_O}$ \hspace{2mm}\textit{$\backslash\backslash$ Stage 2}
+     \ENDWHILE
+     \STATE Compute $\hat{\vec{u}}^{(n)}$ from \eqref{eq:stage2-sol}
+    \RETURN $\hat{f}_\mathrm{struct}(x) = (\hat{\vec{u}}^{(n)})^\top \vec{\psi}_{\hat{\theta}_X}(x)$ 
+    \end{algorithmic} 
+    \end{algorithm}
+   

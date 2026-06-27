@@ -1,0 +1,33 @@
+We apply our IV methods to the off-policy policy evaluation (OPE) problem \citep{Sutton2018}, which is one of the fundamental problems of deep RL.
+In particular, it has been realized by \cite{bradtke1996linear} that 2SLS could be used to estimate a linearly parameterized value function, and we use this reasoning as the basis of our approach.
+Let us consider the RL environment $\left\langle\mathcal{S}, \mathcal{A}, P, R, \rho_0, \gamma \right\rangle$, where $\mathcal{S}$ is the state space, $\mathcal{A}$ is the action space,
+$P: \mathcal{S} \times\mathcal{A} \times \mathcal{S} \to [0, 1]$ is the transition function,
+$R: \mathcal{S} \times\mathcal{A} \times \mathcal{S} \times \mathbb{R} \to \mathbb{R}$ is the reward distribution,
+$\rho_0: \mathcal{S} \to [0, 1]$ is the initial state distribution,
+and discount factor $\gamma \in (0,1]$. Let $\pi$ be a policy, and we denote $\pi(a|s)$ as the probability of selecting action $a$ in stage $s\in\mathcal{S}$. Given policy $\pi$, the $Q$-function is defined as
+\begin{align*}
+    Q^{\pi}(s,a)=\expect{\sum_{t=0}^\infty \gamma^t r_t \middle| s_0=s, a_0=a}
+\end{align*}
+with $a_t\sim \pi(\cdot \mid s_t), s_{t+1}\sim P(\cdot | s_t, a_t), r_t \sim R(\cdot | s_t, a_t, s_{t+1})$. The goal of OPE is to evaluate the expectation of the $Q$-function with respect to the initial state distribution for a given target policy $\pi$, $\mathbb{E}_{s\sim \rho_0, a|s\sim \pi}[Q^{\pi}(s,a)]$, learned from a fixed dataset of transitions $(s, a, r, s')$, where $s$ and $a$ are sampled from some potentially unknown distribution $\mu$ and behavioral policy $\pi_b(\cdot|s)$ respectively. Using the Bellman equation satisfied by $Q^{\pi}$, we obtain a structural causal model of the form \eqref{eq:structuralcausalmodel},
+\begin{align}\label{eq:SCMforRL}
+    r=&\overbrace{Q^{\pi}(s,a)-\gamma Q^{\pi}(s',a')}^{\text{structural function~}f_{\mathrm{struct}}(s,a,s',a')}\\
+       &+\underbrace{\gamma \left(Q^{\pi}(s',a')- \expect[s'\sim P(\cdot|s,a), a'\sim \pi(\cdot | s')]{Q^{\pi}(s',a')}\right)+r-\expect[r\sim R(\cdot | s, a,s')]{r}}_{\text{confounder~}\varepsilon}\nonumber,
+\end{align}
+where  $X = (s,a,s',a'), Z = (s,a), Y = r$.
+We have that $\expect{\varepsilon} = 0, \expect{\varepsilon | X} \neq 0$, and Assumption \ref{assum:iv} is verified. Minimizing the loss \eqref{eq:total-loss} for the structural causal model \eqref{eq:SCMforRL} corresponds to minimizing the following loss $\mathcal{L}_{\mathrm{OPE}}$
+\begin{align}
+    \mathcal{L}_{\mathrm{OPE}} = \expect[s, a, r]{\left(r + \gamma \expect[s'\sim P(\cdot|s,a), a'\sim \pi(\cdot | s')]{Q^{\pi}(s', a')} - Q^{\pi}(s, a)\right)^2}, \label{eq:def-msbe}
+\end{align}
+and we can apply any IV regression method to achieve this. In Appendix~\ref{sec:ope-2sls}, we show that minimizing $\mathcal{L}_{\mathrm{OPE}}$ corresponds to minimizing the mean squared Bellman error (MSBE) \citep[p. 268]{Sutton2018} and we detail the DFIV algorithm for OPE. 
+Note that MBSE is also the loss minimized by the residual gradient (RG) method proposed in \citep{Baird95} to estimate $Q$-functions. However, this method suffers from the ``double-sample'' issue, i.e. it requires two independent samples of $s'$ starting from the same $(s,a)$ due to the inner conditional expectation \citep{Baird95}, whereas IV regression methods do not suffer from this issue. 
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.99\textwidth]{Experiment/ope_res.pdf}
+    \caption{Error of offline policy evaluation.}
+    \label{fig:ope_results}
+\end{figure}
+
+We evaluate DFIV on three BSuite \citep{osband2019behaviour} tasks: catch, mountain car, and cartpole. See Section~\ref{sec:app_bsuite_tasks} for a description of those tasks. The original system dynamics are deterministic. To create a stochastic environment, we randomly replace the agent action by a uniformly sampled action with probability $p \in [0, 0.5]$. The noise level $p$ controls the level of confounding effect. The target policy is trained using DQN \citep{mnih2015humanlevel}, and we subsequently generate an offline dataset for OPE by executing the policy in the same environment with a random action probability of 0.2 (on top of the environment's random action probability $p$). We compare DFIV with KIV, DeepIV, and DeepGMM; as well as Fitted Q Evaluation (FQE) \citep{le2019batch,voloshin2019empirical}, a specialized approach designed for the OPE setting, which serves as our ``gold standard'' baseline \citep{paine2020hyperparameter} (see Section~\ref{sec:app_fqe} for details). All methods use the same network for value estimation. Figure \ref{fig:ope_results} shows the absolute error of the estimated policy value by each method with a standard deviation from 5 runs.
+In catch and mountain car, DFIV comes closest in performance to FQE, and even matches it for some noise settings, whereas DeepGMM is somewhat worse in catch, and significantly worse in mountain car. In the case of cartpole, DeepGMM performs somewhat better than DFIV, although both are slightly worse than FQE. DeepIV and KIV both do poorly across all RL benchmarks. 
+

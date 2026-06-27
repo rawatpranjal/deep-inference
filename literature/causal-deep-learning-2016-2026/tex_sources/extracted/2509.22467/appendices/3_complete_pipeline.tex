@@ -1,0 +1,165 @@
+\section{Complete pipeline}
+\label{sec:app:pipeline}
+
+We offer two different complete visualizations of the pipeline that we propose, in an algorithm \cref{alg:causalkan} version that details all the steps, including the details and the computational step of each block, and a block diagram \cref{fig:causalkan-pipeline} in which is easier to focus on the decision steps and the importance of the budgets.
+
+As can be observed, although the pipeline is well defined, the are many variables (or hyperparameters) that the practitioner should vary depending on the dataset or the application of our proposal \add{1}{We include here some recommendations to choose these parameters and some discussion about the pipeline}.
+
+\add{1}{First of all, note that we treat KANs as a modeling option, not a universally superior alternative. Therefore, the practitioner should decide in each step if the \our should be used or if one should keep the causalNN baseline. For example, regarding the benchmarking experiments of \cref{sec:experiments}, we observe that TCGA obtains ITEs that are very far from the causalNNs estimates. Therefore, the practitioner should evaluate if that is acceptable. The same criteria should be applied with the rest of the thresholds. For example, when pruning the DragonKAN in IHDP B in \cref{fig:metrics_pipeline}, we observe that both PEHE and ATE move away from causalNN estimates. A practitioner should establish a threshold of admissible deviation. However note that the variation in metrics given by the pipeline steps are dependant of the parameters established the methods applied: in the pruning step, the pruning threshold \threshold; in the symbolic substitution, the $\threshold_{R^2}$. We recommend to test several of these parameters, and compare the deviation with the pipeline budgets (\budget). Therefore, the process of selecting those parameters can be cyclic and the practitioner should establish the number of iterations that are admissible. For the experiments, we set the default parameters of pruning (edge threshold $3\cdot 10^{-2}$, node threshold $10^{-2}$) and $R^2$ ($\threshold_{R^2}$=0.98) for getting a fair comparison. Therefore, the accept-reject gates are not static steps, but should be defined depending on the dataset and task.}
+
+
+\begin{algorithm}[t]
+\caption{\Our: Interpretable CATE via KAN-ified causal networks}
+\label{alg:causalkan}
+\begin{algorithmic}[1]
+\small
+\Require Base causalNN $A$; splits $\dataset_{\text{tr}},\dataset_{\text{val}},\dataset_{\text{te}}$ with $(\covariates,\treatment,\outcome)$; budgets $\budget_{\text{prune}}, \budget_{\text{symb}}$; thresholds $\threshold$ (prune), $\threshold_{R^2}$ (symbolic), $\budget_{\text{arch}}$ (KAN vs NN); HP spaces, $\mathcal{H}$, (depth, width, spline grid, $\weight_1,\weight_c,\weight_s,\weight_H$); atom dict $\{f_m\}_{m=1}^M$ ordered by complexity (poly $\to$ trigs $\to$ others); optimizer, early stopping.
+\Ensure $\hpozero(\samplecov), \hpoone(\samplecov), \hcate{\samplecov} \equiv \hpoone(\samplecov)-\hpozero(\samplecov)$
+\Statex
+
+\State \textbf{KAN-ification:} $M_0 \gets \textsc{Kanify}(A)$
+\Statex
+
+\State \textbf{HP search \& training:}
+\For{$h \in \mathcal{H}$}
+  \State $M_h \gets \textsc{Instantiate}(M_0,h)$
+  \State Minimize on $\dataset_{\text{tr}}$:
+  \[
+    \Loss=\Loss_{\text{pred}}(M_h)
+    + \weight_1 \!\!\sum_{\indexlayer,\indexsix,\indexfive}\!\! \mathbb{E}\!\left[\left|\kanlayer_{\indexlayer,\indexsix,\indexfive}(\samplekan_{\indexlayer,\indexfive})\right|\right]
+    + \weight_c \!\sum |\splinecoef| + \weight_s \!\sum |\splinecoef-\splinecoef'|
+    + \weight_H \!\sum H
+  \]
+  \State Early stop on $\dataset_{\text{val}}$; store $L_{\text{val}}(h)=\mathcal{L}_{\text{pred}}(M_h^\dagger;\dataset_{\text{val}})$
+\EndFor
+\State $H^\star \gets \arg\min_h L_{\text{val}}(h)$ with tie-break by simplicity (fewer layers, smaller grids/nodes, no MultKAN)
+\State $M \gets M_{H^\star}^\dagger$; \quad $L_{\text{ref}} \gets L_{\text{val}}(H^\star)$
+\Statex
+
+\State \textbf{Baseline causalNN check (KAN vs NN):}
+\State Train $A^\dagger$ (original causalNN) under its best HPs on $\dataset_{\text{tr}}$ with early stopping
+\State $L_{\text{NN}} \gets \mathcal{L}_{\text{pred}}(A^\dagger;\dataset_{\text{val}})$
+\If{$\mathcal{L}_{\text{pred}}(M;\dataset_{\text{val}}) - L_{\text{NN}} > \budget_{\text{arch}}$}
+  \State \textbf{Warn/Recommend:} change $A$ (architecture underperforming);
+\EndIf
+\Statex
+
+\State \textbf{Pruning (accept--reject):}
+\State $\score_{\indexlayer,\indexsix,\indexfive} \gets \mathbb{E}_{\dataset_{\text{val}}}\!\left[\left|\kanlayer_{\indexlayer,\indexsix,\indexfive}(\samplekan_{\indexlayer,\indexfive})\right|\right]$
+\State $E_{\text{prune}} \gets \{(\indexlayer,\indexsix\!\to\!\indexfive): \score_{\indexlayer,\indexsix,\indexfive}<\threshold\}$
+\If{$E_{\text{prune}}\neq\emptyset$}
+  \State $M' \gets \textsc{RemoveEdgesAndIsolatedNodes}(M,E_{\text{prune}})$
+  \If{$\mathcal{L}_{\text{pred}}(M';\dataset_{\text{val}})-L_{\text{ref}} \le \budget_{\text{prune}}$} \State $M\gets M'$; $L_{\text{ref}}\gets \mathcal{L}_{\text{pred}}(M;\dataset_{\text{val}})$ \Else \State \textbf{Reject} pruning \EndIf
+\EndIf
+\Statex
+
+\State \textbf{Auto-symbolic (per-edge, early exit by $R^2$) + global accept}:
+\State $M_{\text{pre}} \gets M$ \Comment{snapshot for possible rollback}
+\For{each edge $e=(\indexlayer,\indexsix\!\to\!\indexfive)$ in $M$}
+  \State collect $\{(u_k,v_k)\}$ on $\dataset_{\text{val}}$: $u_k=\samplekan_{\indexlayer,\indexfive}^{(k)}$, $v_k=\kanlayer_{\indexlayer,\indexsix,\indexfive}(u_k)$
+  \For{$m=1\to M$ \textbf{(complexity-ordered)}}
+    \State $(a^\star,b^\star,c^\star,d^\star)\gets\arg\min_{a,b,c,d}\tfrac{1}{|\dataset_{\text{val}}|}\sum_k \big(v_k-[c f_m(a u_k+b)+d]\big)^2$
+    \State compute $R^2_m$ on $\dataset_{\text{val}}$
+    \If{$R^2_m \ge \threshold_{R^2}$}
+      \State $M \gets \textsc{ReplaceEdgeWithAtom}(M,e,f_m,a^\star,b^\star,c^\star,d^\star)$ \Comment{early accept for this edge}
+      \State \textbf{break}
+    \EndIf
+  \EndFor
+\EndFor
+\State $L_{\text{sym}} \gets \mathcal{L}_{\text{pred}}(M;\dataset_{\text{val}})$
+\If{$L_{\text{sym}} - L_{\text{ref}} \le \budget_{\text{symb}}$}
+  \State \textbf{Accept} symbolic model; $L_{\text{ref}} \gets L_{\text{sym}}$
+\Else
+  \State \textbf{Reject} symbolic model; $M \gets M_{\text{pre}}$
+\EndIf
+\Statex
+
+\State \textbf{CATE extraction (difference $\Rightarrow$ simplify):}
+\State Compute $\hpozero(\samplecov),\,\hpoone(\samplecov)$ by forward evaluation of the two heads
+\State $\hcate{\samplecov} \gets \hpoone(\samplecov)-\hpozero(\samplecov)$
+\State \textsc{SimplifyAlgebra}$(\hcate{\samplecov})$ \Comment{cancel/factor common terms \emph{after} the difference}
+\State \Return $\big(\hpozero,\hpoone,\hcate{\samplecov}, M\big)$
+\end{algorithmic}
+\end{algorithm}
+
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  scale=0.85,
+  every node/.style={transform shape, font=\footnotesize},
+  node distance=6mm and 8mm,
+  >=Stealth,
+  line/.style={->, thin},
+  icon/.style={inner sep=0pt, outer sep=0pt, draw=none, align=center},
+  block/.style={rectangle, draw, rounded corners, align=center, minimum height=6mm, text width=\nodew},
+  decision/.style={diamond, draw, aspect=2, align=center, inner sep=1pt, text width=18mm},
+  term/.style={rounded rectangle, draw, align=center, minimum height=6mm, text width=22mm},
+  note/.style={rectangle, draw, align=center, dashed, text width=24mm}
+]
+
+% Nodes
+\node[term]                         (start)    {Start};
+\node[block,  below=of start]       (kanify)   {KAN-ify: $\textsc{Kanify}(A)\!\to\!M_0$};
+\node[block,  below=of kanify]      (hps)      {HP search over $\mathcal{H}$: train $\{M_h\}$, early stop; select $H^\star\Rightarrow M$};
+\node[icon, left=5mm of hps] (icon-hps) {\includegraphics[width=50mm]{figs/kan.png}};
+\node[decision, below=of hps, yshift=-2mm] (arch) {$\mathcal{L}_{\text{pred}}(M;\dataset_{\text{val}})-L_{\text{NN}}>\budget_{\text{arch}}$?};
+\node[note,    right=32mm of arch]  (warn)     {Recommend: change $A$ or Stop the process};
+\node[block,   below=of arch]       (prunePrep){Scores $\score_{\indexlayer,\indexsix,\indexfive}=\mathbb{E}[|\kanlayer_{\indexlayer,\indexsix,\indexfive}(\samplekan_{\indexlayer,\indexfive})|]$;\\ $E_{\text{prune}}=\{\score<\threshold\}$};
+\node[icon, left=5mm of prunePrep] (icon-prune) {\includegraphics[width=50mm]{figs/kan_pruned.png}};
+\node[decision,below=of prunePrep]  (pruneDec) {$\mathcal{L}_{\text{pred}}(M';\dataset_{\text{val}})-L_{\text{ref}}\le\budget_{\text{prune}}$?};
+\node[block,   below=of pruneDec]   (autosymb) {Auto-symbolic (per-edge): snapshot $M_{\text{pre}}\!\leftarrow\!M$;\\ atoms by complexity (poly$\to\cdots$); early exit if $R^2\!\ge\!\threshold_{R^2}$};
+\node[icon, left=5mm of autosymb] (icon-symb) {\includegraphics[width=35mm]{figs/symbolic_fit.png}};
+\node[decision,below=of autosymb]   (symbDec)  {$L_{\text{sym}}-L_{\text{ref}}\le\budget_{\text{symb}}$?};
+\node[block,   below=of symbDec]    (cate)     {CATE: compute $\hpozero(\samplecov),\hpoone(\samplecov)$;\\ $\hcate{\samplecov}=\hpoone(\samplecov)-\hpozero(\samplecov)$; simplify};
+\node[icon, left=5mm of cate] (icon-eq) {\includegraphics[width=50mm]{figs/equation_example.png}};
+\node[term,    below=of cate]       (outputs)  {Outputs:\\ $\hpozero(\samplecov),\ \hpoone(\samplecov),$ \\  $\hcate{\samplecov},\ M$};
+\node[block,    below=of outputs]    (interpret)      {Interpret \& visualize (\cref{sec:interpretability})};
+\node[icon, left=5mm of interpret] (icon-radar) {\includegraphics[width=25mm]{figs/radar_tkaam.pdf}};
+\node[term,    below=of interpret]    (end)      {End};
+
+% Connections
+\draw[line] (start) -- (kanify);
+\draw[line] (kanify) -- (hps);
+\draw[line] (hps) -- (arch);
+
+% Arch decision
+\draw[line] (arch) -- node[right, xshift=0.5mm]{No} (prunePrep);
+\draw[line] (arch.east) -- node[above]{Yes} (warn.west);
+% \draw[line] (warn.south) |- (prunePrep.east);
+
+\draw[line] (warn.south) |- (end.east);
+\draw[line] (warn.north) |- (start.east);
+
+% Pruning decision
+\draw[line] (prunePrep) -- (pruneDec);
+\draw[line] (pruneDec) -- node[right, xshift=0.5mm]{Accept: $M\!\leftarrow\!M_{\text{pruned}}$} (autosymb);
+\draw[line] (pruneDec.east) -| node[near start, above]{Reject: keep $M$} ($(pruneDec.east)+(20mm,0)$) |- (autosymb.east);
+
+% Auto-symbolic global decision
+\draw[line] (autosymb) -- (symbDec);
+\draw[line] (symbDec) -- node[right, xshift=0.5mm]{Accept: $M\!\leftarrow\!M_{\text{symb}}$} (cate);
+\draw[line] (symbDec.east) -| node[near start, above]{Reject: rollback $M\!\leftarrow\!M_{\text{pre}}$} ($(symbDec.east)+(40mm,0)$) |- (cate.east);
+
+% Tail
+\draw[line] (cate) -- (outputs);
+\draw[line] (outputs) -- (interpret);
+\draw[line] (interpret) -- (end);
+
+% Optional mini-legend
+\node[note, below=8mm of end, align=left, text width=0.9\linewidth] (legend) {
+\footnotesize
+\textbf{Legend:} $\threshold$ pruning threshold;\;
+$\threshold_{R^2}$ per-edge symbolic $R^2$ threshold;\;
+$\budget_{\text{arch}}$ KAN vs NN loss budget;\;
+$\budget_{\text{prune}}$ pruning budget;\;
+$\budget_{\text{symb}}$ global symbolic budget;\;
+$L_{\text{ref}}$ current best validation loss;\;
+$L_{\text{sym}}$ validation loss after symbolification.
+};
+
+
+\end{tikzpicture}
+\caption{Block diagram of \Our pipeline with explicit Accept/Reject semantics and final outputs.}
+\label{fig:causalkan-pipeline}
+\end{figure}

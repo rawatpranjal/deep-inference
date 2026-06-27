@@ -1,0 +1,1172 @@
+\documentclass{article}
+
+\PassOptionsToPackage{numbers, sort&compress}{natbib}
+
+%
+%
+%
+
+%
+\usepackage[final]{neurips_2019}
+
+%
+%
+%
+
+%
+     %
+
+%
+%
+
+\usepackage{subcaption}
+\usepackage{multirow}
+\usepackage{multicol}
+\usepackage{caption, subcaption}
+\usepackage{graphicx}
+\usepackage[inline,shortlabels]{enumitem}
+\usepackage[utf8]{inputenc} %
+\usepackage[T1]{fontenc}    %
+\usepackage{hyperref}       %
+\usepackage{url}            %
+\usepackage{booktabs}       %
+\usepackage{amsfonts}       %
+\usepackage{nicefrac}       %
+\usepackage{microtype}      %
+\usepackage{afterpage}
+\usepackage{tabto}
+\usepackage{siunitx}
+\usepackage{algorithm,algpseudocode}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\usepackage{bm}
+\usepackage{amsthm,amsmath,amssymb}
+\usepackage{shortcuts} 
+\usepackage{hyperref}
+\usepackage[capitalise]{cleveref}
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{assumption}{Assumption}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+\newtheorem{example}{Example}
+\Crefname{assumption}{Assumption}{Assumptions}
+\usepackage{bbm}
+\newcommand{\Ind}{\mathbbm{1}}
+\newcommand{\expnumber}[2]{{#1}\mathrm{e}{#2}}
+
+
+%
+\usepackage[dvipsnames]{xcolor}
+%
+%
+%
+%
+\newcommand\mnist[1]{\textbf{MNIST\textsubscript{#1}}}
+
+
+%
+\usepackage[disable]{todonotes}
+\newcommand{\ts}[1]{\todo[color=purple!10]{Tobias: #1}}
+\newcommand{\nk}[1]{\todo[color=blue!10]{Nathan: #1}}
+\newcommand{\ab}[1]{\todo[color=red!10]{Andrew: #1}}
+
+\title{Deep Generalized Method of Moments\\for Instrumental Variable Analysis}
+
+%
+%
+%
+%
+%
+%
+%
+
+\author{%
+Andrew Bennett\thanks{Alphabetical order.}\\
+Cornell University\\
+\texttt{awb222@cornell.edu}
+\And
+Nathan Kallus\samethanks\\
+Cornell University\\
+\texttt{kallus@cornell.edu}
+\And
+Tobias Schnabel\samethanks\\
+Microsoft Research\\
+\texttt{tbs49@cornell.edu}
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+  %
+}
+
+\newcommand\X{\mathcal X}
+\newcommand\Z{\mathcal Z}
+\newcommand\T{\mathcal T}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Instrumental variable analysis is a powerful tool for estimating causal effects when randomization or full control of confounders is not possible. The application of standard methods such as 2SLS, GMM, and more recent variants are significantly impeded when the causal effects are complex, the instruments are high-dimensional, and/or the treatment is high-dimensional. 
+In this paper, we propose the DeepGMM algorithm to overcome this. Our algorithm is based on a new variational reformulation of GMM with optimal inverse-covariance weighting that allows us to efficiently control very many moment conditions.
+We further develop practical techniques for optimization and model selection that make it particularly successful in practice.
+Our algorithm is also computationally tractable and can handle large-scale datasets.
+Numerical results show our algorithm matches the performance of the best tuned methods in standard settings and continues to work in high-dimensional settings where even recent methods break.
+\end{abstract}
+
+\afterpage{%
+\begin{figure}
+  \centering 
+  \includegraphics[width=0.5\linewidth]{figures/toy.pdf}
+  \caption{A toy example in which standard supervised learning fails to identify the true response function $g_0(X) = \max(\frac{X}{5}, X)$. Data was generated via $Y = g_0(X)  - 2\epsilon + \eta$,  $X = Z + 2\epsilon$. All other variables are standard normal.}
+  \label{fig:toy}
+\end{figure}
+}
+
+\section{Introduction}
+Unlike standard supervised learning that models correlations, causal inference seeks to predict the effect of counterfactual interventions not seen in the data. For example, when wanting to estimate the effect of adherence to a prescription of $\beta$-blockers on the prevention of heart disease, supervised learning
+may overestimate the true effect because good adherence is also strongly correlated with health consciousness and therefore with good heart health \citep{cole2006drug}.
+%
+%
+Figure~\ref{fig:toy} shows a simple example of this type and demonstrates how a standard neural network (in blue) fails to correctly estimate the true treatment response curve (in orange) in a toy example. 
+The issue is that standard supervised learning assumes that the residual in the response from the prediction of interest is independent of the features. 
+
+One approach to account for this is by adjusting for all confounding factors that cause the dependence, such as via matching \cite{rubin1973matching,kallus2016generalized} or regression, potentially using neural networks \citep{shalit2017estimating,johansson2018learning,kallus2018deepmatch}.
+However, this requires that we actually observe \emph{all} confounders so that treatment is as-if random after conditioning on observables. This would mean that in the $\beta$-blocker example, we would need to perfectly measure \emph{all} latent factors that determine both an individual's adherence decision and their general healthfulness which is often not possible in practice.
+
+Instrumental variables (IVs) provide an alternative approach to causal-effect identification. If we can find a latent experiment in another variable (the instrument) that influences the treatment (\ie, is relevant) and does not directly affect the outcome (\ie, satisfies exclusion), then we can use this to infer causal effects \citep{angrist2008mostly}.
+In the $\beta$-blocker example \citep{cole2006drug}, the authors used co-pay cost as an IV.
+Because they enable analyzing natural experiments under mild assumptions, IVs have been one of the most widely used tools for empirical research in a variety of fields \citep{angrist2001instrumental}. 
+An important direction of research for IV analysis is to develop methods that can effectively handle complex causal relationships and complex variables like images that necessitate more flexible models like neural networks \citep{hartford2017deep,lewis2018adversarial}. 
+%
+
+In this paper, we tackle this through a new method called DeepGMM that builds upon the optimally-weighted Generalized Method of Moments (GMM)~\cite{hansen1982large}, a widely popular method in econometrics that uses the moment conditions implied by the IV model to {efficiently} estimate causal parameters.
+%
+%
+%
+%
+%
+%
+%
+%
+Leveraging a new variational reformulation of the efficient GMM with optimal weights, we develop a flexible framework, DeepGMM, for doing IV estimation with neural networks.
+%
+In contrast to existing approaches, DeepGMM is suited for high-dimensional treatments $X$ and instruments $Z$, as well as for complex causal and interaction effects. 
+DeepGMM is given by the solution to a smooth game between a prediction function and critic function. We prove that approximate equilibria provide consistent estimates of the true causal parameters. We find these equilibria using optimistic gradient descent algorithms for smooth game play \citep{daskalakis2017training}, and give practical guidance on how to choose the parameters of our algorithm and do model validation. In our empirical evaluation, we demonstrate that DeepGMM's performance is on par or superior to a large number of existing approaches in standard benchmarks and continues to work in high-dimensional settings where other methods fail.
+
+
+
+%
+%
+
+\section{Setup and Notation}
+We assume that our data is generated by 
+\begin{equation}\label{eq:model}
+Y=g_0(X)+\epsilon,
+\end{equation}
+where the residual $\epsilon$ has zero mean and finite variance, \ie, $\Eb{\epsilon} = 0$ and  $\Eb{\epsilon^2}<\infty$. 
+However, different to standard supervised learning, we allow for the residual $\epsilon$ and $X$ to be correlated, $\Eb{\epsilon\mid X}\neq0$, \ie, $X$ can be endogenous, and therefore $g_0(X)\neq\Eb{Y\mid X}$. We also assume that we have access to an instrument $Z$ satisfying 
+\begin{equation}\label{eq:epsz}\Eb{\epsilon\mid Z}=0.\end{equation}
+Moreover, $Z$ should be relevant, \ie~$\Prb{X\mid Z} \neq \Prb{X}$. Our goal is to identify the causal response function $g_0(\cdot)$ from a parametrized family of functions $G=\braces{g(\cdot;\theta)\ :\ \theta\in\Theta}$. Examples are linear functions $g(x;\theta)=\theta^T\phi(x)$, neural networks where $\theta$ represent weights, and non-parametric classes with infinite-dimensional $\theta$.
+For convenience, let $\theta_0\in\Theta$ be such that $g_0(\cdot)=g(\cdot;\theta_0)$. Throughout, we measure the performance of an estimated response function $\hat{g}$ by its MSE against the true $g_0$.
+%
+%
+%
+
+Note that if we additionally have some exogenous context variables $L$, the standard way to model this using \cref{eq:model} is to include them both in $X$ and in $Z$ as $X = (X',L)$ and $Z = (Z',L)$, where $X'$ is the endogenous variable and $Z'$ is an IV for it.
+In the $\beta$-blocker example, if we were interested in the heterogeneity of the effect of adherence over demographics, 
+$X$ would include both adherence and demographics whereas $Z$ would include both co-payment and demographics.
+%
+%
+%
+%
+
+\subsection{Existing methods for IV estimation}\label{sec:existing}
+
+{\bf Two-stage methods.} 
+One strategy to identifying $g_0$ is based on noting
+that \cref{eq:epsz} implies
+\begin{align}\label{eq:2sls}
+\Eb{Y\mid Z}&=\Eb{g_0(X)\mid Z}=\int g_0(x)d\Prb{X=x\mid Z}.
+%
+%
+\end{align}
+If we let $g(x;\theta)=\theta^T\phi(x)$ this becomes $\Eb{Y\mid Z}=\theta_0^T\Eb{\phi(X)\mid Z}$. The two-stage least squares (2SLS) method \citep[\S4.1.1]{angrist2008mostly} first fits $\Eb{\phi(X)\mid Z}$ by least-squares regression of $\phi(X)$ on $Z$ (with $Z$ possibly transformed) and then estimates $\hat\theta^\text{2SLS}$ as the coefficient in the regression of $Y$ on $\Eb{\phi(X)\mid Z}$.
+This, however, fails when one does not know a sufficient basis $\phi(x)$ for $g(x,\theta_0)$.
+\citep{newey2003instrumental,darolles2011nonparametric} propose non-parametric methods for expanding such a basis but such approaches are limited to low-dimensional settings.
+\citep{hartford2017deep} instead propose DeepIV, which estimates the conditional density $\Prb{X=x\mid Z}$ by flexible neural-network-parametrized Gaussian mixtures. This may be limited in settings with high-dimensional $X$ and can suffer from the non-orthogonality of MLE under any misspecification, known as the ``forbidden regression'' issue 
+%
+\citep[\S4.6.1]{angrist2008mostly}
+(see \cref{sec:experiments} for discussion).
+%
+
+%
+
+{\bf Moment methods.} 
+The generalized method of moments (GMM) instead leverages the moment conditions satisfied by $\theta_0$. 
+Given functions $f_1,\dots,f_m$, \cref{eq:epsz} implies $\Eb{f_j(Z)\epsilon} = 0$, giving us
+\begin{equation}\label{eq:momentconditionsgmm}
+\psi(f_1;\theta_0)=\cdots=\psi(f_m;\theta_0)=0,\quad\text{where}\quad\psi(f;\theta)=\Eb{f(Z)(Y-g(X;\theta))}.
+\end{equation}
+A usual assumption when using GMM is that the $m$ moment conditions in \cref{eq:momentconditionsgmm} are sufficient to uniquely pin down (identify) $\theta_0$.\ab{I added a footnote here discussing this given our comment in reviewer feedback that we would clarify. Not sure if this is over the top, and also not sure how else to clarify this assumption without just repeating it. Let me know what you think!}\footnote{This assumption that a finite number of moment conditions uniquely identifies $\theta$ is perhaps too strong when $\theta$ is very complex, and it easily gives statistically efficient methods for estimating $\theta$ if true. However assuming this is difficult to avoid in practice.}
+To estimate $\theta_0$, GMM considers these moments' empirical counterparts, $\psi_n(f;\theta)=\frac1n\sum_{i=1}^n{f(Z_i)(Y_i-g(X_i;\theta))}$, and seeks to make all of them small simultaneously, measured by their Euclidean norm $\fmagd v^2=v^Tv$:
+\begin{equation}\label{eq:gmm}
+\hat\theta^\text{GMM}\in\argmin_{\theta\in\Theta}\magd{(\psi_n(f_1;\theta),\,\dots,\,\psi_n(f_m;\theta))}^2.
+\end{equation}
+Other vector norms are possible. \citep{lewis2018adversarial} propose using $\fmagd v_\infty$ and solving the optimization with no-regret learning along with an intermittent jitter to moment conditions in a framework they call AGMM (see \cref{sec:experiments} for discussion).
+
+However, when there are many moments (many $f_j$), using \emph{any} unweighted vector norm can lead to significant inefficiencies, as we may be wasting modeling resources to make less relevant or duplicate moment conditions small.
+%
+%
+%
+The \emph{optimal} combination of moment conditions, yielding minimal variance estimates is in fact given by weighting them by their inverse covariance, and it is sufficient to consistently estimate this covariance. 
+In particular, a celebrated result \citep{hansen1982large} shows that
+(with finitely-many moments), 
+using the following norm in \cref{eq:gmm} will yield \emph{minimal} asymptotic variance (efficiency) for any consistent estimate $\tilde\theta$ of $\theta_0$:
+\begin{equation}\label{eq:gmmoptweight}\fmagd v_{\tilde\theta}^2=v^TC_{\tilde\theta}^{-1}v,\quad\text{where}\quad [C_{\theta}]_{jk}=\frac1n\sum_{i=1}^n{f_j(Z_i)f_k(Z_i)(Y_i-g(X_i;\theta))^2}.\end{equation}
+%
+%
+%
+Examples of this are the two-step, iterative, and continuously updating GMM estimators \citep{hansen1996finite}.
+We generically refer to the GMM estimator given in \cref{eq:gmm} using the norm given in \cref{eq:gmmoptweight} as \emph{optimally-weighted GMM} (OWGMM), or $\hat\theta^\text{OWGMM}$.
+
+{\bf Failure of (OW)GMM with Many Moment Conditions.}
+When $g(x;\theta)$ is a flexible model such as a high-capacity neural network, many -- possibly infinitely many -- moment conditions may be needed to identify $\theta_0$. However,
+GMM and OWGMM algorithms fail when we use too many moment conditions. On the one hand, one-step GMM (\ie, \cref{eq:gmm} with $\fmagd v=\fmagd v_p$, $p\in[1,\infty]$) is saddled with the inefficiency of trying to impossibly control many equally-weighted moments:
+at the extreme, if we let $f_1,\dots$ be all functions of $Z$ with unit square integral, one-step GMM is simply equivalent to the \emph{non-causal} least-squares regression of $Y$ on $X$. We discuss this further in \cref{apx:gmm-l2}.
+%
+On the other hand, we also cannot hope to learn the optimal weighting: the matrix $C_{\tilde\theta}$ in \cref{eq:gmmoptweight} will necessarily be singular
+%
+%
+and using its pseudoinverse would mean \emph{deleting} all but $n$ moment conditions. 
+Therefore, we cannot simply use infinite or even too many moment conditions in GMM or OWGMM.
+
+%
+%
+%
+%
+%
+%
+
+%
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+
+%
+
+%
+%
+
+\section{Methodology}
+
+
+%
+%
+%
+%
+%
+%
+
+%
+%
+
+We next present our approach. We start by motivating it using a new reformulation of OWGMM.
+
+\subsection{Reformulating OWGMM}
+Let us start by reinterpreting OWGMM.
+%
+Consider the 
+%
+vector space $\mathcal V$ of 
+real-valued functions $f$ of $Z$ under the usual operations.
+%
+Note that, for any $\theta$, $\psi_n(f;\theta)$ is a linear operator on $\mathcal V$ and
+$$
+\mathcal C_{\theta}(f,h)=\frac1n\sum_{i=1}^n{f(Z_i)h(Z_i)(Y_i-g(X_i;\theta))^2}
+$$
+is a bilinear form on $\mathcal V$. 
+%
+Now, given any subset $\mathcal F\subseteq\mathcal V$, consider the following objective function:
+\begin{equation}\label{eq:obj-variational}
+\Psi_n(\theta;\mathcal F,\tilde\theta)=\sup_{f\in\mathcal F}\psi_n(f;\theta)-\frac14\mathcal C_{\tilde\theta}(f,f).
+\end{equation}
+%
+%
+\begin{lemma}\label{lemma:gmmequiv}
+Let $\fmagd v_{\tilde\theta}$ be the optimally-weighted norm as in \cref{eq:gmmoptweight} and let $\mathcal F=\op{span}(f_1,\dots,f_m)$. Then
+$$\magd{(\psi_n(f_1;\theta),\,\dots,\,\psi_n(f_m;\theta))}_{\tilde\theta}^2=\Psi_n(\theta;\mathcal F,\tilde\theta).$$
+\end{lemma}
+%
+\begin{corollary}\label{cor:gmmequiv}
+An equivalent formulation of OWGMM is
+\begin{equation}\label{eq:obj-deepgmm}
+\hat\theta^\text{OWGMM}\in\argmin_{\theta\in\Theta}\Psi_n(\theta;\mathcal F,\tilde\theta).
+\end{equation}
+\end{corollary}
+In other words, \cref{lemma:gmmequiv} provides a variational formulation of the objective function of OWGMM and \cref{cor:gmmequiv} provides a saddle-point formulation of the OWGMM estimate. 
+
+ %
+%
+
+
+%
+
+%
+
+%
+
+%
+
+%
+
+%
+
+\subsection{DeepGMM}
+
+In this section, we outline the details of our DeepGMM framework.
+Given our reformulation above in \cref{eq:obj-deepgmm}, our approach is 
+to simply replace the set $\mathcal F$ with a more flexible set of functions. 
+Namely we let
+$\mathcal F=\{f(z;\tau):\tau\in\T\}$ be the class of all neural networks of a given architecture with varying weights $\tau$ (but \emph{not} their span).
+Using a rich class of moment conditions allows us to learn correspondingly a rich $g_0$. We therefore similarly let $\mathcal G=\{g(x;\theta):\theta\in \Theta\}$ be the class of all neural networks of a given architecture with varying weights $\theta$.
+
+Given these choices, we let $\hat\theta^\text{DeepGMM}$ be the minimizer in $\Theta$ of $\Psi_n(\theta;\mathcal F,\tilde\theta)$ for any, potentially data-driven, choice $\tilde\theta$. We discuss choosing $\tilde\theta$ in \cref{sec:practicalconsiderations}. Since this is no longer closed form, we formulate our algorithm in terms of solving a smooth zero-sum game. Formally, our estimator is defined as:
+\begin{align}\label{eq:deepgmmgame}
+&\hat\theta^\text{DeepGMM}\in\argmin_{\theta \in \Theta} \sup_{\tau \in \T}\  U_{\tilde\theta}(\theta,\tau)\\&\notag
+\text{where}\quad U_{\tilde\theta}(\theta,\tau)=
+\frac1n\sum_{i=1}^nf(Z_i;\tau)(Y_i-g(X_i;\theta))
+-\frac{1}{4n}\sum_{i=1}^nf^2(Z_i;\tau)(Y_i-g(X_i;\tilde\theta))^2.
+\end{align}
+Since evaluation is linear, for any $\tilde\theta$,
+the game's payoff function $U_{\tilde\theta}(\theta,\tau)$
+is convex-concave in the functions $g(\cdot;\theta)$ and $f(\cdot;\tau)$, although it may not be convex-concave in $\theta$ and $\tau$ as is usually the case when we parametrize functions using neural networks.
+%
+Solving \cref{eq:deepgmmgame} can be done with any of a variety of smooth game playing algorithms; we discuss our choice in \cref{sec:oadam}.  We note that AGMM~\cite{lewis2018adversarial} also formulates IV estimation as a smooth game objective, but without the last regularization term and with the adversary parametrized as a mixture over a finite fixed set of critic functions.\footnote{In their code they also include a jitter step where these critic functions are updated, however this step is heuristic and is not considered in their theoretical analysis.} In our experiments, we found the regularization term to be crucial for solving the game, and we found the use of a flexible neural network critic to be crucial with high-dimensional instruments.\ts{Added a bit more discussion of AGMM here. Let me know what you think.}\ab{Updated this a bit further to reflect the additional difference that AGMM only parametrizes the critic as a mixture over a finite set of critic functions, which is also important.}
+
+Notably, our approach has very few tuning parameters: only the models $\mathcal F$ and $\mathcal G$ (\ie, the neural network architectures) and whatever parameters the optimization method uses. 
+In \cref{sec:practicalconsiderations} we discuss how to select these.
+
+Finally, we highlight that \emph{unlike} the case for OWGMM as in \cref{lemma:gmmequiv}, our choice of $\mathcal F$ is \emph{not} a linear subspace of $\mathcal V$. Indeed, per \cref{lemma:gmmequiv}, replacing $\mathcal F$ with a high- or infinite-dimensional linear subspace simply corresponds to GMM with many or infinite moments, which fails as discussed in \cref{sec:existing} (in particular, we would generically have $\Psi_n(\theta;\mathcal F,\tilde\theta)=\infty$ unhelpfully). Similarly, enumerating many moment conditions as generated by, say, many neural networks $f$ and plugging these into GMM, whether one-step or optimally weighted, will fail for the same reasons. Instead, our approach is to leverage our variational reformulation in \cref{lemma:gmmequiv} and replace the class of functions $\mathcal F$ with a rich (non-subspace) set in this new formulation, which is distinct from GMM and avoids these issues. In particular, as long as $\mathcal F$ has bounded complexity, even if its ambient dimension may be infinite, we can guarantee the consistency of our approach. Since the last layer in a network is a linear combination of the penultimate one, our choice of $\mathcal F$ can in some sense be thought of as a union over neural network weights of subspaces spanned by the penultimate layer of nodes.
+
+%
+
+
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+
+%
+
+
+
+%
+%
+%
+
+%
+
+%
+
+
+%
+
+
+
+%
+
+
+%
+%
+%
+%
+
+
+%
+
+
+%
+
+%
+
+%
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+
+
+
+
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+
+
+
+
+
+
+%
+
+
+%
+%
+
+
+
+%
+%
+
+%
+%
+
+
+%
+%
+%
+%
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+
+\subsection{Consistency}
+
+Before discussing practical considerations in implementing DeepGMM, we first turn to the theoretical question of what consistency guarantees we can provide about our method if we were to approximately solve \cref{eq:deepgmmgame}.
+We phrase our results for generic bounded-complexity functional classes $\mathcal F,\mathcal G$; not necessarily neural networks.
+%
+%
+%
+
+Our main result depends on the following assumptions, which we discuss after stating the result.
+
+\begin{assumption}[Identification]\label{asm:specification}
+$\theta_0$ is the unique $\theta\in\Theta$ satisfying
+$\psi(f;\theta)=0$ for all $f\in\mathcal F$.
+\end{assumption}
+
+\begin{assumption}[Bounded complexity]\label{asm:complexity}
+$\mathcal F$ and $\mathcal G$ have vanishing Rademacher complexities:
+\begin{align*}
+&\frac{1}{2^n}\sum_{\xi\in\{-1,+1\}^n}\E\sup_{\tau\in\T}\frac1n\sum_{i=1}^n\xi_if(Z_i;\tau)\to0,\quad
+\frac{1}{2^n}\sum_{\xi\in\{-1,+1\}^n}\E\sup_{\theta\in\Theta}\frac1n\sum_{i=1}^n\xi_ig(X_i;\theta)\to0.
+\end{align*}
+%
+\end{assumption}
+
+\begin{assumption}[Absolutely star shaped]\label{asm:closure}
+For every $f \in \mathcal{F}$ and $\abs{\lambda} \leq 1$, we have $\lambda f \in \mathcal{F}$.
+\end{assumption}
+
+\begin{assumption}[Continuity]\label{asm:continuity}
+For any $x$,
+$g(x;\theta),f(x;\tau)$ are continuous in $\theta,\tau$, respectively.
+%
+\end{assumption}
+
+\begin{assumption}[Boundededness]\label{asm:bounded}
+$Y,\ \sup_{\theta\in\Theta}\abs{g(X;\theta)},\ \sup_{\tau\in\T}\abs{f(Z;\tau)}$ are all bounded random variables.
+\end{assumption}
+
+\begin{theorem}\label{theorem:consistency}
+Suppose \cref{asm:specification,asm:complexity,asm:bounded,asm:continuity,asm:closure} hold.
+Let $\tilde\theta_n$ by any data-dependent sequence with a limit in probability.
+Let $\hat\theta_n, \hat\tau_n$ be any approximate equilibrium in the game \cref{eq:deepgmmgame}, \ie,
+%
+$$\sup_{\tau \in \T} U_{\tilde\theta_n}(\hat{\theta}_n, \tau) - o_p(1) \leq U_{\tilde\theta_n}(\hat\theta_n, \hat\tau_n) \leq \inf_\theta U_{\tilde\theta_n}(\theta, \hat\tau_n) + o_p(1).$$ Then $\hat\theta_n\to\theta_0$ in probability.
+\end{theorem}
+
+\cref{theorem:consistency} proves that approximately solving \cref{eq:deepgmmgame} (with eventually vanishing approximation error) guarantees the consistency of our method. We next discuss the assumptions we made. 
+
+\Cref{asm:specification} stipulates that the moment conditions given by $\mathcal F$ are sufficient to identify $\theta_0$. Note that, by linearity, the moment conditions given by $\mathcal F$ are the same as those given by the subspace $\op{span}(\mathcal F)$ so we are actually successfully controlling many or infinite moment conditions, perhaps making the assumption defensible. 
+If we do not assume \cref{asm:specification}, 
+the arguments in \cref{theorem:consistency} easily extend to showing instead that 
+%
+we approach \emph{some} identified $\theta$ that satisfies all moment conditions. In particular this means that if we parametrize $f$ and $g$ via neural networks where we can permute the parameter vector $\theta$ and obtain an identical function, our result still holds. We formalize this by the following alternative assumption and lemma.\ab{Added formal lemma and proof justifying that consistency still holds under set identification as long as all identified theta give the same function g}
+
+\begin{assumption}[Identification of $g$]
+\label{asm:set-ident}
+Let $\Theta_0 = \{\theta \in \Theta : \psi(f;\theta) = 0 \;\forall f \in \mathcal F\}$. Then for any $\theta_1, \theta_2 \in \Theta_0$ the functions $g(\cdot;\theta_1)$ and $g(\cdot;\theta_2)$ are identical.
+%
+\end{assumption}
+
+\begin{lemma}
+\label{lemma:consistency}
+Suppose  \cref{asm:complexity,asm:bounded,asm:continuity,asm:closure,asm:set-ident} hold. Let $\hat\theta_n, \hat\tau_n$ be any approximate equilibrium in the game \cref{eq:deepgmmgame}, \ie,
+%
+$$\sup_{\tau \in \T} U_{\tilde\theta_n}(\hat{\theta}_n, \tau) - o_p(1) \leq U_{\tilde\theta_n}(\hat\theta_n, \hat\tau_n) \leq \inf_\theta U_{\tilde\theta_n}(\theta, \hat\tau_n) + o_p(1).$$
+%
+Then $\inf_{\theta \in \Theta_0} \fmagd{\hat\theta_n - \theta} \to 0$ in probability.
+\end{lemma}
+
+\Cref{asm:complexity} provides that $\mathcal F$ and $\mathcal G$, although potentially infinite and even of infinite ambient dimension, have limited complexity. 
+Rademacher complexity is one way to measure function class complexity \citep{bartlett2002rademacher}.
+Given a bound (envelope) as in \cref{asm:bounded}, this complexity can also be reduced to other combinatorial complexity measures such VC- or pseudo-dimension via chaining \citep{pollard1990empirical}. \citep{bartlett2019nearly} studied such combinatorial complexity measures of neural networks.
+ %
+%
+
+\Cref{asm:closure} is needed to ensure that, for any $\theta$ with $\psi(f;\theta)>0$ for some $f$, there also exists an $f$ such that $\psi(f;\theta)>\frac14C_{\tilde\theta}(f,f)$. It trivially holds for neural networks by considering their last layer. \Cref{asm:continuity} similarly holds trivially and helps ensure that the moment conditions cannot simultaneously arbitrarily approach zero far from their true zero point at $\theta_0$. \Cref{asm:bounded} is a purely technical assumption that can likely be relaxed to require only nice (sub-Gaussian) tail behavior. Its latter two requirements can nonetheless be guaranteed by either bounding weights (equivalently, using weight decay) or applying a bounded activation at the output. We do not find doing this is necessary in practice.
+
+%
+
+%
+
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+
+
+%
+
+%
+
+%
+
+%
+
+%
+
+%
+
+%
+
+%
+
+%
+
+%
+
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+\section{Practical Considerations in Implementing DeepGMM}\label{sec:practicalconsiderations}
+
+{\bf Solving the Smooth Zero-Sum Game.}\label{sec:oadam}
+In order to solve \cref{eq:deepgmmgame}, we turn to the literature on solving smooth games, which has grown significantly with the recent surge of interest in generative adversarial networks (GANs). In our experiments we use the OAdam algorithm of \citep{daskalakis2017training}. For our game objective, we found this algorithm to be more stable than standard alternating descent steps using SGD or Adam.
+
+Using first-order iterative algorithms for solving \cref{eq:deepgmmgame} enables us to effectively handle very large datasets. In particular, we implement DeepGMM using PyTorch, which efficiently provides gradients for use in our descent algorithms \citep{paszke2017automatic}. As we see in \cref{sec:experiments}, this allows us to handle very large datasets with high-dimensional features and instruments where other methods fail.
+
+%
+%
+%
+%
+
+%
+
+{\bf Choosing $\tilde\theta$.}
+In \cref{eq:deepgmmgame}, we let $\tilde\theta$ be any potentially data-driven choice. Since the hope is that $\tilde\theta\approx\theta_0$, one possible choice is just the solution $\hat\theta^\text{DeepGMM}$ for another choice of $\tilde\theta$. 
+We can recurse this many times over. 
+In practice, to simulate many such iterations on $\tilde\theta$, we continually update $\tilde\theta$ as the previous $\theta$ iterate over steps of our game-playing algorithm. Note that $\tilde\theta$ is nonetheless treated as ``constant'' and does not enter into the gradient of $\theta$. That is, the second term of $U$ in \cref{eq:deepgmmgame} has zero partial derivative in $\theta$.\ab{Clarification here added as promised in review response.} Given this approach we can interpret $\tilde\theta$ in the premise of \cref{theorem:consistency} as the final $\tilde\theta$ at convergence, since \cref{theorem:consistency} allows $\tilde\theta$ to be fully data-driven.
+
+%
+
+%
+
+%
+
+{\bf Hyperparameter Optimization.}
+The only parameters of our algorithm are the neural network 
+architectures for $\mathcal F$ and $\mathcal G$ and the optimization algorithm parameters (\eg, learning rate). To tune these parameters, we suggest the following general approach. We form a validation surrogate $\hat \Psi_n$ for our variational objective in \cref{eq:obj-variational} by taking instead averages on a validation data set and by replacing $\mathcal F$ with the pool of all iterates $f$ encountered in the learning algorithm for all hyperparameter choice. We then choose the parameters that maximize this validation surrogate $\hat \Psi_n$.
+%
+We discuss this process in more detail in \cref{apx:model-selection}.
+
+
+%
+
+%
+
+{\bf Early Stopping.} We further suggest to use $\hat\Psi_n$ to facilitate early stopping for the learning algorithm. Specifically, we periodically evaluate our iterate $\theta$ using $\hat\Psi_n$ and return the best evaluated iterate.
+
+%
+%
+
+
+
+
+%
+%
+
+\section{Experiments}\label{sec:experiments}
+In this section, we compare DeepGMM against a wide set of baselines for IV estimation.
+Our implementation of DeepGMM is publicly available at \url{https://github.com/CausalML/DeepGMM}.
+
+We evaluate the various methods on two groups of scenarios: one where $X,Z$ are both low-dimensional and one where $X$, $Z$, or both are high-dimensional images. 
+In the high-dimensional scenarios, we use a convolutional architecture in all methods that employ a neural network to accommodate the images.
+We evaluate performance of an estimated $\hat{g}$ by MSE against the true $g_0$.
+
+More specifically, we use the following baselines:  
+\begin{enumerate}[align=left,leftmargin=*,labelindent=0in,topsep=0ex,itemsep=0.25ex,partopsep=0ex,parsep=0ex]
+    \item DirectNN: Predicts $Y$ from $X$ using a neural network with standard least squares loss. 
+    \item Vanilla2SLS: Standard two-stage least squares on raw $X,Z$.
+    \item Poly2SLS: Both $X$ and $Z$ are expanded via polynomial features, and then 2SLS is done via ridge regressions at each stage. The regularization parameters as well polynomial degrees are picked via cross-validation at each stage.
+    \item GMM+NN: Here, we combine OWGMM with a neural network $g(x;\theta)$. We solve \cref{eq:gmm} over network weights $\theta$ using Adam. We employ optimal weighting, \cref{eq:gmmoptweight}, by iterated GMM~\cite{hansen1996finite}. We are not aware of any prior work that uses OWGMM to train neural networks.
+    \item AGMM~\cite{lewis2018adversarial}: Uses the publicly available implementation\footnote{\url{https://github.com/vsyrgkanis/adversarial_gmm}} of the Adversarial Generalized Method of Moments, which performs no-regret learning on the one-step GMM objective \cref{eq:gmm} with norm $\fmagd\cdot_\infty$ and an additional jitter step on the moment conditions after each epoch. 
+    \item DeepIV~\cite{hartford2017deep}: We use the latest implementation that was released as part of the econML package.\footnote{\url{https://github.com/microsoft/EconML}}
+\end{enumerate}
+
+Note that GMM+NN relies on being provided moment conditions. 
+%
+When $Z$ is low-dimensional, we follow AGMM~\cite{lewis2018adversarial} and expand $Z$ via RBF kernels around 10 centroids returned from a Gaussian Mixture model applied to the $Z$ data.
+When $Z$ is high-dimensional, we use the moment conditions given by each of its components.\footnote{That is, we use $f_i(Z) = Z_i$ for $i = 1,\ldots,\text{dim}(Z)$.}
+
+
+\subsection{Low-dimensional scenarios}\label{sec:lowdimex}
+\begin{figure}\center
+\raisebox{2em}{\rotatebox[origin=c]{90}{\textbf{sin}}}\includegraphics[width=0.98\textwidth]{figures/sin.pdf}\\
+\raisebox{2.2em}{\rotatebox[origin=c]{90}{\textbf{step}}}\includegraphics[width=0.98\textwidth]{figures/step.pdf}\\
+\raisebox{2em}{\rotatebox[origin=c]{90}{\textbf{abs}}}\includegraphics[width=0.98\textwidth]{figures/abs.pdf}\\
+\raisebox{2.3em}{\rotatebox[origin=c]{90}{\textbf{linear}}}\includegraphics[width=0.98\textwidth]{figures/linear.pdf}
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    %
+    \caption{Low-dimensional scenarios (\cref{sec:lowdimex}). Estimated $\hat{g}$ in blue; true response $g_0$ in orange.\label{fig:lowdimex}}\vspace{-0.5em}
+  \end{figure}
+  {
+\begin{table}[t!]
+\setlength{\tabcolsep}{3pt}
+\centering
+\begin{tabular}{lrrrrrrr}
+\toprule
+  {Scenario} &       {DirectNN} &    {Vanilla2SLS} &       {Poly2SLS} &         {GMM+NN} &           {AGMM} &         {DeepIV} &     {Our Method} \\
+\midrule
+    \textbf{sin} &  $.26 \pm .00$ &  $.09 \pm .00$ &  $.04 \pm .00$ &  $.08 \pm .00$ &  $.11 \pm .01$ &  $.06 \pm .00$ &  $.02 \pm .00$ \\
+  \textbf{step} &  $.21 \pm .00$ &  $.03 \pm .00$ &  $.03 \pm .00$ &  $.06 \pm .00$ &  $.06 \pm .01$ &  $.03 \pm .00$ &  $.01 \pm .00$ \\
+   \textbf{abs} &  $.21 \pm .00$ &  $.23 \pm .00$ &  $.04 \pm .00$ &  $.14 \pm .02$ &  $.17 \pm .03$ &  $.10 \pm .00$ &  $.03 \pm .01$ \\
+ \textbf{linear} &  $.09 \pm .00$ &  $.00 \pm .00$ &  $.00 \pm .00$ &  $.06 \pm .01$ &  $.03 \pm .00$ &  $.04 \pm .00$ &  $.01 \pm .00$ \\
+\bottomrule
+\end{tabular}
+%
+\caption{Low-dimensional scenarios: Test MSE\label{tab:lowdimex} averaged across ten runs with standard errors.}
+%
+\end{table}
+%
+%
+%
+%
+\begin{table}[t!]
+\setlength{\tabcolsep}{3pt}
+\centering
+\begin{tabular}{lrrrrrrr}
+\toprule
+       Scenario &         DirectNN &                                Vanilla2SLS &        Ridge2SLS &           GMM+NN & AGMM & DeepIV &       Our Method \\
+\midrule
+   \mnist{z} &  $.25 \pm .02$ &                            $.23 \pm .00$ &  $.23 \pm .00$ &  $.27 \pm .01$ &  -- &    $.11 \pm .00$  &  $.07 \pm .02$ \\
+   \mnist{x} &  $.28 \pm .03$ &  $ > 1000 $ &  $.19 \pm .00$ &  $.19 \pm .00$ &  -- &    -- &  $.15 \pm .02$ \\
+ \mnist{x,z} &  $.24 \pm .01$ &               $ > 1000$ &  $.39 \pm .00$ &  $.25 \pm .01$ &  -- &    -- &  $.14 \pm .02$ \\
+\bottomrule
+\end{tabular}
+%
+\caption{High-dimensional scenarios: Test MSE averaged across ten runs\label{tab:highdimex} with standard errors.}\label{tab:hidimex}\vspace{-2em}
+\end{table}
+}
+  
+In this first group of scenarios, we study the case when both the instrument as well as treatment is low-dimensional. Similar to \citep{lewis2018adversarial}, we generated data via the following process:
+\begin{center}
+\begin{tabular}{ll}
+    $Y =  g_0(X) + e + \delta$ \qquad & \qquad $X = Z_1 + e + \gamma$ \\
+     $Z \sim \mathrm{Uniform}( [-3,3]^2 )$ \qquad & \qquad $e \sim \Nrm(0, 1),~~\gamma, \delta \sim~ \Nrm(0, 0.1)$ \\
+\end{tabular}\ab{Fixed typo with 0.5's in X's formula}
+\end{center}
+%
+%
+%
+%
+%
+%
+%
+%
+%
+In other words, only the first instrument has an effect on $X$, and $e$ is the confounder breaking independence of $X$ and the residual $Y-g_0(X)$. We keep this data generating process fixed, but vary the true response function $g_0$ between the following cases:
+%
+%
+%
+%
+%
+%
+%
+%
+%
+$$
+\text{\textbf{sin}: }g_0(x) = \sin(x)\qquad
+\text{\textbf{step}: }g_0(x)=  \Ind_{\{x \geq 0\}}\qquad
+\text{\textbf{abs}: }g_0(x)=\abs{x}\qquad
+\text{\textbf{linear}: }g_0(x)=x
+$$
+
+We sample $n=2000$ points for train, validation, and test sets each. To avoid numerical issues, we standardize the observed $Y$ values by removing the mean and scaling to unit variance.
+Hyperparameters used for our method in these scenarios are described in \cref{apx:hyperparameters}.\ab{Added appendix containing hyperparameter details.}
+We plot the results in \cref{fig:lowdimex}.
+The left column shows the sampled $Y$ plotted against $X$, with the true $g_0$ in orange. The other columns show in blue the estimated $\hat{g}$ using various methods. \cref{tab:lowdimex} shows the corresponding MSE over the test set.
+
+%
+
+First we note that in each case there is sufficient confounding that the DirectNN regression fails badly and a method that can use the IV information to remove confounding is necessary.
+
+Our next substantive observation is that our method performs competitively across scenarios, attaining the \emph{lowest MSE} in each (except linear where are beat just slightly and only by methods that use a linear model). At the same time, other methods employing neural networks perform well in some scenarios and less well in others.
+%
+Therefore we conclude that in the low dimensional setting, our method is able to adapt to the scenario and compete with best tuned methods for the scenario.
+
+Overall, we also found that GMM+NN performed well (but not as well as our method). In some sense GMM+NN is a novel method; we are not aware of previous work using (OW)GMM to train a neural network. Whereas GMM+NN needs to be provided moment conditions, our method can be understood as improving further on this by learning the best moment condition over a large class using optimal weighting. AGMM performed similarly well to GMM+NN, which uses the same moment conditions. Aside from the heuristic jitter step implemented in the AGMM code, it is equivalent to one-step GMM, \cref{eq:gmm}, with $\fmagd\cdot_\infty$ vector norm in place of the standard $\fmagd\cdot_2$ norm. Its worse performance than our method perhaps also be explained by this change and by its lack of optimal weighting.\ab{I updated this paragraph to reflect fact that AGMM is not clearly worse than GMM+NN in Table 1}
+
+In the experiments, the other NN-based method, DeepIV, was consistently outperformed by Poly2SLS across scenarios.
+This may be related to the computational difficulty of its two-stage procedure, or possibly due to sensitivity of the second stage to errors in the density fitting in the first stage. Notably this is despite the fact that the neural-network-parametrized Gaussian mixture model fit in the first stage is correctly specified, so DeepIV's poorer performance cannot be attributed to the infamous ``forbidden regression'' issue. Therefore we might expect that, in more complex scenarios where the first-stage is not well specified, DeepIV could be at even more of a disadvantage. In the next section, we also discuss its limitations with high-dimensional $X$.\ab{Updated DeepIV discussion to reflect the fact that first stage model is actually well-specified, so forbidden regression doesn't explain its poorer performance}
+%
+
+%
+
+
+%
+
+%
+
+%
+
+%
+
+%
+
+\subsection{High-dimensional scenarios}
+We now move on to scenarios based on the MNIST dataset~\cite{lecun1998gradient} in order to test our method's ability to deal with structured, high-dimensional $X$ and $Z$ variables. For this group of scenarios, we use same data generating process as in \cref{sec:lowdimex} and fix the response function $g_0$ to be \textbf{abs}, but map $Z$, $X$, or both $X$ and $Z$ to MNIST images. Let the output of \cref{sec:lowdimex} be $X^{\mathrm{low}}, Z^{\mathrm{low}}$ and  $\pi(x)=\mathrm{round}(\min(\max(1.5x + 5, 0), 9))$ be a transformation function that maps inputs to an integer between 0 and 9, and let $\op{RandomImage}(d)$ be a function that selects a random MNIST image from the digit class $d$.
+The images are $28\times28=784$-dimensional.
+The scenarios are then given as:\ts{I changed the notation here as the old own was awkwardly overriding variables}
+\begin{itemize}[topsep=0pt,itemsep=0pt,partopsep=1ex,parsep=1ex]
+\item \textbf{MNIST\textsubscript{Z}}: $X \leftarrow X^{\mathrm{low}}$, $Z\leftarrow\text{RandomImage}(\pi(Z_1^{\textrm{low}}))$.
+\item \textbf{MNIST\textsubscript{X}}: $X\leftarrow\text{RandomImage}(\pi(X^{\mathrm{low}}))$, $Z\leftarrow Z^{\mathrm{low}}$.
+\item \textbf{MNIST\textsubscript{X, Z}}: $X\leftarrow\text{RandomImage}(\pi(X^{\mathrm{low}}))$, $Z\leftarrow\text{RandomImage}(\pi(Z_1^{\textrm{low}})).$
+\end{itemize}
+We sampled 20000 points for the training, validation, and test sets and ran each method 10 times with different random seeds.
+Hyperparameters used for our method in these scenarios are described in \cref{apx:hyperparameters}.
+We report the averaged MSEs in \cref{tab:hidimex}.
+ %
+%
+%
+%
+We failed to run the AGMM code on any of these scenarios, as it crashed and returned overflow errors. Similarly, the DeepIV code  produced \texttt{nan} outcomes on any scenario with a high-dimensional $X$. Furthermore, because of the size of the examples, we were similarly not able to run Poly2SLS. Instead, we present Vanilla2SLS and Ridge2SLS, where the latter is Poly2SLS with fixed linear degree.
+Vanilla2SLS failed to produce reasonable numbers for high-dimensional $X$ because the first-stage regression is ill-posed.
+
+Again, we found that our method performed competitively across scenarios, achieving the lowest MSE in each scenario. In the $\textbf{MNIST\textsubscript{Z}}$ setting, our method had better MSE than DeepIV. In the $\textbf{MNIST\textsubscript{X}}$ and $\textbf{MNIST\textsubscript{X,Z}}$ scenarios, it handily outperformed all other methods. Even if DeepIV had run on these scenarios, it would be at great disadvantage since it models the conditional distribution over images using a Gaussian mixture. This can perhaps be improved using richer conditional density models like \citep{chen2016infogan,isola2017image}, but the forbidden regression issue remains nonetheless. Overall, these results highlights our method's ability to adapt not only to each low-dimensional scenario but also to high-dimensional scenarios, whether the features, instrument, or both are high-dimensional, where other methods break. Aside from our method's competitive performance, our algorithm was tractable and was able to run on these large-scale examples where other algorithms broke computationally.
+
+\vspace{-0.75em}\section{Conclusions}\label{sec:conclusions}
+\vspace{-0.75em}
+
+\textbf{Other related literature and future work.} We believe that our approach can also benefit other applications where moment-based models and GMM is used \citep{hansen1980formulating,hansen1982generalized,berry1995automobile}. Moreover, notice that while DeepGMM is related to GANs~\cite{goodfellow2014generative}, the adversarial game that we play is structurally quite different. In some senses, the linear part of our payoff function is similar to that of the Wasserstein GAN \citep{arjovsky2017wasserstein}; therefore our optimization problem might benefit from a similar approaches to approximating the sup player as employed by WGANs.
+Another related line of work is in methods for learning conditional moment models, either in the context of IV regression or more generally, that are statistically efficient \citep{chamberlain1987asymptotic,ai2003efficient,blundell2007semi,chen2012estimation,chen2018optimal}. This line of work is different in focus than ours; they focus on methods that are statistically efficient, whereas we focus on leveraging work on deep learning and smooth game optimization to deal with complex high-dimensional instruments and/or treatment. However an important direction for future work would be to investigate the possible efficiency of DeepGMM or efficient modifications thereof. 
+%
+Finally, there has been some prior work connecting GANs and GMM in the context of image generation \citep{ravuri2018learning}, so another potential avenue of work would be to leverage some of the methodology developed there for our problem of IV regression.  \ts{Add other related work here.} \ab{Added additional requested references from Xiaohong and reviewers.}
+
+\textbf{Conclusions.} We presented DeepGMM as a way to deal with IV analysis with high-dimensional variables and complex relationships. The method was based on a new variational reformulation of GMM with optimal weights with the aim of handling many moments and was formulated as the solution to a smooth zero-sum game. Our empirical experiments showed that the method is able to adapt to a variety of scenarios, competing with the best tuned method in low dimensional settings and performing well in high dimensional settings where even recent methods break.
+
+
+%
+%
+
+%
+%
+%
+%
+
+%
+%
+%
+%
+
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+
+%
+
+%
+
+%
+%
+
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+%
+
+%
+
+%
+
+%
+
+\section*{Acknowledgements}
+This material is based upon work supported by the National Science Foundation under Grant No. 1846210.
+
+\newpage
+
+\bibliography{deepgmm}
+\bibliographystyle{abbrvnat}
+
+\clearpage
+
+\appendix
+
+\section{Omitted Proofs}
+
+\begin{proof}[Proof of \cref{lemma:gmmequiv}]
+For ease of notation in this proof we will use $\magd{\cdot}$ as shorthand for $\magd{\cdot}_{\tilde\theta}$. First note that since $\magd{v}^2 = v^T C_{\tilde\theta}^{-1} v$, the associated dual norm is $\magd{v}_*^2 = v^T C_{\tilde\theta} v$. Next, define as shorthand $\bm\psi$ as shorthand for $(\psi_n(f_1;\theta), \ldots, \psi_n(f_m;\theta))$. It follows from the definition of the dual norm that $\magd{\bm\psi} = \sup_{\magd{v}_* \leq 1} v^T \bm\psi$. Therefore we have:
+\begin{align}
+    \magd{\bm\psi}^2 &= \sup_{\magd{v}_* \leq \magd{\bm\psi}} v^T \bm\psi \nonumber \\
+    &= \sup_{v^T C_{\tilde\theta} v \leq \magd{\bm\psi}^2} v^T \bm\psi \nonumber 
+\end{align}
+
+The Lagrangian of this optimization problem is given by:
+\begin{equation}
+    \mathcal{L}(v,\lambda) = v^T \bm\psi + \lambda (v^T C_{\tilde\theta} v - \magd{\bm\psi}^2) \nonumber
+\end{equation}
+Taking the derivative of this with respect to $v$ shows us that when $\lambda < 0$, this quantity is maximized by $v = -\frac{1}{2\lambda} C_{\tilde\theta}^{-1} \bm\psi$. In addition we clearly have strong duality for this problem by Slater's condition whenever $\magd{\bm\psi} > 0$ (since in this case $v = 0$ is a feasible interior point). This therefore gives us the following dual formulation for $\magd{\bm\psi}^2$:
+\begin{align}
+    \magd{\bm\psi}^2 &= \inf_{\lambda < 0} -\frac{1}{2\lambda} \magd{\bm\psi}^2 + \lambda(\frac{1}{4\lambda^2} \magd{\bm\psi}^2 - \magd{\bm\psi}^2) \nonumber \\
+    &= \inf_{\lambda < 0} -\frac{1}{4 \lambda} \magd{\bm\psi}^2 - \lambda \magd{\bm\psi}^2 \nonumber
+\end{align}
+
+Taking derivative with respect to $\lambda$ we can see that this is minimized by setting $\lambda = -\frac{1}{2}$. Given this and strong duality, we know it must be the case that $\magd{\bm\psi}^2 = \sup_v \mathcal{L}(v, -\frac{1}{2}) = \sup_v v^T \psi - \frac{1}{2} v^T C_{\tilde\theta} v + \frac{1}{2} \magd{\bm\psi}^2$. Rearranging terms and doing a change of variables $v\leftarrow 2v$ gives us the identity:
+\begin{equation}
+    \magd{\bm\psi}^2 = \sup_v v^T \bm\psi - \frac{1}{4} v^T C_{\tilde\theta} v \nonumber
+\end{equation}
+
+Finally, we can note that any vector $v \in \mathbb{R}^m$ corresponds to some $f\in \text{span}(\mathcal{F})$, such that $f = \sum_i v_i f_i$, and according to this notation we have $v^T \bm\psi = \psi_n(f;\theta)$ and $v^T C_{\tilde\theta} v = \mathcal{C}_{\tilde\theta}(f, f)$. Therefore our required result follows directly from the previous identity.
+\end{proof}
+
+
+\begin{proof}[Proof of \cref{theorem:consistency}]
+Define $m(\theta,\tau,\tilde\theta) = f(Z; \tau)(Y - g(X; \theta) - \frac{1}{4}f(Z;\tau)^2(Y-g(X;\tilde\theta))^2$, $M(\theta) = \sup_{\tau \in \T} \mathbb{E}[m(\theta,\tau,\tilde\theta)]$, and $M_n(\theta) = \sup_{\tau \in \T} \mathbb{E}_n[m(\theta,\tau,\tilde\theta_n)]$, where $\mathbb{E}_n$ refers to the empirical measure (average over the $n$ data points) and $\tilde\theta_n\to_p\tilde\theta$. We will proceed by proving the following three conditions, and then proving our results in terms of these conditions:
+\begin{enumerate}
+    \item $\sup_\theta \abs{M_n(\theta) - M(\theta)} \rightarrow_p 0$
+    \item for every $\delta > 0$ we have $\inf_{d(\theta, \theta_0) \geq \delta} M(\theta) > M(\theta_0)$
+    \item $M_n(\hat\theta_n) \leq M_n(\theta_0) + o_p(1)$
+\end{enumerate}
+
+We will proceed by proving these conditions one by one. For the first, we can derive the inequality:
+\begin{align}
+    \sup_{\theta} &\abs{M_n(\theta) - M(\theta)} \nonumber \\
+    &= \sup_{\theta}\abs{\sup_{\tau}\mathbb{E}_n[m(\theta,\tau,\tilde\theta_n)] - \sup_{\tau}\mathbb{E}[m(\theta,\tau,\tilde\theta)]} \nonumber \\
+    &\leq \sup_{\theta,\tau} \abs{\mathbb{E}_n[m(\theta,\tau,\tilde\theta_n)] - \mathbb{E}[m(\theta,\tau,\tilde\theta)]} \nonumber \\
+    &\leq \sup_{\theta,\tau} \abs{\mathbb{E}_n[m(\theta,\tau,\tilde\theta_n)] - \mathbb{E}[m(\theta,\tau,\tilde\theta_n)]} + \sup_{\theta,\tau} \abs{\mathbb{E}[m(\theta,\tau,\tilde\theta_n)] - \mathbb{E}[m(\theta,\tau,\tilde\theta)]} \nonumber \\
+    &\leq \sup_{\theta_1,\theta_2,\tau} \abs{\mathbb{E}_n[m(\theta_1,\tau,\theta_2)] - \mathbb{E}[m(\theta_1,\tau,\theta_2)]} + \sup_{\theta,\tau} \abs{\mathbb{E}[m(\theta,\tau,\tilde\theta_n)] - \mathbb{E}[m(\theta,\tau,\tilde\theta)]} \nonumber 
+\end{align}
+
+Next we will bound these two terms separately, which we will term $B_1$ and $B_2$. For the first term, we can derive the following bound, where $\epsilon_i$ are iid Rademacher random variables, $m_i(\theta, \tau, \tilde\theta_n) = f(Z_i; \tau)(Y_i - g(X_i; \theta) - \frac{1}{4}f(Z_i;\tau)^2(Y_i-g(X_i;\tilde\theta))^2$, and $m_i'(\theta, \tau, \tilde\theta_n')$ are shadow variables:
+\begin{align*}
+    \mathbb{E}[B_1] &= \mathbb{E}\left[ \sup_{\theta_1,\theta_2,\tau} \abs{\frac{1}{n} \sum_i m_i(\theta_1,\tau,\theta_2) - \mathbb{E}[m_i'(\theta_1,\tau,\theta_2')]} \right] \\
+    &\leq \mathbb{E}\left[ \sup_{\theta_1,\theta_2,\tau} \abs{\frac{1}{n} \sum_i m_i(\theta_1,\tau,\theta_2) - m_i'(\theta_1,\tau,\theta_2')} \right] \\
+    &= \mathbb{E}\left[ \sup_{\theta_1,\theta_2,\tau} \abs{\frac{1}{n} \sum_i \epsilon_i (m_i(\theta_1,\tau,\theta_2) - m_i'(\theta_1,\tau,\theta_2'))} \right] \\
+    &\leq 2 \mathbb{E}\left[ \sup_{\theta_1,\theta_2,\tau} \abs{\frac{1}{n} \sum_i \epsilon_i m_i(\theta_1,\tau,\theta_2)} \right] \\
+    &\leq 2 \mathbb{E}\left[ \sup_{\theta,\tau} \abs{\frac{1}{n} \sum_i \epsilon_i f(Z_i; \tau)(Y_i - g(X_i; \theta) }\right] \\
+    &\qquad\qquad + \frac{1}{2} \mathbb{E}\left[ \sup_{\theta,\tau} \abs{ \frac{1}{n} \sum_i \epsilon_i f(Z_i;\tau)^2(Y_i-g(X_i;\theta))^2} \right] \\
+    &\leq \mathbb{E}\left[ \sup_{\theta,\tau} \abs{\frac{1}{n} \sum_i \epsilon_i f(Z_i; \tau)^2}\right] + \mathbb{E}\left[ \sup_{\theta,\tau} \abs{\frac{1}{n} \sum_i \epsilon_i (Y_i - g(X_i; \theta)^2 }\right] \\
+    &\qquad\qquad + \frac{1}{4} \mathbb{E}\left[ \sup_{\theta,\tau} \abs{ \frac{1}{n} \sum_i \epsilon_i f(Z_i;\tau)^4} \right] + \frac{1}{4} \mathbb{E}\left[ \sup_{\theta,\tau} \abs{ \frac{1}{n} \sum_i \epsilon_i (Y_i-g(X_i;\theta))^4} \right] 
+\end{align*}
+
+Note that in the final inequality we apply the inequality $xy \leq 0.5(x^2 + y^2)$. Now given \cref{asm:bounded}, the functions that map $(f(Z_i;\tau)$ and $g(X_i;\theta))$ to the summands in each term are Lipschitz. Now for any function class $\mathcal F$ and $L$-Lipschitz function $\phi$ we have $\mathcal R_n(\phi \circ \mathcal F) \leq L \mathcal R_n(\mathcal F)$, where $\mathcal R_n(\mathcal F)$ is the Rademacher complexity of class $\mathcal F$ \citep[Thm.~4.12]{ledoux2013probability}. Therefore we have
+\begin{equation}
+    \mathbb{E}[B_1] \leq L(\mathcal{R}_n(\mathcal G) + \mathcal{R}_n(\mathcal F)) \nonumber,
+\end{equation}
+for some constant $L$. Thus given \cref{asm:complexity} it must be case that $\mathbb{E}[B_1] \rightarrow 0$. Now let $B_1'$ be some recalculation of $B_1$ where we are allowed to edit the $i$'th $X$, $Z$, and $Y$ values. Then given \cref{asm:bounded} we can derive the following bounded differences inequality:
+\begin{align}
+    \sup_{X_{1:n}, Z_{1:n}, Y_{1:n}, X_i', Z_i', Y_i'} \abs{B_1 - B_1'} &\leq \sup_{\theta_1,\theta_2,\tau, X_{1:n}, Z_{1:n}, Y_{1:n}, X_i', Z_i', Y_i'} \abs{\frac{1}{n} \left(m_i(\theta_1, \tau, \theta_2) - m_i'(\theta_1, \tau, \theta_2)\right)} \nonumber \\
+    &\leq \frac{c}{n} \nonumber
+\end{align}
+for some constant $c$. Therefore from McDiarmid's Inequality we have $P(\abs{B_1 - \mathbb{E}[B_1]} \geq \epsilon) \leq 2 \exp \left( -\frac{2n\epsilon^2}{c^2} \right)$. Putting this and the previous result for $\mathbb{E}[B_1]$ together we get $B_1 \rightarrow_p 0$.
+
+Next, define $\omega_n = \abs{(Y - g(X;\tilde\theta_n))^2 - (Y - g(X;\tilde\theta))^2}$. Recall that from the premise of the theorem we have $\tilde\theta_n \rightarrow_p \tilde\theta$. Then by Slutsky's Theorem, the Continuous Mapping Theorem, and \cref{asm:continuity} we have $\omega_n = o_p(1)$. Given this we can bound $B_2$ as follows:
+\begin{align}
+    B_2 &= \sup_{\theta,\tau} \abs{\mathbb{E}[m(\theta,\tau,\tilde\theta_n)] - \mathbb{E}[m(\theta,\tau,\tilde\theta)]} \nonumber \\
+    &= \frac{1}{4} \sup_{\theta,\tau} \abs{\mathbb{E}[f(Z;\tau)^2(Y - g(X;\tilde\theta_n))^2] - \mathbb{E}[f(Z;\tau)^2(Y - g(X;\tilde\theta))^2]} \nonumber \\
+    &\leq \frac{1}{4} \sup_{\theta,\tau} \abs{\mathbb{E}[f(Z;\tau)^2(Y - g(X;\tilde\theta))^2] - \mathbb{E}[f(Z;\tau)^2(Y - g(X;\tilde\theta))^2]} + \frac{1}{4} \sup_{\tau} \abs{\mathbb{E}[f(Z;\tau)^2 \omega_n]} \nonumber \\
+    &= \frac{1}{4} \sup_{\tau} \abs{\mathbb{E}[f(Z;\tau)^2 \omega_n]} \nonumber
+\end{align}
+%
+
+Now we know from \cref{asm:bounded} that $f(Z;\tau)$ is uniformly bounded, so it follows that $B_2 \leq \frac{b}{4} \mathbb{E}[\abs{\omega_n}]$ for some constant $b$. Next we can note, again based on our boundedness assumption, that $\omega_n$ is uniformly bounded. Therefore it follows from the Lebesgue Dominated Convergence Theorem that $\mathbb{E}[\abs{\omega_n}] \rightarrow 0$. Thus we know that both $B_1$ and $B_2$ converge, so we have proven the first of the three conditions, that $\sup_{\theta}\abs{M_n(\theta) - M(\theta)}$ converges in probability to zero.
+
+For the second condition we will first prove that $M(\theta_0)$ is the unique minimizer of $M(\theta)$. Clearly by \cref{asm:specification,asm:closure} we have that $\theta_0$ is the unique minimizer of $\sup_{\tau}\mathbb{E}[f(Z;\tau)(Y - g(X;\theta)]$, since it sets this quantity to zero, and by these assumptions any other value of $\theta$ must have at least one $\tau$ that can be played in response that makes this expectation strictly positive. Now we can see that $M(\theta_0) = 0$ also, since $M(\theta_0) = \sup_{\tau} -\frac{1}{4} f(Z;\tau)^2 (Y - g(X;\tilde\theta))^2$, and the inside of the supremum is clearly non-positive but can be set to zero using the zero function for $f$, which is allowed given \cref{asm:closure}. Furthermore, for any other $\theta' \neq \theta_0$, let $f'$ be some function in $\mathcal{F}$ such that $\mathbb{E}[f(Z)(Y - g(X;\theta')] > 0$. If we have $\mathbb{E}[f'(Z)^2(Y - g(X;\tilde\theta))^2] = 0$ then it follows immediately that $M(\theta') > 0$. Otherwise, consider the function $\lambda f'$ for arbitrary $0 < \lambda < 1$. Since by \cref{asm:closure} this function is also contained in $\mathcal{F}$, it follows that:
+\begin{align}
+    M(\theta') &= \sup_{f \in \mathcal{F}} \mathbb{E}[f(Z)(Y - g(X;\theta')) - \frac{1}{4} f(Z)^2(Y - g(X;\tilde\theta))^2] \nonumber \\
+    &\geq  \lambda\mathbb{E}[ f'(Z)(Y - g(X;\theta'))] - \frac{\lambda^2}{4}\mathbb{E}[ f'(Z)^2(Y - g(X;\tilde\theta))^2] \nonumber 
+\end{align}
+
+This expression is a quadratic in $\lambda$ that is clearly positive when $\lambda$ is sufficiently small, so therefore it still follows that $M(\theta') > 0$.
+
+Given this, we will prove the second condition by contradiction. If this were false, then for some $\delta > 0$ we would have that $\inf_{\theta \in B(\theta_0,\delta)} M(\theta) = M(\theta_0)$, where $B(\theta_0, \delta) = \{\theta \mid d(\theta,\theta_0) \geq \delta\}$. This is because from \cref{asm:specification} we know $\theta_0$ is the unique minimizer of $M(\theta)$. Given this there must exist some sequence $(\theta_1,\theta_2,\ldots)$ in $B(\theta_0,\delta)$ satisfying $M(\theta_n) \rightarrow M(\theta_0)$. Now by construction $B(\theta_0,\delta)$ is closed, and the corresponding limit parameters $\theta^* = \lim_{n \rightarrow \infty} \theta_n \in B(\theta_0,\delta)$ must satisfy $M(\theta^*) = M(\theta_0)$, since given \cref{asm:continuity} $M(\theta)$ is clearly a continuous function of $\theta$ so we can swap function application and limit. However $d(\theta^*,\theta_0) \geq \delta > 0$, so $\theta^* \neq \theta_0$. This contradicts the fact that $\theta_0$ is the unique minimizer of $M(\theta)$, so we have proven the second condition.
+
+Finally, for the third condition we will use the fact that by assumption $\hat\theta_n$ satisfies the approximate equilibrium condition:
+\begin{equation}
+    \sup_{\tau \in \T} \mathbb{E}_n m(\hat{\theta}_n, \tau, \tilde\theta_n) - o_p(1) \leq \mathbb{E}_n m(\hat\theta_n, \hat\tau_n, \tilde\theta_n) \leq \inf_\theta \mathbb{E}_n m(\theta, \hat\tau_n, \tilde\theta_n) + o_p(1) \nonumber
+\end{equation}
+%
+Now by definition $M_n(\hat \theta_n) = \sup_{\tau \in \T} \mathbb{E}_n m(\hat{\theta}_n, \tau, \tilde\theta_n)$. Therefore, $$\inf_{\theta} \mathbb{E}_n m(\theta, \hat \tau_n, \tilde\theta_n) \leq \inf_{\theta} \sup_{\tau} \mathbb{E}_n m(\theta, \tau, \tilde\theta_n) =\inf_{\theta} M_n(\theta)\leq M_n(\theta_0).$$
+%
+Thus we have
+\begin{equation}
+    M_n(\hat\theta_n) - o_p(1) \leq \mathbb{E}_n m(\hat\theta_n, \hat\tau_n, \tilde\theta_n) \leq M_n(\theta_0) + o_p(1) \nonumber.
+\end{equation}
+%
+
+At this point we have proven all three conditions stated at the start of the proof. For the final part we can first note that from the first and third conditions it easily follows that $M_n(\hat \theta_n) \leq M(\theta_0) + o_p(1)$, since $\abs{M_n(\theta_0) - M(\theta_0)} \rightarrow_p 0$. Therefore we have:
+\begin{align*}
+M(\hat \theta_n) - M(\theta_0) &\leq M(\hat \theta_n) - M_n(\hat \theta_n) + o_p(1) \\
+&\leq \sup_{\theta} \abs{M(\hat \theta) - M_n(\hat \theta)} + o_p(1) \\
+&\leq o_p(1) 
+\end{align*}
+
+Next, define $\eta(\delta) = \inf_{d(\theta,\theta_0) \geq \delta} M(\theta) - M(\theta_0)$. Now by definition of $\eta$ we know that whenever $d(\hat \theta_n, \theta) \geq \delta$ we have $M(\hat \theta_n) - M(\theta_0) \geq \eta(\delta)$.  Therefore $\mathbb P[d(\hat \theta_n, \theta) \geq \delta] \leq \mathbb P[M(\hat \theta_n) - M(\theta_0) \geq \eta(\delta)]$. Now since for every $\delta > 0$ we have $\eta(\delta) > 0$ from the second condition, and we know $M(\hat \theta_n) - M(\theta_0) = o_p(1)$, we have that for every $\delta > 0$ the RHS probability converges to zero. Thus $d(\hat \theta_n, \theta_0) = o_p(1)$, so we can conclude that $\hat\theta_n \rightarrow_p \theta_0$.
+%
+%
+\end{proof}
+
+
+\begin{proof}[Proof of \cref{lemma:consistency}]
+
+We prove this lemma by redefining the parameter space $\Theta$ such that it satisfies \cref{asm:specification,asm:complexity,asm:bounded,asm:continuity,asm:closure}, and then appealing to the proof of \cref{theorem:consistency}. We define the pseudo parameter space $\Theta^*$ as
+\begin{equation*}
+    \Theta^* = \{\Theta_0\} \cup \{\theta \in \Theta : \theta \notin \Theta_0\}.
+\end{equation*}
+
+In other words, we group together all elements of $\Theta_0$ as a single element that we will refer to as $\theta^*$. Note that by definition of $\Theta_0$ the set of functions $g(\cdot;\theta)$ induced by $\theta \in \Theta'$ is the same as for the original parameter space, and that the function $g(\cdot;\theta^*)$ is well-defined given \cref{asm:set-ident}. Next we define the metric $d'$ for the new parameter space in terms of the metric of the original space $d$ as
+\begin{equation*}
+    d'(\theta_1, \theta_2) = \min \{ d(\theta_1, \theta_2), \inf_{\theta_0 \in \Theta_0} d(\theta_1, \theta_0) + \inf_{\theta_0 \in \Theta_0} d(\theta_2, \theta_0) \}
+\end{equation*}
+
+Next we justify that $d'$ is a metric. First of all it is trivial from this definition that $d'(\theta,\theta) = 0$ for every $\theta \in \Theta'$, and also that non-negativity and symmetry are maintained. Finally it is easy to verify that this definition still satisfies the triangle inequality, given that $d$ is a metric and satisfies the triangle inequality itself.
+
+In order to verify that we still have continuity, consider $\theta_1$ and $\theta_2$ such that $d'(\theta_1, \theta_2) < \epsilon$. In the case that $d(\theta_1, \theta_2) = d'(\theta_1, \theta_2)$, continuity follows trivially from \cref{asm:continuity}. That is, it is trivial to construct an $\epsilon,\delta$ argument in this case. If this isn't the case, there must exist $\theta_1^*, \theta_2^* \in \Theta_0$ such that $d(\theta_1, \theta_1^*) + d(\theta_2, \theta_2^*) = \epsilon$. In addition for any $x$ we have $\abs{g(x;\theta_1) - g(x;\theta_2)} \leq \abs{g(x;\theta_1) - g(x;\theta_1^*)} + \abs{g(x;\theta_2^*) - g(x;\theta_2)}$, given \cref{asm:set-ident}. Thus continuity still follows and it is trivial to construct a formal $\epsilon,\delta$ argument given \cref{asm:continuity}.
+
+Given that all the other assumptions only depend on the space of functions $g(\cdot;\theta)$ not on the parameter space itself, they are unaffected via switching from $\Theta$ to $\Theta^*$. Also, by construction using $\Theta^*$ instead of $\Theta$ means we satisfy \cref{asm:specification}. Thus we satisfy \cref{asm:specification,asm:complexity,asm:bounded,asm:continuity,asm:closure}, so we can appeal to \cref{theorem:consistency} to argue that $d'(\hat\theta_n - \theta^*) \to 0$ in probability. Finally it follows from the definition of $d'$ that $d'(\theta, \theta^*) = \inf_{\theta_0 \in \Theta_0} d(\theta, \theta_0)$, which gives us our final result that $\inf_{\theta_0 \in \Theta_0} d(\hat\theta_n, \theta_0) \to 0$ in probability.
+\end{proof}
+
+
+\section{Additional Methodology Details}
+\subsection{Hyperparameter Optimization Procedure}
+\label{apx:model-selection}
+
+We provide more details here about the hyperparameter optimization procedure described in \cref{sec:practicalconsiderations}. Let $m$ be the total number of hyperparameter choices under consider. Then for each candidate set of hyperparameters $\gamma_i \in \{\gamma_1,\ldots,\gamma_m\}$ we run our learning algorithm for a fixed number of epochs using $\gamma_i$, training it on our train partition. Every $k_{\text{eval}}$ epochs we save the current parameters $\hat \tau$ and $\hat \theta$ at that epoch. This gives, for each hyperparameter choice $\gamma_i$, a finite set of $f$ functions $\hat{\mathcal{F}}_i$, and a finite set of $\theta$ values $\hat{\Theta}_i$.
+
+Now, define the set of functions $\hat{\mathcal{F}} = \cup_{i=1}^m \hat{\mathcal{F}}_i$. We define our approximation of our variational objective as 
+\begin{equation*}
+\hat \Psi_n(\theta) = \Psi_n(\theta; \hat{\mathcal{F}}, \theta),
+\end{equation*}
+where $\Psi_n$ is as defined in \cref{eq:obj-variational}. Note that this means for every $\theta$ we wish to evaluate we choose to approximate $\tilde \theta$ using that value of $\theta$.
+
+Given this, we finally choose the set of hyperparameters $\gamma_i$ whose corresponding trajectory of parameter values $\hat{\Theta}_i$ minimizes the objective function $\min_{\theta \in \hat{\Theta}_i} \hat \Psi_n(\theta)$, calculated on the validation data. Note that this objective function is meant to approximate the value of the variational objective we would have obtained if we performed learning with that set of hyperparameters using early stopping.
+
+Note that in practice, since we only ever calculate $\hat \Psi_n$ on the validation data, and we only ever use $\Theta_i$ in optimizing the above objective function on the validation data, instead of saving the actual parameter values $\hat \tau$ and $\hat \theta$ we can instead save vectors $f(Z_{\text{val}}, \tau)$ and $g(X_{\text{val}}, \theta)$, where $Z_{\text{val}}$ and $X_{\text{val}}$ are the vectors of $Z$ and $X$ values respectively in our validation data. This makes our methodology tractable when working with very complex deep neural networks.
+
+\subsection{Hyperparameter Details}
+\label{apx:hyperparameters}
+
+We describe here the specific hyperparameter choices used in all our experiments. In all scenarios we parametrized the $f$ and $g$ networks either as fully connected neural networks (FCNN) with leaky ReLU activations with various numbers and sizes of hidden layers, or using a fixed deep convolutional neural network (CNN) architecture designed to perform well with non-causal inference on the MNIST data. We refer readers to our code release for exact details on our CNN construction. In addition in all cases we performed the hyperparameter optimization procedure described above over a range of learning rates. Specifically, in every scenario we explore a range of learning rates for $g$, and compute the $f$ learning rate as $\text{lr}_f = \lambda_f \text{lr}_g$, where $\lambda_f$ is chosen separately for each scenario.
+
+We summarize our choices for each scenario in \cref{tab:hyperparameters}. Note that we made the same hyperparameter choices in all low-dimensional scenarios. In the case of FCNN models, we list the hidden layer sizes in parentheses. 
+
+\begin{table}
+    \begin{tabular}{ccccc}
+        \hline
+        scenario & $g$ model & $f$ model & $g$ learning rates & $\lambda_f$ \\
+        \hline
+        low-dimensional & FCNN $(20,3)$ & FCNN $(20)$ & $(5 * 10^{-4}, 2 * 10^{-4}, 1 * 10^{-3})$ & 5.0 \\
+        \mnist{z} & FCNN $(200,200)$ & CNN & $(2 * 10^{-5}, 5 * 10^{-5}, 1 * 10^{-4})$ & $5.0$ \\
+        \mnist{x} & CNN & FCNN $(20)$ & $(1 * 10^{-6}, 2 * 10^{-6}, 5 * 10^{-6})$ & $1000.0$ \\
+        \mnist{x,z} & CNN & CNN & $(1 * 10^{-6}, 2 * 10^{-6}, 5 * 10^{-6})$ & $5.0$ \\
+        \hline
+    \end{tabular}
+    \caption{Hyperparameters used in our experiments.}
+    \label{tab:hyperparameters}
+\end{table}
+
+\subsubsection{Low-dimensional Scenarios}
+
+In the low dimensional scenarios we parametrized both $f$ and $g$ as fully-connected neural networks, using a single hidden layer of size 20 for $f$, and two hidden layers of sizes 20 and 3 for $g$. We performed hyperparameter optimization over a range of learning rates, searching over the learning rates $[5 * 10^{-4}, 2 * 10^{-4}, 1 * 10^{-3}]$ for $g$, and in each instance multiplying learning rate by 5 for $f$.
+
+\subsubsection{\mnist{z} Secario}
+
+In this scenario we parametrized 
+
+\section{One-Step GMM Using All Square Integrable Moments}
+\label{apx:gmm-l2}
+
+We describe here the equivalence of performing one-step GMM using all square integrable functions of the instruments, and non-causal least squares. Since we are considering an infinite collection of moment functions we only consider the infinity norm (\ie $\fmagd v = \fmagd v_\infty$.) In addition, the measure we use for integration is the empirical measure. That is, we use all instruments $f$ such that $\sum_{i=1}^n f(Z_i)^2 = 1$. Letting $B_1$ denote this set, $\mathbb{E}_n$ denote expectation with respect to the empricial measure, and otherwise using the same notation as in \cref{sec:existing}, we obtain:
+
+\begin{align*}
+    \fmagd{ \psi_n(f_i;\theta), \ldots}^2 &= \sup_{f \in B_1} \mathbb{E}_n[f(Z) (Y - g(X;\theta))]^2 \\
+    &= \sup_{f \in B_1} \mathbb{E}_n[f(Z) \mathbb{E}_n[Y - g(X;\theta) \mid Z]]^2 \\
+    &= \left( \frac{\mathbb{E}_n[\mathbb{E}_n[Y - g(X;\theta) \mid Z]^2]}{\mathbb{E}_n[\mathbb{E}_n[Y - g(X;\theta) \mid Z]^2]^{1/2}} \right)^2 \\
+    &=  \mathbb{E}_n[\mathbb{E}_n[Y - g(X;\theta) \mid Z]^2] \\
+    &=  \mathbb{E}_n[(Y - g(X;\theta))^2],
+\end{align*}
+
+where the third line follows because $f$ takes it supremum at $f(Z) = \mathbb{E}_n[Y - g(X;\theta) \mid Z]$ by Cauchy-Schwarz, and the final line follows under the additional assumption that $Z$ is a continuous random variable, which implies that $Y - g(Z;\theta)$ has zero conditional variance under the empirical measure given any $Z_i$. Thus we observe that using the infinity norm and under the additional assumption that $Z$ is continuous, one-step GMM using these moment functions is equivalent to non-causal least squares, since they both involve picking $\theta$ to minimize the same loss function.
+
+
+\end{document}

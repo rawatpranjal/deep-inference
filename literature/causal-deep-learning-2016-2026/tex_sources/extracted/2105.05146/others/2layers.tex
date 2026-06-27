@@ -1,0 +1,152 @@
+\documentclass{article}
+\usepackage{arxiv}
+% For french
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsthm,amsmath,natbib}
+\usepackage{amsfonts,amssymb}
+\RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[toc,page]{appendix}
+
+% For tikz pictures
+\usepackage{tikz}
+\usetikzlibrary{matrix,chains,positioning,decorations.pathreplacing,arrows}
+\usepackage{neuralnetwork}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+\usepackage{algorithm}
+\usepackage[]{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{afterpage}
+\usepackage{bbm}
+\usepackage{setspace}
+\usepackage{comment}
+\usepackage[normalem]{ulem}
+%\doublespacing
+
+\newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+
+% Additional definitions
+\def\qadj{\hat{q}_{\mathrm{adj}}}
+\def\tt{\mathbf t}
+\def\z{\mathbf z}
+\def\X{\mathbf X}
+\def\inv{^{-1}}
+\def\H{\mathbf H}
+\def\x{\mathbf x}
+\def\xs{\underline {\mathbf x}}
+\def\Xs{\underline { \mathbf X} }
+\def\r{\mathbf r}
+\def\s{\mathbf s}
+\def\y{\mathbf y}
+\def\u{\mathbf u}
+\def\v{\mathbf v}
+\def\lmax{\lambda_\mathrm{max}}
+\def\emax{\mathbf{e}_\mathrm{max}}
+\def\emin{\mathbf{e}_\mathrm{min}}
+\def\lmin{\lambda_\mathrm{min}}
+\def\bbeta{\boldsymbol \beta}
+\def\ggamma{\boldsymbol \gamma}
+\def\intinf{\int_\infty^\infty}
+\def\sumi{\sum_{i=1}^n}
+\def\t{^\top}
+\def\eps{\boldsymbol \varepsilon}
+\def\KL{\mathbb {KL}}
+\def\E{\mathbb E}
+\def\V{\mathbb V}
+\def\N{\mathcal N}
+\def \real{\rm I\!R}
+\def \I{\mathbf I}
+\def \L {\mathcal{L}}
+\mathcode`\[="8000
+\mathcode`\]="8000
+
+% define alphabetical enumeration in \bgin{enumerate}
+\renewcommand{\theenumi}{\alph{enumi}}
+\renewcommand{\labelenumi}{\theenumi)}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{relsize}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclareMathOperator*{\argmax}{argmax~} % for subscripts and superscripts
+\DeclareMathOperator*{\argmin}{argmin~} % for subscripts and superscripts
+\DeclareMathOperator{\sign}{sign} % for functions
+
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+%\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+%\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.} }{\ \rule{0.5em}{0.5em}}
+
+\title{1 Layers with interaction = 2 layer without}
+
+
+
+
+\begin{document}
+\maketitle
+
+Let $N_1$ be a fully connected neural network with $2n+1$ input neuron and 1 output neuron with any activation function attached to it as well as a bias. We define $X = (x_1,...,x_n) \in \mathbb{R}^{n}$ and $T \in \{0,1\}$ a binary variable. Let further define $(\mu_{i})_{i \in  \llbracket 1,2n+1 \rrbracket }$ the weight that connect the $i$ neurons to the output and let $\beta \in \mathbb{R}$ be the bias.\\
+We define $I$ as the input vector as follow:\\
+$I=(X,T\times X,T)$ therefore the output of $N_1$ writes:\\
+\begin{equation}
+    N_1(I) = \sum_{i=1}^{n} \mu_{i}x_i + \sum_{i=n+1}^{2n} \mu_{i}x_i\times T+ \mu_{2n+1}T + \beta 
+\end{equation}
+
+Let $N_2$ be a fully connected network with a input of size $n+1$ and one hidden layer of size $2n+1$ with a bias attached to each hidden node as well as a Relu activation function reference as $R$ for the simplicity of the notation. The hidden layers is then connected to a single output neuron. We also define the input of the $N_2$ as $I^{*} = (X,T)$. The weight of the input from the first layers are going to be noted $(\lambda^{0 \rightarrow 1}_{i,j})$ with $i \in \llbracket 1,n \rrbracket$ and $j\in \llbracket1,2n+1 \rrbracket$ being the weight that connect the $i$ input to the $j$ hidden neuron. We then define $(\lambda^{1 \rightarrow 2}_{i})$ with $i \in \llbracket 2n+1 \rrbracket$ the weight of the connection between the $i$ hidden units to the output neuron. We additionally reference the bias of the $i$ st hidden neuron as $\beta^{0 \rightarrow 1}_{i}$ with $i \in \llbracket 1,2n+1 \rrbracket$ and finally $\beta^{1 \rightarrow 2}$is the bias attached to the output neuron. Using those notation we can see that:
+
+\begin{equation}
+    N_2(I^{*}) = \mathlarger{\sum}_{i=1}^{2n+1} \lambda^{1 \rightarrow 2}_{i} R( \sum_{j=1}^{n} \lambda^{0 \rightarrow 1}_{j,i} x_j +\lambda^{0 \rightarrow 1}_{n+1,i} T +\beta^{0 \rightarrow 1}_{i} ) +\beta^{1 \rightarrow 2} \label{eqN2}
+\end{equation} 
+
+
+
+\paragraph{Theorem.}
+
+Let $M$ in $\mathbb{R}^{+},~  \forall(\mu_{i})_{i \in \llbracket 1,2n+1 \rrbracket } \in \mathbb{R}^{2n+1}$ and $\beta \in \mathbb{R}$, there exists $(\lambda^{0 \rightarrow 1}_{i,j})\in \mathbb{R}^{n\times(2n+1)}, ~\beta^{0 \rightarrow 1}_{i} \in \mathbb{R}^{n},~\lambda^{1 \rightarrow 2}_{i}\in \mathbb{R}^{2n+1},~\beta^{1 \rightarrow 2} \in \mathbb{R}$ such as $\forall (x_1,...,x_n) \in \left[0, M \right]^{n}, T \in (0,1)$, we have the following equality:
+
+\begin{align}
+N_1(I) &=N_2(I^{*})
+\end{align}
+
+
+We are going to prove the theorem by explicitly finding weights in $N_2$ that will realize the identity . Lets define $\lambda^{1 \rightarrow 2}_{i} = \mu_i$, $\forall i \in \llbracket 1, 2n+1 \rrbracket$ and $\beta^{1 \rightarrow 2} = \beta$ 
+then let pose $\lambda^{0 \rightarrow 1}_{i,j} = 1 $ if $ j$ mod $ n = i$ and $0$ otherwise $\forall i,j \in \llbracket 1, n\rrbracket \times \llbracket 1,2n \rrbracket$ and $\lambda^{0 \rightarrow 1}_{i,2n+1} =0 $ if $i \leq n$ and $1$ if $i = n+1$ and $\lambda^{0 \rightarrow 1}_{n+1,j} = M~ \forall j \in \llbracket 1,2n\rrbracket $.
+
+Furthermore let define  $\forall i \in \llbracket n+1,2n,\rrbracket$ $\beta^{0 \rightarrow 1}_{i} = -M$ and $\beta^{0 \rightarrow 1}_{i} =0$, $\forall i \in \llbracket 1,n\rrbracket \cup \{2n+1\}$. 
+
+Given those attribution one can see that 
+
+\begin{align}
+\forall i \in \llbracket 1, n \rrbracket \text{ we have: } & R( \sum_{j=1}^{n} \lambda^{0 \rightarrow 1}_{j,i} x_j +\lambda^{0 \rightarrow 1}_{n+1,i} T +\beta^{0 \rightarrow 1}_{i}) =  R(x_i) = x_i \label{simplevariable}  \\
+\forall i \in \llbracket n+1, 2n \rrbracket \text{ we have: }&R( \sum_{j=1}^{n} \lambda^{0 \rightarrow 1}_{j,i} x_j +\lambda^{0 \rightarrow 1}_{n+1,i} T +\beta^{0 \rightarrow 1}_{i}) =  R(x_i + MT -M) = x_i \label{interaction} 
+\end{align}
+in (\ref{interaction}) if $T =0$ we only have $x_i - M$ that is negative by definition which imply $R(x_i) = 0$ and if $T = 1$ we only keep $R(x_i) = x_i$
+
+\begin{align}
+\text{ when } i = 2n+1 \text{ we have }~R( \sum_{j=1}^{n} \lambda^{0 \rightarrow 1}_{j,i} x_j +\lambda^{0 \rightarrow 1}_{n+1,i} T +\beta^{0 \rightarrow 1}_{i}) &=  R(T) =T~\label{tvar} 
+\end{align}
+Finaly by replacing (\ref{simplevariable}),(\ref{interaction}) and (\ref{tvar}) within (\ref{eqN2}) with the weight assignement describe before allow to otbain the equality.
+
+\end{document}

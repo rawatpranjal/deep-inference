@@ -1,0 +1,365 @@
+\section{Experiments}
+\label{sec:experiments}
+
+In this section, we present a series of experiments to demonstrate how C-Learner\ifdefined\msom\else\footnote{Here we use ``C-Learner'' to refer to estimators using solutions to the constrained optimization problem in Section~\ref{sec:methods} for a chosen model class, even though other methods can also be thought of as C-Learners, as discussed in \Cref{sec:other_methods}.} \fi
+is flexible across data types and model classes. \ifdefined\msom Here we use ``C-Learner'' to refer to estimators using solutions to the constrained optimization problem in Section~\ref{sec:methods} for a chosen model class, even though other methods can also be thought of as C-Learners, as discussed in \Cref{sec:other_methods}.\fi
+We also show that C-Learner achieves good empirical performance among all these settings, especially variants with low overlap.
+First, in \cref{sec:ks}, we consider well-studied tabular simulated settings where existing debiasing methods (e.g. AIPW) are known to perform poorly~\cite{KangSc07, robins2007comment}. 
+Surprisingly, C-Learner is the only debiased method that performs comparably with the naive plug-in estimator, without additional heuristics or assumptions. 
+We show that the same holds for a more flexible function class using gradient-boosted trees for the outcome models. We also show that the dual C-Learner (Section \ref{sec:balance}) performs at least as well as covariate balancing methods.
+
+To test the scalability of our approach, in \cref{sec:civilcomments} we construct and study a high-dimensional setting with text features, where we 
+fine-tune a language model \citep{distilbert} under our constrained learning framework. Again, we observe that C-Learner outperforms one-step estimation and targeting, especially in settings with low overlap. We summarize the results of our experiments in the above two settings in \Cref{fig:intro_bar_comparison}.
+
+
+\input{bar_figure_tabular_and_nlp}
+
+\ifdefined\msom\else Lastly, in \cref{sec:ihdp_experiment}, we study a common tabular dataset 
+(Infant Health and Development Program~\cite{brooks1992effects}), where the C-Learner is implemented with gradient boosted regression trees matches the performance of one-step estimation and targeting. 
+\fi
+
+\subsection{Tabular Dataset from \citet{KangSc07}} 
+\label{sec:ks}
+
+
+
+We start with the  synthetic tabular setting constructed by \citet{KangSc07}, who
+demonstrate empirically that the direct method (a naive plug-in estimator with a linear outcome model, labeled as ``OLS'' in \citep{KangSc07}) achieves better performance than
+asymptotically optimal methods in their setting. 
+\citet{robins2007comment} note that 
+settings in which some subpopulations have a much higher
+probability of being treated than others,
+like 
+in \citet{KangSc07},
+are very challenging for existing asymptotically optimal methods. 
+Thus, we %
+evaluate the C-Learner on this well-known and challenging setting. %
+
+Our goal is to estimate $\psi(P):=P[Y(1)]=P[P[Y| A=1,X]]=P[\mu(X)]$ from data $(X,A,AY)$
+(assuming $Y(0) := 0$).
+\ifdefined\pnas
+The covariates $Z$ that generate the data are low-dimensional, and 
+the covariates $X$ that are observed are a misspecified version of $Z$. See \cref{sec:ks_dgp} for more details. 
+\else
+The \textit{true} outcome and treatment  mechanisms depend on covariates $\xi \sim N(0, I) \in \mathbb R^4$ and $\varepsilon\sim N(0,1)$ via
+$Y = 210 + 27.4 \xi_{1} + 13.7 \xi_{2} + 13.7 \xi_{3} + 13.7 \xi_{4} + \varepsilon$ and $ 
+\pi(\xi)  = \frac{\exp(-\xi_{1} + 0.5 \xi_{2} - 0.25 \xi_{3} - 0.1 \xi_{4})}{1+\exp(-\xi_{1} + 0.5 \xi_{2} - 0.25 \xi_{3} - 0.1 \xi_{4})}.$
+Here, $P[Y(1)]=P[Y\mid A = 1] = 200$ and $P[Y] = 210$ so that a naive average of the treated units is biased by $-10$. For a random sample of 100 data points, the true propensity score can be as low as 1\% and as high as 95\%. We focus on the misspecified setting, where instead of observing $\xi$, the modeler observes
+$
+X_{1} = \exp(\xi_{1}/2),\;X_{2} = \xi_{2}/(1+\exp(\xi_{1})) + 10,\;X_{3} = (\xi_{1}\xi_{3}/25 + 0.6)^3,\;X_{4} = (\xi_{2} + \xi_{4} + 20)^2.
+$
+\fi
+Next, we demonstrate the instantiations of the C-Learner with two model classes: linear models and gradient boosted regression trees.  
+
+
+
+\begin{table}[t]
+\footnotesize
+\centering
+\hfill
+\begin{subtable}{.53\linewidth}
+\centering
+\caption{$N=200$} %
+\begin{tabular}{lrrrr}
+\toprule
+ Method & \multicolumn{2}{c}{Bias} & \multicolumn{2}{c}{Mean Abs Err} \\
+\cmidrule(lr){1-1}
+\cmidrule(lr){2-3}
+\cmidrule(lr){4-5}
+Direct & -0.00 & (0.10) & 2.60 & (0.06)\\
+IPW & 22.10 & (2.58) & 27.28 & (2.53) \\
+IPW-SN & 3.36 & (0.29) & 5.42 & (0.26)\\
+\greymidrule
+AIPW & -5.08 & (0.474) & 6.16 & (0.46) \\
+AIPW-SN & -3.65 & (0.20) & 4.73 & (0.18) \\
+TMLE & -111.59 & (41.07) & 112.15 & (41.07) \\
+C-Learner & \textbf{-2.45} & (0.12) & \textbf{3.57} & (0.09) \\
+\greydashedmidrule
+TMLE-L & -2.06 & (0.10) & 3.10 & (0.07) \\
+C-Learner-L & \textit{\textbf{-0.792}} & (0.11) & \textit{\textbf{2.89}} & (0.07) \\
+\bottomrule
+\end{tabular}
+\end{subtable}
+\hspace{-3.15em}
+\begin{subtable}{.42\linewidth}
+\centering
+\caption{$N=1000$} %
+\begin{tabular}{rrrr}
+\toprule
+ \multicolumn{2}{c}{Bias} & \multicolumn{2}{c}{Mean Abs Err} \\
+\cmidrule(lr){1-2}
+\cmidrule(lr){3-4}
+-0.43 & (0.04) & 1.17 & (0.03)\\
+ 105.46 & (59.84) & 105.67 & (59.84) \\
+6.83 & (0.33) & 7.02 & (0.32) \\
+\greymidrule
+-41.37 & (24.82) & 41.39 & (24.82) \\
+-8.35 & (0.43) & 8.37 & (0.43) \\
+-17.51 & (3.49) & 17.51 & (3.49) \\
+\textbf{-4.40} & (0.07) & \textbf{4.42} & (0.07) \\
+\greydashedmidrule
+-3.68 & (0.06) & 3.68 & (0.05) \\
+\textit{\textbf{-1.89}} & (0.07) & \textit{\textbf{2.27}} & (0.06) \\
+\bottomrule
+\end{tabular}
+\end{subtable}
+\hfill
+\hspace*{\fill}
+\caption{%
+Comparison of estimators on misspecified  \citet{KangSc07} settings in 1000 tabular simulations, for linear outcome models (\Cref{sec:ks_linear}). Asymptotically optimal methods are listed beneath the solid horizontal divider. 
+Asymptotically optimal methods that use a logistic link are below the dashed horizontal divider. 
+We highlight the best-performing \emph{asymptotically optimal} method, not including the logistic link, in \textbf{bold};
+we highlight the best-performing \emph{asymptotically optimal} method \emph{overall} in \textbf{\textit{bold-italic}}. Standard errors are displayed in parentheses to the right of the point estimate.
+}
+    \label{tb:linear_simulation}
+\end{table}
+
+
+
+
+
+
+
+\subsubsection{Linear Outcome Models}
+\label{sec:ks_linear}
+Linear outcome models are appealing due to their simplicity and interpretability, and are a fundamental tool for both theorists and practitioners. 
+\looseness=-1 Here, 
+we fit a linear model $\what\mu(X)$ on covariates $X$ to predict the potential outcome $Y$. %
+The outcome models we employ achieve an $R^2$ value close to 0.99, indicating a high degree of fit to the observed data. 
+We also fit logistic propensity score models $\what \pi$; the ROC is approximately 0.75, suggesting reasonable %
+classification performance. %
+Following the original study by \citet{KangSc07}, 
+we do not distinguish between data splits; there is only one split (%
+$P_{\rm train}=P_{\rm val}=P_{\rm eval}$ in 
+\Cref{sec:data_splitting}). %
+
+
+
+
+We present a comparison of ATE estimators that use $\what \mu, \what \pi$ as described above in Table~\ref{tb:linear_simulation}. 
+In this table, ``Direct'' refers to the plug-in with the outcome model trained as usual (``OLS'' in \citep{KangSc07}), ``IPW-SN'' \citep{KangSc07} refers to self-normalized IPW (a.k.a. Hajek estimator~\citep{ding2023course}), and ``AIPW-SN'' refers to self-normalized AIPW (see Section~\ref{sec:other_methods}). 
+C-Learner performs best out of asymptotically optimal methods (AIPW, AIPW-SN, TMLE, C-Learner) in this setting, demonstrating strong numerical stability despite extreme inverse propensity weights. In some cases, the C-Learner improves upon AIPW and TMLE by orders of magnitude.\ifdefined\msom\else \footnote{The median absolute error is reported in \cite{KangSc07}. Qualitative results are the same under this additional metric, which we omit for easier exposition. In \cref{sec:ks_more_results}, we show similar results for other metrics such as RMSE and median absolute error.} \fi\ifdefined\msom  
+In \cref{sec:ks_more_results}, we show similar results for other metrics such as RMSE and median absolute error.\fi 
+
+
+
+Even when outcomes are not truly bounded (here they are Gaussian), it is common to implement the TMLE via a logistic link for improved estimator stability. Therefore, %
+in addition to TMLE~\eqref{eqn:tmle} with the squared loss, we also compare with the logistic formulation of TMLE (``TMLE-L'') using the \texttt{tmle} R package~\citep{gruber2012tmle}. To use the logistic link, one needs to normalize the values of $Y$ to be between zero and one, which requires an upper and lower bound for $Y$. Even when $Y$ is not actually bounded, such lower and upper bounds can be roughly estimated from data. %
+We can also formulate the C-Learner using the logistic link, which we call ``C-Learner-L''. We find that C-Learner-L improves upon TMLE-L as well, demonstrating that C-Learner can be used in conjunction with other heuristics to improve and stabilize estimates. Details of C-Learner with the logistic link are in \Cref{sec:exp_details}.
+
+
+
+
+\paragraph{Numerical Instability and Common Ways To Mitigate}
+
+
+ATE estimation methods involving inverse propensity weights are known to be numerically unstable if the propensity score $\what\pi(X)$ is close to 0. One way to address this instability %
+is through normalizing these inverse propensity score weights. We find that self-normalized versions of IPW and AIPW are more stable and have better performance than their original versions, e.g. in Table~\ref{tb:linear_simulation}.  
+
+Another common heuristic to handle extreme estimated propensity scores is to truncate $\what\pi(X)$ for a chosen small $\eta>0$ so that if $\what\pi(X)<\eta$, we redefine $\what \pi(X) := \eta$ \citep{ding2023course,cole2008constructing}. %
+As dealing with extreme estimated propensity scores $\what \pi(X)$ can be challenging, another option is to avoid these difficult $X$ with small $\what \pi(X)$ entirely by adjusting the estimand to exclude or down-weight values of $X$ for which $\what \pi(X)$ takes extreme values~\citep{CrumpHoImMi06,li18}. 
+We show in \cref{sec:ks_more_results} that while AIPW and TMLE perform poorly using raw estimated propensity scores $\what\pi$, both perform better after truncation. 
+We emphasize that C-Learner outperforms other asymptotically optimal methods in settings with low overlap, without needing to use heuristics like normalization or truncation. 
+
+Lastly, additional assumptions, such as bounded outcomes, can be used to improve estimator stability. We also compare with the logistic formulation of TMLE in \Cref{tb:linear_simulation}. %
+
+
+
+
+
+
+
+\begin{wrapfigure}[10]{r}{0.5\textwidth}
+    \centering
+    \vspace{-1cm}
+    \includegraphics[scale=0.4]{images/plot_prop_1000_2.pdf}
+    \caption{Empirical density of fitted propensity
+    scores $\what\pi$, for \citet{KangSc07} settings modified with parameter $c\in\{0.25,1,1.75\}$. Histograms across 1000 datasets with size 200 each.}
+    \label{fig:density_propensity}
+\end{wrapfigure}
+
+\looseness=-1 \paragraph{Estimator Performance When Varying Overlap Between Treatment and Control} In order to understand how quickly estimator performance deteriorates in settings with low overlap, we compare how estimators perform in different data settings that vary by the degree of overlap or variation in propensity scores by modifying the treatment assignment. Specifically, we scale the logit of the treatment mechanism by a parameter $c$ such that if $c = 0$, every observation has an equal chance of being observed, while as $c$ increases, treatment probabilities become more extreme (i.e. closer to 0 or 1). 
+See \Cref{sec:ks_sensitivity} for more details. 
+In \Cref{fig:density_propensity}, we display the empirical density of the the fitted propensity scores for $c \in \{ 0.25, 1, 1.75\}$. The case in which $c = 1$ is precisely the original setting of \citet{KangSc07}. In \Cref{fig:mae_vs_prop}, we plot in log scale the mean absolute error of each estimator as a function of the scaling parameter $c$. The other asymptotically optimal methods and IPW deteriorate quickly as the fitted propensities become extreme, while the C-Learner deteriorates an order of magnitude slower. In \Cref{tb:prop_stats_ks} and \Cref{tb:1_prop_stats_ks} in~\Cref{sec:ks_sensitivity}, we compute statistics for learned propensity scores $\what\pi(X)$ for various values of $c$, such as the minimum, maximum and standard deviation.
+
+\citet{robins2007comment} noted that methods like the AIPW, for example, perform poorly in the setting proposed by \citet{KangSc07} 
+due to high variability in propensity scores. They thus suggest considering the flipped version of the task, in which we want to estimate $\wt\psi(P):= P[Y(0)]$ instead; there, propensity scores are not extreme, and asymptotically optimal methods such as AIPW work well. \citet{robins2007comment} thus ask the following question (rewritten to match our notation): ``Can we find doubly robust estimators that, under the authors' chosen joint distribution for $(X,A,(1-A)Y)$, both perform almost as well as the direct method for $P[Y(1)]$ 
+and yet perform better than the direct method for $P[Y(0)]$?''
+We observe that the C-Learner is such an estimator, as it performs well for estimating both $P[Y(0)]$ and $P[Y(1)]$. See \Cref{tb:flipped_ks} in \cref{sec:ks_more_results} for 
+$P[Y(0)]$. 
+
+\ifdefined\pnas
+\else
+\input{bar_figure_tabular_c}
+\fi
+
+
+
+\begin{table}[t]
+\footnotesize
+\centering
+\hfill
+\begin{subtable}{.53\linewidth}
+\centering
+\caption{$N=200$} %
+\begin{tabular}{lrrrr}
+\toprule
+Method & \multicolumn{2}{c}{Bias} & \multicolumn{2}{c}{Mean Abs Err} \\
+\cmidrule(lr){1-1}
+\cmidrule(lr){2-3}
+\cmidrule(lr){4-5}
+Direct & -5.12 & (0.10) & 5.30 & (0.09)\\
+IPW & 1192 & (919) & 1206 & (919) \\
+IPW-SN & -1.01 & (0.10) & 7.29 & (0.33)\\
+Lagrangian & -4.44 & (0.10) & 3.57 & (0.09) \\
+\greymidrule
+AIPW & 275 & (215) & 280 & (215) \\
+AIPW-SN & \textbf{-0.82} & (0.24) & 4.53 & (0.19) \\
+TMLE & 487 & (345) & 10927 & (493) \\
+C-Learner & -2.89 & (0.10) & \textbf{3.53} & (0.07) \\
+\bottomrule
+\end{tabular}
+\end{subtable}
+\hspace{-3.15em}
+\begin{subtable}{.42\linewidth}
+\centering
+\caption{$N=1000$} %
+\begin{tabular}{rrrr}
+\toprule
+ \multicolumn{2}{c}{Bias} & \multicolumn{2}{c}{Mean Abs Err} \\
+\cmidrule(lr){1-2}
+\cmidrule(lr){3-4}
+-3.48 & (0.04) & 3.49 & (0.04)\\
+28.3 & (3.23) & 32.30 & (3.23) \\
+2.26 & (0.29) & 4.85 & (0.26)\\
+-2.29 & (0.04) & 2.34 & (0.05) \\
+\greymidrule
+2.28 & (0.52) & 4.58 & (0.51) \\
+\textbf{0.36} & (0.14) & 2.74 & (0.15) \\
+17.3 & (10.20) & 20.05 & (10.23) \\
+-1.92 & (0.04) & \textbf{2.03} & (0.04) \\
+\bottomrule
+\end{tabular}
+\end{subtable}
+\hfill
+\hspace*{\fill}
+\caption{\looseness=-1 Comparison of estimators on misspecified \citet{KangSc07} settings, in 1000 tabular simulations, for gradient boosted regression tree outcome models (\Cref{sec:ks_xgb}). Asymptotically optimal methods are listed beneath the horizontal divider. We highlight the best-performing \emph{asymptotically optimal} method in \textbf{bold}. %
+Standard errors are displayed in parentheses to the right of the point estimate.
+}
+
+    \label{tb:linear_simulation_xgb}
+\end{table}
+
+\input{experiments_ks_ipw}
+
+
+\subsubsection{Gradient Boosted Regression Tree Outcome Models.}
+\label{sec:ks_xgb}
+We now demonstrate the flexibility of the C-Learner by using gradient boosted regression trees as outlined in \cref{sec:methods_boosting}. As before, the propensity model $\what\pi$ is fit as a logistic regression on covariates $X$.  
+Since sample splitting is more appropriate for this flexible model class, we use cross-fitting with $K=2$ folds as 
+we describe in 
+\cref{sec:data_splitting}, and treat more formally in \cref{sec:theory_text}.  Additional implementation details, such as the grid of hyperparameters for tuning and coverage results are deferred to \cref{sec:ks_experiment_details}. 
+
+The results for the mean absolute error and their respective standard errors are displayed in Table~\ref{tb:linear_simulation_xgb}. The C-Learner outperforms the direct method and achieves the best mean absolute error (MAE) among \emph{all} estimators and across \emph{all} sample sizes. For comparison, we also include
+a plug-in method where the outcome model is learned using only the first stage in 
+\cref{sec:methods_boosting}. 
+Note that the first stage by itself does not aim to make the estimate of the first-order error term zero, so that the resulting estimator is not asymptotically optimal. 
+In the results in Table~\ref{tb:linear_simulation_xgb} this is labeled as ``Lagrangian'', as it can be seen as a Lagrangian relaxation of the C-Learner framework. Especially for small sample sizes (e.g. $N=200$), the IPW, AIPW, and TMLE estimators perform very poorly, likely due to being sensitive to extreme propensity weights. 
+Self-normalization for both IPW (``IPW-SN'') and AIPW (``AIPW-SN'') is crucial in these settings. 
+
+\looseness=-1 In \Cref{tb:linear_simulation_xgb_trim} in \cref{sec:ks_more_results}, we present results when truncating $\what \pi(X)$ at arbitrary thresholds of of 0.1\% and 5\%. There, C-Learner again performs better (truncating at 0.1\%) or similarly to TMLE and AIPW-SN (truncating at 5\%), and better than other methods.
+
+
+
+
+\subsection{CivilComments Dataset and Neural Network Language Models}\label{sec:civilcomments}
+Neural networks can learn good feature representations for image and text data. 
+We construct a new semisynthetic causal inference dataset using text covariates. 
+
+
+\paragraph{Setting}
+Content moderation is a fundamental problem 
+for maintaining the integrity of social media platforms. 
+We consider a setting in which we wish to
+measure the average level of toxicity across all user
+comments. 
+It is infeasible to have human experts label all comments for 
+toxicity, and the comments that 
+get flagged for human labeling may be 
+a biased sample. 
+This is a mean missing outcome problem (\cref{sec:ate}).
+
+
+We use the CivilComments dataset \citep{civilcomments}, which contains 
+real-world online comments and corresponding human-labeled toxicity scores.
+The dataset contains toxicity labels $Y(1)$ for all 
+comments $X$ (which provides a ground truth to compare to), 
+and we construct the labeling (treatment) mechanism $A \in \{0, 1\}$
+to induce selection bias.
+Specifically, 
+whether the toxicity label for a comment can be observed is drawn as 
+$    A\sim \textrm{Bernoulli}( g(X) )$ where 
+$g(X)=\textrm{clip}(b(X), l, u)$ 
+and $\textrm{clip}(y,l,u)$ is $        \max(l,y)$ if $y\leq l$, and $\min(u,y)$ if $y>u$. 
+We set $u=0.9$ and $l=10^{-4}$. 
+A lower $l$ implies more extreme $\pi(X)$ (and thus also $\what \pi(X)$), i.e. less overlap. %
+Here, $b(X)\in[0,1]$ is a continuous measure of whether comment $X$ relates to the demographic identity ``Black'',
+ from the dataset.
+The labeled data suffers from the following selection bias: within this dataset, 
+comments mentioning the demographic identity ``Black'' tend to be labeled as more toxic, compared to ones that don't, so a naive average of toxicity over labeled units would overestimate the overall toxicity. From a causal perspective, we have induced confounding, can be handled by ATE estimators. %
+
+\paragraph{Procedure}
+\ifdefined\pnas
+    We demonstrate how C-Learner can be instantiated with neural networks. To learn $\what{\pi}$, $\what{\mu}$, and $\what{\mu}^C$,  we fine-tune a pre-trained DistilBERT model \citep{distilbert} with a linear head using stochastic gradient descent. 
+    
+    We fit nuisance estimators on 100 re-drawn datasets of size 2000 each, from the full dataset of size 405,130. 
+    For C-Learner, we consider two ways of picking hyperparameters ($\lambda$ and learning rate), as described in \cref{sec:methods_nn}: one in which we choose hyperparameters for the best outcome model loss on validation data, and one in which we choose hyperparameters that minimize the size of the bias shift. 
+    Additional experiment details are in \cref{sec:nlp_details}. 
+\else
+    We demonstrate C-Learner with neural networks. To learn $\what{\pi}$, $\what{\mu}$, and $\what{\mu}_C$, we fine-tune a pre-trained DistilBERT model \citep{distilbert} with a linear head using stochastic gradient descent, with $\what\mu^C$ learned using the procedure described in \cref{sec:methods_nn}. 
+    We train $\what \mu$
+    using squared loss on labeled units, and propensity models $\what \pi$ using the logistic loss. 
+    We fit nuisance estimators on 100 re-drawn datasets of size 2000 each, from the full dataset of size 405,130. On each dataset draw, we use cross-fitting, as described in \cref{sec:theory_text}, with $K=2$ folds, for all estimators. We consider two ways of picking hyperparameters ($\lambda$ and learning rate), as described in \cref{sec:methods_nn}: one in which we choose hyperparameters for the best mean squared error on validation data, and one in which we choose hyperparameters that minimize the size of the bias shift. 
+    Additional  details are in \cref{sec:nlp_details}. 
+\fi
+
+
+
+
+\paragraph{Results}
+
+
+\begin{table}[t]
+\vspace{-1.5cm}
+\centering
+\footnotesize
+\begin{tabular}{lrrrr}
+\toprule
+Method & \multicolumn{2}{c}{Bias} & \multicolumn{2}{c}{Mean Abs Err} \\ 
+\cmidrule(lr){1-1}
+\cmidrule(lr){2-3}
+\cmidrule(lr){4-5}
+Direct & 0.173 & (0.008) & 0.177 & (0.007) \\
+IPW & 0.504 & (0.084) & 0.546 & (0.081) \\
+IPW-SN & 0.114 & (0.017) & 0.153 & (0.014) \\
+\greymidrule
+AIPW & 0.084 & (0.043) & 0.307 & (0.032) \\
+AIPW-SN & 0.116 & (0.018) & 0.161 & (0.014) \\
+TMLE & -1.264 & (1.361) & 1.802 & (1.355) \\
+C-Learner (best val MSE) & 0.103 & (0.015) & 0.141 & (0.011) \\
+C-Learner (smallest bias shift) & \textbf{0.075} & (0.012) & \textbf{0.115} & (0.008) \\
+\bottomrule
+\vspace{0.05em}
+\end{tabular}
+
+\caption{Comparison of estimators in the CivilComments~\citep{civilcomments} semi-synthetic dataset (\Cref{sec:civilcomments}) over 100 re-drawn datasets, with $l=10^{-4}$. Asymptotically optimal methods are listed beneath the horizontal divider. We highlight the best-performing method in \textbf{bold}. Estimators (besides the ``smallest bias shift'' C-Learner) are analogous to those in \Cref{sec:ks}. Standard errors are displayed within parentheses to the right of the point estimate.}
+    \label{tab:LLM_results}
+\end{table}
+In Table~\ref{tab:LLM_results} (a low overlap setting with $l=10^{-4})$, both variants of C-Learner %
+In \cref{sec:more_nlp_results} we also investigate settings with both low and high overlap ($l=10^{-2},10^{-3},10^{-4}$). We observe C-Learner performs better compared to other asymptotically optimal methods in datasets with low overlap, and more comparably to other asymptotically optimal methods with higher overlap. 
+We also display a subset of these results in the second row of \Cref{fig:intro_bar_comparison}, with 
+$\lambda$ chosen to have the best validation MSE. 
+
+
+\looseness=-1 These results with text covariates echo our tabular results (\Cref{sec:ks}), %
+suggesting C-Learner's strong performance in low-overlap extends to more complex data settings. 

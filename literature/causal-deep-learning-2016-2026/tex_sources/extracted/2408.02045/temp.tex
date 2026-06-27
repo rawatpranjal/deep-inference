@@ -1,0 +1,827 @@
+\documentclass[11pt]{article}
+
+\usepackage{jmlr2e}
+\usepackage{lastpage}
+
+\newcommand{\dataset}{{\cal D}}
+\newcommand{\fracpartial}[2]{\frac{\partial #1}{\partial  #2}}
+
+% Heading arguments are {volume}{year}{pages}{date submitted}{date published}{paper id}{author-full-names}
+
+\jmlrheading{1}{2000}{1-\pageref{LastPage}}{4/00}{10/00}{2022a}{Lin Liu}
+
+% Short headings should be running head and authors last names
+
+\ShortHeadings{Neural Semiparametric}{Liu}
+\firstpageno{1}
+
+\def\MAR{\text{MAR}}
+\def\MNAR{\text{MNAR}}
+\def\MNARshadow{\text{MNAR-shadow}}
+\def\fred{\mathsf{Fredholm\mbox{-}NN}}
+\def\Loss{\mathsf{Loss}}
+\def\calN{\mathcal{N}}
+\def\train{\mathrm{train}}
+\def\test{\mathrm{test}}
+\def\relu{\mathsf{relu}}
+\def\tanh{\mathsf{tanh}}
+\def\sigmoid{\mathsf{sigmoid}}
+\def\eff{\mathrm{eff}}
+\def\poly{\mathsf{Poly}}
+
+\makeatletter
+\def\thanks#1{\protected@xdef\@thanks{\@thanks
+        \protect\footnotetext{#1}}}
+\makeatother
+
+\begin{document}
+\title{Towards computerized neural semiparametric statistics}% \thanks{$^{1}$ SJTU-Yale Joint Center for Biostatistics and Data Science, Shanghai Jiao Tong University; $^{2}$ Department of Biostatistics and Bioinformatics, School of Life Sciences, Shanghai Jiao Tong University; $^{3}$ Institute of Natural Sciences, MOE-LSC, and School of Mathematical Sciences, Shanghai Jiao Tong University; $^{4}$ Shanghai Artificial Intelligence Laboratory; $^{5}$ Department of Statistics and Actuarial Sciences, University of Hong Kong; $^{6}$ Department of Statistics and Data Sciences, National University of Singapore}
+\author{anyone wishing to contribute! (Xi-An Li, Qinshuo Liu, Zhonghua Liu, BaoLuo Sun, Zixin Wang, Lei Zhang)}
+
+\editor{}
+
+\maketitle
+
+\begin{abstract}
+In a number of areas in applied mathematics, statistics, and machine learning, over-parameterized neural networks (ONNs) have shown their superior empirical performance compared to classical tools and algorithms. With no surprise, ONNs have also percolated into semiparametric statistics. Most of the existing works in semiparametric statistics, however, simply treat ONNs as more effective machine learning or nonparametric regression techniques for nuisance parameter estimation. In this paper, we further expand the territory where ONNs can be used in semiparametric statistics. In particular, we propose to use ONNs as numerical solvers for Fredholm integral equations, a numerical problem oft-encountered when constructing semiparametric estimators. We coin our method $\fred$, which is not only a numerical solver for integral equations, but also an end-to-end ONN-based algorithm that outputs parameter estimates in semiparametric statistical models. Both theory and simulation studies are provided to demonstrate the competitive performance of $\fred$.
+\end{abstract}
+
+\noindent{\it Keywords: Semiparametric statistics, Efficient influence function, Fredholm integral equations, Over-parameterized neural networks, Computerized semiparametric estimation}
+
+\section{Introduction}
+\label{sec:intro}
+
+The ultimate undertaking of semiparametric statistical theory \citep{bickel1998efficient, van1998asymptotic, van2002part} is to construct estimators that make efficient use of the data, yet without relying on {\it unnecessary and possibly incorrect} modeling or structural assumptions. Conceptually, semiparametric statistics can be viewed as the middle ground between the nonparametric and parametric statistical paradigms: the parametric statistical paradigm often has simple and transparent scientific interpretations whereas the nonparametric counterpart becomes more useful when interpretability is of secondary concern compared to learning accuracy.
+
+Causal inference is one of the few areas in statistics and data sciences, where semiparametric theory is a powerhouse throughout its development in recent history.
+
+Applications of the semiparametric theory in practice, however, often lead to estimators that take the solution to a system of complicated Fredholm integral equations \citep{kress2013linear} as input. In the semiparametric statistics literature, Fredholm integral equations without closed forms have appeared in many influential works, e.g. \citet{robins1994estimation, robins1995semiparametric, scharfstein1999adjusting, robins2004estimation, zhang2019semiparametric, tchetgen2020introduction, zhao2021versatile}, just to name a few. Without a doubt, numerically solving the integral equations impeded the dissemination and popularity of semiparametric statistics. Various efforts have been made in order to get around of solving integral equations while constructing semiparametric estimators, but they either require tremendous amount of ingenuity, such as in \cite{matsouaka2017instrumental}, or seek additional modeling assumptions to render closed-form solutions, such as in \cite{liu2021efficient, yang2021semiparametric}.
+
+Recent innovations in over-parameterized neural networks (ONNs) or deep learning have ushered in an era of artificial intelligence in many scientific disciplines, including statistics and econometrics. It is very natural to view ONNs as a powerful nonparametric method given its tremendous empirical success in a variety of real-world learning problems \citep{krizhevsky2012imagenet, bruna2014spectral, schmidhuber2015deep, silver2017mastering, carleo2017solving, baldi2018deep, jumper2021highly, tunyasuvunakool2021highly}. Indeed, the popularity of this viewpoint is reflected by the paradigm shift in nonparametric statistics, where there is now an increasing body of works studying the statistical properties of ONNs combined with iterative optimization algorithms such as gradient descent \citep{schmidt2020nonparametric, barron2018approximation, suzuki2019adaptivity, e2020machine, suzuki2020benefit, liang2020just, dou2021training, tsuji2021estimation} from a nonparametric statistical perspective. Similar paradigm shift is also slowly taking place in semiparametric statistics \citep{chen2020efficient, liu2020nearly, liu2020rejoinder, chernozhukov2020adversarial, farrell2021deep}.
+
+In a different vein, applied and computational mathematics communities have demonstrated ONNs to be an extremely effective numerical tool that triumphs over most traditional methods \citep{e2020machine}. For instance, ONNs have been successfully applied to solve large-scale ordinary/partial differential equations (ODEs/PDEs) \citep{e2018deep, cai2019multi, li2020multi, luo2020two, zhang2021mod}, which are otherwise almost impossible to solve in practice. We will review related works in Section \ref{sec:dnn-review} in more detail as we believe that those who are familiar with semiparametric statistics might not be fully aware of this line of research.
+
+Inspired by the above line of works, it is natural to ask the question if ONNs can be incorporated into the current semiparametric statistical pipeline beyond estimating nuisance parameters, but as a solver for Fredholm integral equations. The goal of this paper is thus to translate this idea into a concrete and potentially useful method in practice. In a sense, our work is also related to the literature on computerizing semiparametric statistics \citep{frangakis2015deductive, carone2019toward, williamson2020unified, bhattacharya2020semiparametric, mai2020semiparametric}, although this line of works focuses on a more ambitious goal of numerically deriving the efficient influence functions (EIFs) for the parameter of interest in semiparametric models. An immediate research direction is to synthesize the algorithm developed in our paper into the general pipeline of computerizing EIFs, such as \citet{carone2019toward}.
+
+The contribution of this paper is twofold. On the practical side, we propose a partly automatic and end-to-end deep learning-based algorithm for efficient parameter estimation in semiparametric models, without separating solving the Fredholm integral equations and solving the score equations. A recent line of research shows that the early phase neural network training grasps the low-complexity component of the target function \citep{xu2018understanding, hu2020surprising, xu2020frequency}. This powerful intuition motivates the design of $\fred$ by using only a few epochs to update the neuron parameters during the step of solving the Fredholm integral equations, as the underlying solution has low complexity in most of the statistical applications; for more details, see Section \ref{sec:fred}.
+
+On the theoretical side\footnote{As a further disclaimer, this paper serves as a proof-of-concept on how to exploit the benefit of ONNs for semiparametric statistics as a numerical solver for Fredholm integral equations. We therefore do not attempt to study any new statistical problems or develop any new semiparametric efficient estimators. All the examples given in the paper come from existing literatures and known results.}, we provide a set of sufficient conditions to guarantee that the estimators $\hat{\theta}$ of the parameter of interest $\theta$ from the output of $\fred$ are Centered and Asymptotically Linear (CAN) in the large sample limit. The theoretical analysis is based on several recent works \citep{ma2018priori, e2020machine, e2021barron, luo2020two, lu2021prioria, lu2021priorib, chen2021representation} studying the theoretical properties of ONNs in solving numerical PDEs. We would like to emphasize that our theoretical results are preliminary and somewhat limited in the sense that our theory cannot explain all the observed phenomenon in the numerical experiments.
+
+\subsection*{Organization of the paper}
+The rest of our paper is organized as follows. In Section \ref{sec:dnn-review}, we review recent works on using ONNs to solve numerical problems such as high dimensional PDEs. In Section \ref{sec:semi-review}, we briefly review semiparametric statistics and how Fredholm integral equations arise in constructing semiparametric estimators. In Section \ref{sec:fred}, we describe $\fred$ -- the ONN-based end-to-end algorithm for estimating semiparametric estimators that require solving a Fredholm integral equation numerically. In Section \ref{sec:theory}, we provide some theoretical guarantees on $\fred$. As a proof-of-concept, three simulation experiments are conducted in Section \ref{sec:sim}. The empirical phenomenon emerged in these simulation experiments could also serve as evidence for developing more refined theoretical results. Finally, we conclude our article and discuss future research directions in Section \ref{sec:conclude}.
+
+\subsection*{Notation}
+Before proceeding, in this subsection we collect the frequently used notation throughout this paper. We denote $\theta$ as the parameter of interest and $\eta$ as the potentially infinite-dimensional nuisance parameters. $\bm{\omega}$ is reserved as the entire neuron weight parameters for neural networks, which could be represented as a tensor for deep wide neural networks. $\sigma (\cdot)$ is used to denote activation functions and we may attach subscript to $\sigma$ for specific activation functions: e.g. $\sigma_{\relu}, \sigma_{\tanh}, \sigma_{\sigmoid}$. $\Vert v \Vert$ denotes the $\ell_{2}$-norm of the vector $v$. Also we denote \textbf{nn} as our model which is the nueral network method.
+
+\section{Problem setup}
+\label{sec:setup}
+
+Consider the following generic semiparametric statistical model:
+\begin{equation}
+    \label{model}
+\end{equation}
+
+\eqref{model} can often be rewritten as an integral equation of the following form:
+\begin{equation}
+    \label{fredholm}
+    \int b () \diff 
+\end{equation}
+
+\section{Deep learning-based numerical solvers}
+\label{sec:dnn-review}
+
+In this section, we review some of the recent works that use deep learning to solve numerical problems. The list is by no means trying to be comprehensive as there is a large and yet still fast growing body of literature.
+
+[Xi-An, do you mind writing one to two paragraphs for this section?]
+
+\section{A brief review of semiparametric statistics}
+\label{sec:semi-review}
+
+In this section, we briefly describe how Fredholm integral equations arise in constructing estimators for a parameter in a semiparametric model. To be concrete, 
+
+In this paper, we do not always try to find EIFs. Rather, we deal with a more general problem in which computing the estimator involves a step of projection onto the model tangent space, that in turn leads to a Fredholm integral equation.
+
+\begin{example}
+\label{eg:mnar}
+In the first example, we consider the problem of estimating the mean of a parametric model when data can be missing not at random (or MNAR). Missing data problems have a long history in statistics and econometrics \citep{rubin1976inference}. Notably, now even research in DNNs starts to address the issue of missing data \citep{smieja2018processing}. Blah blah on missing data and causal inference.
+
+The simulation data is generated as follows:
+\begin{align*}
+X & \sim \calN (\mu = 0.5, \sigma^{2} = 0.25) \\
+Y & = 0.25 - 0.5 X + \calN (0, 1) \\
+R & \sim \text{Bernoulli} \left( \frac{e^{1 + Y}}{1 + e^{1 + Y}} \right) \\
+& \text{ and $Y$ is missing if $R = 0$}
+\end{align*}
+Here the missing mechanisms of $Y$ depends on the underlying value of $Y$, which is the so-called MNAR setup. In this setting, the parameter of interest is $\theta = \beta_{0} = (\beta_{0, 1}, \beta_{0, 2})^{\top}$ and the nuisance parameter $\eta$ is the marginal law of $Y$. In a recent work \citep{zhao2021versatile}, the authors showed that $\theta$ is still identifiable by positing a possibly misspecified model $\tilde{\eta}$ for $\eta$ and projecting the misspecified likelihood onto the ortho-complement to the nuisance tangent space. In the above example, we need to first specify an arbitrary marginal model $\eta^{\ast}$ for $Y$ and solve
+    \begin{equation}
+    \label{key}
+    \begin{split}
+    & \ \frac{1}{N} \sum_{i = 1}^{N} S_{\beta}^{\ast} (X_{i}, R_{i}, R_{i} Y_{i}) - R_{i} b^{\ast} (Y_{i}; \beta) + (1 - R_{i}) \frac{\int f_{Y | X} (t, X_{i}; \beta) b^{\ast} (t; \beta) \eta^{\ast} (t) \diff t}{\int f_{Y | X} (t, X; \beta) (1 - \eta^{\ast} (t)) \diff t} = 0 \\
+    \text{where } & \ \frac{1}{N} \sum_{i = 1}^{N} \left\{ \frac{\partial}{\partial \beta} f_{Y | X} (y, X_{i}; \beta) + \frac{\int \frac{\partial}{\partial \beta} f_{Y | X} (t, X_{i}; \beta) \eta^{\ast} (t) \diff t}{\int f_{Y | X} (t, X_{i}; \beta) (1 - \eta^{\ast} (t)) \diff t} f_{Y | X} (y, X_{i}; \beta) \right\} \\
+    = & \ \frac{1}{N} \sum_{i = 1}^{N} \left\{ b^{\ast} (y; \beta) f_{Y | X} (y, X_{i}; \beta) + \frac{\int b^{\ast} (t; \beta) f_{Y | X} (t, X_{i}; \beta) \eta^{\ast} (t) \diff t}{\int f_{Y | X} (t, X_{i}; \beta) (1 - \eta^{\ast} (t)) \diff t} f_{Y | X} (y, X_{i}; \beta) \right\}.
+    \end{split}
+    \end{equation}
+\end{example}
+
+\begin{example}
+\label{eg:sensitivity}
+
+In the second example, we consider the problem of sensitivity analysis of causal effect estimates when certain ignorability assumptions (i.e. no unmeasured confounding) are violated.
+
+Let us consider the following simple example from \cite{zhang2019semiparametric}:
+\begin{equation}
+\label{model-sens}
+\begin{split}
+& X_{1},..., X_{p} \mathop{\sim}\limits^{iid} \text{Uniform} (0, 1);  \\
+& U \sim \text{Beta} (2, 2) \\
+& \text{logit} P\left( A = 1 | X_{1}, ... , X_{p}, U \right) = 3\sum_{j=1}^{p}(-1)^{j+1}X_{j} + 2 U \\
+& \text{logit} P\left( Y = 1 | X_{1}, ... ,X_{p}, U, A \right) = 4\sum_{j=1}^{p}(-1)^{j+1}X_{j} + \theta A + 2 U
+\end{split}
+\end{equation}
+so both treatment $A$ and outcome $Y$ are binary and the parameter of interest $\theta = 2$. So the observed data is $O = (X, A, Y)$ whereas the full data is $D = (X, U, A, Y)$. In a sensitivity analysis, we will posit the strengths of dependence on $U$ in both the outcome model and the treatment model. So the likelihood of the full data factorizes into
+\begin{align*}
+f (X, U, A, Y) = f (X) f (U | X) f (A | X, U; \kappa, \gamma) f (Y | X, U, A; \lambda, \delta, \theta).
+\end{align*}
+
+To estimate $\beta$, we follow the procedure below:
+\begin{enumerate}
+\item Posit a working model $f^{\ast} (U = u | X)$ to be $\text{Uniform} (-B, B)$ where $B$ is sufficiently large so from the joint law $f^{\ast} (X, U, A, Y) = f (X) f^{\ast} (U | X) f (A | X, U; \kappa, \gamma) f (Y | X, U, A; \lambda, \delta, \theta)$ we can find the posited but incorrect score $S_{\theta}^{\ast} (X, U, A, Y) = \frac{1}{f^{\ast} (X, U, A, Y)} \frac{\partial f^{\ast} (X, U, A, Y)}{\partial \theta}$;
+\item Solve for $\mathrm{b}_{\lambda} (u, x)$ in the following integral equation
+\begin{equation}
+\label{fred-sensitivity}
+\int \mathrm{b}_{\lambda} (u', x) K (u', u, x) \diff u' = C (u, x) - \lambda \mathrm{b}_{\lambda} (u, x)
+\end{equation}
+where $C (u, x)$ is a known function up to some unknown parameters. In particular, $C (u, x)$ and $K (u', u, x)$ are of the forms
+\begin{equation}
+\begin{split}
+C (u, x) & = \int \frac{\int S_{\theta} (y, a, x, u') f (y, a | x, u') f^{\ast} (u' | x) \diff u'}{g^{\ast} (y, a, x)} f (y, a | x, u) \diff y \diff a \\
+K (u', u, x) & = f^{\ast} (u' | x) \int \frac{f (y, a | x, u') f (y, a | x, u)}{g^{\ast} (y, a, x)} \diff y \diff a
+\end{split}
+\end{equation}
+where
+\begin{equation}
+\begin{split}
+g^{\ast} (y, a, x) & = \int f (y, a | x, u') f^{\ast} (u' | x) \diff u' \\
+f (y, a | x, u) & = f (y | a, x, u) f (a | x, u)
+\end{split}
+\end{equation}
+\item Solve the parameter of interest $\theta$ by solving
+\begin{equation}
+\label{score-sensitivity}
+\begin{split}
+0 & = \frac{1}{n} \sum_{i = 1}^{n} S_{\eff}^{\ast} (X_{i}, A_{i}, Y_{i}; \theta) \\
+\text{where } S_{\eff}^{\ast} (X_{i}, A_{i}, Y_{i}; \theta) & = \frac{\int [S_{\theta}^{\ast} (Y_{i}, A_{i}, X_{i}, u) - \mathrm{b}_{\lambda} (u, X_{i})] f (Y_{i}, A_{i} | X_{i}, u) f^{\ast} (u | X_{i}) \diff u}{\int f (Y_{i}, A_{i} | X_{i}, u) f^{\ast} (u | X_{i}) \diff u}
+\end{split}
+\end{equation}
+\end{enumerate}
+
+%这个remark我注释掉了，学长您看要是有意义就加上，但是肯能写到这里不大好
+% \begin{remark}\leavevmode
+% \begin{enumerate}
+%     \item A guess about the form of $b()$. By the integral equation (\ref{fred-sensitivity}) with $\lambda = 0$ or the efficient score (\ref{score-sensitivity}), it seems that $b(u,x)$ is in some sense an approximation to the original score $S_\theta(y,a,x,u)=a \cdot (y-py)$, where $py = \sigmoid(4\sum_{j=1}^{p}(-1)^{j+1}x_{j} + \theta a + 2 u)$. Note the Taylor series expansion $\sigmoid(t) \approx \frac{1}{2} + \frac{1}{4}t -\frac{1}{48}t^3 + \frac{1}{480}t^5$, then ......
+%     \item The issue of data imbalance.
+% \end{enumerate}
+% \end{remark} 
+
+
+\end{example}
+
+\begin{example}
+\label{eg:nde}
+A third example 
+\end{example}
+
+We refer the interested readers to \citet{bickel1998efficient, tsiatis2007semiparametric, van2002part} for further details on semiparametric theory.
+
+\section{The $\fred$ algorithm}
+\label{sec:fred}
+The $\fred$ algorithm is described in Algorithm \ref{alg:fred}. It is an alternating procedure that iterates over two different subroutines. The key feature of $\fred$ is to parameterize the solution $\sfb (\cdot)$ to the Fredholm integral equation as a neural network $\sfb_{nn} (\cdot; \bm{\omega}) \in \calB_{nn}$, where $\bm{\omega}$ denotes the weight parameters of the neural network. In this work, we focus on $L$-layer feed-forward neural networks, the simplest architecture. It is interesting to explore other alternative options (e.g. residual neural networks (RNNs)), which is left for future works. The empirical loss function for the training process is comprised of two terms $\calL_{score}$ and $\calL_{fred}$:
+\begin{equation}
+\label{loss}
+\calL_{\train} (\theta'; \bm{\omega}) \coloneqq \calL_{score} + \calL_{fred} \equiv \frac{1}{2 n} \Vert \hat{\bbS}_{n} (O; \theta', \sfb_{nn} (\cdot; \bm{\omega})) \Vert^{2} + \frac{1}{2 m} \Vert \sfb_{nn} (\cdot; \bm{\omega}) - \sfb \Vert^{2}
+\end{equation}
+where $m$ denotes the Monte Carlo size to generate pseudo-data for solving Fredholm integral equations\footnote{In this paper, we will use ``pseudo-data'' to refer to the Monte Carlo samples generated for solving Fredholm integral equations, in order to distinguish from the actual data from which we try to estimate $\theta$, the parameter of interest.}. Denote the global minimizer of $\calL_{\train} (\theta'; \bm{\omega})$ as
+\begin{equation}
+(\tilde{\theta}, \tilde{\bm{\omega}})^{\top} = \arg \min_{\theta' \in \bbR^{d}, \bm{\omega} \in \Omega} \calL_{\train} (\theta'; \bm{\omega}).
+\end{equation}
+
+Recall that under the true parameters $\theta$ and $\sfb$, one immediately has
+\begin{align*}
+\bbE_{\theta} \left[ \hat{\bbS}_{n} (O; \theta, \sfb) \right] \equiv 0.
+\end{align*}
+
+% 之前的算法我注释掉了，应该是不需要了
+% \begin{algorithm}
+% \caption{Pseudocode for the $\fred$ algorithm}\label{alg:fred}
+% \begin{algorithmic}[1]
+% \State Input: alternating frequency $\lambda$, Monte Carlo pseudo-sample size $m$, convergence tolerance $\delta$, mini-batch size $n_{\text{mini}}$, initializing the updated magnitude over iterations $\epsilon_{\theta} \equiv 1000$ and $\epsilon_{\bm{\omega}} \equiv 1000$;
+% \State Generate $m$ pseudo-data as the input for $\calL_{fred}$;
+% \State While $\epsilon_{\theta} \geq \delta$ and $\epsilon_{\bm{\omega}} \geq \delta$:
+% \State 
+% \State End while;
+% \State Output: $(\hat{\theta}, \hat{\bm{\omega}})$.
+% \end{algorithmic}
+% \end{algorithm}
+
+\begin{algorithm}
+\caption{Pseudocode for the $\fred$ algorithm}\label{alg:fred}
+\begin{algorithmic}[1]
+\State \textbf{Hyperparameters}: alternating frequency $\lambda$, Monte Carlo pseudo-sample size $m$, convergence tolerance $\delta$, hyperparameters of neural networks $\bm{\eta}$
+
+\State \textbf{Input}: data $\bm{S} = \{\bm{O}_i\}_{i=1}^n$
+\State Generate $m$ pseudo-data as the input for $\calL_{fred}$;
+\State \textbf{While} $\epsilon_{\theta} \geq \delta$ and $\epsilon_{\bm{\omega}} \geq \delta$ \textbf{do}:
+\State Update $\theta$ by one-step optimization of $\calL_{score}$ via Adam/SGD.
+
+\State Update $\omega$ by $\lambda$-step optimization of $\calL_{fred}$ via Adam/SGD.
+
+\State \textbf{End while};
+\State \textbf{Output}: $(\hat{\theta}, \hat{\bm{\omega}})$.
+\end{algorithmic}
+\end{algorithm}
+
+\begin{assumption}
+\label{global}
+We make the following assumption on the output of Algorithm \ref{alg:fred}:
+\begin{equation}
+\hat{\theta} = \tilde{\theta} + o_{\bbP_{\theta}} (n^{- 1 / 2}).
+\end{equation}
+\end{assumption}
+
+\noindent The following remarks are in order for Algorithm \ref{alg:fred} and Assumption \ref{global}.
+\begin{remark}\leavevmode
+\begin{enumerate}[label = (\arabic*)]
+\item At least based on the empirical observations, the choice of the activation function $\sigma$ is non-essential; see Section \ref{sec:sim} for more details. Therefore we leave this choice to the users for now.
+\item Other types of training frameworks are indeed possible: e.g. the adversarial/minimax estimation framework recently advocated in \citet{hirshberg2017augmented, chernozhukov2020adversarial, ghassami2021minimax, kallus2021causal}. It is interesting to explore how the minimax framework can be incorporated into $\fred$.
+\item More works are needed to show that the output of $\fred$ indeed satisfies Assumption \ref{global}. It is an ongoing work, but unfortunately we have not obtained satisfying theoretical results.
+\item It might be possible to add regularization terms to $\calL_{\train} (\theta'; \bm{\omega})$. But in this paper, we focus on the un-penalized loss function. At least for the simulation studies considered later in this paper, we did not find adding $L_{1}$ regularization or dropout significantly improves the performance of the algorithm.
+\end{enumerate}
+\end{remark}
+
+\section{Theoretical results}
+\label{sec:theory}
+
+\begin{theorem}
+\label{thm:main}
+$\hat{\theta}$ is the output of $\fred$ described in Algorithm \ref{alg:fred}. Then under the regularity conditions given in Appendix \ref{app:regular}, we have
+\begin{equation}
+\sqrt{n} \left( \hat{\theta} - \theta \right) = \frac{1}{\sqrt{n}} \sum_{i = 1}^{n} \IF_{i} + o_{\bbP_{\theta}} (1).
+\end{equation}
+where $\nu^{2}$ is the semiparametric efficiency bound.
+\end{theorem}
+
+\begin{remark}\leavevmode
+\begin{enumerate}[label = (\arabic*)]
+\item The proof of the above theorem is delegated to Appendix \ref{app:proof}.
+\end{enumerate}
+\end{remark}
+
+\section{Simulation studies}
+\label{sec:sim}
+
+It is quite common nowadays that theoretical results on ONNs might not translate well to practice due to the complexity and number of hyperparameters of ONNs deployed in practice. In this section, three simulation studies related to three examples given in Section \ref{sec:semi-review} are conducted to illustrate (1) the performance of $\fred$ in finite samples and (2) more importantly, when $\fred$ and the theoretical guarantees in Section \ref{sec:theory} might fall short. We hope that these exercises could stimulate further investigations that fill the gap between theory and practice.
+
+\subsection{Benchmark}
+
+We compare the performance of $\fred$ to that of one numerical method which we describe briefly here. Just as the classic approach to solve the integral equations, we reparameterize the unknown function inside the integral equation by expansion of basis function such as polynomial function with different degree, and then estimate the parameters of interest by solving the estimate equation which is restricted to the integral equation via numerical solver (eg: fsolve() in Python or multiroot() in R). 
+
+
+Serving as the top line and bottom line in simulation, we refer to the solution of estimating equation $S_{\theta}(X,A,Y)=0$ and $S^{*}_{\theta}(X,A,Y)=0$ as oracle estimator and biased estimator respectively. The semiparametric estimators, both $\fred$ and basis expansion, should be unbiased and thus are expected to be close to the oracle estimator.
+
+
+\subsection{Example 1: Estimating parameters under missing-not-at-random (MNAR)}
+\label{sec:mnar}
+
+As the first experiment, We apply our $\fred$ algorithm to the problem of  regression under MNAR from Section(\ref{eg:mnar}). Recall that in this model we need to estimate the regression coefficient $\beta = (\beta_{0}, \beta_{1})^{T}$ and the true value is $(0.25, -0.5)^{T}$. 
+
+\subsubsection{tunning of hyperparameters}
+
+The hyperparameters of our algorithm are alternating frequency $\lambda$, pseudo-sample size $m$, and the neural network architectures.
+
+During the tuning and training, we find that in this example the alternating frequency $\lambda$ partly determines the speed and stability of convergence, for the detail see Figure \ref{sim1_fig}. When $\lambda$ is set to 1, i.e. when the neuron parameters $\bm{\omega}$ and the target parameter $\theta$ are updated in every other iteration, it is evident that the training process fails to converge and oscillates with extremely high frequency (blue lines in Figure \ref{sim1_fig}). When we increases $\lambda$, the training process starts to stabilize after a certain number of iterations and $\fred$ eventually outputs $\hat{\theta} \approx \theta = (0.25, -0.5)^{\top}$ (Figure \ref{sim1_fig}). However, there exists a trade-off: when $\lambda = 5$, the training process converges steeply but also exhibits some instability as the iteration continues; whereas when $\lambda = 20$, it takes much longer time for the training process to converge. For the time being, we recommend practitioners try multiple $\lambda$'s (higher than 5) and check if they all eventually converge to the same values. It is an interesting research problem to study an adaptive procedure of choosing $\lambda_{\opt}$ that optimally balances speed and stability of the training. For the pseudo-sample size $m$, we find it unimportant for the output.
+
+
+% \begin{figure}
+% \centering
+% \includegraphics[width = 0.85\textwidth]{al_freq_model1.png}
+% \caption{The evolution of training processes in one simulated dataset of Example \ref{sec:mnar} by setting the alternating frequency $\lambda$ as $1, 5, 10$, or $20$. $\mathsf{x}$-axis is the number of iterations. The upper panels show the evolution of $\beta_{0, 1}$ (left) and $\beta_{0, 2}$ (right) over iterations, while the lower panels show the evolution of the loss corresponding to the score equation (left) and the Fredholm integral equation (right) over iterations.}\label{sim1_fig}
+% \end{figure}
+
+\begin{figure}
+\centering
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = \textwidth]{alternating_beta0_mnar.png}
+\caption{}
+\end{center}
+\end{subfigure}
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = \textwidth]{alternating_beta1_mnar.png}
+\caption{}
+\end{center}
+\end{subfigure}\par\medskip
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = \textwidth]{alternating_loss_ee_mnar.png}
+\caption{}
+\end{center}
+\end{subfigure}
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = \textwidth]{alternating_loss_ie_mnar.png}
+\caption{}
+\end{center}
+\end{subfigure}
+\caption{The evolution of training processes in one simulated dataset of Example \ref{sec:mnar} by setting the alternating frequency $\lambda$ as $1, 5, 10$, or $20$. $\mathsf{x}$-axis is the number of iterations. The upper panels show the evolution of (a) $\beta_{0}$  and (b) $\beta_{1}$ over iterations, while the lower panels show the evolution of the loss corresponding to (c) the score equation  and (d) the Fredholm integral equation over iterations.}\label{sim1_fig}
+\end{figure}
+
+
+The most essential hyperparameters are the neural network architectures. We tune those via a grid search shown in Table \ref{table:hyparam of 1}. The optimal network width and depth are $20$ and 2, which gives the lowest average MSE of $Y$ over 5 repetitions with different random seeds. In fact, at least in our experiments, the performance of shallow but wider networks is roughly comparable to that of deep networks that are more time-consuming. Besides, the estimation of $\beta$ is unsusceptible to activation function, so we simply choose hyperbolic tangent (Tanh) function
+as the activation function.
+
+\begin{table}[h]
+\caption{Grid of hyperparameters for neural networks in MNAR.}
+\label{table:hyparam of 1}
+\begin{center}
+\vspace{0.3cm}
+\begin{tabular}{cc}
+\hline
+Hyperparameter    & Value                       \\ \hline
+Learning rate     & 1e-4                    \\
+\# of epoches     & 2000                       \\
+Network width     & \{3, 9, 20\} \\
+Network depth     & \{2, 5, 11\}                \\
+Activation function & ReLU,Tanh \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsubsection{estimation}
+
+%--------need to modify table 1
+
+% Figure \ref{fig:simu_1} summarizes the simulated results over 50 random seeds, and the corresponding sample average and standard deviation of each estimator are summarizes in Table \ref{table:simu_1}. 
+
+Figure \ref{fig:simu_1} shows the distribution of estimation of $\beta_0$ and $\beta_1$ for each method based on 50 repetition, and the corresponding sample average and standard deviation of each estimator are summarizes in Table \ref{table:simu_1}. Note that the biased estimator is susceptible to bias due to model misspecification of working model for $P(r|y)$, while the oracle estimator is unbiased. It is clear to see from Figure that the estimation given by $\fred$ is much closer to the oracle one comparing to $poly$ with degree from 2 to 5. 
+% It is interesting to see that as the degree of chosen polynomial basis increases, the estimation ……
+
+
+
+
+
+
+ 
+
+\begin{figure}
+\centering
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = 1.0\textwidth]{MNAR_beta_0.png}
+\caption{}\label{}
+\end{center}
+\end{subfigure}
+\begin{subfigure}{0.45\textwidth}
+    \begin{center}
+        \includegraphics[width = 1.0\textwidth]{MNAR_beta_1.png}
+        \caption{}\label{}
+    \end{center}
+\end{subfigure}
+\caption{The boxplot of estimation of $\beta_0$ and $\beta_1$ with neural network method and different orders polynomial expansion methods comparing with oracle parameter}
+\label{fig:simu_1}
+\end{figure}
+
+
+\begin{table}[bp]
+\caption{Simulation result}
+\label{table:simu_1}
+\begin{center}
+\vspace{0.3cm}
+\begin{tabular}{c|ccc}
+\hline
+Mean(std)   &   oracle & $\fred$ & quintic  \\
+\hline
+$\hat \beta_0$ & 0.250(0.054)& 0.245(0.076) & 0.133(0.044)  \\
+$\hat \beta_1$ & -0.487(0.054) & -0.492(0.039) & -0.316(0.067) \\
+\hline
+Mean(std)   &  	quartic &cubic  & biased \\
+\hline
+$\hat \beta_0$  & 0.160(0.079)&0.102(0.178)&  0.621(0.099)  \\
+$\hat \beta_1$  & -0.363(0.056) &-0.378(0.109) & -0.292(0.073) \\
+
+
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+%-----------------------------------------------------------
+\subsection{Example 2: Sensitivity analysis in causal inference}
+\label{sec:sensitivity}
+
+We then evaluate $\fred$ under the task of sensitivity analysis in causal inference from Section \ref{eg:sensitivity}. After trying for many scenarios, we find for simply data generating process, it does not need more calculation so that it cannot release the gap between our method and original. So we extend the original data generating process to more complicated simulating scenarios with  multivariate covariates where the unmeasured confounder $U$ is dependent on the covariates. Note that the design of alternating coefficients guarantees data balance. The corresponding DGPs are similar to model (\ref{model-sens}) (Scenario 1)  except that 
+
+
+% \begin{equation}
+% \label{eq:model-sens-nonlinear}
+% \begin{split}
+% & \text{logit} P\left( A = 1 | X_{1}, ... , X_{10}, U \right) = 3\sum_{j=1}^{8}(-1)^{j+1}X_{j} + 3X_{9}^{4}-3X_{10}^{4} + 2 U \\
+% & \text{logit} P\left( Y = 1 | X_{1}, ... ,X_{10}, U, A \right) = 4\sum_{j=1}^{8}(-1)^{j+1}X_{j} +4X_{9}^{4}-4X_{10}^{4}+ \theta A + 2 U
+% \end{split}
+% \end{equation}
+
+% or
+\begin{equation}
+\label{eq:model-sens-depU}
+U \sim \text{Normal} (0, 0.1) + X_1 - X_2 ^2 
+\end{equation}
+with working model being $U^{*} \sim \text{Unif}(-0.5,0.5)$. 
+
+\subsubsection{tunning of hyperparameters}
+
+ Figure \ref{fig:alt_freq_2} illustrates the convergence of $\theta$ during training with various alternating frequency. Unlike example 1, all training process converge stably at different paces that are proportional to alternating frequency.
+
+
+\begin{figure}
+\centering
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = \textwidth]{alternating_beta_sens.png}
+\caption{}
+\end{center}
+\end{subfigure}\par\medskip
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = \textwidth]{alternating_loss_ee_sens.png}
+\caption{}
+\end{center}
+\end{subfigure}
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = \textwidth]{alternating_loss_ie_sens.png}
+\caption{}
+\end{center}
+\end{subfigure}
+\caption{The evolution of training processes in one simulated dataset of Example \ref{sec:sensitivity} by setting the alternating frequency $\lambda$ as $1, 5, 10$, or $20$. $\mathsf{x}$-axis is the number of iterations. The upper panels show the evolution of (a) $\beta$  over iterations, while the lower panels show the evolution of the loss corresponding to (b) the score equation  and (c) the Fredholm integral equation over iterations.}\label{fig:alt_freq_2}
+\end{figure}
+ 
+ % \begin{figure}
+% \begin{subfigure}{0.85\textwidth}
+% \begin{center}
+% \includegraphics[width = 0.85\textwidth]{af_2.png}
+% \caption{}\label{}
+% \end{center}
+% \end{subfigure}\par\medskip
+
+% \caption{The evolution of training processes in one simulated dataset of Example \ref{sec:sensitivity} by setting the alternating frequency $\lambda$ as $1, 5, 10$, or $20$. $\mathsf{x}$-axis is the number of iterations. The upper panels show the evolution of $\theta$ over iterations, while  the lower panels show the evolution of the loss corresponding to the score equation (right) and the Fredholm integral equation (left) over iterations.}\label{
+% fig:alt_freq_2}
+% \end{figure}
+
+Again, we tune the architectures of neural networks via a grid search over hyperparameters shown in Table \ref{table:hyparam of 2}. The optimal network width and depth are $9(p+1)$ and 2, which gives the lowest average MSE of  $\theta$ over 5 repetitions with different random seeds. 
+
+\begin{table}[h]
+\caption{Grid of hyperparameters for neural networks in sensitivity analysis.}
+\label{table:hyparam of 2}
+\begin{center}
+\vspace{0.3cm}
+\begin{tabular}{cc}
+\hline
+Hyperparameter    & Value                       \\ \hline
+Learning rate     & 1e-4                    \\
+\# of epoches     & 20000                       \\
+Network width     & \{3(p+1), 9(p+1), 15(p+1)\} \\
+Network depth     & \{2, 5, 11\}                \\
+Activation function & ReLU,Tanh \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsubsection{estimation}
+
+The boxplots of the simulation results among all methods over 100 random seeds are depicted in Figure \ref{fig:simu_sens}. The left panel (a) and right panel (b) present the scenarios when the dimension of covariates $p=10$ and $p=50$ respectively. Again, in both scenarios the semiparametric estimations fall in between the biased one and the oracle one. The estimation of \textbf{nn} when $p=10$ is less biased and more efficient compared to that of the quadratic solver and cubic solver, while the estimation of \textbf{nn} when $p=50$ is less biased but less efficient.
+
+\begin{figure}
+\centering
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = 1.0\textwidth]{boxplot_sens_p10.png}
+\caption{}\label{}
+\end{center}
+\end{subfigure}
+\begin{subfigure}{0.45\textwidth}
+    \begin{center}
+        \includegraphics[width = 1.0\textwidth]{boxplot_sens_p50.png}
+        \caption{}\label{}
+    \end{center}
+\end{subfigure}
+\caption{The boxplot of estimation of $\beta$ with neural network method and different orders polynomial expansion methods comparing with oracle parameter}
+\label{fig:simu_sens}
+\end{figure}
+
+%We then evaluate $\fred$ against the baseline method. We further consider more complicated simulating scenarios where the logit link is nonlinear (Scenario 2) or the unmeasured confounder $U$ is dependent on the covariates $X$ (Scenario 3) . 
+
+%Figure \ref{plot: sens-scen123} displays the boxplot of five estimators over 50 random seeds. Note that here we refer to the solution of estimating equation $S_{\theta}(X,A,Y)=0$ and $S^{*}_{\theta}(X,A,Y)=0$ as oracle estimator and biased estimator respectively. The semiparametric estimator is unbiased and thus is expected to be close to the oracle estimator. As Figure \ref{plot: sens-scen123} shows, the biased estimator performs nearly the same as the oracle one, resulting that the semiparametric estimators are quite comparable to each other. 
+
+% As Figure \ref{plot: sens-scen123} shows, in scenario 1 and scenario 2, the biased estimator performs nearly the same as the oracle one, resulting that the semiparametric estimators (both $\fred$ and poly) are quite comparable to each other. We think this is mainly due to the little difference between true model and working model, which is proven in the last scenario. In scenario 3, we see distinct gap between the biased estimator and the oracle estimator, and meanwhile the $\fred$ is less biased than poly (quadratic and cubic). This indicates a certain robustness of our method.
+
+% \begin{figure}
+% \centering
+% \includegraphics[width = 0.65\textwidth]{semipara.png}
+% \caption{The boxplot of neural network and polynomial expansion methods estimations comparing with oracle parameter $\theta$}\label{plot: sens-scen123}
+% \end{figure}
+
+
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[scale = 0.5]{Poly.png}
+%     \caption{The boxplot of polynomial method with df=2 or df=3}
+%     \label{fig:Poly}
+% \end{figure}
+
+% \begin{figure}
+% \begin{subfigure}{0.85\textwidth}
+% \begin{center}
+% \includegraphics[width = 0.85\textwidth]{simu_2.png}
+% \caption{}\label{}
+% \end{center}
+% \end{subfigure}\par\medskip
+% \caption{The boxplot. p is the dimension of covariates}
+% \label{fig:simu_2}
+% \end{figure}
+
+
+\subsubsection{$\alpha$}
+
+
+%下面这一段可能要改一下，这一段的内容感觉讲的是交替迭代会更好，但是我们没有合适的图，要不要把之前的图看看重新画还是删掉呢？
+%---- 重新画图af_2.png
+%In particular, we find the following strategy seems to work fine from previous experience: Combining equation \eqref{fred-sensitivity} and \eqref{score-sensitivity} into a single loss function, where $\mathrm{b}_{\lambda} (u, x)$ is parameterized by a neural network with weight parameters $\bm{w}$. Then the entire objective function has two different parameters $\theta$ and $\bm{w}$. While learning $\theta$ and $\bm{w}$ from data, perform adam update for 5-10 epochs by only updating $\bm{w}$ and then update $\theta$ part for sufficient long time. Figure \ref{fig:alt_freq_2} illustrates the convergence of $\theta$ during training with various alternating frequency. Unlike example 1, all training process converge stably at different paces that are proportional to alternating frequency.
+
+
+
+Our goal is that the output $\theta$ should be close to 2 when the sensitivity analysis model happens to have the true parameters (the coefficients in front of $U$ in model \eqref{model-sens}). $\lambda$ is the so-called Tikhonov-regularization parameter because the actual integral equation has $\lambda = 0$, which is an ill-posed inverse problem. So as $\lambda \rightarrow 0$, our estimated $\theta$ should be getting closer to 2. However, we find in our experiment, a slightly larger $\lambda$ would give more accurate estimation.
+
+% Figure \ref{fig:alpha_2} shows the evolution of training process with $\lambda=0,0.01,0.1$.
+
+
+% \begin{figure}
+% \begin{subfigure}{0.85\textwidth}
+% \begin{center}
+% \includegraphics[width = 0.85\textwidth]{alpha_theta_2.png}
+% \caption{}\label{}
+% \end{center}
+% \end{subfigure}\par\medskip
+% \caption{The evolution of training processes in one simulated dataset of Example \ref{sec:sensitivity} by setting the penalty $\lambda$ as $0,0.01,0.1$}
+% \label{fig:alpha_2}
+% \end{figure}
+
+
+
+
+
+\subsection{Example 3: Dynamic treatment regimes under a no direct effect assumption}
+\label{sec:nde}
+
+In the third example, we consider methods for Proximal Inference via Maximum Moment Restriction. Expect for the method which is the mixture of network and kernel given by \cite{kompa2022deep}, we propose a scheme similar to GAN deep learning network.
+
+First, let us consider the following example given by \cite{kompa2022deep}:
+\begin{align*}
+U & \sim \mathcal{U}(0,10)\\
+Z_{1}& =2 \sin (2 \pi U / 10)+\epsilon_{1}\\
+Z_{2} & = 2 \cos (2 \pi U / 10)+\epsilon_{2}\\
+W& =7 g(U)+45+\epsilon_{3}\\
+A& =35+\left(Z_{1}+3\right) g(U)+Z_{2}+\epsilon_{4}\\
+Y& =A \times \min \left(\exp \left(\frac{W-A}{10}\right), 5\right)-5 g(U)+\epsilon_{5}
+\end{align*}
+
+where $g(u)=2\left(\frac{(u-5)^{4}}{600}+e^{-4(u-5)^{2}}+\frac{u}{10}-2\right)$, and $\epsilon_{i} \sim \mathcal{N}(0,1)$
+
+We can get the causal DAG as followings:
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width = 0.6\textwidth]{DAG.png}
+\caption{causal DAG of 5 variants}\label{}
+\end{center}
+\end{figure}
+
+So the variables observed are $D=(U,Z,W,A,Y)$.  Our aim is to calculate the average causal effect (ACE), which is the expected difference in $Y$ caused by changing a little treatment from $a$ to $a'$
+for each unit in the study population, which can be also written as $E[Y^{a'}]-E[Y^a]$. For the expected value of outcome, there exists function $h$:
+
+\begin{equation}
+    \label{E_Y}
+    \mathbb{E}\left[Y^{a}\right]=\int_{\mathcal{W},} h(a, w) p(w) d w =\mathbb{E}_{W}[h(a, W)]
+\end{equation}
+
+So $h$ also follows the next integral equation:
+
+\begin{equation}
+    \label{h1}
+    \mathbb{E}[Y-h(A, W) \mid A, Z]=0
+\end{equation}
+
+which also means for any function $g$:
+
+\begin{equation}
+    \label{g1}
+    \mathbb{E}[(Y-h(A, W))g(A,Z)]=0
+\end{equation}
+
+This suggests a minimax strategy of searching for an estimate of $h$ such that risk $R(h)$ for the worst-case value of g is minimized:
+
+\begin{equation}
+\label{Rh}
+    R(h)=\sup _{\|g\| \leq 1}(\mathbb{E}[(Y-h(A, W)) g(A, Z)])^{2}
+\end{equation}
+
+If $g$ is an element of RKHS, the risk $R(h)$ can be rewritten as:
+
+\begin{equation}
+    \label{rewrite}
+    R_k(h)=\mathbb{E}[(Y-h(A, W)) k((A, Z),(A',Z'))(Y'-h(A',W'))]
+\end{equation}
+
+We can minimize $R_k(h)$ with is approximated by V-statistic:
+
+\begin{equation}
+    \label{vstat}
+    \hat{R}_{V}(h)=\frac{1}{n^{2}} \sum_{i, j=1}^{n}\left(y_{i}-h_{i}\right)\left(y_{j}-h_{j}\right) k_{i j}
+\end{equation}
+
+Also if $g$ is parameterized by a neural network, which means comparing with treating $g$ as a kernel and $h$ by neural network, pure network is established. Therefore, $R$ can be rewritten as:
+
+\begin{equation}
+    \label{Rgh}
+    R(h,g)=\sup _{\|g\| \leq 1}(\mathbb{E}[(Y-h(A, W)) g(A, Z)])(\mathbb{E}[(Y'-h(A', W')) g(A', Z')])
+\end{equation}
+
+For V-statistic:
+
+\begin{equation}
+    \label{Vstatnn}
+    \hat{R}_{V}(h,g)=\frac{1}{n^{2}} \sum_{i, j=1}^{n}\left(y_{i}-h_{i}\right)\left(y_{j}-h_{j}\right) g_ig_j
+\end{equation}
+
+We train the neural networks with the two loss functions:
+$$L_h = \hat{R}_{V}(h,\hat{g})+\lambda||h||,\quad L_g = 1-\sigma(\mathbb{E}[(Y-h(A, W)) g(A, Z)]+\lambda (\nabla g -1)$$
+
+For kernel method, we tune the network of $h$ function with width $200$ and depth $7$. While learning the network, we use adam update the parameters. For pure network, we tune the network of $h$ same to the former; while we treat $g$ with width $300$ and depth $3$. Compared with Adam optimizer, RMSProp is more suitable for our experiment. Also perform RMSProp update for 50 epochs by only updating $g$ after updating $h$ for sufficient long time.
+
+Our goal is to make the CMSE near $0$, which is given by Equation \ref{cmse}:
+
+\begin{equation}
+    \label{cmse}
+    CMSE = \frac{1}{n} \sum_{i=1}^{n}\left(\mathbb{E}\left[Y^{a_{i}}\right]-\hat{\mathbb { E }}\left[Y^{a_{i}}\right]\right)^{2}
+\end{equation}
+
+where $$\hat{\mathbb{E}}\left[Y^{a}\right]=\frac{1}{M} \sum_{i=1}^{M} \hat{h}\left(a, w_{i}, x_{i}\right)$$
+
+\begin{figure}[t]
+\begin{subfigure}{1\textwidth}
+    \begin{center}
+        \includegraphics[scale=0.4]{compare cmse lr.png}
+    \end{center}
+    
+\end{subfigure}
+\begin{subfigure}{1\textwidth}
+    \begin{center}
+        \includegraphics[scale=0.4]{compare loss lr.png}
+    \end{center}
+    
+\end{subfigure}
+    \caption{The upper panels show the evolution of CMSE and loss of $h$ function over iterations under different conditions with learning rate $1e-4$(the green curve), $1e-5$(the gray curve), $1e-4$ for first half epochs and $1e-5$ for the other half epochs(the red curve)}
+    \label{fig:6}
+\end{figure}
+
+We try to adjust the parameters. Figure \ref{fig:6} illustrates CMSE and loss of neural network of $h$ function. From the figures the mixture of $1e-4$ and $1e-5$ will have more stable results. Also in order to test whether pure network has similar stability, we further give the summary of results of over 50 random seed which is shown in Figure \ref{fig:7}.
+
+\begin{figure}[h]
+        \centering
+        \includegraphics[width=1.0\textwidth]{simu_1.png}
+    \caption{The interval of CMSE under two methods for over 50 random seeds}
+    \label{fig:7}
+\end{figure}
+
+Besides this example we generate other process data from \cite{Afsanehproximal} which is shown below:
+
+$$
+\begin{aligned}
+U &:=\left[U_{1}, U_{2}\right], \quad U_{2} \sim \text { Uniform }[-1,2] \\
+U_{1} & \sim \text { Uniform }[0,1]-\mathbb{1}\left[0 \leq U_{2} \leq 1\right] \\
+W &:=\left[W_{1}, W_{2}\right]=\left[U_{1}+\text { Uniform }[-1,1], U_{2}+\mathcal{N}\left(0, \sigma^{2}\right)\right] \\
+Z &:=\left[Z_{1}, Z_{2}\right]=\left[U_{1}+\mathcal{N}\left(0, \sigma^{2}\right), U_{2}+\text { Uniform }[-1,1]\right] \\
+A &:=U_{2}+\mathcal{N}\left(0, \beta^{2}\right) \\
+Y &:=U_{2} \cos \left(2\left(A+0.3 U_{1}+0.2\right)\right)
+\end{aligned}
+$$
+
+where $\sigma^{2}=3$ and $\beta^{2}=0.05$.
+
+We tried both methods 10 times with different seeds which is illustrated by Figure \ref{fig:8}, from which we can see pure network performs better than kernel. Also Figure \ref{fig:9} give the interval of two methods which seems pure network is more stable and less error.
+  
+\begin{figure}[h]
+\begin{subfigure}{0.45\textwidth}
+    \includegraphics[scale=0.3]{kernel cmse.png}
+\end{subfigure}
+\begin{subfigure}{0.45 \textwidth}
+    \includegraphics[scale=0.3]{nnloss.png}
+\end{subfigure}
+
+\begin{subfigure}{0.45\textwidth}
+    \includegraphics[scale=0.3]{kernel loss (1).png}
+\end{subfigure}
+\begin{subfigure}{0.45\textwidth}
+    \includegraphics[scale=0.3]{nnmse.png}
+\end{subfigure}
+    \caption{CMSE and loss of $h$ function of two methods. Left images use kernel method, while right ones uses pure neural network. Images above are CMSE of two methods and below are loss of $h$ function(for 10 seeds)}
+    \label{fig:8}
+\end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[scale=0.7]{2 10.jpg}
+%     \caption{Interval of two method which the blue one reprensents pure network and the other is kernel method}
+%     \label{fig:9}
+% \end{figure}
+
+Also we tried other examples, we create some new data as followings and the only difference from the previous data is that A, Z are related and Y ,W are related meanwhile:
+
+$$
+\begin{aligned}
+U &:=\left[U_{1}, U_{2}\right], \quad U_{2} \sim \text { Uniform }[-1,2] \\
+U_{1} & \sim \text { Uniform }[0,1]-\mathbb{1}\left[0 \leq U_{2} \leq 1\right] \\
+W &:=\left[W_{1}, W_{2}\right]=\left[U_{1}+\text { Uniform }[-1,1], U_{2}+\mathcal{N}\left(0, \sigma^{2}\right)\right] \\
+Z &:=\left[Z_{1}, Z_{2}\right]=\left[U_{1}+\mathcal{N}\left(0, \sigma^{2}\right), U_{2}+\text { Uniform }[-1,1]\right] \\
+A &:=U_{2}+\mathcal{N}\left(0, \beta^{2}\right)+Z_1\times Z_2 \\
+Y &:=U_{2} \cos \left(2\left(A+0.3 U_{1}+W_1\times W_2+0.2\right)\right)
+\end{aligned}
+$$
+
+where $\sigma^{2}=3$ and $\beta^{2}=0.05$.
+
+For this data, we also compare the method of kernel and pure network. We try some different seeds and Figure \ref{fig:10} illustrates CMSE and loss of $h$ function. From this figure we can see the results of CMSE for two methods are similar.
+
+% \begin{figure}
+
+%     \begin{subfigure}{0.45\textwidth}
+%     \includegraphics[scale=1]{1.png}
+% \end{subfigure}
+
+% \begin{subfigure}{0.45\textwidth}
+%     \includegraphics[scale=1]{2.png}
+% \end{subfigure}
+
+% \begin{subfigure}{0.45\textwidth}
+%     \includegraphics[scale=1]{3.png}
+% \end{subfigure}
+
+% \begin{subfigure}{0.45\textwidth}
+%     \includegraphics[scale=1]{4.png}
+% \end{subfigure}
+%     \caption{4 images means we use 4 different seeds. The curve of kernel from top to bottom is red, pink, green and blue, while the curve of pure network is blue, blue, gray and orange.}
+%     \label{fig:10}
+% \end{figure}
+
+Finally, in the third example, we study the data given by \cite{Benjaminproximal} and \cite{Afsanehproximal} with pure network method. From the two experiments we can get for proximal examples, the pure neural network method similar to GAN model can also obtain good results, and the variance of results for different seeds is not large, which means, it has good stability.
+
+% For the third example, maybe it has less correlation with the main idea of this paper, so if we do not use it we can omit it.
+
+\section{Connection to computerized semiparametric statistics}
+\label{sec:vdl}
+
+As mentioned in the Introduction, a series of works \citep{frangakis2015deductive, carone2019toward, williamson2020unified} has tackled one of the most ambitious goals in semiparametric statistics -- automating/computerizing the derivation of EIFs (abbreviated as the ``CEIF framework''). In this section, we discuss how $\fred$ differs from but might eventually converge to their frameworks and why ONNs might be a good alternative to the kernel/basis approximation approach taken in \cite{carone2019toward}.
+
+First, unlike the CEIF framework, $\fred$ does need the formula of the score equation and the accompanied Fredholm integral equation as input. This is the main disadvantage of the current version of $\fred$ compared to the CEIF framework. Second, the CEIF framework builds 
+
+\section{Conclusion}
+\label{sec:conclude}
+
+In this paper, we demonstrate through both theory and simulation studies how over-parameterized neural networks (ONNs) can be used in semiparametric statistics beyond the current trend in practice. To that end, we developed an end-to-end ONN-based algorithm called $\fred$ that directly outputs an estimate of the parameter of interest. 
+
+Further theoretical investigations are needed for widely deploying $\fred$ in practice. For instance, in Theorem \ref{thm:main} we establish the theoretical guarantees only for the global minimizer. But it is now well understood that there exists gap between the global minimizer and the solution actually found by first-order optimization algorithms (e.g. GD, SGD, or $\mathsf{adam}$) commonly used in deep learning toolkit. It is thus important to consider such complications and even develop improved optimization algorithms in future works.
+
+Another interesting direction is to combine $\fred$ with the more popular use of ONNs as a nuisance parameter estimation procedure, making semiparametric statistics even closer to being automatic and developing useful packages for practitioners. Finally, we share the same philosophy and viewpoint as the line of works trying to make semiparametric statistics fully automated/computerized and expect that $\fred$ will evolve towards a fully computerized/symbolic computation framework for semiparametric statistics.
+
+\section{Code availability}
+\label{sec:code}
+
+Two preliminary versions of $\fred$, respectively written in pytorch and tensorflow, are available in \href{https://linliu-stats.github.io/}{https://linliu-stats.github.io/}.
+
+\acks{
+% Lin Liu would like to thank Jamie Robins and Andrea Rotnitzky for inspiring him to work on this problem during a conversation while attending a conference in Leiden, Netherland; thank Jiwei Zhao (U. Wisconsin) for answering a question on his JASA paper; and thank Zheng Ma (INS at SJTU) for a relatively comprehensive list of ONN-based solvers for PDEs.
+This research is supported by the following funding resources: Shanghai Municipal Science and Technology Major Project No.2021SHZDZX0102 (LL), Major Program of National Natural Science Foundation of China No.12090024 (LL), Shanghai Natural Science Foundation Grant No.21ZR1431000 (LL, ZW, LZ), Natural Science Foundation of China Grant No.12101397 (LL).}
+
+\bibliography{Master}
+
+\appendix
+\section{Regularity conditions in Theorem \ref{thm:main}}
+\label{app:regular}
+
+\section{Proof of Theorem \ref{thm:main}}
+\label{app:proof}
+
+In this section, we prove Theorem \ref{thm:main}.
+
+\end{document}

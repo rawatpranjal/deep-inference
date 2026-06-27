@@ -1,0 +1,47 @@
+\section{Problem Setting}
+Let the random variable $\X \in \Xcal$ model observable covariates.
+For clarity, we will assume that $\Xcal$ is a $d$-dimensional continuous space: $\Xcal \subseteq \mathbb{R}^d$, but this does not preclude more diverse spaces.
+Instances of $\X$ are denoted by $\x$.
+The observable continuous treatment variable is modeled as the random variable $\Tf \in \Tcal \subseteq \mathbb{R}$.
+Instances of $\Tf$ are denoted by $\tf$.
+Let the random variable $\Y \in \Ycal \subseteq \mathbb{R}$ model the observable continuous outcome variable.
+Instances of $\Y$ are denoted by $\y$.
+Using the Neyman-Rubin potential outcomes framework \citep{neyman1923edited, rubin1974estimating, sekhon2008neyman}, we model the potential outcome of a treatment level $\tf$ by the random variable $\Yt \in \Ycal$.
+Instances of $\Yt$ are denoted by $\yt$.
+We assume that the observational data, $\mathcal{D}_n$, consists of $n$ realizations of the random variables, $\mathcal{D}_n = \left\{ (\x_i, \tf_i, \y_i) \right\}_{i=1}^{n}$.
+We let the observed outcome be the potential outcome of the assigned treatment level, $\y_i = \y_{\tf_i}$, thus assuming non-interference and consistency \citep{rubin1980randomization}.
+Moreover, we assume that the tuple $(\x_i, \tf_i, \y_i)$ are i.i.d. samples from the joint distribution $P(\X, \Tf, \Y_\Tf)$, where $\YT = \{\Yt: \tf \in \Tcal\}$.
+
+We are interested in the \textbf{conditional average potential outcome (CAPO)} function, $\mu(\x, \tf)$, and the \textbf{average potential outcome (APO)} — or dose-response function — $\mu(\tf)$, for continuous valued treatments.
+These functions are defined by the expectations:
+% \noindent
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:CAPO}
+        \mu(\x, \tf) \coloneqq \E\left[ \Yt \mid \X = \x \right]
+    \end{equation}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:APO}
+        \mu(\tf) \coloneqq \E\left[ \mu(\X, \tf) \right].
+    \end{equation}
+\end{minipage}
+
+Under the assumptions of ignorability, $\YT \indep \Tf \mid \X$, and positivity, $p(\tf \mid \X = \x) > 0 : \forall \tf \in \Tcal, \forall \x \in \Xcal$ — jointly  known as \emph{strong ignorability}  \citep{rosenbaum1983central} — the CAPO and APO are identifiable from the observational distribution $P(\X, \Tf, \Y_\Tf)$ as:
+\noindent
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:CAPO_stat}
+         \mut(\x, \tf) = \E\left[ \Y \mid \Tf = \tf, \X = \x \right]
+    \end{equation}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:APO_stat}
+         \mut(\tf) = \E\left[ \mut(\X, \tf) \right].
+    \end{equation}
+\end{minipage}
+
+In practice, however, these assumptions rarely hold. For example, there will almost always be unobserved confounding variables, thus violating the ignorability (also known as unconfoundedness or exogeneity) assumption, $\YT \not\indep \Tf \mid \X$.
+Moreover, due to both the finite sample of observed data, $\D$, and also the continuity of treatment $\Tf$, there will most certainly be values, $\Tf=\tf$, that are unobserved for a given covariate measurement, $\X=\x$, leading to violations or near violations of the positivity assumption (also known as overlap).

@@ -1,0 +1,20 @@
+In high-dimensional setting, we use the same treatment variable $X=(p, t, s)$ and $Z = (c, t, s)$, but the customer type label $s \in \{1,\dots,7\}$ is replaced with the image of the corresponding handwritten digit from the MNIST dataset \citep{mnist}. This reflects the fact that we cannot know the exact customer type and thus we need to estimate it from high-dimensional data. Although the task itself has not changed, this problem becomes far more difficult than the low-dimensional case. 
+
+Here, we used the same architecture as in the low-dimensional setting with adding one fully-connected layer to extract the feature from the image. Note that this is a significantly simpler network compared to DeepIV. We set hyper-parameter in the way discussed in Appendix~\ref{sec:hyper}. We ran 20 simulations with data size $n+m=5000$, and the mean and the variance of MSE is shown in Table~\ref{table:high-dim}. 
+
+\begin{table}[t]
+  \caption{MSE for high dimensional domain. The bold face means
+        the outstanding method chosen by Welch t-test with the significance level 5\%}
+      \begin{tabular}{l@{\hspace{3pt}}ccccc} \toprule
+         & $\rho=0.9$ & $\rho=0.75$ & $\rho=0.5$ & $\rho=0.25$ & $\rho=0.1$ \\\midrule
+         DFIV &  {\bf 10741 (1747)} & {\bf  10734 (1509)} & {\bf 10912 (1697)} & {\bf  11705 (2163)} & {\bf 10728 (1483)}\\
+          DFIV (vanilla) & 14733 (2449) &   14372 (2827) & 12421 (2293) & 13610 (2110) & 13871 (2134)\\ %without normalization
+        DeepIV &14224 (646)&14301 (719)&14473 (833)&14207 (633)&14189 (725)\\
+        
+        KIV&21161 (1134)&21162 (1134)& 21164 (1134)&21164 (1134)&21164 (1133)\\
+        \bottomrule
+      \end{tabular}
+      \label{table:high-dim}
+  \end{table}
+
+  In the high-dimensional setting, KIV is suffered from the curse of dimension, which significantly harms the performance. Moreover, we observe vanilla DFIV performs as good as DeepIV in spite of its small network, which also suggests the superiority of the method. Finally, we can further improve the performance by applying the Spectral Normalization.

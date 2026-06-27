@@ -1,0 +1,6 @@
+If observations from the joint distribution of $(X, Y, Z)$ are available in both stages, we can tune the regularization parameters $\lambda_1, \lambda_2$ using the approach proposed in \citet{Singh2019}. Let the complete data of stage 1 and stage 2 be denoted as $(x_i, y_i, z_i)$ and $(\tilde x_i, \tilde y_i, \tilde z_i)$. Then, we can use the data not used in each stage to evaluate the out-of-sample performance of the other stage. Specifically, the regularizing parameters are given by
+\begin{align*}
+    &\lambda_1^* = \argmin \mathcal{L}_{1\text{-oos}}^{(n)}, \quad \mathcal{L}_{1\text{-oos}}^{(n)} = \frac1n \sum_{j=1}^n \|\vec{\psi}_{\hat\theta_X}(\tilde x_i) - \hat{\vec{V}}^{(m)}\vec{\phi}_{\hat\theta_Z}(\tilde z_i)\|^2,\\
+    &\lambda_2^* = \argmin \mathcal{L}_{2\text{-oos}}^{(n)}, \quad\mathcal{L}_{2\text{-oos}}^{(n)} = \frac1m \sum_{i=1}^m (y_i - (\hat{\vec{u}}^{(n)})^\top \hat{\vec{V}}^{(m)} \vec{\phi}_{\hat\theta_Z}(z_i))^2,
+\end{align*}
+where $\hat{\vec{u}}^{(n)}, \hat{\vec{V}}^{(m)}, \hat{\theta}_{\theta_X}, \hat{\theta}_{\theta_Z}$ are the parameters learned in \eqref{eq:stage1-empirical-loss} and \eqref{eq:stage2-empirical-loss}.

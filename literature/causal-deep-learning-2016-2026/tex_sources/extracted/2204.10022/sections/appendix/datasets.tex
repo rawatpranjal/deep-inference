@@ -1,0 +1,82 @@
+\section{Datasets}
+\label{app:datasets}
+\subsection{Synthetic}
+\label{app:synthetic}
+\begin{equation}
+    \begin{split}
+        \hu &\coloneqq N_{\hu}, \\
+        \mathrm{x} &\coloneqq N_{\mathrm{x}}, \\
+        \tf &\coloneqq N_{\tf}, \\
+        \yt &\coloneqq \tf + \x \exp(-\tf \mathrm{x}) - \gamma_{\y}(\hu - 0.5) * (0.5 * \mathrm{x} + 1) + N_{\y},
+    \end{split}
+\end{equation}
+where, 
+$N_{\hu} \sim p(\hu) \coloneqq \text{Bern}(\hu \mid 0.5)$, 
+$N_{\mathrm{x}} \sim p(\mathrm{x}) \coloneqq \mathrm{Unif}[\mathrm{x} \mid 0.1, 2.0]$, 
+$N_{\tf} \sim p(\mathrm{\tf} \mid \mathrm{x}, \mathrm{\hu}) \coloneqq \text{Beta-Binomial}(\tf \mid n=100, \alpha=\mathrm{x} + \gamma_{\tf}\hu, \beta=1)$, 
+and $N_{\y} \sim \mathcal{N}(0, 0.04)$.
+For the results in this paper $\gamma_t=0.3$ and $\gamma_y=0.5$.
+
+The ground truth ratio, $\lambda = \frac{p(\tf \mid \mathrm{x})}{p(\mathrm{\tf} \mid \mathrm{x}, \mathrm{\hu})}$, is then given by, 
+\begin{equation}
+\label{eq:true_lambda}
+    \begin{split}
+        \lambda^*(\tf, \mathrm{x}, \hu) 
+        &= \frac{\E_{p(\mathrm{u})}[p(\mathrm{\tf} \mid \mathrm{x}, \mathrm{\hu})]}{p(\mathrm{\tf} \mid \mathrm{x}, \mathrm{\hu})} \\
+        &= \frac{\sum_{\hu^{\prime}=0}^1 0.5 * \text{Beta-Binomial}(\tf \mid n=100, \alpha=\mathrm{x} + \gamma_{\tf}\hu^{\prime}, \beta=1) }{\text{Beta-Binomial}(\tf \mid n=100, \alpha=\mathrm{x} + \gamma_{\tf}\hu, \beta=1)}
+    \end{split}
+\end{equation}
+
+\begin{figure}[ht]
+    \centering
+     \begin{subfigure}[b]{0.24\textwidth}
+         \includegraphics[width=\textwidth]{figures/synthetic/synth_outcome.png}
+         \caption{Observed Outcome}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.24\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/synth_treat.png}
+         \caption{Observed Treatment}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.24\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/synth_capo.png}
+         \caption{CAPO function}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.24\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/synth_apo.png}
+         \caption{APO function}
+    \end{subfigure}
+    \caption{Synthetic data with hidden confounding}
+    \label{fig:synthetic_data_app}   
+\end{figure}
+
+\subsection{Observations of clouds and aerosol}
+
+\begin{figure}[ht]
+    \centering
+     \includegraphics[width=.8\textwidth]{figures/Data_Processing.png}
+     \caption{Workflow of observed clouds from satellite to ingestion by model. }
+    \label{fig:observed_data_processing}   
+\end{figure}
+
+\begin{table}
+    \caption{Sources of satellite observations.}
+    \label{tab:obstable}
+    \centering
+    \begin{tabular}{lc}
+        \multicolumn{1}{c}{}                   \\
+        Product name     & Description \\
+        \midrule
+        Cloud optical depth \(\tau\) & MODIS   \\
+        & (1.6, 2.1, 3.7 \(\mu\)m) \\
+        Precipitation & NOAA CMORPH \\
+        Sea Surface Temperature & NOAA WHOI \\
+        Vertical Motion & MERRA-2 \\
+        Estimated Inversion Strength &  MERRA-2  \\
+        Relative Humidity & MERRA-2 \\
+        Aerosol Optical Depth & MERRA-2  \\
+        \bottomrule
+        \label{tab:datasources}
+    \end{tabular}
+    \vspace{-2em}
+\end{table}
+The Moderate Resolution Imaging Spectroradiometer (MODIS) instrument aboard the Aqua satellite observes the Earth twice daily at \(\sim\)1 km x 1 km resolution native resolution (Level 1) \citep{baum2006introduction}. We used the daily mean, 1\(^{\circ}\) x 1\(^{\circ}\) gridded version (Level 2) in order to somewhat homogenize our observations of clouds and the atmosphere confined to a region off the coast of South America in the Pacific basin. MODIS observations are fed into the Modern-Era Retrospective analysis for Research and Applications version 2 (MERRA-2) real-time model in order to emulate the atmosphere and it's components, such as aerosol \citep{gelaro2017modern}. Aerosol optical depth at 550nm from MERRA-2 is derived from MODIS observations of aerosol from multiple satellites (Terra, Aqua, Suomi-NPP), with corrections for sun glint and near-cloud optical effects \citep{bosilovich2015merra}. We collocated all gridded observations of clouds and reanalysis aerosol with our meteorological proxies of the environment (EIS, SST, w500, RH700, RH850), then normalized our features before feeding them into the model.

@@ -1,0 +1,45 @@
+\subsection{Uncertainty about the Continuous Treatment Effect Interval}
+\label{sec:uncertainty}
+Following \cite{zhao2019sensitivity}, \cite{dorn2021sharp}, and \cite{chernozhukov2021omitted}, we construct $(1 - \alpha)$ statistical confidence intervals for the upper and lower bounds under the CMSM using the percentile bootstrap estimator.
+\cite{jesson2020identifying} and \cite{jesson2021quantifying} have shown that statistical uncertainty is  appropriately high for regions with poor overlap.
+Let $P_{\D}$ be the empirical distribution of the observed data sample, $\D=\{\x_i, \tf_i, \y_i\}_{i=1}^n = \{\mathbf{S}_i\}_{i=1}^n$.
+Let $\widehat{P}_{\D} = \{\widehat{\D}_k\}_{k=1}^{n_b}$ be the bootstrap distribution over $n_b$ datasets, $\widehat{\D}_k=\{\widehat{\mathbf{S}}_i\}_{i=1}^n$, sampled with replacement from the empirical distribution, $P_{\D}$.
+Let $Q_{\alpha}$ be the $\alpha$-quantile of $\mu(w(\y); \x, \tf, \Lambda, \params)$ in the bootstrap resampling distribution: 
+$
+Q_{\alpha} \coloneqq \inf_{\mu^*} \left\{\widehat{P}_\D(\mu(w(\y); \x, \tf, \Lambda, \params) \leq \mu^*) \geq \alpha \right\}.
+$
+Finally, let $\params_k$ be the parameters of the model of the $k$-th bootstrap sample of the data.
+Then, the bootstrap confidence interval of the upper and lower bounds of the CAPO function under the CMSM is given by:
+$
+    \CI_b\left(\mu(\x, \tf; \Lambda, \alpha) \right) \coloneqq \left[ \underline{\mu}_{b}(\x, \tf; \Lambda, \alpha), \overline{\mu}_{b}(\x, \tf; \Lambda, \alpha) \right],
+$
+where,
+\noindent
+\begin{minipage}{.50\linewidth}
+    \begin{equation*}
+        \underline{\mu}_{b}(\x, \tf; \Lambda, \alpha) = Q_{\alpha / 2} \left( \left\{ \widehat{\underline{\mu}}(\x, \tf; \Lambda, \params_k)  \right\}_{k = 1}^b \right),
+    \end{equation*}
+\end{minipage}%
+\begin{minipage}{.50\linewidth}
+    \begin{equation*}
+        \overline{\mu}_{b}(\x, \tf; \Lambda, \alpha) =  Q_{1 - \alpha / 2} \left( \left\{ \widehat{\overline{\mu}}(\x, \tf; \Lambda, \params_k)  \right\}_{k = 1}^b \right).
+    \end{equation*}
+\end{minipage}
+
+Furthermore, the bootstrap confidence interval of the upper and lower bounds of the APO (dose-response) function under the CMSM are given by:
+$
+    \label{eq:apo_ci}
+    \CI_b\left(\mu(\tf; \Lambda, \alpha) \right) \coloneqq \left[ \underline{\mu}_{b}(\tf; \Lambda, \alpha), \overline{\mu}_{b}(\tf; \Lambda, \alpha) \right], 
+$
+where,
+\noindent
+\begin{minipage}{.5\linewidth}
+    \begin{equation*}
+        \underline{\mu}_{b}(\tf; \Lambda, \alpha) = Q_{\alpha / 2} \left( \left\{ \widehat{\underline{\mu}}(\tf; \Lambda, \params_k)  \right\}_{k = 1}^b \right),
+    \end{equation*}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+    \begin{equation*}
+        \overline{\mu}_{b}(\tf; \Lambda, \alpha) =  Q_{1 - \alpha / 2} \left( \left\{ \widehat{\overline{\mu}}(\tf; \Lambda, \params_k)  \right\}_{k = 1}^b \right).
+    \end{equation*}
+\end{minipage}

@@ -1,0 +1,444 @@
+\documentclass{article}
+
+\usepackage[nonatbib, final]{neurips_2023}
+
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage[hidelinks]{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+
+\usepackage{amsmath}
+
+%Theorems % Algorithms
+\usepackage{amssymb,amsmath,amsthm}
+\usepackage{algorithm2e}
+\RestyleAlgo{ruled}
+\theoremstyle{definition}
+\newtheorem{assumption}{Assumption}
+\newtheorem{definition}{Definition}
+\theoremstyle{plain}
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\usepackage{multirow}
+% \usepackage{subfig}
+% \usepackage{subfigure}
+\usepackage{subcaption}
+
+\usepackage{bbm}
+\usepackage{wrapfig}
+
+\usepackage{graphicx}
+
+\usepackage{array}
+
+\usepackage[backend=biber, style=numeric, doi=false, isbn=false, url=false, eprint=false]{biblatex}
+\addbibresource{bibliography.bib}
+
+\newcommand{\indep}{\perp \!\!\! \perp}
+\newcommand{\TODO}[1]{\textcolor{red}{#1}}
+
+\title{Reliable Off-Policy Learning for Dosage Combinations}
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\author{
+  Jonas Schweisthal, Dennis Frauen, Valentyn Melnychuk \& Stefan Feuerriegel \\
+  LMU Munich\\
+  Munich Center for Machine Learning\\
+  \texttt{\{jonas.schweisthal,frauen,melnychuk,feuerriegel\}@lmu.de} \\
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+Decision-making in personalized medicine such as cancer therapy or critical care must often make choices for dosage combinations, i.e., multiple continuous treatments. Existing work for this task has modeled the effect of multiple treatments \emph{independently}, while estimating the \emph{joint} effect has received little attention but comes with non-trivial challenges. In this paper, we propose a novel method for reliable off-policy learning for dosage combinations. Our method proceeds along three steps: (1)~We develop a tailored neural network that estimates the individualized dose-response function while accounting for the joint effect of multiple dependent dosages. (2)~We estimate the generalized propensity score using conditional normalizing flows in order to detect regions with limited overlap in the shared covariate-treatment space. (3)~We present a gradient-based learning algorithm to find the optimal, individualized dosage combinations. Here, we ensure reliable estimation of the policy value by avoiding regions with limited overlap. We finally perform an extensive evaluation of our method to show its effectiveness. To the best of our knowledge, ours is the first work to provide a method for reliable off-policy learning for optimal dosage combinations.
+\end{abstract}
+
+\section{Introduction}
+
+In personalized medicine, decision-making frequently involves complex choices for \emph{\textbf{dosage combinations}}. For example, in cancer therapy, patients with chemotherapy or immunotherapy receive a combination of two or three drugs, and, for each, the dosage must be carefully personalized \cite{Fisusi.2019, Wu.2020b}. In critical care, medical professionals must simultaneously control multiple parameters for mechanical ventilation, including respiratory rate and tidal volume \cite{Grasselli.2021}. 
+
+
+One way to find optimal dosages  (i.e., multiple continuous treatments) is through randomized controlled trials. Yet, such randomized controlled trials are often impractical due to the complexity of dosing problems or even unethical \cite{Robins.2000}. Instead, there is a direct need for learning optimal, individualized dosage combinations from observational data (so-called off-policy learning). 
+
+
+Several methods for off-policy learning aim at discrete treatments \cite{Athey.2021, Bennett.2020, Bennett.2019b, Dudik.2014, Hatt.2022b, Kallus.2018, Kallus.2022b, Thomas.2016, Tschernutter.2022} and are thus \emph{not} applicable to dosage combinations. In contrast to that, there are only a few methods that aim at off-policy learning for continuous treatments, that is, dosages \cite{Chen.2016, Demirer.2019, Kallus.2018e, AkshayKrishnamurthy.2020, Zou.2022}. To achieve this, some of these methods utilize the individualized dose-response function, which is typically not available and must be estimated from observational data. However, existing works model the effect of multiple continuous treatments \emph{independently}. Because of that, existing works ignore the dependence structure among dosage combinations, that is, drug-drug interactions. For example, in chemotherapy, the combination of antineoplastic agents with drugs such as warfarin can have adverse effects on patient health \cite{Riechelmann.2007}. In contrast to that, methods for off-policy learning that account for the \emph{joint} effect of dosage combinations have received little attention and present the focus of our paper.      
+
+Crucially, off-policy learning for dosage combinations comes with non-trivial challenges. (1)~Empirically, datasets in medical practice are often high-dimensional, yet of limited sample size. Hence, in practice, there are often sparse regions in the covariate-treatment space, which, in turn, may lead to estimated individualized dose-response functions that have regions with high uncertainty. (2)~Mathematically, off-policy learning commonly relies upon the {overlap assumption} \cite{Rubin.1974}. Yet, certain drug combinations are rarely used in medical practice and should be avoided for safety reasons. Both challenges lead to areas with limited observed overlap in the data, which results in unreliable estimates of the policy value. Motivated by this, we thus develop a method for \emph{reliable} off-policy learning. 
+
+
+\textbf{Proposed method:} In this paper, we propose a novel method for reliable off-policy learning for dosage combinations. Our method proceeds along three steps. (1)~We develop a tailored neural network that estimates the individualized dose-response function while accounting for the joint effect of multiple dependent dosages. Later, we use the network as a plug-in estimator for the policy value. (2)~We estimate the generalized propensity score through conditional normalizing flows in order to detect regions with limited overlap in the shared covariate-treatment space. (3)~We find the optimal individualized dosage combinations. To achieve that, we present a gradient-descent-ascent-based learning algorithm that solves the underlying constrained optimization problem, where we avoid regions with limited overlap and thus ensure a reliable estimation of the policy value. For the latter step, we use an additional policy neural network to predict the optimal policy for reasons of scalability.
+
+
+\textbf{Contributions:}\footnote{Code is available at \url{https://github.com/JSchweisthal/ReliableDosageCombi}.} (1)~We propose a novel method for reliable off-policy learning for dosage combinations. To the best of our knowledge, ours is the first method that accounts for the challenges inherent to dosage combinations. (2)~As part of our method, we develop a novel neural network for modeling the individualized dose-response function while accounting for the joint effect of dosage combinations. Thereby, we extend previous works which are limited to mutually exclusive or independent treatments. (3)~We perform extensive experiments based on real-world medical data to show the effectiveness of our method. 
+
+
+\section{Related Work}  \label{sec:related_work}
+
+\textbf{Estimating the individualized dose-response function:}
+There are different methods to estimate the outcomes of continuous treatments, that, is the individualized dose-response function. One stream uses the generalized propensity score \cite{Hirano.2004, Imai.2004, Imbens.2000}, while others adapt generative adversarial networks \cite{Bica.2020c}. An even other stream builds upon the idea of shared representation learning from binary treatments (e.g., \cite{Johansson.2016, Kuzmanovic.2023, Shalit.2017, Shi.2019, Zhang.2020}) and extends it to continuous treatments \cite{Nie.2021b,Schwab.2020}. However, all of the previous methods model the marginal effects of multiple dosages \emph{independently} and thus \emph{without} considering the dependence among when multiple treatments are applied simultaneously. Yet, this is unrealistic in medical practice as there are generally drug-drug interactions. To address this, we later model the \emph{joint} effect of multiple \emph{dependent} dosages.
+
+There are some approaches for estimating the individualized effects of multi- or high-dimensional treatments, yet \emph{not} for dosages. For example, some methods target conditional multi-cause treatment effect estimation \cite{Nandy.2017, Parbhoo.2021, Qian.2021, Tanimoto.2021, Wang.2019, Zou.2020} but are restricted to discrete treatments and can \emph{not} be directly applied to dosages. Other works use techniques tailored for high-dimensional structured treatments \cite{Harada.2021, Kaddour.2021, Nabi.2022b}. However, they do not focus on smooth and continuous estimates, or reliable off-policy learning, which is unlike our method.
+
+\textbf{Off-policy learning for dosages:} There is extensive work on off-policy learning for \emph{discrete} treatments \cite{Athey.2021, Bennett.2020, Bennett.2019b, Dudik.2014, Foster.2019, Hatt.2022b, Kallus.2018, Kallus.2022b, ma2022learning, ma2023learning, tang2022leveraging, Thomas.2016, Zhou.2023}. While, in principle, these methods could be applied to our setting by discretizing the dosages, crucial information about the exact individually prescribed dosage values would be lost. This results in less accurate and less personalized dosage recommendations. However, there are only a few papers that address off-policy learning directly for \emph{continuous} treatments (``dosages''). 
+
+For dosages, previous works have derived efficient estimators for policy evaluation and subsequent optimization (e.g., \cite{Demirer.2019, Kallus.2018e}). Other works focus directly on the policy optimization objective to find an optimal dosage \cite{Chen.2016, AkshayKrishnamurthy.2020, Zou.2022}. In principle, some of these methods are applicable to settings with multiple dosages where they act as na{\"i}ve baselines. However, all of them have crucial shortcomings in that they do \emph{not} account for multiple dependent dosages and/or that they do \emph{not} aim at reliable decision-making under limited overlap. Both of the latter are contributions of our method.   
+
+\textbf{Dealing with limited overlap:} 
+Various methods have been proposed to address limited overlap for estimating average treatment effects of binary treatments by making use of the propensity score (e.g., \cite{Cochran.1974, DAmour.2021, Heckman.1997, Ionides.2008, Kallus.2020, Rubin.2010}). In contrast, there exist only a few works for off-policy learning with limited overlap, typically for binary treatments \cite{Kallus.2021, Kallus.2018f, Swaminathan.2015}.
+
+Some works deal with the violation of the overlap assumption by leveraging uncertainty estimates for binary \cite{Jesson.2020} and continuous treatment effect estimation \cite{Jesson.2022}. However, these works do not tackle the problem of direct policy learning. In particular for dosage combinations, this is a clear shortcoming, as determining and evaluating policies becomes computationally expensive and infeasible with a growing number of samples and treatment dimensions.
+
+\textbf{Research gap:} Personalized decision-making for optimal dosage combinations must (1)~estimate the \emph{joint} effect of dosage combinations, (2)~then perform off-policy learning for such dosage combinations, and (3)~be \emph{reliable} even for limited overlap. However, to the best of our knowledge, there is no existing method for this composite task, and we thus present the first method aimed at reliable off-policy learning for dosage combinations.
+
+
+\section{Problem Formulation}\label{sec:problem}
+
+\textbf{Setting:} We consider an observational dataset for $n$ patients with i.i.d. observations $\{(x_i, t_i, y_i)\}{_{i=1}^{n}}$ sampled from a population $(X, T, Y)$, where $X \in \mathcal{X} \subseteq \mathbb{R}^{d} $ are the patients' covariates, $T \in \mathcal{T} \subseteq \mathbb{R}^{p} $ is the assigned $p$-dimensional dosage combination (i.e., multiple continuous treatments), and $Y \in \mathbb{R}$ is the observed outcome. For example, in a mechanical ventilation setting, $X$ are patient features and measured biosignals, such as age, sex, respiratory measurements, and cardiac measurements; $T$ are the dosages of the ventilation parameters, such as respiratory rate and tidal volume; and $Y$ is patient survival. For simplicity, we also refer to the dosages as treatments. 
+
+We adopt the potential outcomes framework \cite{Rubin.1978}, where $Y(t)$ is the potential outcome under treatment $T=t$. %.
+In medicine, one is interested in learning a policy $\pi: \mathcal{X} \rightarrow \mathcal{T}$ that maps covariates to suggested dosage combinations. Then, the policy value $V(\pi) = \mathbb{E}[Y(\pi(X))] $ is the expected outcome of policy $\pi$. Our objective is to find the optimal policy $\pi^*$ in the policy class $\Pi$ that maximizes $V(\pi)$, i.e., 
+\begin{equation} \label{eq:prob_baseobjective}
+    \pi^* \in \underset{\pi \in \Pi}{\arg\max} \; V(\pi). 
+\end{equation}
+In other words, we want to find $\pi^*$ that minimizes the regret given by $R(\pi^*) = \max_{\pi \in \Omega} \! V(\pi) - V(\pi^*)$, where $\Omega$ denotes the set of all possible policies with $\Pi \subseteq \Omega$. 
+
+We further introduce the following notation, which is relevant to our method later. We denote the \emph{conditional potential outcome function} by $\mu(t, x) = \mathbb{E} [Y(t) \,\mid\, X=x ]$. For continuous treatments, this is also called \emph{individualized dose-response function}. Further, the \emph{generalized propensity score} (GPS) is given by $f(t, x) = f_{T\,\mid\, X=x}(t) $, where $f_{T\,\mid\,X=x}$ denotes the conditional density of $T$ given $X=x$ with respect to the Lebesgue measure. The GPS is the stochastic policy used for assigning the observed treatments (i.e., logging / behavioral policy). In our method, both nuisance functions, $\mu(t, x)$ and $f(t, x)$, are not known and must be later estimated from observational data.
+
+\textbf{Assumptions:} To ensure identifiability of the outcome estimation, the following three standard assumptions are commonly made in causal inference \cite{Rubin.1974}: (1)~\emph{Consistency}: $Y = Y(T)$. Consistency requires that the patient's observed outcome is equal to the potential outcome under the observed treatment. (2)~\emph{Ignorability}: $Y(t) \; \indep \; T\,\mid\,X, \; \forall t \in \mathcal{T}$. Ignorability ensures that there are no unobserved confounders. (3)~\emph{Overlap}: $f(t, x) > \varepsilon$,  $\forall x \in \mathcal{X},\, t \in \mathcal{T}$ and for some constant $\varepsilon \in \left[0, \infty \right)$. Overlap (also known as {common support} or {positivity}) is necessary to ensure that the outcomes for all potential treatments can be estimated accurately for all individuals. 
+
+We distinguish between \emph{weak} overlap for $\varepsilon = 0$ and \emph{strong} overlap for $\varepsilon > 0$. Since the estimation of the individualized dose-response function becomes more reliable with increasing $\varepsilon$ in the finite sample setting, we refer to \emph{strong} overlap in the following when we mention overlap, unless explicitly stated otherwise. 
+
+\textbf{Challenges due to limited overlap:} Limited overlap introduces both empirical and theoretical challenges. (1)~Datasets with high dimensions and/or small sample size are especially prone to have sparse regions in the covariate-treatment space $\mathcal{X} \times \mathcal{T}$ and thus limited overlap \cite{DAmour.2021}. As a result, the estimated individualized dose-response function will have regions with high uncertainty, which preclude reliable decision-making. (2)~It is likely that $\varepsilon$ is small for some regions as some drug combinations are rarely prescribed and should be avoided. To address this, we aim at an off-policy method that is reliable, as introduced in Sec.~\ref{sec:method}. 
+
+
+\section{Reliable Off-Policy Learning for Dosage Combinations}\label{sec:method}
+
+In the following, we propose a novel method for reliable off-policy learning for dosage combinations. Our method proceeds along three steps (see Fig.~\ref{fig:method}): \textbf{(1)}~We develop a tailored neural network that estimates the individualized dose-response function while accounting for the joint effect of multiple dependent dosages (Sec.~\ref{sec:outcome}). Later, we use the network as a plug-in estimator for the policy value. \textbf{(2)}~We estimate the generalized propensity score through conditional normalizing flows in order to detect regions with limited overlap in the shared covariate-treatment space (Sec.~\ref{sec:cnf}). \textbf{(3)}~We find the optimal individualized dosage combinations (Sec.~\ref{sec:reliablepolicy}). To achieve that, we present a gradient-descent-ascent-based learning algorithm that solves the underlying constrained optimization problem (Sec.~\ref{sec:learning_algorithm}), where we avoid regions with limited overlap and thus ensure a reliable estimation of the policy value. For the latter step, we use an additional policy neural network to predict the optimal policy for fast inference during deployment.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.95\linewidth]{fig/method_policy.pdf}
+\caption{Overview of our method along steps (1)--(3).}
+\label{fig:method}
+\vspace{-.5cm}
+\end{figure}
+
+\subsection{Neural network for estimating the joint effect of multiple dependent dosages} 
+\label{sec:outcome}
+
+In the first step, we aim to estimate the individualized dose-response function $\mu(t, x)$, which is later used as a plug-in estimator for the policy value $V(\pi)$. However, using a na{\"i}ve neural network with $t$ and $x$ concatenated as inputs can lead to diminishing effect estimates of $t$ when $x$ is high-dimensional \cite{Shalit.2017}. In addition, in our setting with multiple continuous treatments, we want to yield smooth estimates of the dose-response surface to ensure better generalization when interpolating between sparse observations. To address this, we thus develop a tailored \emph{dosage combination network} (DCNet) in the following. 
+
+\textbf{Architecture of DCNet:} Our DCNet builds upon the varying coefficient network (VCNet) \cite{Nie.2021} but extends it to learn the \emph{joint} effect of \emph{multiple} dependent dosages. DCNet consists of (i)~a representation network $\phi(x)$ and (ii)~a prediction head $h_{\eta(t)}(\phi)$, where $h$ is a network with $d_\eta$ different parameters $\eta(t) = \left(\eta_1(t), \dots , \eta_{d_\eta}(t)\right)^T$. The parameters $\eta(t)$ are not fixed but depend on the dosage $t$. This is crucial to ensure that the influence of $t$ does not diminish in a setting with high-dimensional covariates $x$.
+
+To handle multiple dosages $(t^{(1)}, \dots, t^{(p})$, a na{\"i}ve way \cite{Bellot.2022} would be to incorporate a separate prediction head for each treatment with corresponding parameters $\eta^{(i)}(t^{(i)})$. However, this would be ineffective for our task, as it captures only the marginal effect of a dosage but not the joint effect of the dosage combination. Instead, in order to learn the joint effect, we must not only model the marginal effect of a dosage (as in \cite{Bellot.2022}) but also drug-drug interactions. We achieve that through a custom prediction head.
+ 
+
+\textbf{Prediction head in DCNet:} In DCNet, we use a tailored prediction head, which is designed to model the \emph{joint} effect of dosage combinations. For this, we leverage a tensor product basis (see, e.g., \cite{Lin.1999, Wood.2006}) to estimate smooth interaction effects in the dose-response surface. As a result, we can directly incorporate all $p$ dosages simultaneously into the parametrization of the network $h$ by using only one head containing the joint dosage information. This is unlike other networks that use $p$ different independent heads \cite{Bellot.2022} and thus cannot capture the joint effect but only marginal effects.
+
+
+We define each scalar parameter $\eta_j(t)$ of our prediction head as
+\begin{equation}
+    \eta_j(t) = \sum_{k_1=1}^{K_1}\sum_{k_2=1}^{K_2} \dots \sum_{k_p=1}^{K_p}\beta_{j, k_1 k_2\dots k_p}\cdot \psi_{k_1}^{(1)}(t^{(1)}) \cdot \psi_{k_2}^{(2)}(t^{(2)}) \cdot \ldots \cdot \psi_{k_p}^{(p)}(t^{(p)}),
+\end{equation}
+where $K_1, \dots, K_p$ are the number of basis functions $\psi_{k_i}^{(i)}$ of the $p$ dosages $t^{(1)}, \dots, t^{(p)}$, and $\beta_{j, \dots}$ are the trainable coefficients for each element of the tensor product.  In order to preserve the continuity of the non-linear dose-response surface, we choose $\psi_{k_i}^{(i)}$ to be polynomial spline basis functions. Hence, we yield the parameter vector 
+$\eta(t) = \mathbf{B}  \mathbf{\Psi}(t)$, where
+\begin{equation}
+    \left.\mathbf{B} = \begin{bmatrix}
+    \beta_{1, 1\dots 1} & \cdots & \beta_{1, K_1 \dots K_p} \\
+    \vdots & \ddots & \vdots \\
+     \beta_{d_{\eta}, 1 \dots 1} & \cdots & \beta_{d_{\eta},K_1 \dots K_p} \\
+\end{bmatrix} \in \mathbb{R}^{d_{\eta} \times (\prod_{i=1}^{p}K_i)}\right.
+\end{equation}
+with matrix rows arranged as $(\beta_{j, 1 1\dots 1}, \; \dots , \; \beta_{j, K_1 1 \dots 1}, \; \dots, \;  \beta_{j, K_1 \dots K_{p-1} 1}, \; \dots , \;\beta_{j, K_1\dots K_{p-1} K_p})$, with 
+\begin{equation}
+    \left.\mathbf{\Psi}(t) =  \left(\psi^{(1)}(t^{(1)}) \; \otimes \; \psi^{(2)}(t^{(2)}) \; \otimes \dots \otimes \; \psi^{(p)}(t^{(p)})\right) \in \mathbb{R}^{(\prod_{i=1}^{p}K_i)} \right.
+\end{equation}
+and with $\left.\psi^{(i)} = (\psi^{(i)}_1, \dots, \psi^{(i)}_{K_i})^T \right.$, where $\otimes$ is the Kronecker product. For training DCNet, we minimize the mean squared error loss 
+% \begin{equation}
+    $\mathcal{L}_{\mu}=\frac{1}{n}\sum_{i=1}^n \left( \hat{\mu}(t_i, x_i) - y_i \right)^2.$
+% \end{equation} 
+
+
+Our prediction head has three key benefits: (1)~When estimating $\mu(t, x)$, the tensor product basis enables us to model non-linear interaction effects among different dosage dimensions while still having a dose-response surface that offers continuity, smoothness, and expressiveness. (2)~Having a dose-response surface that is smooth between different dosages is beneficial for our task as it allows for better interpolation between sparse data points. (3)~Smoothness is also exploited by our gradient-based learning algorithm later. The reason is that a smooth plug-in estimator $\hat{\mu}(t, x)$ for the estimated policy value $\hat{V}(\pi)$ allows us to have more stable gradients and thus more stable parameter updates during learning.
+
+
+\subsection{Conditional normalizing flows for detecting limited overlap} 
+\label{sec:cnf}
+
+In the second step, we estimate the GPS $f(t, x)$ in order to detect limited overlap, which later allows us to avoid regions with high uncertainty and thus to yield a reliable policy. 
+
+\emph{Why is the GPS relevant for reliable decision-making?} Due to sparsity in the data or otherwise limited overlap, the estimates of the individualized dose-response function $\hat{\mu}(t, x)$ from our DCNet may be naturally characterized by regions with high uncertainty, that is, regions in the covariate-treatment space with low GPS. If we would use the estimated $\hat{\mu}(t, x)$ in a na{\"i}ve manner as a plug-in estimator for policy learning, we may yield a policy where there can be a large discrepancy between the predicted outcome $\hat{\mu}(t, x)$ and the true outcome $\mu(t, x)$ and, therefore, a large discrepancy between $\hat{V}(\pi)$ and $V(\pi)$. By avoiding regions with a low GPS, we can thus ensure reliable decision-making in safety-critical applications such as medicine.
+
+\textbf{Estimation of GPS:} The GPS (i.e., the logging policy) is typically not known in real-world settings. Instead, we must estimate the GPS from observational data. To this end, we leverage \emph{conditional normalizing flows} (CNFs) \cite{trippe2018conditional,winkler2019learning}. CNFs are a fully-parametric generative model built on top of normalizing flows \cite{rezende2015variational, tabak2010density} that can model conditional densities $p(y \mid x)$ by transforming a simple base density $p(z)$ through an invertible transformation with parameters $\gamma(x)$ that depend on the input $x$.\footnote{Normalizing flows were introduced for expressive variational approximations in variational autoencoders \cite{rezende2015variational, tabak2010density}.  
+We provide a background in Appendix~\ref{sec:appendix_background}.} 
+
+In our method, we use CNFs with parameters $\gamma(x)$ to estimate the probability density function $f(t, x) = f_{T\,\mid\,X=x}(t)$ of $T$ conditioned on the patient covariates $X=x$. For our method, CNFs have several advantages.\footnote{Most prior works neglect a proper estimation of the GPS by mainly using non-flexible parametric models \cite{Hirano.2004} or kernel density estimators \cite{Kallus.2018e}. Similarly, the varying coefficient network from \cite{Nie.2021} uses an additional density head but enforces a discretization. It is thus overly simplified and, therefore, \emph{not} reliable and \emph{not} continuous. Both are crucial shortcomings for our task. As a remedy, we propose the use of CNFs.} First, CNFs are universal density approximators \cite{dinh2014nice, dinh2017density, durkan2019neural, huang2018neural}, making them flexible and able to capture even complex density functions for dosage combinations. Second, CNFs are properly normalized. Third, unlike kernel methods, CNFs are fully parametric, and, once trained, the inference time is constant \cite{Melnychuk.2022b}. This is particularly important later in the third step of our method (Sec.~\ref{sec:reliablepolicy}): For each training step and training sample in the batch, the predicted conditional density has to be evaluated again under the updated policy, and, hence, a fast inference time of density is crucial to achieving a significant speed up when training the policy network.
+
+In our method, we use \emph{neural spline flows} \cite{durkan2019neural}, as they allow for flexible estimation of multimodal densities, and, in combination with masked auto-regressive networks \cite{dolatabadi2020invertible}, we can extend them to multiple dimensions. This combination allows for fast and exact evaluation of the multidimensional densities.  We also set the base density, $p(z)$, to standard normal distribution. 
+The CNFs are trained by minimizing the negative log-likelihood loss
+   $ \mathcal{L}_{f}= - \frac{1}{n}\sum_{i=1}^n  \log  \hat{f}(t_i, x_i)$ .
+
+In the following section, we use the estimated GPS $\hat{f}(t,x)$ during policy learning in order to avoid regions with limited overlap and thus ensure reliable decision-making. 
+
+\subsection{Constrained optimization to avoid regions with limited overlap} 
+\label{sec:reliablepolicy}
+
+\textbf{Reliable decision-making}: Our aim is to find the policy $\pi^\text{rel}$ which maximizes the estimated policy value $\hat{V}(\pi)$ while ensuring that $V(\pi)$ can be estimated \emph{reliably}. For this, we suggest to constrain our search space in the shared covariate-treatment space to regions that are sufficiently supported by data, i.e., where overlap is not violated. Formally, we rewrite our objective from Eq.~\eqref{eq:prob_baseobjective} as
+\begin{equation}
+    \pi^\text{rel} \in \underset{\pi \in \Pi^{\mathrm{r}}}{\arg\max} \; \hat{V}(\pi) 
+    \qquad\text{with} \quad
+    \Pi^{\mathrm{r}} = \left\{ \pi \in \Pi\ \,\mid\, f \left(\pi(x), x) > \overline{\varepsilon} \right), \; \forall x \in \mathcal{X} \right\} ,
+\end{equation}
+where $\overline{\varepsilon}$ is a reliability threshold controlling the minimum overlap required for our policy.
+In our setting with finite observational data, this yields the constrained optimization problem 
+\begin{equation}
+\label{eq:method_constrainedobjective}
+    \begin{aligned}
+         & \underset{\pi}{\max} & \frac{1}{n}\sum_{i=1}^{n} \hat{\mu} \left( \pi(x_i), x_i \right) & &
+         \text{s.t.}  & & \hat{f} \left( \pi(x_i), x_i \right) \geq \overline{\varepsilon} & ,\; \forall i \in \{1, \ldots, n\}. \\
+    \end{aligned}
+\end{equation}
+ Here, we use our DCNet as a plug-in dose-response estimator $\hat{\mu}(t, x)$, and we further use our conditional normalizing flows to restrict the search space to policies with a sufficiently large estimated GPS $\hat{f}(t, x)$. 
+
+\textbf{Neural network for reliable policy learning:} To learn the optimal reliable policy, we further suggest an efficient procedure based on gradient updates in the following. Specifically, we train an additional policy neural network to predict the optimal policy. Our choice has direct benefits in practice. \emph{Why not just optimize over the dosage combinations for each patient individually?} In principle, one could also use methods for constrained optimization and leverage the nuisance functions $\hat{\mu}$ and $\hat{f}$ to directly optimize over the dosage assignments $t$ for each patient, i.e., 
+$ t_i^{\mathrm{rel}} = \underset{\Tilde{t_i}}{{\arg\max}}\left[ \hat{\mu} \left( \Tilde{t_i}, x_i \right) \right] \;
+\text{s.t.}\; \hat{f} \left( \Tilde{t_i}, x_i \right) \geq \overline{\varepsilon}$.
+However, this does \emph{not} warrant scalability at inference time, as it requires that one solves the optimization problem for \emph{each} incoming patient. The complexity of this optimization problem scales with both the number of dosages and the number of samples in the data to be evaluated. This makes treatment recommendations costly, which prohibits real-time decision-making in critical care. As such, direct methods for optimization are rendered impractical for real-world medical applications. Instead, we suggest to directly learn a policy that predicts the optimal dosage combination for incoming patients. 
+
+As the constrained optimization problem in Eq.~\eqref{eq:method_constrainedobjective} cannot be natively learned by gradient updates, we must first transform Eq.~\eqref{eq:method_constrainedobjective} into an unconstrained Lagrangian problem
+\begin{equation}\label{eq:lagrangian_optimization}
+    \begin{aligned}
+        &  \underset{\theta}{\min} \; - \frac{1}{n}\sum_{i=1}^{n}\hat{\mu} \left( \pi_{\theta}(x_i), x_i \right)
+         \; \; \; \text{s.t.} \;  \hat{f} \left( \pi_{\theta}(x_i), x_i \right) \geq \overline{\varepsilon}  , \forall i \\
+        \iff \; &  \underset{\theta}{\min} \; \underset{\lambda_i \geq 0}{\max}  - \frac{1}{n}\sum_{i=1}^{n} \left\{ \hat{\mu} \left( \pi_{\theta}(x_i), x_i \right) - \lambda_i \left[ \hat{f} \left( \pi_{\theta}(x_i), x_i \right) - \overline{\varepsilon} \right] \right\},
+    \end{aligned}
+\end{equation}
+where $\pi_{\theta}(x_i)$ is the policy learner with parameters $\theta$, and $\lambda_i $ are the Lagrange multipliers for sample $i$. The Lagrangian min-max-objective can be solved by adversarial learning using gradient descent-ascent optimization (see, e.g., \cite{Lin.2020} for a background). Details are presented in the next section where we introduce our learning algorithm. 
+
+\subsection{Learning algorithm} 
+\label{sec:learning_algorithm}
+
+The learning algorithm for our method proceeds along the following steps (see Algorithm~\ref{algo:relpol}):  
+
+$\bullet$~(1)~We use our DCNet to estimate the individualized dose-response function $\hat{\mu}(t_i, x_i)$ for dosage combinations. 
+
+$\bullet$~(2)~We estimate the GPS $\hat{f}(t_i, x_i)$ using the CNFs to detect areas with limited overlap.
+
+$\bullet$~(3)~We plug the estimated $\hat{\mu}(t, x)$ and $\hat{f}(t, x)$ into the Lagrangian objective from Eq.~\eqref{eq:lagrangian_optimization}. As the policy learner, we use a multilayer-perceptron neural network $\hat{\pi}_{\theta}(x)$ to predict the optimal dosage combination $t$ given the patient covariates $x$. We use stochastic gradient descent-ascent. In detail, we perform adversarial learning with alternating parameter updates. First, in every training step, we perform a gradient \emph{descent} step to update the parameters $\theta$ of the policy network $\hat{\pi}_{\theta}$ with respect to the policy loss
+\begin{equation}
+    \mathcal{L}_{\pi}(\theta, \lambda) =  - \frac{1}{n}\sum_{i=1}^{n} \left\{ \hat{\mu} \left( \hat{\pi}_{\theta}(x_i), x_i \right) - \lambda_i \left[ \hat{f} \left( \hat{\pi}_{\theta}(x_i), x_i \right) - \overline{\varepsilon} \right] \right\},
+\end{equation}
+where $\overline{\varepsilon}$ is the reliability threshold and where $\lambda = \{\lambda_i\}_{i=1}^{n}$ are trainable penalty parameters. Then, we perform a gradient \emph{ascent} step to update the penalty parameters $\lambda$ with respect to $\mathcal{L_{\pi}}$. Here, each $\lambda_i$ is optimized for each sample $i$ in the training set. 
+
+As there is no guarantee for global convergence in the non-convex optimization problem, we perform $k = 1, \ldots, K$ random restarts and select the best run as evaluated on the validation set by 
+\begin{equation} \label{eq:validation}
+    \pi_\theta^\text{rel} = \pi_{\theta}^{(j)}, \quad \mathrm{ with }\quad j= \underset{k}{\arg\max}\;  \sum_{i=1}^{n} \left.  \hat{\mu} \left( \pi_{\theta}^{(k)}(x_i), x_i \right)
+         \; \cdot \; \mathbbm{1}\left\{  \hat{f} \left( \pi_{\theta}^{(k)}(x_i), x_i \right) \geq \overline{\varepsilon}  \right\} \right. ,
+\end{equation}
+where  $\pi_{\theta}^{(k)}$ is the learned policy in run $k$ and $\mathbbm{1}\{\cdot\}$ denotes the indicator function. As a result, we select the policy $\pi_{\theta}^{(j)}$ which maximizes $\hat{V}(\pi)$ under the overlap constraint  $\hat{f} \left( \pi_{\theta}^{(k)}(x_i), x_i \right) \geq \overline{\varepsilon}, \; \forall i$. Note that we use the validation loss from Eq.~\eqref{eq:validation} because $\mathcal{L}_{\pi}$ cannot be directly applied for evaluating the performance on the validation set, as $\lambda_i$ can only be optimized for observations in the training set during the policy learning. 
+
+
+\section{Experiments}\label{sec:experiments}
+
+We perform extensive experiments using semi-synthetic data from real-world medical settings to evaluate the effectiveness of our method. Semi-synthetic data are commonly used to evaluate causal inference methods as it ensures that the causal ground truth is available \cite{Curth.2021, Xu.2021} and thus allows us to benchmark the performance. 
+
+\textbf{MIMIC-IV:} MIMIC-IV \cite{Johnson.2023} is a state-of-the-art dataset with de-identified health records from patients admitted to intensive care units. Analogous to \cite{Schwab.2020}, we aim to learn optimal configurations of mechanical ventilation to maximize patient survival ($Y$). Here, treatments ($T$) involve the configuration of mechanical ventilation in terms of respiratory rate and tidal volume. When filtering for $T$, we yield a dataset with $n=5476$ patients. We select 33 variables as patient covariates $X$ (e.g., age, sex, respiratory measurements, cardiac measurements). Unlike \cite{Schwab.2020} where treatments $T$ are modeled as $p$ mutually exclusive dosages, we model the more realistic setting, where $T$ are dosage combinations with a joint effect. Our choice is well aligned with medical literature according to which the parameters of mechanical ventilation are dependent and must be simultaneously controlled \cite{Grasselli.2021}. Further details for MIMIC-IV are in Appendix~\ref{sec:appendix_data}.
+
+\begin{wrapfigure}{R}{0.55\textwidth}
+\begin{minipage}{0.55\textwidth}
+\vspace{-0.6cm}
+\begin{algorithm}[H] \label{algo:relpol}
+\DontPrintSemicolon
+\caption{Reliable off-policy learning for dosage combinations}
+\label{alg:bounds}
+\scriptsize
+\SetKwInOut{Input}{Input}
+\SetKwInOut{Output}{Output}
+\Input{~ data $(X, T, Y)$, reliability threshold $\overline{\varepsilon}$}
+\Output{~ optimal reliable policy $\hat{\pi}_{\theta}^\text{rel}$}
+%\tcp{Step 1: Estimate nuisance components}
+\tcp{Step 1: Estimate individualized dose-response function using our DCNet}
+Estimate $\hat{\mu}(t, x)$ via loss $\mathcal{L}_\mu$\\
+\tcp{Step 2: Estimate GPS using conditional normalizing flows}
+Estimate $\hat{f}(t, x)$ via loss $\mathcal{L}_f$\\
+\tcp{Step 3: Train policy network using our reliable learning algorithm}
+\For{$k \in \{1, 2, \ldots, K\}$ }{ \tcp{K runs with random initialization}
+$\hat{\pi}_{\theta}^{(k)} \gets \mathrm{initalize\; randomly}$\\
+$\lambda \gets \mathrm{initalize\; randomly}$\\
+\For{each epoch}{ 
+\For{each batch}{
+
+$\mathcal{L}_{\pi} \gets  - \frac{1}{n}\sum_{i=1}^{n} \Big\{ \hat{\mu} \left( \hat{\pi}_{\theta}^{(k)}(x_i), x_i \right)$\\
+\hfill$- \lambda_{i} \left[ \hat{f} \left( \hat{\pi}_{\theta}^{(k)}(x_i), x_i \right) - \overline{\varepsilon} \right] \Big\}$ \\
+$\theta \gets \theta - \eta_{\theta} \nabla_{\theta} \mathcal{L}_{\pi}$ \\
+$\lambda \gets \lambda + \eta_{\lambda} \nabla_{\lambda} \mathcal{L}_{\pi}$
+}
+
+}
+
+}
+\tcp{select best learned policy wrt constrained objective on validation set}
+$\hat{\pi}_\theta^\text{rel} \gets \pi_{\theta}^{(j)}, \quad \mathrm{ with }\quad j= \underset{k}{\arg\max}\;  \sum_{i=1}^{n} \left.  \hat{\mu} \left( \pi_{\theta}^{(k)}(x_i), x_i \right)
+         \; \cdot \; \mathbbm{1}\left\{  \hat{f} \left( \pi_{\theta}^{(k)}(x_i), x_i \right) \geq \overline{\varepsilon}  \right\} \right.$  \; 
+\end{algorithm}
+\vspace{-0.5cm}
+\end{minipage}
+\end{wrapfigure}
+
+\textbf{TCGA:} TCGA \cite{Weinstein.2013} is a diverse collection of gene expression data from patients with different cancer types. Our aim is to learn the optimal dosage combination for chemotherapy ($T$). In chemotherapy, combining different drugs is the leading clinical option for treating cancer \cite{Wu.2020b}.  Let patient survival denote the outcome ($Y$). We select the same version of the dataset as in \cite{Bica.2020c, Schwab.2020}, containing the measurement of 4,000 genes as features $X$ from $n=9659$ patients. Unlike previous works \cite{Bica.2020c, Schwab.2020}, we again model $T$ as different, simultaneously assigned dosages with a joint effect. This follows medical practice where drug combinations in cancer therapy must be jointly optimized for each patient profile \cite{Fisusi.2019, Wu.2020b}. Given that TCGA is high-dimensional, we expect it to be an especially challenging setting for evaluation. Further details for TCGA are in Appendix~\ref{sec:appendix_data}.
+
+In both datasets, the response $Y \sim N(\mu(T, X), 0.5) $ can be interpreted as the log-odds ratio of patient survival, which is to be maximized. Due to the fact that we work with actual data from medical practice, certain dosage combinations conditional on the patients' features are more likely to be observed. Even other dosage combinations may not be assigned at all as they can cause harm. For our experiments, we introduce a parameter $\alpha$ controlling the dosage bias, which changes the observed policy of dosage assignments from random uniform ($\alpha=0$) to completely deterministic ($\alpha = \infty$). Hence, with increasing $\alpha$, the areas in the covariate-treatment space will be increasingly prone to limited overlap. We refer to Appendix~\ref{sec:appendix_data} for details. When not stated otherwise, we choose $\alpha=2$ and $p=2$ as the default setting for our experiments. 
+
+\textbf{Baselines:} To the best of our knowledge, there are no existing methods tailored to off-policy learning for dosage combinations under limited overlap. Hence, we compare our method with the following baselines, which vary different steps in our method and thus allow us to attribute the source of performance gain. Specifically, we vary dose-response estimation ($\hat{\mu}(t, x)$) vs. optimization ($\hat{\pi}$). (1)~For estimating $\hat{\mu}(t, x)$, we use two baselines: (i)~a simple multi-layer perceptron (\textbf{MLP}) as a standard neural alternative to our DCNet, and (ii)~\textbf{VCNet} \cite{Nie.2021} as the SOTA method for dose-response estimation for \emph{independent} treatments with a separate head per treatment dimension. (2)~For optimization, we minimize the policy loss $- \frac{1}{n}\sum_{i=1}^{n} \left.  \hat{\mu} \left( \hat{\pi}_{\theta}(x_i), x_i \right) \right. $ without constraints for dealing with limited overlap (\textbf{na\"ive}). 
+
+\textbf{Evaluation:} For training, we split the data into train / val / test sets (64 / 16 / 20\%). We first train the nuisance models $\hat{\mu}(t, x)$ and $\hat{f}(t, x)$. We then perform $k=5$ random restarts to train $\hat{\pi}(t, x)$. We select the best run with respect to the policy loss on the factual validation dataset. Thereby, we carefully adhere to the characteristics in real-world settings, where one does \emph{not} have access to the true dose-response function $\mu(t, x)$ on the validation set for model selection. In our method, we set the reliability threshold $\Bar{\varepsilon}$ to the $5\%$-quantile of the estimated GPS $\hat{f}(t, x)$ of the train set. Further details including hyperparameter tuning are in Appendix~\ref{sec:appendix_training}.  
+
+For evaluation, we compare the methods on the test set using the regret $R(\hat{\pi}) = \max_{\pi \in \Omega} \! V(\pi) - V(\hat{\pi})$. We report: (1)~the regret for the selected policy, which is the policy with the best policy loss on the validation set out of all $k$ policies; (2)~the average regret across all $k$ restarts; and (3)~the standard deviation to better assess the reliability of the method. 
+
+\begin{wraptable}{r}{0.7\textwidth}
+\vspace{-0.4cm}
+\centering
+\scriptsize
+\begin{tabular}{ll|rrr|rrr}
+\toprule
+
+ \multicolumn{2}{c}{\textbf{Methods}} & \multicolumn{3}{c}{\textbf{MIMIC-IV}} & \multicolumn{3}{c}{\textbf{TCGA}} \\
+ \cmidrule(lr){1-2}\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+
+ $\hat{\mu}$ &   $\hat{\pi}$ &  Selected  &  Mean &  Std &  Selected  &  Mean &  Std  \\
+\midrule
+Oracle ($\mu$) & observed &  1.21 & -- & --  &    1.06 &  -- & -- \\
+\midrule
+MLP  &    na{\"i}ve &    0.02   & 1.44 & 1.56 &    1.94 &  1.88 & 0.12\\
+MLP  & reliable &    0.03  &   0.03 & 0.00 &    1.78 &  1.78 & 0.03 \\
+ \midrule
+VCNet &               na{\"i}ve  &   2.13 & 2.49 & 0.92 & 3.64 & 2.47 & 1.19\\
+VCNet &            reliable &   0.07 & 0.07 & 0.00 &   0.06 & 0.06 & 0.00\\
+\midrule
+DCNet  &    na{\"i}ve &   2.81 &  2.07 & 1.17  &    2.52 &  0.94 & 1.21\\
+DCNet  & reliable (\textbf{ours}) &   0.04  &  0.04 & 0.00 &    0.03 &  0.03 & 0.00  \\
+\bottomrule
+\multicolumn{8}{l}{Reported: best / mean / standard deviation (lower = better)}
+\end{tabular}
+\caption{Performance against baselines. Regret on test set over $k=5$ restarts.}
+\label{tab:results}
+\vspace{-0.4cm}
+\end{wraptable}
+
+\textbf{Results:} Table~\ref{tab:results} compares the performance of our method against the baselines. We make the following observations: (1)~DCNet performs similarly to MLP for low-dimensional data such as MIMIC-IV, as expected. However, we find substantial improvements from DCNet over MLP for high-dimensional data such as TCGA, showing the advantage of enforcing smoothness and expressiveness in our prediction head. (2)~DCNet outperforms VCNet on both datasets, which demonstrates the importance of modeling the joint effect of dosage combinations. (3)~Choosing a policy that is reliable greatly benefits overall performance. For example, the baselines ($+$na{\"i}ve) even perform worse than the observed policy for TCGA, whereas our method ($+$reliable) is clearly superior. (4)~We also observe that our selection of reliable policies greatly reduces the standard deviation of the observed regrets. This further demonstrates the reliability of our proposed method. Overall, our method works best across both datasets. For example, the regret on the TCGA dataset for the selected policy drops from 2.52 (DCNet$+$na{\"i}ve) to only 0.03 (DCNet$+$reliable), which is a reduction by 98.8\%. In sum, this demonstrates the effectiveness of our method. 
+
+
+
+\textbf{Comparison to discretization:} There exist several methods for off-policy learning for discrete treatments (see Sec.~\ref{sec:related_work}), including methods targeted for overlap violations and treatment combinations. In principle, we could also discretize the dosages in our setting and apply such methods. However, we would then lose information about the exact dosage values and could not exploit the continuity of the dose-response surface. To demonstrate the benefits of our method,  we benchmark against an ``oracle'' discretized baseline where we assume perfect knowledge of the dose-response function and perfect individual treatment assignment. 
+\begin{wraptable}{r}{0.45\textwidth}
+\vspace{-0.2cm}
+\centering
+\scriptsize
+     \begin{tabular}{ll|r|r}
+    \toprule
+    
+     \multicolumn{2}{c}{\textbf{Methods}} & {\textbf{MIMIC-IV}} & {\textbf{TCGA}} \\
+     \cmidrule(lr){1-2}\cmidrule(lr){3-3}\cmidrule(lr){4-4}
+      $\hat{\mu}$ &   $\hat{\pi}$ &  \multicolumn{2}{c}{Regret}  \\
+      \midrule
+    
+   
+   Oracle ($\mu$) & discrete (3x3) &   3.32 &   2.94  \\
+     Oracle ($\mu$) & discrete (4x4) &   0.96 &   0.95  \\
+      Oracle ($\mu$) & discrete (5x5) &   0.05 &   0.06 \\
+      
+
+   \midrule
+    DCNet &        reliable (\textbf{ours}) &   0.04 &  0.03 \\
+
+    \bottomrule
+    \multicolumn{4}{l}{Reported: best / mean / standard deviation (lower = better)}
+    \end{tabular}
+        
+        \vskip 0.2cm
+        \caption{Performance against methods based on discretized treatments. }
+        \label{tab:baselines_discrete}
+
+\vspace{-0.4cm}
+\end{wraptable}This serves as an upper bound for all policy learning methods with discretization. We display the results for different granularities of equally-spaced grid discretization in Table~\ref{tab:baselines_discrete}. We observe that, even in the oracle setting, discretization itself leads to a higher regret than our proposed method, which confirms the advantages of leveraging continuous dosage information.
+
+\textbf{Robustness checks:} We evaluate the robustness of our method across settings with different levels of limited overlap. For this, we vary the dosage bias $\alpha$ (in Fig.~\ref{fig:dosage_bias}) and the number of dosages $p$ (in Fig.~\ref{fig:dosage_dim}). Here, we use DCNet for modeling $\hat{\mu}(t, x)$ in both methods, but then vary the policy selection (na{\"i}ve vs. reliable, as defined above). Our method (DCNet+reliable) shows robust behavior. As desired, it achieves a low regret and a low variation in all settings. In contrast, the na\"ive method leads to high variation. This must be solely attributed to that our constrained optimization for avoiding regions with limited overlap leads to large performance gains. We also observe another disadvantage of the na\"ive method: it may select a suboptimal policy out of the different runs due to the fact that the estimation of $\hat{\mu}(t, x)$ is erroneous in regions with limited overlap. Again, this underlines the benefits of our method for reliable off-policy learning of dosage combinations in settings with limited overlap. In Appendix~\ref{sec:appendix_experiments}, we demonstrate the robustness of our method in further setups.
+
+
+
+\begin{figure}[ht]
+Shown: selected policy (line) and the range over 5 runs (area). The na{\"i}ve baseline has a large variability across runs while ours is highly robust as expected (i.e., we see no variability).
+ \centering
+\begin{subfigure}{0.38\textwidth}
+  \centering
+  \caption{MIMIC-IV}
+  \includegraphics[width=1\linewidth]{fig/dosagebias_mimic.png}
+\end{subfigure}%
+\begin{subfigure}{0.38\textwidth}
+  \centering
+  \caption{TCGA}
+  \includegraphics[width=1\linewidth]{fig/dosagebias_tcga.png}
+\end{subfigure}
+\caption{Robustness for dosage bias $\alpha$.}
+\vspace{-.4 cm}
+\label{fig:dosage_bias}
+\end{figure} 
+~
+\begin{figure}[ht]
+\vspace{-1. cm}
+ \centering
+\begin{subfigure}{0.38\textwidth}
+  \centering
+  \caption{MIMIC-IV}
+  \includegraphics[width=1\linewidth]{fig/dimensions_mimic.png}
+\end{subfigure}%
+\begin{subfigure}{0.38\textwidth}
+  \centering
+  \caption{TCGA}
+  \includegraphics[width=1\linewidth]{fig/dimensions_tcga.png}
+\end{subfigure}
+\caption{Robustness for number of dosages $p$.}
+\label{fig:dosage_dim}
+\end{figure} 
+
+
+
+\section{Discussion}
+
+\textbf{Limitations:} Our method makes an important contribution over existing literature in personalized treatment design for dosage combinations by adjusting for the naturally occurring but non-trivial problems of drug-drug interactions and limited overlap. However, the complexity of real-world data in medical practice can limit the applicability of our method in certain ways. (i)~Our method does not account for the ignorability assumption, which can result in biased estimates in the case of unobserved confounders or other missing data. (ii)~We apply our method in a static treatment setting, whereas, in several clinical applications, time-series data are available, e.g., sequences of varying dosages, multiple treatment cycles, and right-censored data. Thus, future work could extend our method to account for causal effect estimates in a time-varying setting (e.g., \cite{Frauen.2023, hess2023bayesian, Melnychuk.2022}). (iii)~Our method relies on the -- for medical applications reasonable -- implicit assumption of smooth dose-response surfaces. In settings with extremely unsmooth or even stepwise dose-response surfaces, other methods may be more suitable for dose-response estimation. (iv)~Our method aims at reliable policy learning by avoiding areas with limited overlap to minimize potential harm. In other applications such as marketing, one may want to explicitly target unreliable regions to acquire new customers.
+
+\textbf{Broader impact:} Our method can have a significant impact in the field of medicine, where reliable dosing recommendations are crucial for effective treatment. Our approach addresses the limitations of previous methods in terms of reliability and estimating joint effects of dosage combinations, and, hence, can improve decision support for clinicians. The reliability of dosage recommendations is particularly important, as incorrect dosing can have serious consequences for patients, such as adverse effects or treatment failure. By addressing this gap, our approach provides a valuable tool for decision support in medicine, empowering healthcare professionals to make more personalized and safe treatment recommendations.
+
+\newpage
+
+\section*{Acknowledgments}
+SF acknowledges funding from the Swiss National Science Foundation (SNSF) via Grant 186932.
+
+\printbibliography
+
+\include{appendix}
+
+
+\end{document}

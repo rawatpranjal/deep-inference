@@ -1,0 +1,108 @@
+For DeepIV, we used the structure described in Table~\ref{deepiv-ope}. For DFIV, we used the structure described in Table~\ref{dfiv-ope}. The regularizer $\lambda_1, \lambda_2$ are both set to $10^{-5}$ as a result of the tuning procedure described in Appendix~\ref{sec:hyper-param}. For KIV, we used the Gaussian kernel where the bandwidth is determined by the median trick. We used random Fourier features \citep{Rahimi2008} with 100 dimensions.  For DeepGMM, we use the structure described in Table~\ref{deepGMM-ope}.
+
+
+\begingroup
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[t]
+    \caption{Network structures of DFIV in OPE experiment. For the input layer, we provide the input variable. For the fully-connected layers (FC), we provide the input and output dimensions.}
+    
+    \label{dfiv-ope}
+    
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Instrument Feature} $\vec{\phi}_{\theta_Z}$ }
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($s,\text{one-hot}(a)$) \\ \hline
+            2 & FC(*, 150), ReLU\\ \hline
+            3 & FC(150, 100), ReLU\\ \hline
+            4 & FC(100, 50), ReLU \\ \hline
+            \end{tabular}    
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Treatment Feature} $\vec{\psi}_{\theta_X}$} 
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($s, \text{one-hot}(a)$) \\ \hline
+            2 & FC(*, 50), ReLU\\ \hline
+            3 & FC(50, 50), ReLU\\ \hline
+            \end{tabular}    
+    \end{minipage}
+\end{table}
+\endgroup  
+
+\begingroup
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[t]
+    \caption{Network structures of DeepGMM in OPE experiment. For the input layer, we provide the input variable. For the fully-connected layers (FC), we provide the input and output dimensions.}
+    
+    \label{deepGMM-ope}
+    
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Instrument Net}}
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($s,\text{one-hot}(a)$) \\ \hline
+            2 & FC(*, 150), ReLU\\ \hline
+            3 & FC(150, 100), ReLU\\ \hline
+            4 & FC(100, 50), ReLU \\ \hline
+            5 & FC(50, 1) \\ \hline
+            \end{tabular}    
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Treatment Net}} 
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($s, \text{one-hot}(a)$) \\ \hline
+            2 & FC(*, 50), ReLU\\ \hline
+            3 & FC(50, 50), ReLU\\ \hline
+            4 & FC(50, 1), ReLU\\ \hline
+            \end{tabular}    
+    \end{minipage}
+\end{table}
+\endgroup  
+
+\begingroup
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[t]
+    \caption{Network structures of DeepIV in OPE experiment. For the input layer, we provide the input variable. For the fully-connected layers (FC), we provide the input and output dimensions. The MixutureGaussian layer maps the input linearly to required parameter dimensions for a mixture of Gaussian distribution with diagonal covariance matrices. The Bernoulli layer maps the input linearly to a single dimension to represent the logit of a Bernoulli distribution to predict if the next state is a terminating state.}
+    
+    \label{deepiv-ope}
+    
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Instrument Net}}
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($s,\text{one-hot}(a)$) \\ \hline
+            2 & FC(*, 50), ReLU\\ \hline
+            3 & FC(50, 50), ReLU\\ \hline
+            4 & MixtureGaussian(3) \text{ and } Bernoulli \\ \hline
+            \end{tabular}    
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Treatment Net}} 
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($s, \text{one-hot}(a)$) \\ \hline
+            2 & FC(*, 50), ReLU\\ \hline
+            3 & FC(50, 50), ReLU\\ \hline
+            4 & FC(50, 1), ReLU\\ \hline
+            \end{tabular}    
+    \end{minipage}
+\end{table}
+\endgroup  
+

@@ -1,0 +1,27 @@
+\section{Problem Definition}\label{sec:problem}
+% We aim to estimate the causal impact of $K$ heterogeneous treatments on a multi-agent dynamical system over time. Throughout this paper, we use boldface uppercase letters to denote matrices or vectors, and regular lowercase letters to represent the values of variables.
+We consider a dynamical system of $N$ agents as an evolving interaction graph $\mathcal{G}^t = \{\mathcal{V},\mathcal{E}^t\}$, where nodes $\mathcal{V} = \{v_1, v_2, \cdots, v_N\}$ are agents and $\mathcal{E}^t$ are the weighted edges among them, denoting agents' dynamic interaction that changes over time. Each node is associated with time-varying causal characteristics, which we introduce in the following along with the casual inference framework.
+
+
+We follow the longitudinal causal inference setting for predicting future potential outcomes as in~\cite{rubin1978bayesian}.  We denote the observational data at timestamp $t$ as $(\mathbf{X}^t, \mathbf{W}^t, \mathbf{A}^t, \mathbf{Y}^t)$, where $\mathbf{X}^t\in\mathbb{R}^{N\times d_1}$ represents the time-varying covariates (e.g., the health status of residents) of $N$ agents. $\mathbf{W}^t \in \mathbb{R}^{N\times N}$ represents the weighted adjacency matrix, whose element $w_{i\rightarrow j}\in \mathbb{R}$ is the weight of the directed edge that points from node $i$ to node $j$ and may be asymmetric. $\mathbf{A}^t\in \{0,1\}^{N\times K}$ are time-dependent treatments, where $\mathbf{A}_{kj}^t = 1$ denotes the $k^{th}$ treatment assigned to node $i$ at timestamp $t$, and $K$ is the number of heterogeneous treatments.  $\mathbf{Y}^t\in\mathbb{R}^{N\times d_2}$ is the time-dependent outcome, such as the number of confirmed cases in each state, which can be part of $\mathbf{X}^t$. The historical observations up to time $t$ is represented as $\mathcal{H}^t=\left\{\overline{\mathbf{X}}^t, \overline{\mathbf{W}}^t, \overline{\mathbf{A}}^t, \overline{\mathbf{Y}}^t\right\}$, where $\overline{\mathbf{X}}^t, \overline{\mathbf{W}}^t, \overline{\mathbf{A}}^t, \overline{\mathbf{Y}}^t$ contain all $\mathbf{X}^{t^-},\mathbf{W}^{t^-},\mathbf{A}^{t^-},\mathbf{Y}^{t^-}\left(t^{-} \leq t\right)$. 
+We aim to predict the unbiased potential outcomes $\mathbb{E}\big(\mathbf{Y}^{t^{+}}\big(\mathbf{A}^{t^{+}}=a\big)|\mathcal{H}^t\big)$ under any treatment assignment $a$\footnote{The potential outcome can also be formalized using \textit{do} operation~\cite{pearl2009causality}}. Here, $a$ is the dynamic treatment trajectory (e.g. sequences of state policies). As only one of the potential outcome trajectories is observed for each treatment assignment, we refer to the unobserved potential outcomes as counterfactuals~\cite{BicaAJS20,seedat2022continuous}.
+
+To make potential outcomes identifiable from observational data, we follow three standard assumptions~\cite{BicaAJS20,seedat2022continuous,anonymous2023cfgode} below:
+
+\textbf{Assumption 1: Consistency}. The potential outcome is equal to the observed factual outcome if $\mathbf{A}^{t} = a^{t} $: $\mathbf{Y}^{t^+}(\mathbf{A}^{t}=a^{t}) = \mathbf{Y}^{t^+}$.
+
+
+\textbf{Assumption 2: Overlap}. At any time point $t^+$, there is some positive probability of treatment assignment regardless of the historical observation: $0 < P(\mathbf{A}^{t^+}=a\mid \mathcal{H}^t) < 1,~\forall \mathcal{H}^t,~t<t^+$.
+
+The last assumption defines unconfoundedness (strong ignorability) in  dynamical systems. 
+We first define the interference effects caused by neighbors' treatments of node $i$ as $\mathbf{G}_{i}^t =\sum_{j\in \mathcal{N}_i}\frac{1}{|N_i|} \mathbf{A}_j^t\in \mathbb{R}^{K}$, which is the proportion of treated nodes in node $i$'s neighbors for each treatment type. 
+We refer to $\mathbf{G}_i^t$ as interference summary, which assumes that a node is only influenced by treatments of its immediate neighbors as in previous studies~\cite{anonymous2023cfgode,ma2022learning, jiang2022estimating}. 
+
+
+\textbf{Assumption 3: Strong Ignorability for Multi-Agent Dynamical Systems}. Given the historical observations, the potential outcome trajectory is independent of the treatments and interference summary: $\mathbf{Y}^{t^+}(\mathbf{A}^{t}=a) \perp \mathbf{A}^{t^+}, \mathbf{G}^{t^+} \mid \mathcal{H}^t,~\forall a, t$.
+
+It ensures that it is sufficient to only condition on the historical observations and graph sequences up to $t$ to block all backdoor paths so as to estimate the potential outcome in the future. With these three assumptions, the potential outcome trajectory can be identified as: 
+\begin{align*}
+    \mathbb{E}\left(\mathbf{Y}^{t^+}(\mathbf{A}^{t}=a)\mid \mathcal{H}^t\right) = \mathbb{E}\left(\mathbf{Y}^{t^+}\mid \mathbf{A}^{t^+}, \mathbf{G}^{t^+}, \mathcal{H}^t\right).
+\end{align*}
+This enables us to estimate the potential outcomes by training a machine learning model using observational data, and to use the same model to predict counterfactual outcomes given new treatment trajectories. 

@@ -1,0 +1,245 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{iclr2021_conference,times}
+\iclrfinalcopy
+
+\makeatletter
+\newcommand{\printfnsymbol}[1]{%
+  \textsuperscript{\@fnsymbol{#1}}%
+}
+\makeatother
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+% \title{Varying Coefficient Neural Network with Functional Targeted Regularization for Estimating Continuous Treatment Effects}
+
+\title{VCNet and Functional Targeted Regularization For Learning Causal Effects of Continuous Treatments}
+
+% Authors must not appear in the submitted version. They should be hidden
+% as long as the \iclrfinalcopy macro remains commented out below.
+% Non-anonymous submissions will be rejected without review.
+
+
+\author{Lizhen Nie\thanks{Equal contribution and corresponding authors.}$^{\,\,\,1}$,\quad Mao Ye\printfnsymbol{1}$^{2}$, \quad Qiang Liu$^{2}$,  \quad Dan Nicolae$^{1}$ \\
+$^1$Department of Statistics,
+The University of Chicago\\
+$^2$Department of Computer Science,
+University of Texas at Austin\\
+\texttt{lizhen@statistics.uchicago.edu, my21@cs.utexas.edu,}\\
+\texttt{lqiang@cs.utexas.edu, nicolae@statistics.uchicago.edu} 
+}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to \LaTeX{} to determine where to break
+% the lines. Using \AND forces a linebreak at that point. So, if \LaTeX{}
+% puts 3 of 4 authors names on the first line, and the last on the second
+% line, try using \AND instead of \And before the third author name.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{wrapfig}
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}
+\usepackage{subcaption,siunitx,booktabs}
+\definecolor{darkblue}{rgb}{0, 0, 0.5}
+\usepackage{subcaption}
+\usepackage[colorlinks=true,linkcolor=darkblue,citecolor=darkblue,urlcolor=darkblue]{hyperref}
+\usepackage{url}
+\usepackage{multirow}
+\usepackage{natbib}
+\usepackage{hyperref}
+
+
+\global\long\def\th{\boldsymbol{\theta}}
+\def\X {\bm{X}}
+\def\C {\,|\:}
+\newtheorem{corollary}{Corollary}
+\newtheorem{remark}{Remark}
+\newtheorem{proposition}{Proposition}
+\newtheorem{thm}{Theorem}
+\newtheorem{assump}{Assumption}
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
+
+\global\long\def\E{\mathbb{E}}%
+\global\long\def\P{\mathbb{P}}%
+\global\long\def\Pr{\text{Prob}}%
+%\global\long\def\P{P}%
+\global\long\def\R{\mathbb{R}}%
+\global\long\def\w{\boldsymbol{\omega}}%
+\global\long\def\th{\boldsymbol{\theta}}%
+\global\long\def\x{\boldsymbol{x}}%
+\global\long\def\X{\boldsymbol{X}}%
+\global\long\def\F{\mathcal{F}}%
+\global\long\def\z{\boldsymbol{z}}%
+\global\long\def\do{\text{do}}%
+\global\long\def\nn{\text{NN}}%
+\global\long\def\tr{\text{TR}}%
+\global\long\def\grid{\text{grid}}%
+\global\long\def\A{\textbf{A}}%
+\global\long\def\bp{\boldsymbol{\Phi}}%
+\global\long\def\O{O}%
+\global\long\def\o{o}%
+\global\long\def\vp{\bm{\varphi}}%
+\global\long\def\vpk{\bm{\varphi}^{K_n}}%
+\global\long\def\tildevpk{\tilde{\bm{\varphi}}^{K_n}}%
+\global\long\def\bb{\bm{b}}%
+\global\long\def\hbb{\hat{\bm{b}}}%
+\global\long\def\hqn{\hat{Q}_n}%
+\global\long\def\hpin{\hat{\pi}_n}%
+\global\long\def\tbn{\tilde{B}_n}%
+\global\long\def\Zn{\bm{Z}_n}%
+\global\long\def\Rn{\bm{R}_n}%
+\global\long\def\En{\mathcal{\mathcal{E}}_{n}}%
+\global\long\def\Sn{\mathcal{S}_{n}}%
+\global\long\def\Dn{\mathcal{D}_{n}}%
+\global\long\def\An{\mathcal{A}_{n}}%
+\global\long\def\hpi{\bar{h}_{\hat{\pi}}}%
+\global\long\def\E{\mathbb{E}}%
+\global\long\def\epi{e_{\hat{\pi}}}%
+\global\long\def\Var{\text{Var}}%\
+\global\long\def\bmalpha{\check{\bm{\alpha}}}%
+\global\long\def\vecI{\bm{1}}%
+\global\long\def\I{\mathbb{I}}%
+\global\long\def\Rad{\text{Rad}_n}%
+\global\long\def\subG{\text{subG}}%
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+    Motivated by the rising abundance of observational data with continuous treatments, we investigate the problem of estimating the average dose-response curve (ADRF). Available parametric methods are limited in their model space, and previous attempts in leveraging neural network to enhance model expressiveness relied on partitioning continuous treatment into blocks and using separate heads for each block; this however produces in practice discontinuous ADRFs. Therefore, the question of how to adapt the structure and training of neural network to estimate ADRFs remains open. This paper makes two important contributions. First, we propose a novel varying coefficient neural network (VCNet) that improves model expressiveness while preserving continuity of the estimated ADRF. Second, to improve finite sample performance, we generalize targeted regularization to obtain a doubly robust estimator of the whole ADRF curve.
+\end{abstract}
+
+\section{Introduction}\label{sec:introduction}
+Continuous treatments arise in many fields, including healthcare, public policy, and economics. With the widespread accumulation of observational data, estimating the average dose-response function (ADRF) while correcting for confounders has become an important problem \citep{hirano2004propensity, imai2004causal, kennedy2017non, fong2018covariate}.
+%Under the no hidden confounder setting, traditional statistical methods for estimating ADRF include inverse-probability weighting \citep{robins2000marginal}, subclassification \citep{imai2004causal}, and regressing on generalized propensity score \citep{hirano2004propensity}. All these methods require an estimation of the conditional density of treatment given covariates, which rely on parametric assumptions. Nonparametric estimators like \cite{mccaffrey2004propensity} and \cite{fong2018covariate} are also proposed. assume parametric models of either propensity score or response function, and then obtain an estimator of ADRF using \cite{robins2000marginal}, \cite{imai2004causal},  \cite{hirano2004propensity}.
+
+Recently, papers in causal inference \citep{johansson2016learning, alaa2017bayesian, shalit2017estimating, schwab2019learning, farrell2018deep,shi2019adapting} 
+have utilized feed forward neural network for modeling. The success of using neural network model lies in the fact that neural networks, unlike traditional parametric models, are very flexible in modeling the complex causal relationship as shown by the universal approximation theorem \citep{csaji2001approximation}. Also, unlike traditional non-parametric models, neural network has been shown to be powerful when dealing with high-dimensional input (i.e., \citet{masci2011stacked, johansson2016learning}), which implies its potential for dealing with high-dimensional confounders.
+
+
+%In general, two challenges arise in estimating treatment effects \citep{kennedy2017non}. The first is the flexibility of causal relationship. Parametric assumptions limit the model space, and can lead to significant bias under model misspecification. The second challenge is properly correcting for high-dimensional confounders under observational studies \citep{fong2018covariate}. %Previous methods designed for continuous treatment are usually limited in practical use due to challenges of accurately estimating the unknown generalized propensity score \citep{fong2018covariate}. As a consequence, applied researchers often discretize a continuous treatment and utilize methods based on discrete treatment (e.g. \cite{donohue2007impact}, \cite{harder2008adolescent}, \cite{boyd2010untangling}, \cite{nielsen2011foreign}). 
+%Recently, many works in causal inference \citep{johansson2016learning, alaa2017bayesian, shalit2017estimating, schwab2019learning, farrell2018deep,shi2019adapting} utilize feed forward neural network to deal with the two challenges. Indeed, for the first challenge, the Universal Approximation Theorem \citep{csaji2001approximation} shows that feed-forward neural network can approximate any continuous function under mild assumptions, which guarantees that the neural network is flexible in modeling the causal relationship. And various successful application of neural network with high-dimensional input (i.e., \citet{masci2011stacked, johansson2016learning}) demonstrates that the neural network is potentially able to overcome the second challenge.
+
+% And for the second challenge, neural network has been successfully applied for dealing with high-dimensional input \citep{masci2011stacked, johansson2016learning}.  
+
+A successful application of neural network to causal inference requires a specially designed network structure that distinguishes the treatment variable from other covariates, since otherwise the treatment information might be lost in the high dimensional latent representation \citep{shalit2017estimating}. However, most of the existing network structures are designed for binary treatments and are difficult to generalize to treatments taking value in continuum. For example, \cite{shalit2017estimating, louizos2017causal, schwab2019learning, shi2019adapting} used separate prediction heads for the two treatment options and this structure is not directly applicable for continuous treatments as there is an infinite number of treatment levels. To deal with a continuous treatment, recent work \citep{schwab2019learning} proposed a modification called DRNet. DRNet partitions a continuous treatment into blocks and for each block, trains a separate head, in which the treatment is concatenated into each hidden layer (see Figure \ref{fig:structure}). Despite the improvements made by the building block of DRNet, this structure does not take the continuity of ADRF \citep{prichard1971assessment, schneider1993dose,threlfall1999sun} into account, and  it produces discontinuous ADRF estimators in practice (see Figure \ref{fig:discontinuity}). 
+
+% However, most previous neural network models for treatment effect use network structures that are specifically designed for binary treatment and are difficult to generalize to treatment taking value in a continuum. For example, \cite{shalit2017estimating, louizos2017causal, schwab2019learning, shi2019adapting} use separate heads for the two treatment options and this structure is not directly applicable for continuous treatment as there are infinite number of treatment levels. To deal with the continuous treatment, a modification called DRNet \citep{schwab2019learning} partitions continuous treatment into blocks and trains a separate head for each block (see Figure \ref{fig:structure}). This structure, however, does not take the continuity of ADRF \citep{prichard1971assessment, schneider1993dose,threlfall1999sun} into account and in practice it produces discontinuous ADRF estimator (see Figure \ref{fig:discontinuity}). 
+
+
+%To avoid loss of dosage information under high dimensional latent representations \citep{shalit2017estimating}, it appends treatment to each hidden layer of the prediction head. 
+% Those structures do not take the continuity of ADRF \citep{prichard1971assessment, schneider1993dose,threlfall1999sun} into account when modeling and in practice, the discontinuous ADRF (see Figure \ref{fig:discontinuity}). 
+
+% These problems come from their way of dealing with treatment. Intuitively, the role of treatment and covariates in the network structure should be different, and incorporating treatment information should not destroy the continuity of ADRF. 
+
+We propose a new network building block that is able to strengthen the influence of treatment but also preserve the continuity of ADRF. Under binary treatment, previous neural network models for treatment effect estimation use separate prediction heads to model the mapping from covariates to (expected) outcome under different treatment levels. When it comes to the continuous treatment case, by the continuity of ADRF, this mapping should change continuously with respect to the treatment. To achieve this, motivated by the varying coefficient model (\cite{hastie1993varying}, \cite{fan1999statistical}, \cite{chiang2001smoothing}), one can allow the weights of the prediction head to be continuous functions of the treatment. 
+This serves as the first contribution here, called Varying Coefficient Network (VCNet). In VCNet, once the activation function is continuous, the mapping defined by the network automatically produces continuous ADRF estimators as shown in Figure \ref{fig:discontinuity} but also prevents the treatment information from being lost in its high dimensional latent representation.
+
+% changes continuously w.r.t. different treatment levels.
+% Our first contribution is to propose a novel Varying Coefficient Network (VCNet), which allows weights of the network to depend on treatment information. It automatically produces continuous ADRF estimator as shown in Figure \ref{fig:discontinuity} but also avoids the treatment being lost in high dimensional latent representation.
+
+
+% Motivated by the varying coefficient model (\cite{hastie1993varying}, \cite{fan1999statistical}, \cite{chiang2001smoothing}), one can think of treatment as a parameter that affects the  relationship between response and covariates. Upon this observation,   our first contribution is to propose a novel Varying Coefficient Network (VCNet), which allows weights of the network to depend on treatment information. It has the advantage of automatically producing continuous ADRF, as shown in Figure \ref{fig:discontinuity}.
+
+
+\iffalse
+Most previous methods utilize the predictive power of deep network, and are free from the problem of estimating propensity score, whereas \cite{shi2019adapting} shows that adding an additional conditional density estimation head helps the treatment effect estimation. 
+
+We further extend the idea of \cite{shi2019adapting} to continuous treatments. Incorporating treatment taking value in a continuum is challenging and nontrivial. 
+\fi
+
+\begin{figure}
+\begin{center}
+\begin{subfigure}{.4\textwidth}\centering
+  \includegraphics[width=.7\linewidth,height=.6\textwidth]{Vc_Dr.pdf} 
+\end{subfigure}\hspace{-15mm}
+\begin{subfigure}{.4\textwidth}\centering
+  \includegraphics[width=.7\linewidth,height=.6\textwidth]{Vc_Dr_ihdp.pdf} 
+\end{subfigure}\hspace{-15mm}
+\begin{subfigure}{.4\textwidth}\centering
+  \includegraphics[width=.7\linewidth,height=.6\textwidth]{Vc_Dr_news.pdf} 
+\end{subfigure}
+\end{center}
+\caption{Estimated ADRF on testing set from a typical run of VCNet and DRNet. From left to right panels are results on simulation, IHDP and News dataset. Both VCNet and DRNet are well optimized. Blue points denote DRNet estimation and red points VCNet. The truth is shown in yellow solid line.}
+\vspace{-0.5em}
+\label{fig:discontinuity}
+\end{figure}
+
+%{\color{red} 1. find literature show curve is smooth; utilize the smoothness to reduce the model complexity}
+%{\color{red} TR introduce model complexity}
+
+The second contribution of this paper is to generalize targeted regularization \citep{shi2019adapting} to obtain a doubly robust estimator of the whole ADRF curve, which improves finite sample performance. Targeted regularization was previously used for estimating a scalar quantity \citep{shi2019adapting} and it associates an extra perturbation parameter to the scalar quantity of interest. While adapting it to a finite-dimensional vector is not difficult, generalization to a curve is far less straightforward. Difficulties arise from the fact that ADRFs cannot be regularized at each treatment level independently because the number of possible levels is infinite and, thus, the model complexity cannot be controlled with the introduction of infinite extra perturbations parameters. Utilizing the continuity (and smoothness) of ADRF \citep{schneider1993dose,threlfall1999sun}, we introduce smoothing to control model complexity. Its model size increases in a specific manner to balance model complexity and regularization strength.
+%cite TMLE; to the best of our knowledge
+Moreover, the original targeted regularization in \citet{shi2019adapting} is not guaranteed to obtain a doubly robust estimator. By allowing regularization strength to depend on sample size, we obtain a consistent and doubly robust estimator under mild assumptions.
+Noticing the connection between targeted regularization and TMLE \citep{van2006targeted}, a by-product of this work is that we give the first (to the best of our knowledge) generalization of TMLE to estimating a function.
+
+We do experiments on both synthetic and semi-synthetic datasets, finding that VCNet and targeted regularization boost performance independently. Using them jointly consistently achieves  state-of-the-art performance.
+
+%{\color{red} say sth that we fix issue in victor's paper}
+
+% This paper is organized as follows: Section \ref{sec:problem_statement}  describes the problem setting, Section \ref{sec:structure} introduces network structure of VCNet, Section \ref{sec:targeted_regularization} introduces targeted regularization on ADRF, Section \ref{sec:experiments} shows experimental results, and Section \ref{sec:conclusion} gives conclusions.
+
+\paragraph{Notation}
+We denote the Dirac delta function by $\delta(\cdot)$. We use $\E$ to denote expectation, $\P$ to denote population probability measure and we write $\P(f)=\int f(z) d\P(z)$. Similarly, we denote $\P_n$ as the empirical measure and we write $\P_n(f)=\int f(z) d\P_n(z)$. We denote $\lceil n\rceil$ as the least integer greater than or equal to $n$, and we denote $\lfloor n\rfloor$ as the greatest integer less than or equal to $n$. We use $\tau$ to denote Rademacher random variables. We denote Rademacher complexity of a function class $\mathcal{F}:\mathcal{X}\rightarrow \R$ as $\Rad(\mathcal{F})=\E\left(\sup_{f\in\mathcal{F}}\left|\frac{1}{n}\sum_{i=1}^n\tau_i f(X_i)\right|\right)$. Given two functions $f_1, f_2: \mathcal{X} \to \R$, we define $\left\Vert f_{1}-f_{2}\right\Vert _{\infty}=\sup_{x\in\mathcal{X}}\left|f_{1}(x)-f_{2}(x)\right|$ and $\left\Vert f_{1}-f_{2}\right\Vert _{L^{2}}=\left(\int_{x\in\mathcal{X}}\left(f_{1}(x)-f_{2}(x)\right)^{2}dx\right)^{1/2}$. For a function class $\mathcal{F}$, we define $\left\Vert \mathcal{F}\right\Vert _{\infty}=\sup_{f\in\mathcal{F}}\left\Vert f\right\Vert _{\infty}$. We denote stochastic boundedness with $O_p$ and convergence in probability with $o_p$. Given two random variable $X_1$ and $X_2$, $X_1 \perp X_2$ denotes $X_1$ and $X_2$ are independent. We use $a_n\asymp b_n$ to denote that both $a_n/b_n$ and $b_n/a_n$ are bounded.
+
+\section{Problem Statement and Background}\label{sec:problem_statement}
+
+%{\color{red} fix \X and \x}
+
+Suppose we observe an i.i.d sample $\{(y_i,\x_i,t_i)\}_{i=1}^{n}$ where $(y_i,\x_i,t_i)$ is a realization of random vector $(Y,\X,T)$ with support $(\mathcal{Y}\times\mathcal{X}\times\mathcal{T})$. Here $\X$ is a vector of covariates, $T$ is a continuous treatment, and $Y$ is the outcome.  Without loss of generality, we assume $\mathcal{T}=[0,1]$.
+%{\color{red} $\mathcal{T}$ [0,1]}
+We want to estimate the Average Dose Response Function (ADRF) 
+\[
+\psi(t):=\E(Y \mid \text{do}(T = t)),
+\]
+which is the potential expected outcome that would have been observed under treatment level $t$.
+Suppose the conditional density of $T$ given $\X$ is $\pi(T\mid \X)$. 
+Throughout this paper, we make the following assumptions:
+\begin{assump}\label{assump}
+(a) There exists some constant $c>0$ such that $\pi(t\mid \x)\ge c$ for all $\x\in\mathcal{X}$ and $t\in\mathcal{T}$.
+(b) The measured covariate $\X$ blocks all backdoor paths of the treatment and outcome.
+\end{assump}
+
+\begin{remark}
+Assumption (a) implies that treatment is assigned in a way that every subject has some chance of receiving every treatment level regardless of its covariates, which is a standard assumption to establish doubly robust estimators. Assumption (b) implies that the casual effect is identifiable, i.e., can be estimated using observational data.
+\end{remark}
+
+
+\input{method.tex}
+\input{TMLE}
+\input{experiments.tex}
+\input{conclusion.tex}
+
+\bibliographystyle{iclr2021_conference}
+\bibliography{main.bib}
+\clearpage
+\appendix
+\section{Appendix}
+\input{appendix.tex}
+\end{document}

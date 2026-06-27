@@ -1,0 +1,70 @@
+\subsection{Uncertainty about the Continuous Treatment Effect Interval}
+\label{sec:uncertainty}
+% \subsubsection{Frequentist interpretation}
+Following \cite{zhao2019sensitivity, dorn2021sharp, chernozhukov2021omitted}, we construct $(1 - \alpha)$ confidence intervals for the upper and lower bounds under the CMSM using the percentile bootstrap estimator.
+Let $P_{\D}$ be the empirical distribution of the observed data sample, $\D=\{\x_i, \tf_i, \y_i\}_{i=1}^n = \{\mathbf{S}_i\}_{i=1}^n$.
+Let $\widehat{P}_{\D} = \{\widehat{\D}_j\}_{k=1}^{n_b}$ be the bootstrap distribution over $n_b$ datasets, $\widehat{\D}_k=\{\widehat{\mathbf{S}}_i\}_{i=1}^n$, sampled with replacement from the empirical distribution, $P_{\D}$.
+Let $Q_{\alpha}$ be the $\alpha$-percentile of $\mu(w(\y, \cdot; \bm{\omega}); \x, \tf, \Lambda, \params)$ in the bootstrap resampling distribution: 
+\[Q_{\alpha} \coloneqq \inf_{\mu^*} \left\{\widehat{P}_\D(\mu(w(\y, \cdot; \bm{\omega}); \x, \tf, \Lambda, \params) \leq \mu^*) \geq \alpha \right\}.\]
+Finally, let $\params_k$ be the parameters of the model fit on the $k$-th bootstrap sample of the data.
+Then, the bootstrap confidence interval of the upper and lower bounds of the CAPO function under the CMSM are given by:
+\begin{equation}
+    \label{eq:capo_ci}
+    \CI_b\left(\mu(\x, \tf; \Lambda, \alpha) \right) \coloneqq \left[ \underline{\mu}_{b}(\x, \tf; \Lambda, \alpha), \overline{\mu}_{b}(\x, \tf; \Lambda, \alpha) \right],
+\end{equation}
+where,
+\begin{equation*}
+    \underline{\mu}_{b}(\x, \tf; \Lambda, \alpha) = Q_{\alpha / 2} \left( \left\{ \underline{\mu}(\x, \tf; \Lambda, \params_k)  \right\}_{k = 1}^b \right),
+\end{equation*}
+and
+\begin{equation*}
+    \overline{\mu}_{b}(\x, \tf; \Lambda, \alpha) =  Q_{1 - \alpha / 2} \left( \left\{ \overline{\mu}(\x, \tf; \Lambda, \params_k)  \right\}_{k = 1}^b \right).
+\end{equation*}
+Furthermore, the bootstrap confidence interval of the upper and lower bounds of the APO (dose-response) function under the CMSM are given by:
+\begin{equation}
+    \label{eq:apo_ci}
+    \CI_b\left(\mu(\tf; \Lambda, \alpha) \right) \coloneqq \left[ \underline{\mu}_{b}(\tf; \Lambda, \alpha), \overline{\mu}_{b}(\tf; \Lambda, \alpha) \right],
+\end{equation}
+where,
+\begin{equation*}
+    \underline{\mu}_{b}(\tf; \Lambda, \alpha) = Q_{\alpha / 2} \left( \left\{ \underline{\mu}(\tf; \Lambda, \params_k)  \right\}_{k = 1}^b \right),
+\end{equation*}
+and
+\begin{equation*}
+    \overline{\mu}_{b}(\tf; \Lambda, \alpha) =  Q_{1 - \alpha / 2} \left( \left\{ \overline{\mu}(\tf; \Lambda, \params_k)  \right\}_{k = 1}^b \right).
+\end{equation*}
+
+
+% \subsubsection{Bayesian interpretation}
+% \andrew{Thinking of moving to appendix and leaving for future work}
+% Extending the work of \cite{jesson2021quantifying} for binary-valued treatments, we formalize the estimation of $(1 - \alpha)$ credible intervals for the upper and lower bounds under the CMSM.
+% \begin{definition}
+%     \label{def:bayesion}
+%     \normalfont{Monte-Carlo credible interval estimators.}\newline
+%     Given, $q(\params \mid \D)$, a variational approximation of the posterior distribution, $p(\params \mid \D)$, over model parameters, $\params$, given the observational data, $\D$. 
+%     Sample $k$ times from $q(\params \mid \D)$ to construct a set of functional estimators parameterized by $\{\params_j\}_{j=1}^{k}$.
+%     Then, the Monte-Carlo credible interval of the upper and lower bounds of the CAPO function under the CMSM are given by:
+%     \begin{equation*}
+%         \CrI\left(\mu(\x, \tf), \Lambda, \alpha \right) \coloneqq \left[ \widehat{\underline{\mu}}(\x, \tf; \Lambda, \alpha), \widehat{\overline{\mu}}(\x, \tf; \Lambda, \alpha) \right],
+%     \end{equation*}
+%     where,
+%     \begin{equation*}
+%         \widehat{\underline{\mu}}(\x, \tf; \Lambda, \alpha) = Q_{\alpha / 2} \left( \left\{ \widehat{\underline{\mu}}_{\params_j}(\x, \tf; \Lambda)  \right\}_{j = 1}^k \right),
+%     \end{equation*}
+%     and
+%     \begin{equation*}
+%         \widehat{\overline{\mu}}(\x, \tf; \Lambda, \alpha) =  Q_{1 - \alpha / 2} \left( \left\{ \widehat{\overline{\mu}}_{\params_j}(\x, \tf; \Lambda)  \right\}_{j = 1}^k \right).
+%     \end{equation*}
+%     Furthermore, the bootstrap confidence interval of the upper and lower bounds of the APO (dose-response) function under the CMSM are given by:
+%     \begin{equation*}
+%         \CrI\left(\mu(\tf), \Lambda, \alpha \right) \coloneqq \left[ \widehat{\underline{\mu}}(\tf; \Lambda, \alpha), \widehat{\overline{\mu}}(\tf; \Lambda, \alpha) \right],
+%     \end{equation*}
+%     where,
+%     \begin{equation*}
+%         \widehat{\underline{\mu}}(\tf; \Lambda, \alpha) = Q_{\alpha / 2} \left( \left\{ \widehat{\underline{\mu}}_{\params_j}(\tf; \Lambda)  \right\}_{j = 1}^k \right),
+%     \end{equation*}
+%     and
+%     \begin{equation*}
+%         \widehat{\overline{\mu}}(\tf; \Lambda, \alpha) =  Q_{1 - \alpha / 2} \left( \left\{ \widehat{\overline{\mu}}_{\params_j}(\tf; \Lambda)  \right\}_{j = 1}^k \right).
+%     \end{equation*}
+% \end{definition}

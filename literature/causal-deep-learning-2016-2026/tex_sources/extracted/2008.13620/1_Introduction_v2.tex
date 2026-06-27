@@ -1,0 +1,43 @@
+\section{Introduction}
+Estimating the individual treatment effect (ITE) is a task of evaluating the causal effect of treatment strategies on some important outcomes over individual-level, which is a significant problem in many areas \cite{glass2013causal,baum2015causal,wang2015robust,heckman2018returns,song2019effect}. For example, in healthcare domain, it is critical to prescribe personalized medicines (treatments) for different patients based on their health conditions. 
+% \textcolor{blue}{Especially in healthcare domain, it is critical to accurately identify the treatment effect before applying models to real-world clinical settings.}
+To approach this, randomized controlled trial (RCT) is usually conducted, which is accomplished by randomly allocating patients to two groups, treating them differently (i.e., one group has intervention and the other has a placebo or no intervention) and comparing them in terms of a measured response. However, conducting RCTs in the healthcare domain is extremely expensive and time-consuming, if not impossible, due to the requirement of tremendous expert effort and the consideration of ethical issues.
+
+Observational data contain patient records, including their demographic information, vital signs, lab tests and outcomes but without having complete knowledge of why a specific treatment is applied to a patient.
+% \textcolor{blue}{$\leftarrow$ Lack logic relation to the last paragraph. $\rightarrow$ Due to the existence of issues above, most existing studies \cite{?,?} usually estimate ITE with observational data of patient records, including their demographic information, vital signs, lab tests and outcomes but without having complete knowledge of why a specific treatment is applied to a patient.} 
+The accumulation of observational data in electronic medical records (EMRs) offers a promising opportunity for ITE estimation when RCTs are expensive or impossible to conduct.
+ 
+
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.9\linewidth]{figures/Fig1.pdf}
+\caption[]{The illustration of causal graphs for causal estimation from dynamic observational data. During observed window $T$, we have a trajectory $\{X_t, A_t, Z_{t-1}\}_{t=1}^{T}\cup\{Y_{T+\tau}\}$, where $X_t$ denotes the current observed covariates, $A_t$ denotes the treatment assignments, $Z_t$ denotes the hidden confounders and $Y_{T+\tau}$ denotes the potential outcomes. At any time stamp $t$, the treatment assignments $A_t$ are affected by both observed covariates $X_t$ and hidden confounders $Z_{t-1}$ (the causal relationship are annotated by blue arrows). The hidden confounders $Z_{t-1}$ are inferred from previous hidden confounders, treatments and covariates (annotated by black arrows). The potential outcomes $Y_{T+\tau}$ are affected by last time stamp covariates $X_{T}$, treatment assignments $A_{T}$ and hidden confounders $Z_{T-1}$.}
+\vspace{-15pt}
+\label{problem_setting}
+\end{figure}
+
+There have been lots of existing methods that estimate ITE by leveraging observational data, including propensity score matching method \cite{rosenbaum1983central}, forest based methods \cite{hill2011bayesian,wager2018estimation}, and representation learning-based methods \cite{johansson2016learning,shalit2017estimating,yao2018representation}. However, many methods are mainly based on the \textit{strong ignorability assumption} that there are no unobserved confounders and only few studies have considered the influence of hidden confounders \cite{louizos2017causal}. Here, the hidden confounders refer to factors that affect both treatment assignment and outcome, but are not directly measured in the observational data. For example, physicians may prescribe treatments to the patient based on indicators not in the medical records. Ignoring these hidden confounders can lead to bias in estimating causal effects \cite{pearl2009causality}. 
+% \textcolor{blue}{(What is the bias? Just inaccuracy? A clear definition is needed.)} 
+Besides, these methods are primarily designed for static settings and are hardly extended to longitudinal observation data. However, most real-world observational data is naturally dynamic and consists of sequential information. For example, in EMR, the patient's conditions (e.g., prescribed medicines, lab results and vital signs) and treatment assignments are recorded frequently during their stay in the hospital. Therefore, estimating ITE becomes more challenging when the treatments and covariates change over time, and the potential outcomes are influenced by historical treatments and covariates. 
+
+
+% In statistics and epidemiology domains, some work focuses on adjusting time-varying confounders \cite{robins2000marginal,schulam2017reliable}. However, these traditional methods mainly adopt linear regression or gaussian process regression for potential outcome estimation, which may not be effective when applied to high-dimensional data with complex dependency among time-varying covariates. \textcolor{blue}{($\leftarrow$ Place time-varying models in Related Work Section.)} 
+
+In this paper, we study the problem of \textit{Estimating individual treatment effects with time-varying confounders} (as illustrated by a causal graph in Fig \ref{problem_setting}). To alleviate the aforementioned challenges, we propose a novel causal effects estimation framework, Deep Sequential Weighting (\modelnospace), to adjust the time-varying confounders in the longitudinal data. The proposed framework \model consists of three main components: representation learning module, balancing module and prediction module. To adjust the time-varying hidden confounders, \model first learns the representations of hidden confounders by leveraging the current observed covariates and all historical information (i.e., previous covariates and treatment assignments) through Gated Recurrent Units (GRU) with an attention mechanism. With the help of the attention mechanism, the model can automatically focus on important historical information. Then, we compute the time-varying inverse probability of treatment for each individual to balance the confounding. The learned representations of hidden confounders and observed covariates are then combined together for both treatment prediction and potential outcome prediction. 
+
+
+To demonstrate the effectiveness of our framework, we conduct comprehensive experiments on synthetic, semi-synthetic and real-world EMR datasets (MIMIC-III \cite{johnson2016mimic}). \model outperforms state-of-the-art baselines in terms of PEHE and ATE.
+% By comparing with state-of-the-art causal inference methods on ITE estimation, \model achieves XX\%, xx\% and XX\% absolute improvement in terms of PEHE, ATE and RMSE metric on the three datasets respectively. 
+To further illustrate how our method can be used in personalized medicine,  we analyze the treatment effects on important outcomes for ICU septic patients. Results demonstrate that our model can generate unbiased and accurate treatment effect by conditioning both time-varying observed confounders and hidden confounders. Our model has the potential to be leveraged as part of clinical decision support systems that assist physicians to determine whether to introduce treatment to a patient or a specific population. 
+% We envision that our model would be leveraged as a real-time treatment decision support tool for individualized critical-care interventions.
+
+The contributions of this paper are as follows:
+\begin{itemize}
+  \item We study the task of estimating ITE with time-varying confounders, on which few attention has been before. 
+  \item We propose a novel causal inference framework \model to solve the task. \model fully utilize the historical information and current covariates for learning the representations of hidden confounders. A balancing operation is adopted to generate unbiased and accurate ITE estimation.
+  \item We conduct experiments on synthetic, semi-synthetic and real-world datasets to demonstrate the effectiveness of our proposed method. Results show that our method outperforms state-of-the-art causal inference methods and 
+  has the potential to be used as part of clinical decision support systems to determine whether a treatment is needed for a specific patient, paving the way for personalized medicine.
+\end{itemize}
+
+ 

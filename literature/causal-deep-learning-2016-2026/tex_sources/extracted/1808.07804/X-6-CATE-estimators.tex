@@ -1,0 +1,129 @@
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\I}{\mathcal{I}}
+\newcommand{\J}{\mathcal{J}}
+%\newcommand{\E}{\mathbb{E}}
+\renewcommand{\P}{\mathcal{P}}
+%\newcommand{\Yobs}{Y}
+\newcommand{\Yobst}{Y^{obs,t}}
+\newcommand{\Yobsc}{Y^{obs,c}}
+\newcommand{\var}{\mbox{Var}}
+\newcommand{\sd}{\mbox{Sd}}
+\newcommand{\cov}{\mbox{Cov}}
+%\newcommand{\R}{\mathbb{R}}
+\newcommand{\Dt}{\tilde D}
+\newcommand{\taun}{\hat{\tau}^{mn}}
+\newcommand{\theoremfont}{\itshape}
+\renewcommand{\descriptionlabel}[1]{\hspace{\labelsep}\textbf{\descriptionlabelfont #1}}
+\newcommand{\D}{\mathcal{D}}
+\newcommand{\trace}{\mbox{trace}}
+\newcommand{\IMSE}{\mbox{IMSE}}
+\newcommand{\EMSE}{\mbox{EMSE}}
+\newcommand{\MSE}{\mbox{MSE}}
+\newcommand{\BIAS}{\mbox{BIAS}}
+%\newcommand{\Pcal}{\mathcal{P}}
+\newcommand{\mae}{\gamma_{\scriptsize\mbox{max}}}
+\newcommand{\mie}{\gamma_{\scriptsize\mbox{min}}}
+\newcommand{\mis}{s_{\scriptsize\mbox{min}}}
+\newcommand{\ED}{\mathbb{E}_{\mathcal{D}}}
+\newcommand{\Ex}{\mathbb{E}_{x}}
+\newcommand{\Pobs}{\mathcal{P}_{\mbox{\tiny observed}}}
+%\newcommand{\define}{:=}
+\newcommand{\deltat}{\tilde \delta}
+%\newcommand{\define}{\overset{\mbox{def}}{=}}
+%\newcommand{\emin}{e_{\min}}
+%\newcommand{\emax}{e_{\max}}
+\newcommand{\Sb}{{\bar S}}
+\section{Pseudo Code for CATE Estimators}
+\label{app:learners}
+
+In this section, we will present pseudo code for the CATE estimators in this paper. We present code for the meta learning algorithms in Section \ref{app:transfer.algos}.
+We denote by $Y^0$ and $Y^1$ the observed outcomes for the control and the treated group. For example, $Y^1_i$ is the observed outcome of the $i$th unit in the treated group. $X^0$ and $X^1$ are the features of the control and treated units, and hence, $X^1_i$  corresponds to the feature vector of the $i$th unit in the treated group. $M_k(Y\sim X)$ is  the notation for a regression estimator, which estimates $x \mapsto \E[Y|X=x]$. It can be any regression/machine learning estimator, but in this paper we only choose it to be a neural network or random forest.
+
+% cateestimate T-learner    	
+\begin{algorithm}[H] 
+	\begin{algorithmic}[1]
+		\Procedure{T--Learner}{$X, \Yobs, W$}
+		
+		\State $\hat \mu_0 	= M_0(Y^0 \sim X^0)$
+		\State $\hat \mu_1	 = M_1(Y^1 \sim X^1)$
+		
+		\item[]
+		\State $\hat \tau(x) = \hat \mu_1(x) - \hat \mu_0(x)$ 
+		\EndProcedure
+	\end{algorithmic}
+	\caption{T-learner}
+	
+	\label{algo:Tlearner}
+		\algcomment{$M_0$ and $M_1$ are here some, possibly different machine learning/regression algorithms.}	
+\end{algorithm}
+
+% cateestimate S-learner
+\begin{algorithm}[H] 
+	\begin{algorithmic}[1]
+		\Procedure{S--Learner}{$X, \Yobs, W$}
+		
+		\State $\hat \mu 	= M(\Yobs \sim (X, W))$
+%				\Comment{Estimate $\mu_1$ and $\mu_0$}:
+						
+		\State $\hat \tau(x) = \hat \mu(x,1) - \hat \mu(x,0)$ 
+%				\Comment{Difference is the CATE estimator}:
+		\EndProcedure
+	\end{algorithmic}
+	\caption{S-learner}
+	
+	\label{algo:Slearner}
+	\algcomment{$M(\Yobs \sim (X, W))$ is the notation for estimating $(x,w) \mapsto \E[Y|X=x, W=w]$ while treating $W$ as a 0,1--valued feature.}
+\end{algorithm}
+
+\begin{algorithm}[H]
+	\begin{algorithmic}[1]	
+		\Procedure{X--Learner}{$X, \Yobs, W, g$}
+		
+		
+		\item[]
+		\State $\hat \mu_0	= M_1(Y^0 \sim X^0)$ 
+				\Comment{Estimate response function}
+		\State $\hat \mu_1	 = M_2(Y^1 \sim X^1)$
+		
+		\item[]
+		\State $\Dt^1_{i} =         Y^1_{i}                         -     \hat \mu_0(X^1_{i})$
+				\Comment{Compute imputed treatment effects}
+		\State $\Dt^0_{i} =     \hat \mu_1(X^0_{i})     -     Y^0_{i}$
+		
+		\item[]
+		\State $\hat \tau_1      = M_3(\Dt^{1}      \sim     X^1)$
+				\Comment{Estimate CATE for treated and control}
+		\State $\hat \tau_0     = M_4(\Dt^0     \sim     X^0)$
+		
+		\item[]
+		\State $\hat \tau(x) = g(x) \hat \tau_0(x) + (1- g(x)) \hat \tau_1(x)$ 
+				\Comment{Average the estimates}
+		
+		\EndProcedure
+	\end{algorithmic}
+	\caption[test]{X--learner}
+
+	\label{aglo:Xlearner}
+	
+	\algcomment{$g(x) \in [0,1]$ is a weighing function which is chosen to minimize the variance of $\hat \tau(x)$. It is sometimes possible to estimate $\cov(\tau_0(x) , \tau_1(x) )$, and compute the best $g$ based on this estimate. However, we have made good experiences by choosing $g$ to be an estimate of the propensity score, but also choosing it to be constant and equal to the ratio of treated units usually leads to a good estimator of the CATE. }	
+\end{algorithm}
+
+
+\begin{algorithm}[t]
+  \begin{algorithmic}[1]
+  \If{$W_i == 0$}
+  \State Update the network $\pi_{\theta_0}$ to predict $Y_i^{obs}$
+  \State Update the network $\pi_{\theta_1}$ to predict $Y_i^{obs} + \pi_\tau(X_i)$
+  \State Update the network $\pi_\tau$ to predict $\pi_{\theta_1}(X_i) - Y_i^{obs}$
+  \EndIf
+  \If{$W_i == 1$}
+  \State Update the network $\pi_{\theta_0}$ to predict $Y_i^{obs} - \pi_\tau(X_i)$
+  \State Update the network $\pi_{\theta_1}$ to predict $Y_i^{obs}$
+  \State Update the network $\pi_\tau$ to predict $Y_i^{obs} - \pi_{\theta_0}(X_i)$
+  \EndIf
+  \end{algorithmic}
+  \caption{Y-Learner Pseudo Code}
+  \label{algo:Ylearner}
+  \label{ylearner}
+      \algcomment{This process describes training the Y-Learner for one step given a data point $(Y_i^{obs}, X_i, W_i)$}
+\end{algorithm}

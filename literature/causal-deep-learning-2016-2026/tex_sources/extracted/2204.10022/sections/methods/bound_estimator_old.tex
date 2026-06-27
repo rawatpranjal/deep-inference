@@ -1,0 +1,76 @@
+\subsection{Continuous Treatment Effect Interval Estimator}
+\label{sec:estimator}
+Following \cite{jesson2021quantifying}, we develop a parametric estimator of the bounds in \Cref{def:CAPO_bounds,def:APO_bounds}. 
+The parametric estimator is based off of the doubly-robust formulation of \Cref{eq:mu_w}:
+\begin{equation}
+    \begin{split}
+        \mu&(w(\y); \x, \tf) \\
+        &= \mut(\x, \tf) + \frac{\int_\Ycal r(\y; \tf, \x) w(\y; \tf, \x)p(\y \mid \tf, \x)d\y}{\int_\Ycal w(\y; \tf, \x)p(\y \mid \tf, \x)d\y},
+    \end{split}
+\end{equation}
+where $r(\y; \tf, \x) = y - \mut(\x, \tf)$.
+
+By analogy to Lemma 3 in \cite{jesson2021quantifying}, the lower bound in \Cref{def:CAPO_bounds} is given by,
+\begin{equation}
+    \underline{\mu}(\x, \tf; \Lambda) = \inf_{u \in \Uni} \{ \kappa(\x, \tf; \Lambda, u) \},
+\end{equation}
+where $\Uni = \{ u: \Ycal \to [0, 1] \: \textrm{s.t}.\: u(\y) \: \textrm{is non-increasing} \}$,
+\begin{equation*}
+    \begin{split}
+        \kappa(\x, &\tf; \Lambda, u) = \\
+        &\mut(\x, \tf) + \frac{\int u(\y) r(\y; \tf, \x) p(\y | \tf, \x)d\y}{\alphap\left(\x; \Lambda, p(\tf \mid \x)\right) + \int u(\y)p(\y | \tf, \x)d\y},
+    \end{split}
+    \label{eq:kappa}
+\end{equation*}
+and 
+\begin{equation*}
+    \alphap(\x; \Lambda, p(\tf \mid, \x)) = \frac{\alpha(p(\tf \mid \x), \Lambda)}{\beta(p(\tf \mid \x), \Lambda) - \alpha(p(\tf \mid \x), \Lambda)}.
+    \label{eq:gamma}
+\end{equation*}
+Similarly, the upper bound in \Cref{def:CAPO_bounds} is given by,
+\begin{equation}
+        \overline{\mu}(\x, \tf; \Lambda) = \sup_{u \in \Und} \{ \kappa(\x, \tf; \Lambda, u) \},
+\end{equation}
+where $\Und = \{ u: \Ycal \to [0, 1] \: \textrm{s.t}.\: u(\y) \: \textrm{is non-decreasing} \}$.
+
+Given this formulation, the bounds on the expected potential outcome, $\mu(\x, \tf)$, are now completely defined in terms of identifiable quantities: namely, the nominal propensity density for treatment, $p(\tf \mid \x)$; the conditional density of the outcome given the assigned treatment and measured covariates, $p(\y \mid \tf, \x)$; and the conditional expected outcome $\mut(\x, \tf)$. 
+Thus, we define density estimators $\pp(\tf \mid \x)$, $\pp(\y \mid \tf, \x)$, and estimator $\mup(\x, \tf)$ parameterized by instances $\params$ of the random variable $\Params$.
+% The bounds on the expected potential outcome, $\mu(\x, \tf)$, are now completely defined in terms of identifiable quantities: namely, the conditional density of the outcome given the assigned treatment and measured covariates, $p(\y \mid \tf, \x)$; and the conditional expected outcome $\mut(\x, \tf)$. 
+% Thus, we define density estimators $\pp(\tf \mid \x)$, $\pp(\y \mid \tf, \x)$, and estimator $\mup(\x, \tf)$ parameterized by instances $\params$ of the random variable $\Params$.
+
+In this work we will model both densities as Gaussian mixtures, noting that with a sufficient number of components they can model any continuous distribution \cite{titterington1985statistical}. Thus,
+\begin{equation*}
+    \pp(\tf \mid \x) = \sum_{j=1}^{n_{\tf}} \pip^{j}(\x) \mathcal{N}\left(\tf \mid \mup^{j}(\x), \Sigmap^{j}(\x)\right),
+\end{equation*}
+\begin{equation*}
+    \pp(\y \mid \tf, \x) = \sum_{j=1}^{n_{\y}} \pip^{j}(\x, \tf) \mathcal{N}\left(\y \mid \mup^{j}(\x, \tf), \sigmap^{2j}(\x, \tf)\right),
+\end{equation*}
+and $\mup(\x, \tf) = \sum_{j=1}^{n_{\y}} \pip^{j}(\x, \tf)\mup^{j}(\x, \tf)$ \cite{bishop1994mixture}.
+
+The parametric bound estimators of the CAPO function are then given by,
+\begin{equation*}
+    \underline{\mu}_{\params}(\x, \tf; \Lambda) = \inf_{u \in \Uni} \left\{ \kappap(\x, \tf; \Lambda, u) \right\},
+\end{equation*}
+and
+\begin{equation*}
+    \overline{\mu}_{\params}(\x, \tf; \Lambda) = \sup_{u \in \Und} \{ \kappap(\x, \tf; \Lambda, u) \},
+\end{equation*}
+where
+\begin{equation}
+    \begin{split}
+        \kappap&(\x, \tf; \Lambda, u) = \\
+        &\mup + 
+        \frac{\int u(\y) r_{\params}(\y; \tf, \x) \pp(\y | \tf, \x)d\y}
+        {\alphap\left(\x; \Lambda, \pp(\tf \mid \x)\right) + \int u(\y)\pp(\y | \tf, \x)d\y},
+    \end{split}
+    \label{eq:kappap}
+\end{equation}
+where $\mup=\mup(\x, \tf)$.
+Finally, the parametric bound estimators for the APO (dose-response) function are given by,
+\begin{equation}
+    \underline{\mu}_{\params}(\tf; \Lambda) = \inf_{u \in \Uni}  \E[\kappap(\X, \tf; \Lambda, u)],
+\end{equation}
+and
+\begin{equation}
+    \overline{\mu}_{\params}(\tf; \Lambda) = \sup_{u \in \Und} \E[\kappap(\X, \tf; \Lambda, u)].
+\end{equation}

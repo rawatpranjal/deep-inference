@@ -1,0 +1,22 @@
+ \begin{algorithm}
+ \caption{Deep Feature Instrumental Variable Regression}
+ \begin{algorithmic}[1]  \label{algo}
+ \renewcommand{\algorithmicrequire}{\textbf{Input:}}
+ \renewcommand{\algorithmicensure}{\textbf{Output:}}
+ \REQUIRE Stage 1 data $(x_i, z_i)$, Stage 2 data $(\tilde y_i \tilde z_i)$, Regularization parameters $(\lambda_1, \lambda_2)$. Initial values $\hat{\theta}_X,\hat{\theta}_Z$. Mini-batch size $(m_b, n_b)$. Number of updates in each stage $(T_1, T_2)$.
+ \ENSURE Estimated structural function $\hat{f}_\mathrm{struct}(x)$
+ \REPEAT
+   \STATE Sample $m_b$ stage 1 data $(x^{(b)}_i, z^{(b)}_i)$ and  $n_b$ stage 2 data $(\tilde y^{(b)}_i, \tilde z^{(b)}_i)$.
+  \FOR{$t=1$ to $T_1$}
+    \STATE Return function $\hat{\vec{V}}^{(m_b)}(\hat{\theta}_X,\theta_Z)$ in \eqref{eq:stage1-sol}  using $(x^{(b)}_i, z^{(b)}_i)$
+    \STATE Update $\hat{\theta}_Z \leftarrow \hat{\theta}_Z - \alpha \nabla_{\theta_Z} \mathcal{L}^{(m_b)}_1(\hat{\vec{V}}^{(m_b)}(\hat{\theta}_X,\theta_Z), \theta_Z)|_{\theta_Z=\hat{\theta}_Z}$ \hspace{5mm}\textit{$\backslash\backslash$ Stage 1 learning}
+  \ENDFOR
+  \FOR{$t=1$ to $T_2$}
+    \STATE Return function $\hat{\vec{u}}^{(n_b)}(\theta_X,\hat{\theta}_Z)$ in  \eqref{eq:stage2-sol} using $ (\tilde y^{(b)}_i, \tilde z^{(b)}_i)$ and function $\hat{\vec{V}}^{(m_b)}(\theta_X,\hat\theta_Z)$\!
+    \STATE Update $\hat{\theta}_X \leftarrow \hat{\theta}_X -\alpha\nabla_{\theta_X} \mathcal{L}^{(n_b)}_2(\hat{\vec{u}}^{(n_b)}(\theta_X,\hat{\theta}_Z), \theta_X)|_{\theta_X=\hat{\theta}_X}$ \hspace{5mm}\textit{$\backslash\backslash$ Stage 2 learning}
+  \ENDFOR
+  \UNTIL{\textbf{convergence}}
+  \STATE Compute $\hat{\vec{u}}^{(n)}:=\hat{\vec{u}}^{(n)}(\hat{\theta}_X,\hat{\theta}_Z)$ from \eqref{eq:stage2-sol} using entire dataset.
+ \RETURN $\hat{f}_\mathrm{struct}(x) = (\hat{\vec{u}}^{(n)})^\top \vec{\psi}_{\hat{\theta}_X}(x)$
+ \end{algorithmic} 
+ \end{algorithm}

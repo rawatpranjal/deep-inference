@@ -1,0 +1,14 @@
+In DFIV, we learn the adaptive basis functions. Let $\vec{\psi}_{\theta_X}(x): \mathcal{X} \to \mathbb{R}^{d_1}$ and $\vec{\phi}_{\theta_Z}(z):\mathcal{Z} \to \mathbb{R}^{d_2}$ are the basis functions that are parameterized by $\theta_X$ and $\theta_Z$, respectively. We do not put any further assumption on these feature maps, except parameters can be learned from gradient descent method. Given these functions, we define the model
+\begin{align*}
+    f_\mathrm{str}(x) = \vec{f}^\top \vec{\psi}_{\theta_X}(x), \quad \expect[X|z]{\vec{\psi}_{\theta_X}(X)} = E\vec{\phi}_{\theta_Z}(z),
+\end{align*}
+where parameters $\vec{f}, E, \theta_X, \theta_Z$ are tuned during the training.
+
+From the perspective from kernel methods, using this feature map corresponds to consider the kernel functions $k_\mathcal{X}: \mathcal{X}\times\mathcal{X} \to \mathbb{R}$ and $k_\mathcal{Z}: \mathcal{Z}\times\mathcal{Z} \to \mathbb{R}$ defined as
+\begin{align}
+    k_\mathcal{X}(x, x') = (\vec{\psi}_{\theta_X}(x))^\top \vec{\psi}_{\theta_X}(x') \quad k_\mathcal{Z}(z, z') = (\vec{\phi}_{\theta_Z}(z))^\top \vec{\phi}_{\theta_Z}(z'). \label{eq:kernel-def}
+\end{align}
+
+In the most of literature on deep kernels\adcomment{add relevant refs}, we try to learn kernel functions formulated as $k(x,x') = \kappa(\psi(x), \psi(x'))$ where $\kappa$ is a static positive definite kernel and $\psi$ is a neural network. Hence, our kernel function \eqref{eq:kernel-def} can be regarded as the simplest type of such deep kernels, in which $\kappa$ corresponds to the inner product of Euclidean space.
+
+In general, kernel ridge regression requires to compute the inverse of the Gram matrix which takes a time cubic in the data size. However, if we use the kernel \eqref{eq:kernel-def}, all we have to do is linear regression based on the features $\vec{\psi}_{\theta_X}, \vec{\phi}_{\theta_Z}$, which greatly reduces the computational complexity, yet still makes use of the flexibility of neural networks. We will discuss the computational complexity in detail after introducing the algorithm.

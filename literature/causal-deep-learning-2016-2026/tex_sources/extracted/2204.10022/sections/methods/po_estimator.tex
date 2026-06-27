@@ -1,0 +1,79 @@
+\subsection{Semi-Parametric Interval Estimator}
+\label{sec:estimator}
+\begin{wrapfigure}{R}{0.46\textwidth}
+    \begin{minipage}{0.46\textwidth}
+        \vspace{-2em}
+        \begin{algorithm}[H]
+            \caption{Grid Search Interval Optimizer}
+            \label{alg:grid-search}
+            \begin{algorithmic}[1]
+                \Require{$\x$ is an instance of $\X$, $\tf$ is a treatment level to evaluate, $\Lambda$ is a belief in the amount of hidden confounding, $\params$ are optimized model parameters, $\widehat{\Ycal}$ is a set of unique values $\{\y \sim p(\y \mid \tf, \x, \params)\}$.}
+                \Function{GridSearch}{$\x$, $\tf$, $\Lambda$, $\params$, $\widehat{\Ycal}$}
+                    \State $\overline{\mu} \gets -\infty$, $\overline{\y} \gets 0$ 
+                    \State $\underline{\mu} \gets \infty$, $\underline{\y} \gets 0$
+                    \For{$\yH \in \widehat{\Ycal}$}
+                        \State $\overline{\kappa} \gets \mu(H(\y - \yH); \x, \tf, \Lambda, \params)$
+                        \State $\underline{\kappa} \gets \mu(H(\yH - \y); \x, \tf, \Lambda, \params)$
+                        \If{$\overline{\kappa} > \overline{\mu}$}
+                            \State $\overline{\mu}\gets \overline{\kappa}$, $\overline{\y} \gets \yH$
+                        \EndIf
+                        \If{$\underline{\kappa} < \underline{\mu}$}
+                            \State $\underline{\mu} \gets \underline{\kappa}$, $\underline{\y} \gets \yH$
+                        \EndIf
+                    \EndFor
+                    \State \Return $\underline{\y}, \overline{\y}$
+                \EndFunction
+            \end{algorithmic}
+        \end{algorithm}
+    \end{minipage}
+\end{wrapfigure}
+Following \cite{jesson2021quantifying}, we develop a semi-parametric estimator of the bounds in \cref{eq:CAPO_lower,eq:CAPO_upper,eq:APO_lower,eq:APO_upper}. 
+Under assumption $\Lambda$, the bounds on the expected potential outcome over $\mu(w(\y); \x, \tf, \Lambda)$ are completely defined in terms of identifiable quantities: namely, the conditional density of the outcome given the assigned treatment and measured covariates, $p(\y \mid \tf, \x)$; and the conditional expected outcome $\mut(\x, \tf)$. 
+Thus, we define a density estimator, $p(\y \mid \tf, \x, \params)$, and estimator, $\mu(\x, \tf; \params)$, parameterized by instances $\params$ of the random variable $\Params$.
+The choice of density estimator is ultimately up to the user and will depend on the scale of the problem examined and the distribution of the outcome variable $\Y$. 
+In \Cref{sec:scalable}, we will outline how to define appropriate density estimators for high-dimensional, large-sample, continuous-valued treatment problems.
+Next, we need an estimator of the integrals in $\mu(w(\y); \x, \tf, \Lambda, \params)$, \cref{eq:mu_w}. 
+We use Monte-Carlo (MC) integration to estimate the expectation of arbitrary functions $h(y)$ with respect to the parametric density estimate $p(\y \mid \tf, \x, \params)$:
+$
+    I(h(\y)) \coloneqq \frac{1}{m} \sum_{i=1}^m h(\y_i), \quad \y_i \sim p(\y \mid \tf, \x, \params).
+$
+We outline how the Gauss-Hermite quadrature rule is an alternate estimator of these expectations in \Cref{app:gauss-hermite}. The integral estimators allow for the semi-parametric estimators for the CAPO and APO bounds under the CMSM to be defined.
+
+The semi-parametric CAPO bound estimators under the CMSM with sensitivity parameter $\Lambda$ are:
+\noindent
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:CAPO_lower_param}
+        \underline{\mu}(\x, \tf; \Lambda, \params) \coloneqq \inf_{w \in \WniH} \mu(w(\y); \x, \tf, \Lambda, \params)
+    \end{equation}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:CAPO_upper_param}
+        \overline{\mu}(\x, \tf; \Lambda, \params) \coloneqq \sup_{w \in \WndH} \mu(w(\y); \x, \tf, \Lambda, \params)
+    \end{equation}
+\end{minipage}
+where,
+\begin{equation*}
+    \mu(w(\y); \x, \tf, \Lambda, \params) 
+    \equiv \mut(\x, \tf; \params) + \frac{I\left( w(\y) (\y - \mut(\x, \tf; \params)) \right)}{(\Lambda^2 - 1)^{-1} + I\left( w(\y) \right)}.
+\end{equation*}
+
+The semi-parametric APO bound estimators under the CMSM with sensitivity parameter $\Lambda$ are:
+\noindent
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:APO_lower_param}
+        \underline{\mu}(\tf; \Lambda, \params) \coloneqq \E\left[ \underline{\mu}(\X, \tf; \Lambda, \params) \right]
+    \end{equation}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:APO_upper_param}
+        \overline{\mu}(\tf; \Lambda, \params) \coloneqq \E\left[ \overline{\mu}(\X, \tf; \Lambda, \params) \right]
+    \end{equation}
+\end{minipage}
+\begin{theorem}
+    \label{th:sharpness}
+    In the limit of data ($n \to \infty$) and MC samples ($m \to \infty$), for observed $(\X=\x, \Tf=\tf) \in \D_n$, we assume that $p(\y \mid \tf, \x, \params)$ converges in measure to $p(\y \mid \tf, \x)$, $\mut(\x, \tf; \params)$ is a consistent estimator of $\mut(\x, \tf)$, and $p(\tf \mid \yt, \x)$ is bounded away from 0 uniformly for all $\yt \in \Ycal$. Then, $\underline{\mu}(\x, \tf; \Lambda, \params) \overset{p}{\to} \underline{\mu}(\x, \tf; \Lambda)$ and $\overline{\mu}(\x, \tf; \Lambda, \params) \overset{p}{\to} \overline{\mu}(\x, \tf; \Lambda)$. Proof in \Cref{app:sharpness}.
+\end{theorem}

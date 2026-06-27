@@ -1,0 +1,44 @@
+Here we first show that the optimal solution of \eqref{eq:total-loss} in the OPE problem is equivalent to that of mean squared Bellman error, and then describe how we apply 2SLS algorithm.
+
+We interpret the Bellman equation in \eqref{eq:SCMforRL} as IV regression problem, where $X = (s,a,s',a'), Z = (s,a)$ and $Y =r$ and 
+\begin{align*}
+    f_\mathrm{struct}(s,a,s',a') = Q^{\pi}(s,a) - \gamma Q^{\pi}(s',a').
+\end{align*}    
+
+Let $\bar R(s,a)$ be the conditional expectation of reward given $s,a$ defined as
+\begin{align*}
+    \bar R(s,a) = \expect[r\mid s,a]{r} = \int  r P(s'|s,a) R(r|s,a,s') \mathrm{d} s' \mathrm{d} r.
+\end{align*}
+Then, we can prove that the solutions of \eqref{eq:def-msbe} and MSBE are equivalent. Indeed, we have
+\begin{align}
+    & \argmin_{Q^\pi} \expect[s, a, r]{\left(r - Q^{\pi}(s, a) + \gamma \expect[s', a'|a,s]{Q^{\pi}(s', a')}\right)^2} ~~~~\text{// \eqref{eq:def-msbe}}  \nonumber\\
+    =& \argmin_{Q^\pi} \expect[s, a, r]{\left(r - \bar R(s,a) + \bar R(s,a) - Q^{\pi}(s, a) + \gamma \expect[s', a'|a,s]{Q^{\pi}(s', a')}\right)^2} \nonumber\\
+    =& \argmin_{Q^\pi} \mathbb{E}_{s, a}\Big[
+    \mathrm{Var}(r|s, a) ~~~~\text{// const wrt $Q^\pi$} \nonumber\\
+    & \quad\quad\quad\quad\quad 
+    +2 \expect[r|s,a]{(r - \bar R(s,a))} (\bar R(s,a) - Q^{\pi}(s, a) + \gamma \expect[s', a'|a,s]{Q^{\pi}(s', a')})    ~~~~\text{// $=0$} \nonumber\\
+    & \quad\quad\quad\quad\quad 
+    +\left(\bar R(s,a) - Q^{\pi}(s, a) + \gamma \expect[s', a'|a,s]{Q^{\pi}(s', a')}\right)^2\big] \nonumber\\
+    =& \argmin_{Q^\pi} \expect[s, a]{
+    \left(\bar R(s,a) - Q^{\pi}(s, a) + \gamma \expect[s', a'|a,s]{Q^{\pi}(s', a')}\right)^2}.   
+\end{align}
+
+In this context, we model $Q^{\pi}(s,a)=\vec{u}^\top \vec{\psi}(s,a)$ so that
+\begin{align}\label{eq:SCMforQ}
+    f_\mathrm{struct}(s,a,s',a') = \vec{u}^\top (\vec{\psi}(s,a) - \gamma \vec{\psi}(s',a')).
+\end{align}
+It follows that 
+\begin{align*}
+\expect[X|z]{f(X)} = \vec{u}^\top(\vec{\psi}(s,a)- \gamma \expect[s'\sim P(\cdot|s,a), a'\sim \pi(\cdot | s')]{\vec{\psi}(s',a')}).
+\end{align*}
+We will model $\expect[s'\sim P(\cdot|s,a), a'\sim \pi(\cdot | s')]{\vec{\psi}(s',a')}=\vec{V} \vec{\phi}(s,a)$.
+In this case, given stage 1 data $(s_i,a_i,s'_i)$, stage 1 regression becomes
+\begin{align*}
+    \hat{\vec{V}}^{(m)} = \argmin_{\vec{V} \in \mathbb{R}^{d_1 \times d_2}} \mathcal{L}_1^{(m)}, \quad \mathcal{L}_1^{(m)} = \frac1m \sum_{i=1}^m \|\vec{\psi}(s'_i,a'_i) - \vec{V}\vec{\phi}(s_i,a_i)\|^2 + \lambda_1 \|\vec{V}\|^2,
+\end{align*}
+where we sample $a'_i \sim \pi (\cdot|s'_i)$.
+However, given the specific form \eqref{eq:SCMforQ} of the structural function, stage 2 is slightly modified and requires minimizing the loss
+\begin{align*}
+    \hat{\vec{u}}^{(n)} = \argmin_{\vec{u} \in \mathbb{R}^{d_1}}\mathcal{L}^{(n)}_2, \quad \mathcal{L}^{(n)}_2 = \frac1n \sum_{i=1}^n (\tilde r_i - \vec{u}^\top (\vec{\psi}(\tilde  s_i, \tilde a_i)-\gamma\hat{\vec{V}}^{(m)} \vec{\phi}(\tilde s_i, \tilde a_i)))^2 + \lambda_2 \|\vec{u}\|^2,
+\end{align*}
+given stage 2 data $(\tilde s_i, \tilde  a_i, \tilde r_i)$. We can further learn deep feature maps by parameterized feature maps $\vec{\psi}$ and $\vec{\phi}$ as described in Section \ref{sec:algorithm} to obtain the DFIV algorithm for OPE.

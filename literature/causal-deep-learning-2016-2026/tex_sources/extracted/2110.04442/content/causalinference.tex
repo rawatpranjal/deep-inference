@@ -1,0 +1,200 @@
+\section{Causal Identification and Estimation Strategies}
+\label{section:CI}
+
+\subsection{Identification of Causal Effects}
+
+The papers described in this primer are primarily framed within the Potential Outcomes causal framework (Neyman-Rubin causal model) \citep{rubin1974estimating,imbens2015causal}. This framework is concerned with identifying the ``potential outcomes" of each unit $i$ in the sample, had it received treatment ($Y(1)$) or not received treatment ($Y(0)$). However, because each unit can only receive one treatment regime in reality (being treated or remaining untreated), it is not possible to observe both potential outcomes for each individual (often termed ``the fundamental problem of causal inference") \citep{holland1986statistics}. While we cannot thus identify individual treatment effects $\tau_i=Y_i(1)-Y_i(0)$ for each unit, causal inference frameworks allow us to probabilistically estimate average treatment effects ($ATE$) and average treatment effects conditional on select covariates ($CATE$) across samples of treated and control units. Within this literature, the motivation of many papers is to present algorithms that can both infer CATEs from observational data, but also predict them for out-of-sample units where treatment status is unknown. For readers unfamiliar with causal inference, a short introduction is glossed in Box \ref{box:causalintro} with a concrete example, used in the tutorials, in Box \ref{box:example}.
+
+\begin{TCBBox}[label=box:causalintro]{Basic Introduction to Causal Inference}
+ Correlation does not equal causation, and causal inference is concerned with the identification of causal relationships between random variables. Many causal questions we would like to ask about social data (``What is the causal effect of $T$ on $Y$ for units with characteristics $X$?") can be unpacked as counterfactual questions with the general format: ``What would have been the outcome $Y$ for a unit with $X$ characteristics, if $T$ had happened or not happened?".
+ 
+Randomized control trials (RCTs, also known as A/B testing in data science and industry applications) are usually understood to be the ideal approach to answering this type of question: each unit with covariates or features $X$ is randomly assigned to the treatment or control groups and outcome $Y$ is subsequently measured. But in many scenarios it is prohibitively expensive or unethical (e.g., randomly assigning students to attend college or not) to collect experimental data. In these cases, we can statistically adjust observational data (e.g., survey data on college attendance) to approximate the experimental ideal. The methods described in this paper are designed to answer counterfactual questions with primarily non-experimental observational data. 
+
+There are at least three different schools of causal inference that have been introduced in social statistics and econometrics \citep{rubin1974estimating,imbens2015causal}, epidemiology \citep{robins1986new,robins1987graphical,hernancausal2020}, and computer science \citep{goldszmidt1996qualitative,pearl2009causality}. The goal of these causal frameworks is to describe and correct for biases in data or study design that would prevent one from making a true causal claim. If these biases are correctable and the causal effect can be uniquely expressed in terms of the distribution of observed data, then we say that the causal effect is \textit{identifiable} \citep{kennedy2016semiparametric}.
+ Only if a causal effect is identifiable, we can use statistical tools to correct for biases and \textit{estimate} the causal effect (e.g., inverse propensity score weighting, g-computation, deep learning). Other forms of bias, like sample selection bias, are possible to correct for, but are outside the focus of this article.
+
+The algorithms presented in this paper focus on estimating causal effects primarily by correcting for \textit{confounding} bias. Loosely speaking, a confounding covariate/feature is one that is correlated with both the treatment and the outcome, misleadingly suggesting that the treatment has a causal effect on the outcome, or obscuring a true causal relationship between the treatment and outcome. Often times, the confounder is a cause of the treatment \textit{and} outcome. As an example of confounding bias, estimating the causal effect of attending college (treatment) on adult income (outcome) requires controlling for the fact that parental income may be a common cause of both college attendance and adult income. 
+\end{TCBBox}
+
+The ATE is defined as:
+ 
+$$ATE =\mathbb{E}[Y_i(1)-Y_i(0)] = \mathbb{E}[\tau_i]$$
+ 
+where $Y_i(1)$ and $Y_i(0)$ are the potential outcomes had the unit $i$ received or not received the treatment, respectively. The CATE is defined as,
+
+$$CATE =\mathbb{E}[Y_i(1)-Y_i(0)|X_i=x] = \mathbb{E}[\tau_i|X_i=x] $$
+ 
+where $X$ is the set of selected, observable covariates, and $x \in X$.
+
+\begin{TCBBox}[label=box:example]{Applied Causal Inference Example: The Infant Health and Development Study}
+To make this problem setting more concrete for readers unfamiliar with causal inference, consider simulations based on the 1985-1988 Infant Health and Development Study that are widely used as benchmarks within this literature. In this experiment, premature children were randomly assigned to intensive, high-quality childcare ($T$), and their cognitive test scores were measured later ($Y$). The authors also measured numerous other covariates $X$ including ``pregnancy complications, child's birth weight and gestation age, birth order, child's gender, household composition, day care arrangements, source of health care, quality of the home environment, parents' race and ethnicity, and maternal age, education, IQ, and employment" \citep{gross1993infant}. The $ATE$ would be the effect of intensive child care on cognitive scores across all children, while various $CATE$s might be formulated to better understand how the effects of child care vary for female children, children born to teenage mothers, or children with unemployed parents.   
+
+\citet{Hill2011} turns this experimental data into an observational benchmark by re-simulating the outcome such that the covariates $X$ induce confounding bias between the treatment and outcome. While the simulations don't preserve the names of the covariates, we can imagine some confounding relationships that might be present in an observational study. For example, suppose that affluent ($X_1$) parents are more likely able to afford high-quality child care ($T$), but there is actually a weak association between childcare and premature babies' cognitive ability ($Y$). We also know affluent parents are more likely to engage in breastfeeding ($X_2$), which is positively associated with higher cognitive ability \citep{heck2006socioeconomic,kramer2008breastfeeding}. If we do not account for the correlation between income and childcare ($X_1 \rightarrow T$), or income and cognitive ability ($X_1 \rightarrow X_2 \rightarrow Y$), we may have bias in our $ATE$/$CATE$ estimates, or worse, erroneously interpret the correlation between childcare and cognitive ability as causal. This example is depicted in a causal graph below.
+
+\begin{center}
+\includegraphics[width=.7\textwidth]{content/CausalGraph.png}
+\end{center}
+
+The hypothetical confounding bias presented here can be adjusted for either through treatment modeling (e.g., inverse propensity score weighting, non-parametric, deep representation learning) to block the path $X_1 \rightarrow T$, outcome modeling (e.g., generalized linear models, deep regression) to block the path $X_1 \rightarrow X_2 \rightarrow Y$, or both (see Section \ref{sec:estimationstrats}). For coded examples using many of these approaches in Tensorflow and Pytorch on the IHDP benchmark, please see the tutorials.
+
+\end{TCBBox}
+
+Within the machine learning literature on causal inference treated here, the primary strategy for causal identification is \textbf{selection on observables}. A challenge to identifying causal effects is the presence of confounding relationships between covariates associated with both the treatment and the outcome. 
+
+The key assumptions allowing the identification of causal effects in the presence of confounding is:
+
+1. \textbf{Conditional Ignorability/Exchangability} The potential outcomes $Y(0)$, $Y(1)$ and the treatment $T$ are conditionally independent given $X$,
+$$Y(0),Y(1)\perp \!\!\! \perp T|X $$
+Conditional Ignorability specifies that there are no unmeasured confounders that affect both treatment and outcome outside of those in the observed covariates/features $X$. Additionally $X$ may contain predictors of the outcome (helping precision), but should not contain instrumental variables (hurting precision and potentially amplifying residual bias) or colliders within the conditioning set.\footnote{A variable is a collider if it is caused by two other variables. Controlling for colliding variables, or descendants of colliding variables, will induce a spurious correlation between the parents. In the case of adjusting for confounding, controlling for a collider variable can (re-)open a confounding path that would otherwise be closed, introducing additional bias.}
+
+Other standard assumptions invoked to justify causal identification are:
+
+2. \textbf{Consistency/Stable Unit Treatment Value Assumption (SUTVA)}. Consistency specifies that when a unit receives treatment, their observed outcome is exactly the corresponding potential outcome (and the same goes for the outcomes under the control condition). Moreover, the response of any unit does not vary with the treatment assignment to other units (i.e., no network or spillover effects), and the form/level of treatment is homogeneous and consistent across units (no multiple versions of the treatment). Note that this is an identification assumption, based on our understanding of the data generating process, and independent of the model chosen for estimation. More formally,
+$$T=t \rightarrow Y=Y(T)$$
+
+3. \textbf{Overlap}. For all $x \in X$ (i.e., any observed covariate value), all treatments $t\in \{0,1\}$ have a non-zero probability of being observed in the data, within the ``strata" defined by such covariates, 
+$$1 > p(T=t|X=x)  > 0$$
+
+4. An additional assumption sometimes invoked at the interface of identification and estimation using neural networks is:
+
+\textbf{Invertability}
+$$\Phi^{-1}(\Phi(X)) = X$$
+In words, there must exist an inverse function of the representation function $\Phi$ encoded by a neural network that can reproduce $X$ from representation space. This is required for the Conditional Ignorability assumption to hold when using representation learning. From a practical perspective, it also means that the representation we created is rich enough to capture the causal relationships we are interested in.
+
+For reference, we describe the full notation used within the review in Box \ref{Box:Notation}.
+\begin{TCBBox}[label=Box:Notation]{Notation for Causal Inference and Estimation}
+\
+ We use uppercase to denote general quantities (e.g., random variables) and lowercase to denote specific quantities for individual units (e.g., observed variable values).
+\\
+\textbf{Causal identification}
+\begin{small}
+\begin{itemize}
+\item Observed covariates/features: $X$
+\item Potential outcomes: $Y(0)$ and $Y(1)$
+\item Treatment: $T$
+\item Unobservable Individual Treatment Effect: $\tau_i=Y_i(1)-Y_i(0)$
+\item Average Treatment Effect: $ATE =\mathbb{E}[Y_i(1)-Y_i(0)] = \mathbb{E}[\tau_i]$
+\item Conditional Average Treatment Effect: $CATE(x) =\mathbb{E}[Y_i(1)-Y_i(0)|X_i=x] = \mathbb{E}[\tau_i|X_i=x]$
+\end{itemize}
+\end{small}
+\textbf{Deep learning estimation}
+\begin{small}
+\begin{itemize}
+\item Predicted potential outcomes: $\hat{Y}(0)$ and $\hat{Y}(1)$
+\item Outcome modeling functions: $\hat{Y}(T)=h(X,T)$ 
+\item Propensity score function: $\pi(X,T)=P(T|X)$ (where $\pi(X,0)=1-\pi(X,1)$)
+\item Representation functions: $\Phi(X)$ (producing representations $\phi$)
+\item Loss functions: $\mathcal{L}(true,predicted)$
+\item Loss abbreviations: $MSE$ (mean squared error), $BCE$ (binary cross-entropy),
+CCE (categorical cross-entropy)
+\item Loss hyperparameters: $\lambda,\alpha,\beta$
+\item Estimated CATE*: $\hat{CATE_i} = \hat{\tau}_i = \hat{Y_i}(1)-\hat{Y_i}(0) = h(X,1)-h(X,0)$
+\item Estimated ATE: $\hat{ATE}=\frac{1}{N}\sum_{i=1}^N\hat{\tau_i}$
+\end{itemize}
+\end{small}
+Beyond the $ATE$ and $CATE$ there is an additional metric commonly used in the machine learning literature, first introduced by \citet{Hill2011} called the \textit{Precision in Estimated Heterogeneous Effects (PEHE)}. PEHE is the average error across the predicted $CATE$s.
+\begin{itemize}
+\small \item Precision in Estimated Heterogeneous Effects: $PEHE=\frac{1}{N}\sum_{i=1}^N(\tau_i-\hat{\tau_i})^2$
+\end{itemize}
+Beyond being a metric for simulations with known counterfactuals, the $PEHE$ has theoretical significance in the formulation of generalization bounds within this literature \citep{Shalit2017,Johansson2018,johannson2020,zhang2020learning}.
+
+*Note that we use $\hat{\tau}$ to refer to the estimated CATE because truly individual treatment effects cannot be described only by the observed covariates $X$. 
+\iffalse
+Because the $CATE$ is unobservable, the PEHE is often approximated using the nearest neighbor from the opposite treatment regime.
+\begin{small}
+\begin{itemize}
+\item Estimated PEHE: $PEHE_{nn}=\frac{1}{N}\sum_{i=1}^N{(\underbrace{(1-2t_i)(y_i(t_i)-y_i^{nn}(1-t_i)}_{CATE_{nn}}-\underbrace{(h(x,1)-h(x,0)))}_{\hat{CATE}}}^2$
+\end{itemize}
+\end{small}
+for nearest neighbor $j$ of each unit $i$ such that $t_j\neq t_i$:
+  $y_i^{nn}(1-t_i) = \min_{j\in (1-T)}||x_i|t_i-x_j|1-t_i||_2$
+ \fi
+\end{TCBBox}
+
+\subsection{Estimation of Causal Effects}\label{sec:estimationstrats}
+
+Once a strategy for identifying causal effects from available data has been developed (arguably the harder and more important part of causal inference), statistical methods can be used to estimate causal effects by controlling for confounding bias, selection bias, and/or measurement error. There are two fundamental approaches to estimation: \textbf{treatment modeling} to control for correlations between the covariates $X$ and the treatment $T$, and \textbf{outcome modeling} to control for correlations between the treatment $X$ and the outcome $Y$ (Fig. \ref{fig:modelingstrats}). Below we briefly review three traditional techniques for removing confounding bias to motivate our systematization of deep learning models. First, we discuss outcome modeling through regression. Next, we consider treatment modeling through non-parametric matching. Finally, we discuss treatment modeling through inverse propensity score weighting (IPW) and introduce the concept of double robustness. 
+
+\begin{figure}[!p]
+    \centering
+    \includegraphics[width=\textwidth]{content/Modeling.png}
+    \caption{\textbf{Two fundamental approaches to deconfounding.} Blunted arrows indicate blocked causal paths. Treatment modeling approaches like inverse propensity weighting, balancing, and representation learning adjust for the association between the covariates $X$ and the treatment $T$. Outcome modeling approaches like generalized linear models or machine learning regressors adjust for the association between $X$ and the outcome $Y$.}
+\label{fig:modelingstrats}
+\end{figure}
+\iffalse
+Different approaches to estimation may be more clearly understood by representing the selection on observables identification scenario as a directed acycling graph (DAG).
+
+A directed acyclic causal graph depicts correlations between covariates (nodes) as edges \citep{pearl2009causality}. Relationships that are thought be causal are depicted with arrows. The selection on observables strategy from Potential Outcomes is roughly equivalent to the \textit{back-door criterion} in the Structural Causal Model to control for confounding. A back-door path is any path between the treatment and outcome in the graph that is not fully causal. We can block a backdoor path by conditioning on a variable or set of variables on the backdoor path between treatment and outcome. Conditioned variables are represented as squares rather than circles.
+
+Fig. \ref{fig:dagexamples} A. shows a simplified graphical representation of the Infant Health and Development Program example from \citet{Hill2011} estimating the causal effect of specialized childcare on cognitive outcomes for premature infants. The treatment ($T$) is attendance at a special child development center for premature infants. The outcome is some measure of cognitive development for infants after ($Y$). Measured covariates ($X$) such as socioeconomic status are predictive of both seeking treatment and cognitive development.
+
+There are two possible estimation approaches to blocking confounding paths in this DAG: conditionally modeling the treatment and conditionally modeling the outcome. \textit{Treatment modeling} blocks the path between the observed covariates and treatment assignment. \textit{Outcome modeling} blocks the path between observed covariates and the outcome. Here we discuss traditional approaches to both strategies to provide context for how they may be extended using neural networks.  
+\fi
+
+
+\subsubsection{Outcome Modeling: Regression}
+
+Assuming the treatment effect is constant across covariates/features or the probability of treatment is constant across all covariates/features (both improbable assumptions), the simplest consistent approach to estimating the $ATE$ is to regress the outcome on the treatment indicator and covariates using a linear model.\footnote{Another outcome modeling approach that could be used to estimate the outcome, not discussed here, is g-computation \citep{robins1986new,hernancausal2020}.} The ATE is then the coefficient of the treatment indicator. Without loss of generality, we call outcome models of this nature, linear or non-linear, $h$:
+
+$$\hat{Y}_i(T)=h(X_i,T)$$
+
+A slightly more sophisticated semi-parametric approach to \textbf{outcome modeling}, used widely in the application of machine learning to causal inference, is to use $h(X,T)$ to impute $\hat{Y}(1)$ and $\hat{Y}(0)$, and calculate the CATE for each unit as a plug-in estimator:
+
+$$\widehat{CATE_i}=\hat{\tau_i}=\hat{Y_i(1)}-\hat{Y_i(0)}=h(X_i,1)-h(X_i,0)$$
+
+and the ATE as:
+
+$$\widehat{ATE}=\frac{1}{N}\sum_{i=1}^N{\hat{\tau_i}}$$
+
+\subsubsection{Treatment Modeling: Non-Parametric Matching}
+\label{subsection:doublyrobust}
+
+A common treatment-modeling strategy is balancing the treated and control covariate distributions through matching. Matching requires the analyst to select a distance measure that captures the difference in observed covariate distributons between a treated and untreated unit \citep{austin2011introduction}. Units with treatment status $T$ can then be matched with one or more counterparts with treatment status $1-T$ using a variety of algorithms \citep{stuart2010matching}. In a one-to-one matching scenario where each treated unit has an otherwise identical untreated counterpart, the covariate distribution of treated and control units is indistinguishable. 
+
+\subsubsection{Treatment Modeling: Inverse Propensity Score Weighting}
+\label{subsection:treatmentmodeling}
+
+Another common approach is \textbf{inverse propensity score weighting (IPW)}. In IPW, units are weighted on their inverse propensity to receive treatment. Without loss of generality, we call the propensity function $\pi$. The propensity score is calculated as the probability of receiving treatment conditional on covariates:
+
+$$\pi(X,T)=P(T|X)$$
+
+The simplest IPW estimator of the ATE is then:
+
+ \begin{equation}\label{propscore}
+    \widehat{ATE}=\frac{1}{N}\sum_{i=1}^N\left\{\frac{T_iY_i}{\hat{\pi}(X_i,1)}+\frac{(1-T_i)Y_i}{\hat{\pi}(X_i,0)}\right\}
+\end{equation}
+
+Note that only one of the two terms is active for any given unit. Furthermore, this presentation looks  different than how the IPW is generally presented because we use $\pi$ as a function with different outputs depending on the value of $T$ rather than a scalar (Box \ref{Box:Notation}).\footnote{To de-emphasize the contribution of units with extreme weights due to sparse data, sometimes a ``stabilized" IPW is used \citep{glynn2010introduction}.}
+
+
+IPW weighting is attractive because if the propensity score $\pi$ is specified correctly, it is an unbiased estimator of the ATE. Moreover, the IPW is consistent if $\pi$ is estimated consistently \citep{rosenbaum1983central,glynn2010introduction}.
+
+\iffalse
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{content/ExampleDAGsCropped.jpg}
+    \caption{\textbf{Example DAGs for treatment and outcome modeling.} \textbf{A.} Simplified graphical representation of the Infant Health and Development Program example from \citet{Hill2011}. \textbf{B.} Example of treatment modeling using the propensity score $\pi$. \textbf{C.} Example of outcome modeling using the outcome modeling function $f$. Representation $\phi$ also shown.}
+\label{fig:dagexamples}
+\end{figure}
+\fi
+
+\subsubsection{Double Robustness}
+Because different models make different assumptions, it is not uncommon to combine outcome modeling with propensity modeling or matching estimators to create \textbf{doubly-robust} estimators. For example, one of the most widely used doubly-robust estimators is the Augmented-IPW (AIPW) estimator. 
+
+%\begin{equation}\label{augpropscore}
+%\widehat{ATE} = \frac{1}{N}\sum_{i=1}^N \left\{\underbrace{{h(X_i,1)-h(X_i,0)}}_{\text{Outcome models}}+\underbrace{\left[T_i\frac{Y_i - h(X_i,1)}{\hat{\pi}(X_i,1)}-(1-T_i)\frac{Y_i - h(X_i,0)}{\hat{\pi}(X_i,0)}\right]}_{\text{Residualized IPW}}\right\}
+%\hat{ATE} = \frac{1}{N}\sum_{i=1}^N{[\underbrace{\underbrace{(\frac{T}{\pi(\Phi(X),1)}-\frac{1-T}{\pi(\Phi(X),0)})}_{\text{Treatment Modeling}}\times\underbrace{[Y-h(\Phi(X),T)]}_{\text{Residual Confounding}}}_{\text{Adjustment}} +\underbrace{[h(\Phi(X),1)-h(\Phi(X),0)]}_{\text{Outcome Modeling}}}]$
+%\end{equation}
+
+\begin{equation}
+\hat{ATE} = \frac{1}{N}\sum_{i=1}^N{[\underbrace{\underbrace{(\frac{T}{\pi(\Phi(X),1)}-\frac{1-T}{\pi(\Phi(X),0)})}_{\text{Treatment Modeling}}\times\underbrace{[Y-h(\Phi(X),T)]}_{\text{Residual Confounding}}}_{\text{Adjustment}} +\underbrace{[h(\Phi(X),1)-h(\Phi(X),0)]}_{\text{Outcome Modeling}}}
+\end{equation}
+
+
+The first term is the difference in prediction from two outcome models, one for treated and one for 
+control units, while the last terms is a ``corrected'' IPW estimator replacing the raw outcome by the residuals from the regression models. As expected, this estimator is unbiased if the IPW and regression estimators are consistently estimated. However, the model is attractive because it will be consistent if \textit{either} the propensity score $\pi(X,T)$ is correctly specified or the regression model $h$ is consistently specified \citep{glynn2010introduction}. The model also provide efficiency gains with respect to the use of each model separately, and especially with respect to weighting alone. 
+
+Doubly robust estimation is especially important for causal estimation using machine learning. When using simple outcome plug-in estimators, bias is directly dependent on estimation error, which may be different for each potential outcome depending on the modeling strategy \citep{kennedy2020}. Machine learning estimation of the propensity score can also rely heavily on non-confounding predictors, giving rise to extreme weights \citep{schnitzer2016variable}. More generally, there are no asymptotic linearity guarantees for machine learning estimators which may converge at a slow rate, leading to misleading confidence intervals \citep{naimi2021,zivich2021machine}. For these reasons, plug-in machine learning estimation often has poor empirical performance when not using double robust estimators \citep{benkeser2017,kennedy2020,zivich2021machine}.
+
+The growth of machine learning for causal
+inference literature has thus been largely driven by the introduction of semi-parametric frameworks. Semi-parametric frameworks  address these issues by using machine learning only to estimate the nuissance parameters (i.e., potential outcomes and propensity score) of influence functions for causal parameters like the ATE and CATE \citep{chernozhukov2016double,kennedy2016semiparametric,van2011targeted}. In these approaches, the estimation of causal parameters is only-second order dependent on machine learning error, there is double-robustness against inconsistent estimation, and guarantees of fast convergence and asymptotically-valid confidence intervals even if the machine learning models converge slowly \citep{benkeser2017,kennedy2020,naimi2021,zivich2021machine}. We use the final algorithm introduced below, Dragonnet, as an opportunity to provide an intuitive introduction to semi-parametric theory and how it can be used for doubly robust estimation \citep{Shi2019}.

@@ -1,0 +1,773 @@
+\def\year{2021}\relax
+%File: formatting-instructions-latex-2021.tex
+%release 2021.1
+\documentclass[letterpaper]{article} % DO NOT CHANGE THIS
+\usepackage{aaai21}  % DO NOT CHANGE THIS
+\usepackage{times}  % DO NOT CHANGE THIS
+\usepackage{helvet} % DO NOT CHANGE THIS
+\usepackage{courier}  % DO NOT CHANGE THIS
+\usepackage[hyphens]{url}  % DO NOT CHANGE THIS
+\usepackage{graphicx} % DO NOT CHANGE THIS
+\urlstyle{rm} % DO NOT CHANGE THIS
+\def\UrlFont{\rm}  % DO NOT CHANGE THIS
+\usepackage{natbib}  % DO NOT CHANGE THIS AND DO NOT ADD ANY OPTIONS TO IT
+\usepackage{caption} % DO NOT CHANGE THIS AND DO NOT ADD ANY OPTIONS TO IT
+\frenchspacing  % DO NOT CHANGE THIS
+\setlength{\pdfpagewidth}{8.5in}  % DO NOT CHANGE THIS
+\setlength{\pdfpageheight}{11in}  % DO NOT CHANGE THIS
+
+%PDF Info Is REQUIRED.
+% For /Author, add all authors within the parentheses, separated by commas. No accents or commands.
+% For /Title, add Title in Mixed Case. No accents or commands. Retain the parentheses.
+\pdfinfo{
+/Title (Treatment Effect Estimation with Disentangled Latent Factors)
+/Author (Weijia Zhang,Lin Liu,Jiuyong Li)
+/TemplateVersion (2021.1)
+} %Leave this
+% /Title ()
+% Put your actual complete title (no codes, scripts, shortcuts, or LaTeX commands) within the parentheses in mixed case
+% Leave the space between \Title and the beginning parenthesis alone
+% /Author ()
+% Put your actual complete list of authors (no codes, scripts, shortcuts, or LaTeX commands) within the parentheses in mixed case.
+% Each author should be only by a comma. If the name contains accents, remove them. If there are any LaTeX commands,
+% remove them.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+		T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\usepackage{url}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{enumitem}
+\usepackage{mathtools}
+\usepackage{array}
+\newcolumntype{H}{>{\setbox0=\hbox\bgroup}c<{\egroup}@{}}
+
+\newcommand{\bigCI}{\mathrel{\text{\scalebox{1.07}{$\perp\mkern-10mu\perp$}}}}
+\newcommand*\diff{\mathop{}\!\mathrm{d}}
+
+\urlstyle{same}
+\newtheorem{example}{Example}
+\newtheorem{theorem}{Theorem}
+
+\usepackage[symbol]{footmisc}
+
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+%\footnote[num]{text}
+
+% DISALLOWED PACKAGES
+% \usepackage{authblk} -- This package is specifically forbidden
+% \usepackage{balance} -- This package is specifically forbidden
+% \usepackage{color (if used in text)
+% \usepackage{CJK} -- This package is specifically forbidden
+% \usepackage{float} -- This package is specifically forbidden
+% \usepackage{flushend} -- This package is specifically forbidden
+% \usepackage{fontenc} -- This package is specifically forbidden
+% \usepackage{fullpage} -- This package is specifically forbidden
+% \usepackage{geometry} -- This package is specifically forbidden
+% \usepackage{grffile} -- This package is specifically forbidden
+% \usepackage{hyperref} -- This package is specifically forbidden
+% \usepackage{navigator} -- This package is specifically forbidden
+% (or any other package that embeds links such as navigator or hyperref)
+% \indentfirst} -- This package is specifically forbidden
+% \layout} -- This package is specifically forbidden
+% \multicol} -- This package is specifically forbidden
+% \nameref} -- This package is specifically forbidden
+% \usepackage{savetrees} -- This package is specifically forbidden
+% \usepackage{setspace} -- This package is specifically forbidden
+% \usepackage{stfloats} -- This package is specifically forbidden
+% \usepackage{tabu} -- This package is specifically forbidden
+% \usepackage{titlesec} -- This package is specifically forbidden
+% \usepackage{tocbibind} -- This package is specifically forbidden
+% \usepackage{ulem} -- This package is specifically forbidden
+% \usepackage{wrapfig} -- This package is specifically forbidden
+% DISALLOWED COMMANDS
+% \nocopyright -- Your paper will not be published if you use this command
+% \addtolength -- This command may not be used
+% \balance -- This command may not be used
+% \baselinestretch -- Your paper will not be published if you use this command
+% \clearpage -- No page breaks of any kind may be used for the final version of your paper
+% \columnsep -- This command may not be used
+% \newpage -- No page breaks of any kind may be used for the final version of your paper
+% \pagebreak -- No page breaks of any kind may be used for the final version of your paperr
+% \pagestyle -- This command may not be used
+% \tiny -- This is not an acceptable font size.
+% \vspace{- -- No negative value may be used in proximity of a caption, figure, table, section, subsection, subsubsection, or reference
+% \vskip{- -- No negative value may be used to alter spacing above or below a caption, figure, table, section, subsection, subsubsection, or reference
+
+\setcounter{secnumdepth}{2} %May be changed to 1 or 2 if section numbers are desired.
+
+% The file aaai21.sty is the style file for AAAI Press
+% proceedings, working notes, and technical reports.
+%
+
+% Title
+
+% Your title must be in mixed case, not sentence case.
+% That means all verbs (including short verbs like be, is, using,and go),
+% nouns, adverbs, adjectives should be capitalized, including both words in hyphenated terms, while
+% articles, conjunctions, and prepositions are lower case unless they
+% directly follow a colon or long dash
+\title{Treatment Effect Estimation with Disentangled Latent Factors}
+\author {
+        Weijia Zhang\footnote{Corresponding Author},
+        Lin Liu,
+        Jiuyong Li \\
+}
+\affiliations {
+     University of South Australia
+     \\
+%    \textsuperscript{\rm 2} Affiliation 2 \\
+    weijia.zhang.xh@gmail.com, \{lin.liu, jiuyong.li\}@unisa.edu.au
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+%A common challenge of many scientific studies is to determine whether a treatment is effective for an outcome. 
+%When considering a binary treatment, this problem can be addressed by estimating the average treatment effect using the potential outcome framework. 
+%Moreover, since different individuals often respond differently to the same treatment due to their distinct characteristics. 
+%In order to understand the heterogeneous treatment effect for different individuals, practitioners need to estimate the conditional average treatment effects conditioning on the variables describing the distinct characteristics of individuals.
+Much research has been devoted to the problem of estimating treatment effects from observational data; however, most methods assume that the observed variables only contain confounders, i.e., variables that affect both the treatment and the outcome. Unfortunately, this assumption is frequently violated in real-world applications, since some variables only affect the treatment but not the outcome, and vice versa. Moreover, in many cases only the proxy variables of the underlying confounding factors can be observed. 
+In this work, we first show the importance of differentiating confounding factors from instrumental and risk factors for both average and conditional average treatment effect estimation, and then we propose a variational inference approach to simultaneously infer latent factors from the observed variables, disentangle the factors into three disjoint sets corresponding to the instrumental, confounding, and risk factors, and use the disentangled factors for treatment effect estimation.
+Experimental results demonstrate the effectiveness of the proposed method on a wide range of synthetic, benchmark, and real-world datasets.
+\end{abstract}
+
+\section*{Introduction}
+Estimating the effect of a treatment on an outcome is a fundamental problem faced by many researchers and has a wide range of applications across diverse disciplines.
+In social economy, policy makers need to determine whether a job training program will improve the employment perspective of the workers \cite{Athey2015}. 
+%In cancer diagnosis, oncologists need to determine whether prescribing radiotherapy will improve the prognosis of a particular patient \cite{Zhang2017}. 
+In online advertisement, companies need to predict whether an advertisement campaign could persuade a potential buyer into buying the product \cite{Rzepakowski2011}. 
+%in online advertising, companies need to evaluate whether an advertisement campaign will persuade a potential buyer into buying the product \cite{Rzepakowski2011}. 
+
+%In the center of these questions lies the \textit{counterfactual} problem: each subject is associated with two potential outcomes: the treated outcome (the factual outcome) if the subject had received the treatment and the control outcome if the subject had not, i.e. had received the control. 
+%Once a subject has been assigned to the treatment, it is impossible to know what the potential outcome would have been had the subject received the control (the counterfactual outcome), and vice versa. 
+%Since the underlying ground truth treatment effect is defined by both the factual and counterfactual outcomes, estimation of treatment effect is difficult in observational studies without additional assumptions \cite{Abadie2006}.
+
+To estimate treatment effect from observational data, the treatment assignment mechanism needs to be independent of the possible outcomes when conditioned on the observed variables, i.e., the unconfoundedness assumption \cite{Rosenbaum1983} needs to be satisfied. With this assumption, treatment effects can be estimated from observational data by adjusting on the confounding variables which affects both the treatment assignment and the outcome. The treatment effect estimation may be biased if not all the confounders are considered in the estimation \cite{Pearl2009}.
+
+From a theoretical perspective, practitioners are tempted to include as many variables as possible to ensure the satisfaction of the unconfoundedness assumption.
+This is because confounders can be difficult to measure in the real-world and practitioners need to include noisy proxy variables to ensure unconfoundedness. 
+For example, the socio-economic status of patients confounds treatment and prognosis, but cannot be included in the electronic medical records due to privacy concerns. It is often the case that such unmeasured confounders can be inferred from noisy proxy variables which are easier to measure. For instance, the zip codes and job types of patients can be used as proxies to infer their socio-economic statuses \cite{Sauer2013}. 
+
+%Although it is tempting for researchers to include all the available variables in the adjustment set in the attempt to ensure unconfoundedness, 
+From a practical perspective, the inflated number of variables included for confounding adjustment reduces the efficiency of treatment effect estimation. 
+Moreover, it has been previously shown that including unnecessary covariates is suboptimal when the treatment effect is estimated non-parametrically \cite{Hahn1998,Abadie2006,Haeggstroem2017}. In a high dimensional scenario, eventually many included variables will not be confounders and should be excluded from the set of adjustment variables. 
+
+%Other than irrelevant variables that are not related to either the treatment or the outcome, the observed variables can be categorized into three groups. The first group contains instrumental variables that are related to the treatment, but has no effect on the outcome. The second category contains confounding variables that affect both the treatment and the outcome, and the third group of variables are the risk factors that only affect the outcome but not the treatment. 
+
+Most existing treatment estimation algorithms treat the given variables ``as is", and leave the task of choosing confounding variables to the user. 
+It is clear that the users are left with a dilemma: on the one hand including more variables than necessary produces inefficient and inaccurate estimators; on the other hand restricting the number of adjustment variables may exclude confounders themselves or proxy variables of the confounders and thus increases the bias of the estimated treatment effects. 
+With only a handful of variables, the problem can be avoided by consulting domain experts. 
+However, a data-driven approach is required in the big data era to deal with the dilemma.
+
+In this work, we propose a data-driven approach for simultaneously inferencing latent factors from proxy variables and disentangling the latent factors into three disjoint sets as illustrated in Figure \ref{illustration}: the instrumental factors $\mathbf{z}_t$ which only affect the treatment but not the outcome, the risk factors $\mathbf{z}_y$ which only affect the outcome but not the treatment, and the confounding factors $\mathbf{z}_c$ that affect both the treatment and the outcome.
+Since our method builds upon the recent advancement of the research on variational autoencoder \cite{Kingma2014}, we name our method Treatment Effect by Disentangled Variational AutoEncoder (TEDVAE).
+Our main contributions are:
+\begin{itemize}
+	\item We address an important problem in treatment effect estimation from observational data, where the observed variable may contain confounders, proxies of confounders and non-confounding variables. 
+%	which is critical for designing efficient and accurate estimators from observational data in the big data era.
+	\item We propose a data-driven algorithm, TEDVAE, to simultaneously infer latent factors from proxy variables and disentangle confounding factors from the others for a more efficient and accurate treatment effect estimation. 
+	\item We validate the effectiveness of the proposed TEDVAE algorithm on a wide range of synthetic datasets, treatment effect estimation benchmarks and real-world datasets. 
+%	The results show that TEDVAE outperforms existing state-of-the-art algorithms and is not sensitive to parameters.
+\end{itemize}
+
+The rest of this paper is organized as follows. In Section 2, we discuss related works. The details of TEDVAE is presented in Section 3. In Section 4, we discuss the evaluation metrics, datasets and experiment results. Finally, we conclude the paper in Section 5. 
+
+
+\begin{figure}[!t]
+	\centering
+	\includegraphics[width = 0.9\columnwidth]{figures.pdf}
+	\caption{Model diagram for the proposed Treatment Effect with Disentangled Autoencoder (TEDVAE). $t$ is the treatment, $y$ is the outcome. $\mathbf{x}$ is the ``as-is" observed variables which may contain non-confounders and noisy proxy variables. 
+		$\mathbf{z}_t$ are factors that affect only the treatment, $\mathbf{z}_y$ are factors that affect only the outcome, and $\mathbf{z}_c$ are confounding factors that affect both treatment and outcome. 
+		%	Note that our diagram is more general : in the simplest case where all variables in $\mathbf{x}$ are themselves confounders and satisfy unconfoundedness, then $\mathbf{z}_c =\mathbf{x}$ with $\mathbf{z}_t=\mathbf{z}_y=\emptyset$. 	
+	}
+	\label{illustration}
+\end{figure}
+\section*{Related Work}
+Treatment effect estimation has steadily drawn the attentions of researchers from the statistics and machine learning communities. During the past decade,  
+several tree based methods \cite {Su2009,Athey2015,Zhang2017,Zhang2018} have been proposed to address the problem by designing a treatment effect specific splitting criterion for recursive partitioning. 
+Ensemble algorithms and meta algorithms \cite{Kuenzel2019,Wager2018} have also been explored. For example, Causal Forest\cite{Wager2018} builds ensembles using the Causal Tree \cite{Athey2015} as base learners. X-Learner \cite{Kuenzel2019} is a meta algorithm that can utilize off-the-shelf machine learning algorithms for treatment effect estimation. 
+
+Deep learning based heterogeneous treatment effect estimation methods have attracted increasingly research interest in recent years \cite{Shalit2016,Alaa2018,Louizos2017,Hassanpour2018,Yao2018_Twin,Yoon2018}. 
+Counterfactual Regression Net \cite{Shalit2016} and several other methods \cite{Yao2018_Twin,Hassanpour2018} have been proposed to reduce the discrepancy between the treated and untreated groups of samples by learning a representation such that the two groups are as close to each other as possible.
+However, their designs do not separate the covariates that only contribute to the treatment assignment from those only contribute to the outcomes. Furthermore, these methods are not able to infer latent covariates from proxies. 
+
+Variable decomposition \cite{Kun2017,Haeggstroem2017} has been previously investigated for average treatment effect estimation. 
+%In \cite{Kun2017} the variables are decomposed into confounding and risk variables using optimization, and in \cite{Haeggstroem2017} the confounder sets are selected using Markov and Bayesian network algorithms.
+Our method has several major differences from the above methods: (i) our method is capable of estimating the individual level heterogeneous treatment effects, where existing ones only focus on the population level average treatment effect; (ii) we are able to identify the non-linear relationships between the latent factors and their proxies, whereas their approach only models linear relationships. Recently, a deep representation learning based method, DR-CFR \cite{Hassanpour2020} is proposed for treatment effect estimation.
+
+Another work closely related to ours is the Causal Effect Variational Autoencoder (CEVAE) \cite{Louizos2017}, which also utilizes variational autoencoder to learn confounders from observed variables. However, CEVAE does not consider the existence of non-confounders, and is not able to learn the separated sets of instrumental and risk factors. 
+As demonstrated by the experiments, disentangling the factors significantly improves the performance.
+
+
+
+\section*{Method}
+
+\subsection*{Preliminaries}
+Let $t_i \in \{0,1\}$ denote a binary treatment where $t_i = 0$ indicates the $i$-th individual receives no treatment (control) and $t_i = 1$ indicates the individual receives the treatment (treated). We use $y_i(1)$ to denote the potential outcome of $i$ if it were treated, and $y_i(0)$ to denote the potential outcome if it were not treated. Noting that only one of the potential outcomes can be realized, and the observed outcome is $y_i = (1-t_i)y_i(0) + t_i y_i(1)$. Additionally, let $\mathbf{x}_i \in \mathcal{R}^d$ denote the ``as is'' set of covariates for the $i$-th individual. When the context is clear, we omit the subscript $i$ in the notations.
+
+Throughout the paper, we assume that the following three fundamental assumptions for treatment effect estimations \cite{Rosenbaum1983} are satisfied:
+\newtheorem{assumption}{Assumption}
+\begin{assumption}
+	(\textbf{SUTVA)} The Stable Unit Treatment Value Assumption requires that the potential outcomes for one unit (individual) is unaffected by the treatment of others.
+\end{assumption}
+
+\begin{assumption}
+	(\textbf{Unconfoundedness)} The distribution of treatment is independent of the potential outcome when conditioning on the observed variables: $t \bigCI (y(0), y(1)) | \mathbf{x}$.
+	%	\begin{equation}
+	%	t \bigCI (y(0), y(1)) | \mathbf{x}.
+	%	\end{equation}
+	\label{unconfound}
+\end{assumption}
+
+\begin{assumption}
+	(\textbf{Overlap)} Every unit has a non-zero probability to receive either treatment or control when given the observed variables, i.e., $0< P(t=1|\mathbf{x})<1$.
+	%	\begin{equation}
+	%	0< P(t=1|\mathbf{x})<1.
+	%	\end{equation}
+	\label{overslap}
+\end{assumption}
+
+The first goal of treatment effect estimation is estimating the average treatment effect (ATE) which is defined as: $ATE = \mathbb{E}[y(1) - y(0)] = \mathbb{E}[y|do(t=1)] - \mathbb{E}[y|do(t=0)]$,
+%\begin{equation}
+%\resizebox{0.89\hsize}{!}{$ATE = \mathbb{E}[y(1) - y(0)] = \mathbb{E}[y|do(t=1)] - \mathbb{E}[y|do(t=0)]$},
+%\end{equation}
+where $do(t=1)$ denote an manipulation on $t$ by removing all its incoming edges and setting $t=1$ \cite{Pearl2009}.
+
+The treatment effect for an individual $i$ is defined as $\tau_i = y_i(1) - y_i(0)$.
+%\begin{equation*}
+%\tau_i = y_i(1) - y_i(0).
+%\end{equation*}
+Due to the counterfactual problem, we never observe $y_i(1)$ and $y_i(0)$ simultaneously and thus $\tau_i$ is not observed for any individual. Instead, we estimate the conditional average treatment effect $(\tau(x))$, defined as $\tau(\mathbf{x}) \vcentcolon = \mathbb{E}[\tau|\mathbf{x}] =  \mathbb{E}[y|\mathbf{x}, do(t=1)] - \mathbb{E}[y|\mathbf{x},do(t=0)]$.
+%so that $\tau_i$ is not identifiable without additional assumptions in the sense that one can construct data-generating processes with the same distribution of the observed data. 
+
+%\begin{equation}
+%\resizebox{0.89\hsize}{!}{
+%	$\tau(\mathbf{x}) \vcentcolon = \mathbb{E}[\tau|\mathbf{x}] =  \mathbb{E}[y|\mathbf{x}, do(t=1)] - \mathbb{E}[y|\mathbf{x},do(t=0)]$},
+%\end{equation}
+
+\subsection*{Treatment Effect Estimation from Latent Factors}
+%\begin{figure}[!t]
+%	\centering
+%	
+%	\includegraphics[width = 0.49\columnwidth]{figures_2.pdf}
+%	
+%	
+%	%	\begin{subfigure}[b]{0.48\columnwidth}
+%	%	\includegraphics[width = \columnwidth]{Figures/figures_2.pdf}
+%	%	\caption{The Model of CEVAE \cite{Louizos2017}.}
+%	%	\end{subfigure}
+%	\caption{Model diagram for treatment effect estimation using confounders \cite{Imbens2019}. $t$ is the treatment, $y$ is the outcome. $\mathbf{x}_c$ is the confounding variables that must be included for adjustment. 
+%		It is the users responsibility to determine which variable in $\mathbf{x}$ should be included or excluded from the adjustment set $\mathbf{x}_c$.
+%	}
+%	\label{illustration_2}
+%\end{figure}
+
+
+In this work, we propose the TEDVAE model (Figure \ref{illustration}) for estimating the treatment effects, where the observed pre-treatment variables $\mathbf{x}$ can be viewed as generated from three disjoint sets of latent factors $\mathbf{z} = (\mathbf{z}_t,\mathbf{z}_c, \mathbf{z}_y)$. 
+Here $\mathbf{z}_t$ are instrumental factors that only affect the treatment but not the outcome, 
+$\mathbf{z}_y$ are risk factors which only affect the outcome but not the treatment, 
+and $\mathbf{z}_c$ are confounding factors that affect both the treatment and the outcome. 
+
+On the one hand, the proposed TEDVAE model in Figure \ref{illustration} provides two important benefits. The first one is that by explicitly modelling for the instrumental factors and adjustment factors, it accounts for the fact that not all variables in the observed variables set $\mathbf{x}$ are confounders. The second benefit is that it allows for the possibility of learning unobserved confounders that from their proxy variables.
+
+On the other hand, our model diagram does not pose any restriction other than the three standard assumptions discussed in Section 3.1. 
+%Indeed, the  can be viewed as a special case of our model. 
+To see this, consider the case where every variable in $\mathbf{x}$ itself is a confounder, i.e., $\mathbf{x}=\mathbf{x}_c$, then the generating mechanism in the TEDVAE model becomes $\mathbf{z_c} = \mathbf{x}$ with $\mathbf{z}_t=\mathbf{z}_y=\emptyset$ and the model in Figure \ref{illustration} becomes identical to the widely used diagram for treatment effect estimation (Figure 2 in \cite{Imbens2019}).
+
+With our model, the estimation of treatment effect is immediate using the back-door criterion \cite{Pearl2009}:
+\begin{theorem}
+	The effect of $t$ on $y$ can be identified if we recover the confounding factors $\mathbf{z}_c$ from the data.
+	\label{ATE}
+\end{theorem}
+\begin{proof}
+	From Figure \ref{illustration} we know that $\mathbf{z}_t, \mathbf{z}_c$ are the parents of the treatment $t$, following (3.13) in \citeauthor{Pearl2009} we have,
+	%	\begin{equation}
+	%	P(y|do(t)) = \sum_{u \in U}p(y|t, u)p(u).
+	%	\end{equation}
+	\begin{equation}
+	P(y|do(t)) = \sum_{\mathbf{z}_t} \sum_{\mathbf{z}_c} P(y|t, \mathbf{z}_t,\mathbf{z}_c) P(\mathbf{z}_t)P(\mathbf{z}_c).
+	\end{equation}
+	%	Noting that $\mathbf{z}_c$ block all back-door paths from $t$ to $y$, we have
+	Utilizing the fact that $y \bigCI \mathbf{z_t} |t, \mathbf{z_c}$, we have
+	\begin{equation}
+	\resizebox{0.89\hsize}{!}{
+	$P(y|do(t)) = \sum\limits_{\mathbf{z}_t} P(\mathbf{z}_t) \sum\limits_{\mathbf{z}_c} P(y|t, \mathbf{z}_c) P(\mathbf{z}_c | t, \mathbf{z}_c, \mathbf{z}_t).$}
+	\end{equation}
+	Furthermore, since $\mathbf{z}_c$ is not a descendant of $t$, by Markov property we have $t \bigCI \mathbf{z}_c | \mathbf{z}_c,\mathbf{z}_t$. Therefore
+	\begin{equation}
+	P(y|do(t)) = \sum\limits_{\mathbf{z}_t} P(\mathbf{z}_t) \sum\limits_{\mathbf{z}_c} P(y|t, \mathbf{z}_c) P(\mathbf{z}_c | \mathbf{z}_c, \mathbf{z}_t).
+	\end{equation}
+	Note that $\sum\limits_{\mathbf{z}_t} P(\mathbf{z}_t) P(\mathbf{z}_c|\mathbf{z}_t,\mathbf{z_c}) = P(\mathbf{z}_c)$, which gives us
+	\begin{equation*}
+	P(y|do(t)) =\sum\limits_{\mathbf{z}_c} P(y|t,\mathbf{z}_c) P(\mathbf{z}_c).  \qedhere
+	\end{equation*}
+\end{proof}
+
+For the estimation of the conditional average treatment effect, our result follows from Theorem 3.4.1 in \cite{Pearl2009} as shown in the following theorem:
+\begin{theorem}
+	The conditional average treatment effect of $t$ on $y$ conditioned on $\mathbf{x}$ can be identified if we recover the confounding factors $\mathbf{z}_c$ and risk factors $\mathbf{z}_y$ .
+	\label{ITE}
+\end{theorem}
+\begin{proof}
+	Let $G_{\overline{t}}$ denote the causal structure obtained by removing all incoming edges of $t$ in Figure \ref{illustration}, $G_{\underline{t}}$ denote the structure by deleting all outgoing edges of $t$. 
+	
+	\noindent Noting that $y \bigCI \mathbf{z}_t | t, \mathbf{z}_y, \mathbf{z}_c$ in $G_{\overline{t}}$, using the three rules of do-calculus we can remove $\mathbf{z}_t$ from the conditioning set and obtain 	$P(y|do(t),\mathbf{x}) = P(y|do(t), \mathbf{z}_t, \mathbf{z}_c, \mathbf{z}_y) = P(y | do(t), \mathbf{z}_y, \mathbf{z}_c)$.
+%	\begin{equation}
+%	\resizebox{0.89\hsize}{!}{
+%		$P(y|do(t),\mathbf{x}) = P(y|do(t), \mathbf{z}_t, \mathbf{z}_c, \mathbf{z}_y) = P(y | do(t), \mathbf{z}_y, \mathbf{z}_c)$}.
+%	\end{equation}
+	with Rule 1. Furthermore, using Rule 2 with $(y \bigCI t | \mathbf{z}_c, \mathbf{z}_y)$ in $G_{\underline{t}}$ yields $P(y|do(t),\mathbf{x}) =P(y | do(t), \mathbf{z}_y, \mathbf{z}_c) = P(y | t, \mathbf{z}_y, \mathbf{z}_c)$. \qedhere
+%	\begin{equation*}
+%	P(y|do(t),\mathbf{x}) =P(y | do(t), \mathbf{z}_y, \mathbf{z}_c) = P(y | t, \mathbf{z}_y, \mathbf{z}_c)	\qedhere
+%	\end{equation*}
+\end{proof}
+
+
+\begin{figure*}[!t]
+	\centering
+	\begin{subfigure}[b]{0.96\columnwidth}
+		\centering
+		\includegraphics[height=1.8in]{generative.pdf}
+		\caption{Generative Model.}
+	\end{subfigure}
+	~
+	\begin{subfigure}[b]{0.96\columnwidth}
+		\centering
+		\includegraphics[height=1.6in]{inference.pdf}
+		\caption{Inference Model.}
+	\end{subfigure}
+	\caption{Overall architecture of the model network and the inference network for the Treatment  Effect Disentangling Variational AutoEncoder (TEDVAE). White nodes correspond to parametrized deterministic neural network transitions, gray nodes correspond to drawing samples from the respective distribution and white circles correspond to switching paths according to the treatment $t$. Dashed arrows in the inference model represent the two auxiliary classifiers $q_{\omega_t}(t|\mathbf{z}_t,\mathbf{z}_c)$ and $q_{\omega_y} (y|\mathbf{z}_y,\mathbf{z}_c)$.}
+	\label{architecture}
+\end{figure*}
+
+An implication of Theorem \ref{ATE} and \ref{ITE} is that they are not restricted to binary treatment. In other words, our proposed method can be used for estimating treatment effect of a continuous treatment variable, while most of the existing estimators are not able to do so. However, due to the lack of datasets with continuous treatment variables for evaluating this, we focus on the case of binary treatment variable and leave the continuous treatment case for future work.
+
+Theorems \ref{ATE} and \ref{ITE} suggest that disentangling the confounding factors allows us to exclude unnecessary factors when estimating ATE and CATE. However, keen readers may wonder since we already assumed unconfoundedness, doesn't straightforwardly adjusting for $\mathbf{x}$ suffice? 
+
+Theoretically, it has been shown that both the bias \cite{Abadie2006} and the variance \cite{Hahn1998} of treatment effect estimation will increase if variables unrelated to the outcome is included during the estimation. Therefore, it is crucial to differentiate the instrumental, confounding and risk factors and only use the appropriate factors during treatment effect estimation. 
+In the next section, we propose our data-driven approach to learn and disentangle the latent factors using a variational autoencoder.
+%For the relationship between the bias and the number of adjustment covariates, it has been proved that $n^{1/2}(\hat{\tau} - \tau) = O_p(1) + O_p(n^{1/2-1/k})$ where $k$ is the number of covariates in the adjustment set \cite{Abadie2006}.
+
+%\begin{theorem}
+%	Suppose $\mathbf{u}$ is a set of covariates that satisfies $Pr(t=1|\mathbf{x}) = Pr(t=1|\mathbf{u})$, then the asymptotic variance bound for $\tau$ equals to
+%	\begin{equation*}
+%	\mathbb{E}[\frac{\sigma_1^2(\mathbf{x})}{p(U)} + \frac{\sigma_0^2(\mathbf{x})}{1-p(U)} + (\hat{\tau}(\mathbf{x}) - \tau(\mathbf{x})^2],
+%	\end{equation*}
+%	where $\sigma_0^2(\mathbf{x}) = \mathbb{E}[(y(1) - \beta_1(\mathbf{x}))^2 | \mathbf{x}]$, $\sigma_1^2(\mathbf{x})= \mathbb{E}
+%	[(y(1) - \beta_1 (\mathbf{x}))^2 | \mathbf{x}]$.
+%\end{theorem}
+
+\subsection*{Learning of the Disentangled Latent Factors}
+
+
+In the above discussion, we have seen that removing unnecessary factors is crucial for efficient and accurate treatment effect estimation. We have assumed that the mechanism which generates the observed variables $\mathbf{x}$ from the latent factors $\mathbf{z}$ and the decomposition of latent factors $\mathbf{z} = (\mathbf{z}_t, \mathbf{z}_c, \mathbf{z}_y)$ are available.
+However, in practice both the mechanism and the decomposition are not known. Therefore, the practical approach would be to utilize the complete set of available variables during the modelling to ensure the satisfaction of the unconfoundedness assumption, and utilize a data-driven approach to simultaneously learn and disentangle the latent factors into disjoint subsets.
+
+To this end, our goal is to learn the posterior distribution $p(\mathbf{z}|\mathbf{x})$ for the set of latent factors  with $\mathbf{z}= (\mathbf{z}_t, \mathbf{z}_y, \mathbf{z}_c)$ as illustrated in Figure \ref{illustration}, where $\mathbf{z}_t,\mathbf{z}_c, \mathbf{z}_y$ are independent of each other and correspond the instrumental factors, confounding factors, and risk factors, respectively.
+Because exact inference would be intractable, we employ neural network based variational inference to approximate the posterior $p_\theta(\mathbf{x}|\mathbf{z}_t, \mathbf{z}_c, \mathbf{z}_y)$. Specifically, we utilize three separate encoders $q_{\phi_t}(\mathbf{z}_t|\mathbf{x})$, $q_{\phi_c}(\mathbf{z}_c|\mathbf{x})$, and $q_{\phi_y}(\mathbf{z}_y|\mathbf{x})$ that serve as variational posteriors over the latent factors. 
+These latent factors are then used by a single decoder $p_\theta(\mathbf{x}|\mathbf{z}_t,\mathbf{z}_c, \mathbf{z}_y)$ for the reconstruction of $\mathbf{x}$. Following standard VAE design, the prior distributions $p(\mathbf{z}_t),p(\mathbf{z}_c),p(\mathbf{z}_y)$ are chosen as Gaussian distributions \cite{Kingma2014}. 
+%Due to page limit, the detailed description of the factors and the generative models can be found in the supplementary material. 
+
+Specifically, the factors and the generative models for $\mathbf{x}$ and $t$ are described as:
+\begin{align}
+&p(\mathbf{z}_t) = \prod\limits_{j=1}^{D_{z_t}} \mathcal{N}(z_{tj}|0,1);\quad
+p(\mathbf{z}_c) = \prod\limits_{j=1}^{D_{z_c}} \mathcal{N}(z_{cj}|0,1); \nonumber\\
+&p(\mathbf{z}_y) = \prod\limits_{j=1}^{D_{z_y}} \mathcal{N}(z_{yj}|0,1);\quad p(t|\mathbf{z}_t,\mathbf{z}_c) = Bern(\sigma(f_1(\mathbf{z}_t,\mathbf{z}_c))\nonumber\\
+& p(\mathbf{x}|\mathbf{z}_t,\mathbf{z}_c, \mathbf{z}_y) = \prod\limits_{j=1}^{d} p(x_j|\mathbf{z}_t,\mathbf{z}_c, \mathbf{z}_y),
+\end{align}
+with $p(x_j|\mathbf{z}_t,\mathbf{z}_c, \mathbf{z}_y)$ being the suitable distribution for the $j$-th observed variable, $f_1$ is a function parametrized by neural network, and $\sigma(\cdot)$ being the logistic function, $D_{z_t},D_{z_c}$, and $D_{z_y}$ are the parameters that determine the dimensions of instrumental, confounding, and risk factors to infer from $\mathbf{x}$. 
+
+For continuous outcome variable $y$, we parametrize it as using a Gaussian distribution with its mean and variance given by a pair of disjoint neural networks that defines $p(y|t=1,\mathbf{z}_c, \mathbf{z}_y)$ and $p(y|t=0,\mathbf{z}_c, \mathbf{z}_y)$. This pair of disjoint networks allows for highly imbalanced treatment. Specifically, for continuous $y$ we parametrize it as:
+\begin{align}
+&p(y|t, \mathbf{z}_c, \mathbf{z}_y)  = \mathcal{N}(\mu =\hat{\mu}, \sigma^2 = \hat{\sigma}^2),\nonumber\\
+&\hat{\mu} = (tf_2(\mathbf{z}_c, \mathbf{z}_y) + (1-t)f_3(\mathbf{z}_c, \mathbf{z}_y)), \nonumber\\
+&\hat{\sigma}^2 = (tf_4(\mathbf{z}_c, \mathbf{z}_y) + (1-t)f_5(\mathbf{z}_c, \mathbf{z}_y)),
+\end{align}
+where $f_2$, $f_3$, $f_4$, $f_5$ are neural networks parametrized by their own parameters.
+The distribution for the binary outcome case can be similarly parametrized with a Bernoulli distribution. 
+
+In the inference model, the variational approximations of the posteriors are defined as:
+\begin{align}
+&q_{\phi_{t}}(\mathbf{z_t}|\mathbf{x}) = \prod\limits_{j=1}^{D_{z_t}} \mathcal{N}(\mu = \hat{\mu}_{t}, \sigma^2 = \hat{\sigma}_t^2 );\nonumber\\
+&q_{\phi_{c}}(\mathbf{z_c}|\mathbf{x}) = \prod\limits_{j=1}^{D_{z_c}} \mathcal{N} (\mu = \hat{\mu}_{c}, \sigma^2 = \hat{\sigma}_c^2 );\nonumber\\
+&q_{\phi_{y}}(\mathbf{z_y}|\mathbf{x}) = \prod\limits_{j=1}^{D_{z_y}} \mathcal{N} (\mu = \hat{\mu}_{y}, \sigma^2 = \hat{\sigma}_y^2 )  
+\end{align}
+where $\hat{\mu}_t, \hat{\mu}_c, \hat{\mu}_y$ and $ \hat{\sigma}_t^2,  \hat{\sigma}_c^2,  \hat{\sigma}_y^2$ are the means and variances of the Gaussian distributions parametrized by neural networks similarly to the $\hat{\mu}$ and $\hat{\sigma}$ in the generative model. 
+
+Given the training samples, the parameters can be optimized by maximizing the evidence lower bound (ELBO):
+
+\begin{align}
+%\mathcal{L}(\mathbf{X},Y,T) = & \mathbb{E}_{q_{\phi_c}(z_x|x){q_{\phi_c}(z_x|x)}{q_{\phi_c}(z_x|x)}} [\log p_\theta (\mathbf{X}|\mathbf{z}_c,\mathbf{z}_t)]
+\mathcal{L}_{\textrm{ELBO}}(\mathbf{x},y,t) = & \mathbb{E}_{q_{\phi_c}{q_{\phi_t}}{q_{\phi_y}}} [\log p_\theta (\mathbf{x}|\mathbf{z}_t, \mathbf{z}_c, \mathbf{z}_y)] \nonumber\\
+& -  D_{KL} (q_{\phi_t}(\mathbf{z}_t|\mathbf{x})|| p_{\theta_t}(\mathbf{z}_t)) \nonumber\\
+& -  D_{KL} (q_{\phi_c}(\mathbf{z}_c|\mathbf{x})|| p_{\theta_c}(\mathbf{z}_c)) \nonumber\\
+& -  D_{KL} (q_{\phi_y}(\mathbf{z}_y|\mathbf{x})|| p_{\theta_y}(\mathbf{z}_y)).
+\end{align}
+%The weighting term $\beta$ on the Kullback-Leibler divergence is motivated by the $\beta-VAE$ \cite{Higgins2017} to encourage disentanglement of the latent factors. Larger values of $\beta$ limit the capacity of each latent space and thus each dimension of the latent factors captures one of the conditionally independent factors in generating $\mathbf{X}$. 
+To  encourage the disentanglement of the latent factors and ensure that the treatment $t$ can be predicted from $\mathbf{z}_t$ and $\mathbf{z}_c$, and the outcome $y$ can be predicted from $\mathbf{z}_y$ and $\mathbf{z}_c$,  we add two auxiliary classifiers to the variational lower bound. Finally, the objective of TEDVAE can be expressed as
+\begin{align}
+\mathcal{L}_{\text{TEDVAE}} = & \mathcal{L}_{\textrm{ELBO}}(\mathbf{x},y,t)\nonumber\\
+& + \alpha_t \mathbb{E}_{q_{\phi_{t}} q\phi_{c}} [\log q_{\omega_t}(t|\mathbf{z}_t,\mathbf{z}_c)]\nonumber \\
+&+  \alpha_y \mathbb{E}_{q_{\phi_{y}} q\phi_{c}} [\log q_{\omega_y}(y|t, \mathbf{z}_c, \mathbf{z}_y)],
+\label{loss_function}
+\end{align}
+where $\alpha_t$ and $\alpha_y$ are the weights for the auxiliary objectives.
+
+For predicting the CATEs of new subjects given their observed covariates $\mathbf{x}$, we use the encoders $q(\mathbf{z}_y|\mathbf{x})$ and $q(\mathbf{z}_c|\mathbf{x})$ to sample the posteriors of the confounding and risk factors for $l$ times, and average over the predicted outcome $y$ using the auxiliary classifier $q_{\omega_y}(y|t, \mathbf{z}_c, \mathbf{z}_y)$. 
+%Specifically,
+%\begin{align}
+%\hat{\tau}(\mathbf{x}) = \sum\limits_{j=1}^L q_{\omega_y}(y|t, \mathbf{z}_c, \mathbf{z}_y) - \sum\limits_{j=1}^L q_{\omega_y}(y|t, \mathbf{z}_c, \mathbf{z}_y)
+%\end{align}
+
+An important difference between TEDVAE and CEVAE lies in their inference models. 
+During inference, CEVAE depends on $t$, $x$ and $y$ for inferencing $\mathbf{z}$; in other words, CEVAE needs to estimate $p(t|\mathbf{x})$ and $p(y|t,\mathbf{x})$, inference $\mathbf{z}$ as $p(\mathbf{z}|t,y,\mathbf{x})$, and finally predict the CATE as $\hat{\tau} (\mathbf{x}) = \mathbb{E}[y|t=1,\mathbf{z}] - \mathbb{E}[t|y=0, \mathbf{z}]$.
+The estimations of $p(t|\mathbf{x})$ and $p(y|t,\mathbf{x})$ are unnecessary since we assume that $t$ and $y$ are generated by the latent factors and inferencing the latents should only depend on $\mathbf{x}$ as in TEDVAE. 
+%In TEDVAE, the latent factors $\mathbf{z}_c$, $\mathbf{z}_y$ and $\mathbf{z}_t$ 
+As we later show in the experiments, this difference is crucial even when no instrumental or risk factors are present in the data. 
+
+%Recently, it has been shown that unsupervised learning of disentangled factors is impossible for generative models, and constraints on the latent space are necessary to identify a model that matches the underlying generating mechanism \cite{Locatello2019}. TEDVAE avoids this problem by using the outcome $y$ and the treatment $t$ along with $\mathbf{x}$ during model training. Furthermore, the marginal distribution of $\mathbf{z}$ is forced to take the decomposition $q_\phi (\mathbf{z}) = q_{\phi_t} (\mathbf{z}_t) q_{\phi_c}  (\mathbf{z}_c) q_{\phi_y} (\mathbf{z}_y)$. The additional information in $y$ and $t$ makes it possible for TEDVAE to learn the disentangled latent factors.
+
+%An issue worth noting is that by employing variational inference parameterized by neural networks, it cannot be guaranteed that the learned model is identical to the mechanism. However, as demonstrated by the empirical evaluations, we argue that variational autoencoder's lack of theoretical support is mitigated by its strong empirical performance and capability of learning disentangled latent factors \cite{Higgins2017}. 
+
+\section*{Experiments}
+We empirically compare TEDVAE with traditional and neural network based treatment effect estimators. 
+For traditional methods, we compare with tailor designed methods including Squared t-statistic Tree (t-stats) \cite{Su2009} and Causal Tree (CT) \cite{Athey2015}; ensemble methods including Causal Random Forest (CRF) \cite{Wager2018}, Bayesian Additive Regression Trees (BART) \cite{Hill2011}, and meta algorithm X-Learner \cite{Kuenzel2019} using Random Forest \cite{Breiman1984} as base learner (X-RF).  
+For deep learning based methods, we compare with representation learning based methods including Counterfactual Regression Net (CFR) \cite{Shalit2016}, 
+Similarity Preserved Individual Treatment Effect (SITE) \cite{Yao2018_Twin}, and with a deep learning variable decomposition method for Counterfactual Regression (DR-CFR) \cite{Hassanpour2020}.
+We also compare with generative methods including Causal Effect Variational Autoencoder (CEVAE) \cite{Louizos2017} and GANITE \cite{Yoon2018}.
+%For all compared algorithms, we use the implementation provided by the original authors on GitHub (for deep learning algorithms) and on CRAN (for traditional methods). 
+Parameters for the compared methods are tuned by cross-validated grid search on the value ranges recommended in the code repository. The code is available at https://github.com/WeijiaZhang24/TEDVAE.
+%Since TEDVAE and CEVAE both utilizes variational autoencoder, throughout our comparison we use the same neural network structure: 4 hidden layers, 500 hidden neurons in each layer, and use ELU for activation.
+%For CEVAE and CFR-Net, we use the Python implementation provided by the authors at \url{https://github.com/clinicalml/cfrnet} and \url{https://github.com/AMLab-Amsterdam/CEVAE}, respectively. For X-Learner and Causal Random Forest, we use the R implementation provided by the authors at \url{https://github.com/soerenkuenzel/causalToolbox} and \url{https://github.com/grf-labs/grf}, respectively. 
+%The data and code of TEDVAE can be found online at this URL. 
+\begin{figure}[!t]
+	\centering
+	\begin{subfigure}{0.15\textwidth}
+		\includegraphics[width=\linewidth]{synthetic2_alpha.pdf}
+	\end{subfigure}
+	\begin{subfigure}{0.15\textwidth}
+		\includegraphics[width=\linewidth]{synthetic2_beta.pdf}
+	\end{subfigure}
+	\begin{subfigure}{0.15\textwidth}
+		\includegraphics[width=\linewidth]{synthetic2_gamma.pdf}
+	\end{subfigure}	
+	\\
+	\begin{subfigure}{0.15\textwidth}
+		\includegraphics[width=\linewidth]{synthetic1_alpha.pdf}
+	\end{subfigure}
+	\begin{subfigure}{0.15\textwidth}
+		\includegraphics[width=\linewidth]{synthetic1_beta.pdf}
+	\end{subfigure}
+	\begin{subfigure}{0.15\textwidth}
+		\includegraphics[width=\linewidth]{synthetic1_gamma.pdf}
+	\end{subfigure}
+	\caption{Comparison of CEVAE and TEDVAE under different settings using the synthetic datasets. Rows: the results for data generating procedure satisfies the assumption of the TEDVAE model and the CEVAE model, respectively. Columns: (Left) Varying the proportional of treated samples; (Middle) Varying the size of the outcome; (Right) Varying the size of the CATE. (Figures are best viewed in colour.)
+	}
+	\label{synthetic}
+\end{figure}
+
+\subsection*{Evaluation Criteria}
+%\subsubsection{Metrics for Dataset with Known Ground Truth}
+%Evaluation of treatment effect estimation methods is difficult due to the counterfactual problem \cite{Hill2011,Louizos2017,Hassanpour2018}. 
+
+For evaluating the performance of CATE estimation, we use the Precision in Estimation of Heterogeneous Effect (PEHE) \cite{Hill2011,Shalit2016,Louizos2017,Dorie2019} which measures the root mean squared distance between the estimated and the true CATE when ground truth is available: $\epsilon_{\text{PEHE}} = \sqrt{\frac{1}{N}\sum_{i=1}^{N} (\hat{\tau}(\mathbf{x}_i) - \tau(\mathbf{x}_i))^2}$
+%\begin{align}
+%
+%\label{PEHE_metric}
+%\end{align}
+, where $\tau(\mathbf{x})$ is the ground truth CATE for subjects with observed variables $\mathbf{x}_i$. 
+
+
+%For real-world dataset without ground truth CATE, the uplift curve \cite{Radcliffe2007,Guelman2015,Gutierrez2017} can be used for evaluating datasets with binary outcomes. The intuition of uplift curve is that when individuals are ranked by their estimated treatment effect, a good CATE estimator should rank individuals with positive outcomes in the treated group and individuals with negative outcomes in the control group higher than the others. 
+%%It is worth noting that the POL curve used in \cite{Shalit2016,Louizos2017} is equivalent to the uplift curve with a constant related to the treated/control sample proportioin.
+%
+%To provide a clear definition of the uplift curve, we introduce some extra notations. For a given estimator $\hat{\tau}$ and subjects $\mathbf{x}_i$, let $\pi$ be the descending ordering of the subjects according to their estimated treatment effects, and let $\pi(k)$ be the first k subjects from the ordering. 
+%Let $R_{\pi(k)}$ be the count of individuals with positive outcomes in $\pi(k)$, and let $R_\pi^{t=1}(k)$ and $R_\pi^{t=0}(k)$ be the numbers of positive outcomes in the treatment and control groups respectively from $\pi(k)$: $R_\pi^{t=1}(k) = R_\pi(k)|t=1$, and $R_\pi^{t=0}(k)=R_\pi(k)|t=0$. Finally, let $N_\pi^{t=1}(k)$ and $N_\pi^{t=0}(k)$ be the numbers of subjects in the treated and control groups from the top-$k$ subjects. The uplift curve is then defined as:
+%\begin{align}
+%%&\textrm{uplift}(k) = (\frac{R_\pi^T(k)}{N_\pi^T(k)} -\frac{R_\pi^C(k)}{N_\pi^C(k)}) (N_\pi^T(k) + N_\pi^C(k))\\
+%\resizebox{0.88\hsize}{!}{
+%	$\textrm{uplift}(k) = (\frac{R_\pi^{t=1}(k)}{N_\pi^{t=1}(k)} - \frac{R_\pi^{t=0}(k)}{N_\pi^{t=1}(k)})(N_\pi^{t=1}(k)+ N_\pi^{t=0}(k)).$}
+%\label{upliftcurve}
+%\end{align}
+
+For evaluating the performance of the average treatment effect (ATE) estimation, the ground truth ATE can be calculated by averaging the differences of the outcomes in the treated and control groups if randomized controlled trials data is available. Then, when comparing the ground truth ATE with the estimated ATE obtained from a non-randomized sample (observational sample or created via biased sampling) of the dataset, the performances can then be evaluated using the mean absolute error in ATE \cite{Hill2011,Shalit2016,Louizos2017,Yao2018_Twin} for evaluation: $\epsilon_{\text{ATE}} = \vert \hat{\tau} - \frac{1}{N}\sum\limits_{i=1}^N[t_i y_i - (1-t_i)y_i]\vert$, 
+%\begin{equation}
+%\epsilon_{\text{ATE}} = \vert \hat{\tau} - \frac{1}{N}\sum\limits_{i=1}^N[t_i y_i - (1-t_i)y_i]\vert,
+%\label{ate_metric}
+%\end{equation}
+where $\hat{\tau}$ is the estimated ATE, $t_i$ and $y_i$ are the treatments and outcomes from the randomized data. For both $\epsilon_{\text{ATE}}$ and $\epsilon_{\text{PEHE}}$, we use superscripts $tr$ and $te$ to denote their values on the training and test sets, respectively.
+
+%\subsection{Parameter Tuning}
+%Unlike parameter selection in standard supervised tasks where models can be selected using cross-validation, a major challenge of parameters tuning for treatment estimation is that there is no ground truth CATE for any subject. Therefore, the algorithm need to use some surrogate estimation $\tilde{\tau_i}$ to approximate the true treatment effect $\tau_i$. A common approach used by many existing methods \cite{Athey2015,Kun2017,Johansson:2016:LRC:3045390.3045708} is to use the matching surrogate: $\tilde{\tau_i} = (2t_i - 1)(y_i - y_{j_m(i)})$, where ${j_m(i)}$ is the index of the nearest neighbor to the $i$-th individual $\mathbf{x}_i$ whose treatment is opposite to $t_i$. 
+%
+%However, even with a moderate number of dimension, it is unlikely that the matching surrogate would be a good choice due to the curse of dimensionality. Another previously used approach is to utilize a traditional estimator, e.g., BART as a surrogate to provide an estimation of the true treatment effect \cite{Hassanpour2018}. 
+%However, this approach is also not optimal as it inevitably leads to a model that is similar to the chosen surrogate estimator, and thus it is unlikely to produce models better than the surrogate on a wide range of datasets. 
+%
+%We argue that a treatment effect estimation algorithm should be self-sufficient and should not rely on other algorithms for selecting parameters. Moreover, treatment effect algorithms should be robust to the choice of parameters since the counterfactual problem complicates the parameter tuning procedure.
+%To avoid the above problems, we simply use the validation losses of TEDVAE for choosing parameters.  
+
+\subsection*{Synthetic Datasets}
+We first conduct experiments using synthetic datasets to investigate TEDVAE's capability of inferring the latent factors and estimating the treatment effects. Due to the page limit, we only provide an outline of the synthetic dataset and provide the detailed settings in the supplementary materials.
+%Throughout these experiments, we use the same network structure for CEVAE and TEDVAE which is a fully connected neural network with 3 hidden layers and 200 hidden neurons in each layer. 
+
+%Our first setting of synthetic datasets are generated using the same procedure as in the CEVAE \cite{Louizos2017}. Specifically, the marginal distribution of $\mathbf{x}$ is a mixture of Gaussians, with a 5-dimensional hidden factor $\mathbf{z}$ determining the mixture component:
+%\begin{align*}
+%&\mathbf{z}\sim \text{Bernoulli}(0.5); \\
+%%\mathbf{z}_x \sim Bern(0.5) ,\mathbf{z}_y \sim Bern(0.5)\\
+%&\mathbf{x}|\mathbf{z}  \sim  \mathcal{N}(\mathbf{z}, \theta_{z_{1}}\mathbf{z} + \theta_{z_{0}} (1-\mathbf{z}))\\
+%%&t|\mathbf{z} \sim \text{Bernoulli}(\alpha \pmb{z} + (1-\alpha) (1-\pmb{z}));\\
+%&t|\mathbf{z} \sim \text{Bernoulli}(\alpha \cdot \text{Sigmoid}(\mathbf{\zeta} \cdot \mathbf{z}));\\
+%& y|t,\mathbf{z} \sim \text{Bernoulli}(\text{Sigmoid} ( \beta( \mathbf{\zeta} \cdot  \mathbf{z} + \gamma (2t-1)))),
+%\end{align*}
+%where $\theta_{z_{1}}$ and $\theta_{z_{2}}$ are integers randomly sampled from $[1,5]$, $\zeta$ is a coefficient vector with the same dimension as $\mathbf{z}$ and the coefficients are randomly sampled from $(-1,1)$. It can be seen that $\alpha$ controls the proportion of treated samples, $\beta$ controls the size of the outcomes, and $\gamma$ controls the scales of the treatment effects. 
+%For the dimensions of latent factors, we set the dimension of $\mathbf{z}$ (for CEVAE) to 5, and the dimensions of $\mathbf{z}_t$, $\mathbf{z}_c$, $\mathbf{z}_y$ (for TEDVAE) also to 5. All of the reported results are obtained from averaging over 100 simulations where each simulation contains 10,000 samples. The datasets are split into 60\%/30\%/10\% of training/validation/test sets and results on the test sets are reported. 
+
+The first setting of synthetic datasets studies the benefit of disentangling the confounding factors from instrumental and risk factors, and are generated using the structure depicted in Figure \ref{illustration}. 
+We illustrate the results in the first row of Figure \ref{synthetic}. It can be seen that when the instrumental and risk factors exist in the data, the benefit of disentanglement is signficance as demonstrated by the PEHE curves between TEDVAE and CEVAE. When the proportions of the treated samples varies, the performances of CEVAE fluctuates severely and the error remains high even when the dataset is balanced; however, the PEHEs of TEDVAE are stable even when the dataset is highly imbalanced, and are always stays significantly lower than CEVAE. When the scales of outcome and CATE change, TEDVAE also performs consistently and significantly better than CEVAE. 
+
+
+The second setting for the synthetic datasets are designed to study how TEDVAE performs when the instrumental and risk factors are absent, and follow the same data generating procedure as in the CEVAE \cite{Louizos2017}.
+We illustrate the results of this synthetic dataset in the second row of Figure \ref{synthetic}. Therefore, it is reasonable to expect that CEVAE would perform better than TEDVAE since the instrumental factors $\mathbf{z}_t$ and risk factors $\mathbf{z}_y$ do not exist.
+However, from the second row of Figure \ref{synthetic} we can see that TEDVAE either performs better than  CEVAE, or performs as well as CEVAE using a wide range of parameters under this setting. 
+This is possibly due to the differences in predicting for previous unseen samples between TEDVAE and CEVAE, where CEVAE needs to follow a complicated procedure of inferencing $p(t|\mathbf{x})$ and $p(y|t,\mathbf{x})$ first and then inferencing the latents as $p(z|t,y,\mathbf{x})$, whereas in TEDVAE this is not needed.
+%Considering the fact that we set $D_{z_t}=D_{z_y}=5$ for TEDVAE while there is no instrumental or risk factors, 
+These results suggests that the TEDVAE model is able to effectively learn the latent factors and estimate the CATE even when the instrumental and risk factors are absent. It also indicates that the TEDVAE algorithm is robust to the selection of the latent dimensionality parameters. 	
+
+%The second sets of synthetic datasets are generated from three independent sets of 5-dimensional latent factors $\mathbf{z}_t$, $\mathbf{z}_c$, and $\mathbf{z}_y$ corresponding to the instrumental factors, confounding factors, and the risk factors. Furthermore, the observed covariates $\mathbf{x}$ is the concatenation of $\mathbf{x}_c$, $\mathbf{x}_t$, and $\mathbf{x}_y$ generated independently from each of the latent factors. Specifically,
+%\begin{align*}
+%\centering
+%&\mathbf{z}_t\sim \text{Bern}(0.5);\quad \mathbf{z}_c \sim \text{Bern}(0.5); \quad \mathbf{z}_y \sim \text{Bern}(0.5); \\
+%%\mathbf{z}_x \sim Bern(0.5) ,\mathbf{z}_y \sim Bern(0.5)\\
+%&\mathbf{x}_t|\mathbf{z}_t  \sim  \mathcal{N}(\mathbf{z}_t,\theta_{z_{t_1}} \mathbf{z}_t + \theta_{z_{t_0}}(1-\mathbf{z}_t));\\
+%&\mathbf{x}_c|\mathbf{z}_c  \sim  \mathcal{N}(\mathbf{z}_c,\theta_{z_{c_1}} \mathbf{z}_c + \theta_{z_{c_0}}(1-\mathbf{z}_c));\\
+%&\mathbf{x}_y|\mathbf{z}_y  \sim  \mathcal{N}(\mathbf{z}_y,\theta_{z_{y_1}} \mathbf{z}_y + \theta_{z_{y_0}}(1-\mathbf{z}_y));
+%\\
+%&t|\mathbf{z}_t,\mathbf{z}_y \sim \text{Bernoulli}(\alpha \cdot \text{Sigmoid} (\mathbf{\zeta}_t \cdot \mathbf{z}_t)) \\
+%&\qquad\quad \times \text{Bernoulli}(\alpha \cdot \text{Sigmoid}( \mathbf{\zeta}_{z_{c_1}} \cdot \mathbf{z}_c)); \\
+%& y|t,\mathbf{z}_y, \mathbf{z}_c \sim \mathcal{N}(\beta(\mathbf{\zeta}_{z_{c_2}} \cdot\mathbf{z}_c + \gamma(2t-1)),1)\\
+%&\qquad\qquad  + \mathcal{N}(\beta(\mathbf{\zeta}_y \cdot \mathbf{z}_y + \gamma(2t-1)), 1),
+%\end{align*}
+%where the $\theta$ and $\zeta$ are defined similarly as the first dataset. $\alpha$, $\beta$, and $\gamma$ are parameters that control the proportion of treated samples, size of the outcome, and size of the CATE. For the dimensionality parameters, we set the dimension of $\mathbf{z}$ for CEVAE to 15, and the dimensions of $\mathbf{z}_t$, $\mathbf{z}_c$, $\mathbf{z}_y$ for TEDVAE to 5. All of the reported results are obtained from averaging over 100 simulations where each run contains 10,000 samples. 
+
+Next, we investigate whether TEDVAE is capable of recovering the latent factors of $\mathbf{z}_t$, $\mathbf{z}_c$, and $\mathbf{z}_y$ that are used to generate the observed covariates $\mathbf{x}$. To do so, we compare the performances of TEDVAE when setting the $D_{z_t}$, $D_{z_c}$ and $D_{z_y}$ parameters to 10 against itself when setting one of the latent dimensionality parameter of TEDVAE to $0$, i.e., setting $D_{z_t}=0$ and forcing TEDVAE to ignore the existence of $\mathbf{z}_t$. If TEDVAE is indeed capable of recovering the latent factors, then its performances with non-zero latent dimensionality parameters should be better than its performance when ignoring the existence of any of the latent factors. 
+Figure \ref{radar} illustrates the capability of TEDVAE for identifying the latent factors using radar chart. Taking the Figure \ref{radar}(a) as example, the $z_t$ and $\neg z_t$ polygons correspond to the performances of TEDVAE when setting the dimension parameter $D_{z_t}=5$ (identify $\mathbf{z}_t$) and $D_{z_t}=0$ (ignore $\mathbf{z}_t$). From the figures we can clearly see that the performances of TEDVAE are significantly better when the latent dimensionality parameters are set to non-zero, than setting any of the latent dimensionality to 0. 
+
+\begin{figure}[!t]
+	\centering
+	\begin{subfigure}{0.15\textwidth}
+		\includegraphics[width = \linewidth]{z_t2.pdf}
+		\caption{}
+	\end{subfigure}
+		\begin{subfigure}{0.15\textwidth}
+			\includegraphics[width = \linewidth]{z_c2.pdf}
+			\caption{}
+		\end{subfigure}
+	\begin{subfigure}{0.15\textwidth}
+		\includegraphics[width = \linewidth]{z_y2.pdf}
+		\caption{}
+	\end{subfigure}
+	\caption{Radar charts for TEDVAE's capability in identifying the latent factors. Each vertex on the polygons is identified with the latent factors’ dimension sequence of the associated synthetic dataset. For example, 5-5-5 indicates that the dataset is generated using 5 dimensions each for the instrumental, confounding, and risk factors.
+	}
+	\label{radar}
+\end{figure}
+
+\subsection*{Benchmarks and Real-world Datasets}
+In this section, we use two benchmark datasets for treatment effect estimation to compare TEDVAE with the baselines. 
+%We focus on the conditional average treatment effect since accurate estimations of the PEHE indicate good ATE estimation.
+\subsubsection{Benchmark I: 2016 Atlantic Causal Inference Challenge}
+
+
+\begin{table}[!t]
+	\centering		
+	%	\setlength{\tabcolsep}{3pt}
+	\begin{tabular}{l | c c }
+		\hline
+		%		 \multicolumn{3}{c}{ACIC 2016}\\
+		%		\hline
+		Methods & $\epsilon_{\text{PEHE}}^{tr}$ & $\epsilon_{\text{PEHE}}^{te}$ \\
+		\hline
+		CT &  4.81$\pm$0.18 & 4.96$\pm$0.21 \\
+		t-stats &  5.18$\pm$0.18 & 5.44$\pm$0.20 \\
+		\hline
+		CF	& 2.16$\pm$0.17 & 2.18$\pm$0.19 \\
+		BART & 2.13$\pm$0.18 & 2.17$\pm$0.15 \\
+		X-RF & 1.86$\pm$0.15 & 1.89$\pm$0.16   \\
+		\hline
+		CFR	 & 2.05$\pm$0.18 & 2.18$\pm$0.20 \\
+		%		CFR-IPW  & 0.90$\pm$0.04 & 1.00$\pm$0.17\\
+		SITE & 2.32$\pm$0.19 & 2.41$\pm$0.23  \\
+		DR-CFR & 2.44$\pm$0.20& 2.56$\pm$0.21 \\
+		\hline
+		GANITE & 2.78$\pm$0.56 & 2.84$\pm$ 0.61 \\
+		CEVAE & 3.12$\pm$0.28 & 3.28$\pm$0.35 \\
+		TEDVAE & \textbf{1.75$\pm$0.14} &  \textbf{1.77$\pm$0.17}  \\
+		\hline
+		%		W/T/L & 
+	\end{tabular}
+	\caption{Means and standard deviations of the PEHE metrics (smaller is better) for training and test sets on the 77 benchmark datasets from ACIC2016. The bolded values indicate the best performers (Wilcoxon signed rank tests at $p=0.05$).}
+	\label{acic2016}
+\end{table}
+
+The 2016 Atlantic Causal Inference Challenge (ACIC2016) \cite{Dorie2019} contains 77 different settings of benchmark datasets that are designed to test causal inference algorithms under a diverse range of real-world scenarios. 
+%The datasets are constructed on the basis of the Collaborative Perinatal Project \cite{Niswander1972}, a longitudinal study which was conducted on pregnant women and their children between 1959 to 1974 designed for discovering causal factors related to developmental disorders. 
+The dataset contains 4802 observations and 58 variables. The outcome and treatment variables are generated using different data generating procedures for the 77 settings, providing benchmarks for a wide range of treatment effect estimation scenarios. This dataset can be accessed at \url{https://github.com/vdorie/aciccomp/tree/master/2016}. 
+
+We report the average PEHE metrics across 77 settings where each setting is repeated for 10 replications. For TEDVAE, the parameters are selected using the average of the first five settings, instead of tuning separately for the 77 settings. This approach has two benefits: firstly and most importantly, if an algorithm performs well using the same parameters across all 77 settings, it indicates that the algorithm is not sensitive to the choice of parameters and thus would be easier for practitioners to use in real-world scenarios; the second benefit is to save computation costs, as conducting parameter tuning across a large amount of datasets can be computationally overwhelming for practitioners.
+As a result, we set the latent dimensionality parameters as $D_{z_y}=5$, $D_{z_t}=15$, $D_{z_c}=15$ and set the weight for auxiliary losses as $\alpha_t=\alpha_y=100$. For all the parametrized neural networks, we use 5 hidden layers and 100 hidden neurons in each layer, with ELU activation.   with a 60\%/30\%/10\% train/validation/test splitting proportions.
+
+The results on the ACIC2016 datasets are reported in Table \ref{acic2016}. We can see that TEDVAE performs significantly better than the compared methods.
+These results show that, without tuning parameters individually for each setting, TEDVAE achieves state-of-the-art performances across diverse range of data generating procedures, which empirically demonstrates that TEDVAE is effective for treatment effect estimation across different settings.
+
+\begin{table}[!t]
+	\centering		
+	\setlength{\tabcolsep}{3pt}
+	\begin{tabular}{l | c c | c c }
+		\hline
+		%		\multicolumn{5}{c}{IHDP}\\
+		& \multicolumn{2}{c|}{Setting A} & \multicolumn{2}{c}{Setting B}\\
+		\hline
+		Methods & $\epsilon_{\text{PEHE}}^{tr}$ & $\epsilon_{\text{PEHE}}^{te}$ & $\epsilon_{\text{PEHE}}^{tr}$ & $\epsilon_{\text{PEHE}}^{te}$ \\
+		\hline
+		CT &  1.48$\pm$0.12 & 1.56$\pm$0.13 & 5.46$\pm$0.08 & 5.73$\pm$0.09\\				
+		t-stats &  1.78$\pm$0.09 & 1.91$\pm$0.12 & 5.40$\pm$0.08 & 5.71$\pm$0.09\\
+		\hline
+		CF	& 1.01$\pm$0.08 & 1.09$\pm$0.16 & 3.86$\pm$0.05 & 3.91$\pm$0.07\\
+		BART & 0.87$\pm$0.07 & 0.88$\pm$0.07 & 2.78$\pm$0.03 & 2.91$\pm$0.04\\
+		X-RF & 0.98$\pm$0.08 & 1.09$\pm$0.15 & 3.50$\pm$0.04 & 3.59$\pm$0.06  \\
+		\hline
+		CFR	 & 0.67$\pm$0.02 & 0.73$\pm$0.04 & 2.60$\pm$0.04 & 2.76$\pm$0.04 \\
+		
+		SITE & 0.65$\pm$0.07 & 0.67$\pm$0.06 & 2.65$\pm$0.04 & 2.87$\pm$0.05 \\
+		DR-CFR  & 0.62$\pm$0.15 & 0.65$\pm$0.18 & 2.73$\pm$0.04 & 2.93$\pm$0.05\\
+		\hline	
+		GANITE & 1.84$\pm$0.34 & 1.90$\pm$0.40 & 3.68$\pm$0.38 & 3.84$\pm$0.52\\
+		CEVAE & 0.95$\pm$0.12 & 1.04$\pm$0.14 & 2.90$\pm$0.10 & 3.24$\pm$0.12\\
+		TEDVAE & \textbf{0.59$\pm$0.11} & \textbf{0.60$\pm$0.14} & \textbf{2.10$\pm$0.09} & \textbf{2.22$\pm$0.08} \\
+		\hline
+	\end{tabular}
+	\caption{Means and standard deviations of the PEHE metric (smaller is better) on IHDP. The bolded values indicate the best performers (Wilcoxon signed rank tests ($p=0.05$).}
+	\label{IHDP}
+\end{table}
+
+
+\subsubsection{Benchmark II: Infant Health Development Program}
+The Infant Health and Development Program (IHDP) is a randomized controlled study designed to evaluate the effect of home visit from specialist doctors on the cognitive test scores of premature infants. 
+%The program is a randomized controlled trial which began in 1985, and the targets of the program are low-birth-weight, premature infants. 
+%Subjects in the treatment group are provided with intensive high-quality child care and home visits from a trained health-care provider. The program was effective at improving the cognitive functions of the treated subjects when compared with the control subjects where the average treatment effect (ATE) on all the subjects from this dataset is reported as $4$.
+The datasets is first used for benchmarking treatment effect estimation algorithms in \cite{Hill2011}, where selection bias is induced by removing a non-random subset of the treated subjects to create an observational dataset, and the outcomes are simulated using the original covariates and treatments. 
+It contains 747 subjects and 25 variables that describe both the characteristics of the infants and the characteristics of their mothers. 
+We use the same procedure as described in \cite{Hill2011} which includes two settings of this benchmark: `Setting A" and ``Setting B", where the outcomes follow linear relationship with the variables in ``Setting A" and exponential relationship in ``Setting B". The datasets can be accessed at \url{https://github.com/vdorie/npci}.
+The reported performances are averaged over 100 replications with a training/validation/test splits proportions of 60\%/30\%/10\%.
+
+Since evaluating treatment effect estimation is difficult in real-world scenarios \cite{Alaa2019}, a good treatment effect estimation algorithm should perform well across different datasets with minimum requirement for parameter tuning.
+Therefore, for TEDVAE we use the same parameters in the ACIC dataset and do not perform parameter tuning on the IHDP dataset. 
+For the compared traditional methods, we also use the same parameters as selected on the ACIC benchmark. For the compared deep learning methods, we conduct grid search using the recommended parameter ranges from the relevant papers.
+
+From Table \ref{IHDP} we can see that TEDVAE achieves the lowest PEHE errors among the compared methods on both Setting A and Setting B of the IHDP benchmark. Wilcoxon signed rank tests ($p=0.05$) indicate that TEDVAE is significantly better than the compared methods.
+Since TEDVAE uses the same parameters on the IHDP datasets as in the previous ACIC benchmarks,  these results demonstrate that the TEDVAE model is suitable for diverse real-world scenarios and is robust to the choice of parameters.
+
+\begin{table}[!t]
+	\setlength{\tabcolsep}{4pt}
+	\centering
+	\begin{tabular}{l | c c}
+		\hline
+		&   \multicolumn{2}{c}{Twins} \\
+		\hline
+		Methods & $\epsilon_{\text{ATE}}^{tr}$ &  $\epsilon_{\text{ATE}}^{te}$  \\
+		\hline
+		CT &   0.034$\pm$0.002 & 0.038$\pm$0.007  \\
+		t-stats & 0.032$\pm$0.003 & 0.033$\pm$0.005\\
+		\hline
+		CF	 & 0.025$\pm$0.001 & 0.025$\pm$0.001 \\
+		BART  & 0.050$\pm$0.002 & 0.051$\pm$0.002\\
+		X-RF   & 0.075$\pm$0.003 & 0.074$\pm$0.004 \\
+		\hline
+		CFR	    & 0.029$\pm$0.002 & 0.030$\pm$0.002\\
+		
+		SITE  & 0.031$\pm$0.003 & 0.033$\pm$0.003 \\ 
+		DR-CFR & 0.032$\pm$0.002 & 0.034$\pm$0.003 \\
+		\hline
+		GANITE & 0.016$\pm$0.004 & 0.018$\pm$0.005 \\
+		CEVAE   & 0.046$\pm$0.020 & 0.047$\pm$0.021 \\
+		TEDVAE  & \textbf{0.006$\pm$0.002}  & \textbf{0.006$\pm$0.002} \\
+		\hline
+	\end{tabular}
+	\label{ATE_results}
+	\caption{ Means and standard deviations of $\epsilon_{\text{ATE}}$ on the Twins datasets. The bolded values indicate the best performers (Wilcoxon signed rank tests ($p=0.05$). }	
+\end{table}
+
+%\begin{table}[!t]
+%	\setlength{\tabcolsep}{4pt}
+%	\centering
+%	\caption{ Means and standard deviations of $\epsilon_{\text{ATE}}$ on the Jobs and Twins datasets. The bolded values indicate the best performers (Wilcoxon signed rank tests ($p=0.05$). }
+%	\begin{tabular}{l | c c |c c}
+%		\hline
+%		&  \multicolumn{2}{c}{Jobs} & \multicolumn{2}{c}{Twins} \\
+%		\hline
+%		Methods & $\epsilon_{\text{ATE}}^{tr}$ &  $\epsilon_{\text{ATE}}^{te}$ & $\epsilon_{\text{ATE}}^{tr}$ &  $\epsilon_{\text{ATE}}^{te}$  \\
+%		\hline
+%		CT &   0.448$\pm$0.005 & 0.448$\pm$0.005 & 0.034$\pm$0.002 & 0.038$\pm$0.007  \\
+%		t-stats &   0.448$\pm$0.004 & 0.448$\pm$0.005 & 0.032$\pm$0.003 & 0.033$\pm$0.005\\
+%		\hline
+%		CF	 & \textbf{0.064$\pm$0.000} & \textbf{0.064$\pm$0.000} & 0.025$\pm$0.001 & 0.025$\pm$0.001 \\
+%		BART  &   \textbf{0.064$\pm$0.001} & \textbf{0.064$\pm$0.001} & 0.050$\pm$0.002 & 0.051$\pm$0.002\\
+%		X-RF  & \textbf{0.064$\pm$0.001}  &\textbf{0.064$\pm$0.001} & 0.075$\pm$0.003 & 0.074$\pm$0.004 \\
+%		\hline
+%		CFR	   &  0.116$\pm$0.028 & 0.120$\pm$0.032  & 0.029$\pm$0.002 & 0.030$\pm$0.002\\
+%		
+%		SITE &  0.134$\pm$0.031  &  0.142$\pm$0.050 & 0.031$\pm$0.003 & 0.033$\pm$0.003 \\ 
+%		DR-CFR & \\
+%		\hline
+%		CEVAE  &  0.265$\pm$0.078 & 0.284$\pm$0.079 & 0.046$\pm$0.020 & 0.047$\pm$0.021 \\
+%		TEDVAE &  \textbf{0.064$\pm$0.000} & \textbf{0.064$\pm$0.000} & \textbf{0.006$\pm$0.002}  & \textbf{0.006$\pm$0.002} \\
+%		\hline
+%	\end{tabular}
+%	\label{ATE_results}
+%\end{table}
+\subsubsection{Real-world Dataset: Twins}
+In this section, we use a real-world randomized dataset to compare the methods capability of estimating the average treatment effects. 
+
+%The Jobs dataset is based on the randomized controlled trial originally provided in \cite{Lalonde1986}, which has then become a widely used benchmark for average treatment effect estimation. 
+%The treatment is whether a subject has participated in a job training program, and the outcome is the subject's employment status. 
+%This dataset combines the original randomized controlled trial samples, the Panel Study of Income Dynamics (PSID) observational samples, and the Current Population Survey (CPS) samples. 
+%The randomized controlled trial samples allow for the estimation of the true average treatment effect, and by including the observational samples we can investigate whether the algorithms can account for the confounding bias in the observational data.
+%As a result, the dataset includes 19,204 samples where each sample is described by 8 covariates including age, education, and previous earnings of the participants, etc. 
+%We follow the procedure in \cite{Shalit2016} to use a binary outcome variable indicating whether the program is effective for improving the participant's income.
+
+The Twins dataset has been previously used for evaluating causal inference in \cite{Louizos2017,Yao2018_Twin}. It consists of samples from twin births in the U.S. between the year of 1989 and 1991 provided in \cite{Almond2005_TwinData}. Each subject is described by 40 variables related to the parents, the pregnancy and the birth statistics of the twins.
+The treatment is considered as $t=1$ if a sample is the heavier one of the twins, and considered as $t=0$ if the sample is lighter. 
+The outcome is a binary variable indicating the children's mortality after a one year follow-up period. 
+Following the procedure in \cite{Yao2018_Twin}, we remove the subjects that are born with weight heavier than 2,000g and those with missing values, and introduced selection bias by removing a non-random subset of the subjects. The final dataset contains 4,813 samples. The data splitting is the same as previous experiments, and the reported results are averaged over 100 replications. 
+The ATE estimation performances are illustrated in Table \ref{ATE_results}. 
+On this dataset, we can see that TEDVAE achieves the best performance with the smallest $\epsilon_{ATE}$ among all the compared algorithms. 
+
+Overall, the experiments results show that the performances of TEDVAE are significantly better than the compared methods on a wide range of synthetic, benchmark, and real-world datasets. In addition, the results also indicate that TEDVAE is less sensitive to the choice of parameters than the other deep learning based methods, which makes our method attractive for real-world application scenarios. 
+%In the meantime, none of the compared methods performs as consistently as the performance of TEDVAE. 
+
+
+\section*{Conclusion}
+We propose the TEDVAE algorithm, a state-of-the-art treatment effect estimator which infer and disentangle three disjoints sets of instrumental, confounding and risk factors from the observed variables. 
+%We argued that most of the previous methods can be improved in two aspects. 
+%Firstly, they take the observed variables “as is” and do not consider the fact that many of them are not true confounders. 
+%Secondly, they do not consider the fact that some difficult to measure confounders may be represented by proxy variables.
+%Based on our model diagram which assumes that the observed variables are generated from three disjoint sets of latent factors including the confounding, the instrumental and the risk factors, 
+Experiments on a wide range of synthetic, benchmark, and real-world datasets have shown that TEDVAE significantly outperforms compared baselines. 
+For future work, a path worth exploring is extending TEDVAE for treatment effects with non-binary treatment variables. 
+While most of the existing methods are restricted to binary treatments, the generative model of TEDVAE makes it a promising candidate for extension to treatment effect estimation with continuous treatments.
+
+\bibliography{ijcai20}
+\end{document}
+
+

@@ -1,0 +1,62 @@
+\ifdefined\response\newpage\newpage\clearpage\pagebreak\else\fi
+\subsubsection{The Dual C-Learner and Covariate Balancing.}
+\label{sec:ks_ipw}
+Here, we include experiment results in this setting for the dual C-Learner and for balancing methods for the propensity score, as introduced in \Cref{sec:balance}. We now compare an alternative formulation of the C-Learner presented in Equation \eqref{eq:c_learner_dual}, in which we take the linear outcome model (learned with no constraint) as fixed and we solve for the best propensity model subject to the efficiency constraints for the propensity weighted estimator. Finally, we use this learned propensity model for inverse propensity weighting to obtain the dual C-Learner estimator. We present in \Cref{tb:linear_ipw} a comparison between the following propensity weighted estimators: IPW, which would be analogous to a direct implementation, IPW with the standard CBPS formulation that forces balancing across the covariates $X$, a parametrically fluctuated model (``Param-Fluc'') based on \cite{tan2010bounded}, which is analogous to the parametric fluctuation of TMLE for the IPW, and the dual C-Learner (``C-Learner-Dual'') as just described. We also include self-normalized versions of each method (denoted with ``-SN''). Implementation details are in \Cref{sec:exp_details}. For both sample sizes, the dual C-Learner is the best-performing propensity-weighted estimator.
+See  \Cref{sec:ks_more_results} for additional results that use covariate-balanced propensity scores. 
+
+\begin{table}[t]
+\footnotesize
+\centering
+\hfill
+\begin{subtable}{.53\linewidth}
+\centering
+\caption{$N=200$} %
+\begin{tabular}{lrrrr}
+\toprule
+ Method & \multicolumn{2}{c}{Bias} & \multicolumn{2}{c}{Mean Abs Err} \\
+\cmidrule(lr){1-1}
+\cmidrule(lr){2-3}
+\cmidrule(lr){4-5}
+IPW & 22.10 & (2.58) & 27.28 & (2.53) \\
+IPW-SN & 3.36 & (0.29) & 5.42 & (0.26)\\
+CBPS & 1.98 & (0.18) & 4.30 & (0.13)\\
+CBPS-SN & -1.20 & (0.10) & 2.76 & (0.06)\\
+Param-Fluc & -2.77 & (0.13) & 3.61 & (0.11) \\
+Param-Fluc-SN & -1.81 & (0.10) & 2.79 & (0.07) \\
+C-Learner-Dual & \textbf{-0.01} & (0.10) & \textbf{2.59} & (0.06) \\
+C-Learner-Dual-SN & -9.20 & (0.11) & 9.22 & (0.11) \\
+\bottomrule
+\end{tabular}
+\end{subtable}
+\hspace{-1.15em}
+\begin{subtable}{.42\linewidth}
+\centering
+\caption{$N=1000$} %
+\begin{tabular}{rrrr}
+\toprule
+ \multicolumn{2}{c}{Bias} & \multicolumn{2}{c}{Mean Abs Err} \\
+\cmidrule(lr){1-2}
+\cmidrule(lr){3-4}
+-0.43 & (0.04) & 1.17 & (0.03)\\
+ 105.46 & (59.84) & 105.67 & (59.84) \\
+  -1.85 & (0.07) & 2.36 & (0.06) \\
+   -1.35 & (0.04) & 1.59 & (0.04) \\
+-1.74 & (0.04) & 1.85 & (0.04) \\
+-1.72 & (0.04) & 1.83 & (0.04) \\
+\textbf{-0.41} & (0.04) & \textbf{1.16} & (0.03) \\
+-9.49 & (0.05) & 9.49 & (0.05) \\
+\bottomrule
+\end{tabular}
+\end{subtable}
+\hfill
+\hspace*{\fill}
+\caption{%
+Comparison of estimator performance on mispecified datasets from \citet{KangSc07} in 1000 tabular simulations, for linear logit propensity models (\Cref{sec:ks_ipw}). %
+We highlight the best-performing method \emph{overall} in \textbf{bold}. Standard errors are displayed within parentheses to the right of the point estimate.
+}
+    \label{tb:linear_ipw}
+\end{table}
+
+\label{sec:ks_ipw-end}
+
+\ifdefined\response\newpage\newpage\clearpage\pagebreak\else\fi

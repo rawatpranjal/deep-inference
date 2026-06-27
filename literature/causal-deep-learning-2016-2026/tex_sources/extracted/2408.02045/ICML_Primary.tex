@@ -1,0 +1,1407 @@
+%%%%%%%% ICML 2024 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{mathrsfs}
+\usepackage{color}
+\usepackage{booktabs} % for professional tables
+\usepackage{breqn}
+\usepackage{bm, bbm}
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2023} with \usepackage[nohyperref]{icml2023} above.
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+% \usepackage{icml2024}
+
+% If accepted, instead use the following line for the camera-ready submission:
+\usepackage[accepted]{icml2024}
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\def\calF{\mathcal{F}}
+\def\logit{\mathrm{logit}}
+\def\IIF{\mathsf{IF}}
+\def\EIF{\mathsf{EIF}}
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+\def\MAR{\texttt{MAR}}
+\def\MNAR{\texttt{MNAR}}
+\def\MNARshadow{\texttt{MNAR-shadow}}
+\def\dnase{{\mathsf{DNA\mbox{-}SE}}}
+\def\Loss{\texttt{Loss}}
+\def\calN{\mathcal{N}}
+\def\calH{\mathcal{H}}
+\def\train{\texttt{train}}
+\def\test{\texttt{test}}
+\def\relu{\mathsf{relu}}
+\def\tanh{\mathsf{tanh}}
+\def\sigmoid{\mathsf{sigmoid}}
+\def\eff{\mathsf{eff}}
+\def\op{\mathsf{op}}
+\def\opt{\mathsf{opt}}
+\def\nn{\texttt{nn}}
+\def\sfb{\mathsf{b}}
+\def\score{\texttt{score}}
+\def\inteq{\texttt{inteq}}
+\def\sfb{\mathsf{b}}
+\def\bbP{\mathbb{P}}
+\def\bfX{\mathbf{X}}
+\def\bfx{\mathbf{x}}
+\def\var{\mathrm{var}}
+
+\def\expit{\mathrm{expit}}
+
+\def\sfs{\mathsf{s}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\def\diff{\mathrm{d}}
+\def\P{\mathrm{P}}
+\def\bbeta{\boldsymbol{\beta}}
+\def\E{\mathrm{E}}
+\def\bbE{\mathbb{E}}
+\def\hat{\widehat}
+\def\tilde{\widetilde}
+\def\p{\mathrm{p}}
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+\def\st{\mathrm{s.t.}}
+\def\bbR{\mathbb{R}}
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{DNN-Assisted Semiparametric Estimation}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{DNA-SE: Towards Deep Neural-Nets Assisted Semiparametric Estimation}
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2023
+% package.
+
+% List of affiliations: The first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% You can specify symbols, otherwise they are numbered in order.
+% Ideally, you should not use this facility. Affiliations will be numbered
+% in order of appearance and this is the preferred way.
+\icmlsetsymbol{equal}{*}
+\icmlsetsymbol{co}{$\dag$}
+
+\begin{icmlauthorlist}
+\icmlauthor{Qinshuo Liu}{1}
+\icmlauthor{Zixin Wang}{2}
+\icmlauthor{Xi-An Li}{3}
+\icmlauthor{Xinyao Ji}{}
+\icmlauthor{Lei Zhang}{3}
+\icmlauthor{Lin Liu}{co,3,4}
+\icmlauthor{Zhonghua Liu}{co,5}
+%\icmlauthor{Firstname7 Lastname7}{comp}
+%\icmlauthor{}{sch}
+%\icmlauthor{Firstname8 Lastname8}{sch}
+%\icmlauthor{Firstname8 Lastname8}{yyy,comp}
+%\icmlauthor{}{sch}
+%\icmlauthor{}{sch}
+\end{icmlauthorlist}
+
+\icmlaffiliation{1}{Department of Statistics and Actuarial Science, The University of Hong Kong, Hong Kong SAR, China}
+\icmlaffiliation{2}{School of Life Sciences, Shanghai Jiao Tong University, Shanghai, China}
+\icmlaffiliation{3}{Institute of Natural Sciences, MOE-LSC, School of Mathematical Sciences, CMA-Shanghai, Shanghai Jiao Tong University, Shanghai, China}
+\icmlaffiliation{4}{SJTU-Yale Joint Center for Biostatistics and Data Science, Shanghai Jiao Tong University, Shanghai, China}
+\icmlaffiliation{5}{Department of Biostatistics, Columbia University, New York, NY, USA}
+\icmlcorrespondingauthor{Lin Liu}{linliu@sjtu.edu.cn}
+\icmlcorrespondingauthor{Zhonghua Liu}{zl2509@cumc.columbia.edu}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{semiparametric statistics, missing data, causal inference, Fredholm integral equations of the second kind, bi-level optimization, deep learning, AI for science}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+\printAffiliationsAndNotice{The two corresponding authors are alphabetically ordered and contributed equally to this project.} % otherwise use the standard text.
+
+\begin{abstract}
+% Semiparametric statistics play a pivotal role in a wide range of domains, including but not limited to missing data, causal inference, and transfer learning, to name a few. In many settings, semiparametric theory leads to (nearly) statistically optimal procedures that yet involve numerically solving Fredholm integral equations of the second kind. Traditional numerical methods, such as polynomial or spline approximations, are difficult to scale to multi-dimensional problems. Alternatively, statisticians may choose to approximate the original integral equations by ones with closed-form solutions, resulting in computationally more efficient, but statistically suboptimal or even incorrect procedures. To bridge this gap, we propose a novel framework by formulating the semiparametric estimation problem as a bi-level optimization problem; and then we propose a scalable algorithm called **D**eep **N**eural-Nets **A**ssisted **S**emiparametric **E**stimation ($\mathsf{DNA\mbox{-}SE}$)  by leveraging the  universal approximation property of Deep Neural-Nets (DNN) to streamline semiparametric procedures. Through extensive numerical experiments and a real data analysis, we demonstrate the numerical and statistical advantages of $\mathsf{DNA\mbox{-}SE}$ over traditional methods. To the best of our knowledge, we are the first to bring DNN into semiparametric statistics as a numerical solver of integral equations in our proposed general framework. 
+
+Semiparametric statistics play a pivotal role in a wide range of domains, including but not limited to missing data, causal inference, and transfer learning, to name a few. In many settings, semiparametric theory leads to (nearly) statistically optimal procedures that yet involve numerically solving Fredholm integral equations of the second kind. Traditional numerical methods, such as polynomial or spline approximations, are difficult to scale to multi-dimensional problems. Alternatively, statisticians may choose to approximate the original integral equations by ones with closed-form solutions, resulting in computationally more efficient, but statistically suboptimal or even incorrect procedures. To bridge this gap, we propose a novel framework by formulating the semiparametric estimation problem as a bi-level optimization problem; and then we develop a scalable algorithm called \underline{D}eep \underline{N}eural-Nets \underline{A}ssisted \underline{S}emiparametric \underline{E}stimation ($\dnase$) by leveraging the universal approximation property of Deep Neural-Nets (DNN) to streamline semiparametric procedures. Through extensive numerical experiments and a real data analysis, we demonstrate the numerical and statistical advantages of $\dnase$ over traditional methods. To the best of our knowledge, we are the first to bring DNN into semiparametric statistics as a numerical solver of integral equations in our proposed general framework. 
+\end{abstract}
+
+\section{Introduction}
+\label{Introduction_chap}
+
+% Modern Artificial Intelligence (AI) based on Deep Neural Networks (DNN) has made unprecedented progress in various scientific and industrial domains, including image classification \citep{krizhevsky2012imagenet}, protein folding prediction \citep{jumper2021highly}, games \citep{silver2016mastering, silver2017mastering}, natural language processing \citep{chatgpt}, and scientific computing \citep{noe2019boltzmann}. These achievements have sparked significant interest in the statistical community to explore the properties of DNN \citep{suzuki2019adaptivity, mei2019mean, schmidt2020nonparametric, bartlett2021deep, chen2022learning} and their integration into statistical practice \citep{mandel2021neural, zhong2021deep, zhong2022deep}. Despite efforts to understand the theoretical reasons behind DNN' success \citep{elad2020another, goel2020superpolynomial}, the mystery remains. Incorporating DNN into statistical practice within the semiparametric framework seems natural, as it combines nonparametric and parametric components \citep{bickel1998efficient}, allowing transparent modeling of scientifically relevant aspects while estimating the non-relevant components.
+
+% Modeling nuisance parameters nonparametrically (or as a black-box) is appealing to data science practitioners, reducing misspecification bias and enabling the use of algorithmic approaches like DNN, which often outperform traditional statistical tools such as kernel smoothing \citep{breiman2001statistical,kennedy2020discussion}. In fields like epidemiology, economics, and political sciences, where transparent modeling assumptions and careful interpretation are crucial, semiparametric statistics dominate \citep{newey1990semiparametric, robins1994estimation, chernozhukov2018double, farrell2021deep}. This has led to a growing literature on integrating DNN for semiparametric and missing data problems, leveraging their nonparametric regression capabilities and statistical guarantees \citep{shi2019adapting, chen2024causal, xu2022deepmed, kompa2022deep, suzuki2019adaptivity, schmidt2020nonparametric, jiao2021deep}. However, integrating DNN into semiparametric statistics remain unexplored.
+
+%Modern Artificial Intelligence (AI) based 
+Deep Neural-Nets (DNN) have made unprecedented progress in a variety of scientific and industrial problems, such as image classification \citep{krizhevsky2012imagenet}, natural language processing \citep{vaswani2017attention}, and scientific computing \citep{e2018deep}. Recently, the statistical literature has also garnered increasing interests in deploying DNN to solve statistical problems that baffled traditional methods, for example, nonparametric regression \citep{chen1999improved, suzuki2019adaptivity, schmidt2020nonparametric, padilla2022quantile} and nonparametric density estimation \citep{liu2021density, liang2021well}. A common theme in these applications is to view DNN as an alternative method to approximate infinite-dimensional nonparametric models, conventionally done by splines, polynomials, etc. \citep{gine2016mathematical}.
+ 
+Interpretability is at the core of many statistical problems. A conceptually appealing statistical paradigm is semiparametric statistics (including semiparametric statistical models, methods and related theory). In semiparametric statistics, one models the part of the Data Generating Process (DGP) of scientific interest with low-dimensional parametric models to improve interpretability, while leaving the remaining part (termed as nuisance parameters) either completely unspecified or modeled by infinite-dimensional nonparametric models to avoid unnecessary model misspecification bias \citep{newey1990semiparametric, bickel1998efficient}. As a result, semiparametric statistics have been very popular in problems calling for both interpretability and robustness against model misspecification, such as missing data \citep{robins1994estimation}, causal inference \citep{van2003unified}, and more recently, transfer learning \citep{qiu2023efficient, tian2023elsa}. It is natural to employ DNN to estimate the infinite-dimensional nuisance parameters in semiparametric models, an extension of the aforementioned idea from nonparametric statistics. In fact, this is the route that most recent semiparametric statistics literature has taken \citep{farrell2021deep, shi2021double, zhong2022deep, xu2022deepmed, kompa2022deep, chernozhukov2022riesznet, chen2023efficient, chen2024causal}. 
+
+In this paper, we take a different path and instead propose to treat DNN as a numerical solver for semiparametric statistics. Here is our motivation. All the above cited works on semiparametric statistics are special cases, where the statistically optimal (i.e. semiparametric efficient) estimator for the parameter of scientific interest has closed-form. In general, however, semiparametric theory can lead to nearly statistically optimal estimators that depend on the solution of Fredholm integral equations of the second kind\footnote{In the sequel, we will simply call Fredholm integral equations of the second kind as integral equations to ease exposition.} \citep{bickel1998efficient}. These integral equations often: (1) do not have closed-form solutions; and (2) depend on the unknown parameter of interest, calling for complicated iterative methods \citep{robins1994estimation}. As shown in our numerical experiments in Section \ref{sec:sim}, using traditional methods such as polynomials/splines \citep{bellour2016two} or approximately inverting the integral kernel \citep{atkinson1967numerical} to approximate the solution does not always lead to optimal or satisfactory estimators in practice. In certain cases, statisticians may derive alternative estimators with closed-forms, but this strategy generally leads to statistically suboptimal or sometimes even inconsistent estimators \citep{zhao2022versatile, liu2021efficient, yang2022semiparametric}.
+
+To bridge this gap, inspired by recent works using DNN as a new-generation numerical method for scientific computing \citep{e2018deep, raissi2019physics, li2020multi}, we propose a novel framework by formulating the semiparametric estimation problem as a bi-level optimization problem; and then we develop a scalable algorithm called \underline{D}eep \underline{N}eural-Nets \underline{A}ssisted \underline{S}emiparametric \underline{E}stimation ($\dnase$). In a nutshell, $\dnase$ uses multi-layer feed-forward neural networks to approximate the solution of the integral equations and then employs the alternating gradient descent algorithm to solve the integral equations and estimate the parameters of interest simultaneously (see Section \ref{sec:algor}). We summarize our main contributions below.
+
+% One  \citep{robins1994estimation, scharfstein1999adjusting, robins2004estimation, matsouaka2017instrumental, zhang2022semi, liu2021efficient, zhao2022versatile, yang2021semiparametric}.  There exist multiple conventional numerical methods for solving the integral equations that commonly resort to grid search or basis function expansion techniques \citep{krenk1975use, sezer1994taylor, REN199915, maleknejad2005numerical, paripour2014expansion} as computationally efficient [???]alternatives to more intensive numerical methods. However, these approaches may fall into local optimality and yield suboptimal fits to the data. Furthermore, traditional methods may struggle to handle even moderately high-dimensional problems, because the computational complexity often grows exponentially with the dimension of the underlying computational problem. Also they typically rely on a predefined functional form or basis functions \citep{maleknejad2005numerical, paripour2014expansion}, limiting their flexibility and adaptability to different problem domains. 
+
+% Therefore we can get inspiration from these articles that we can use DNN as the tools to solve the integral equations. It is apparent that neural network algorithms can effectively approximate complex functions with relatively more learnable parameters, resulting in more accurate computations. Also neural networks, on the other hand, are inherently well-suited for (certain) structured high-dimensional problems and can capture intricate relationships between variables, allowing for more accurate solutions. Furthermore, they can learn the underlying patterns directly from the data, enabling them to adapt to various problem structures and provide more flexible and robust solutions.
+
+% Therefore, to overcome limitations of conventional methods and leverage the remarkable progress of using DNN as a tool for scientific computing \citep{e2018deep, yang2019adversarial, li2020multi, raissi2019physics, psaros2023uncertainty, lu2021learning, lu2022machine, mardt2018vampnets, lu2021deepxde, yang2020physics, guo2022normalizing, noe2019boltzmann, wu2020stochastic}, we introduce a novel methodology referred to as $\dnase$. 
+
+% Our proposed approach employs neural networks with multi-layer feed-forward neural networks following ReLU or Tanh activate functions (the number of layers and activate function according to actual situation) as a powerful tool for solving integral equations in the context of semi-parametric estimation. Overall, neural network algorithms offer significant advantages over traditional methods in terms of computational accuracy, handling high-dimensional problems, and adaptability to different problem domains. These advantages make neural networks a promising approach for solving integral equations in various scientific and statistic applications. And our contributions are summarized as follows:
+
+% By integrating neural networks into the estimation process, we aim to enhance the accuracy and computational efficiency of parameter estimation within the semi-parametric framework.
+
+
+% Unprecedented progress is being made by artificial intelligence (AI) systems based on Deep Neural Networks (DNN) in almost every scientific and industrial disciplines, from ImageNet for image classification emulating human-level errors \citep{krizhevsky2012imagenet} and AlphaFold for essentially solving the problem of predicting secondary protein structures based solely on amino acid sequences \citep{jumper2021highly}, to AlphaZero for defeating human experts in playing strategic games \citep{silver2016mastering, silver2017mastering} and the very recent GPT for human language understanding \citep{chatgpt}. Inevitably, these successful stories prompt a surge of research and application interests in the statistics community to investigate the statistical and algorithmic properties of DNN \citep{suzuki2019adaptivity, mei2019mean, schmidt2020nonparametric, bartlett2021deep, chen2022learning} and how to integrate DNN into statistical practice \citep{mandel2021neural, zhong2021deep, zhong2022deep}.
+
+% Despite numerous works trying to unravel the black-box of DNN, the (theoretical) reason why they work so well in practice is still largely a mystery \citep{elad2020another, goel2020superpolynomial}. Given this state of affair, it is particularly natural to incorporate DNN into statistical practice under the semiparametric statistics framework for reasons that we detail below. In semiparametric statistics, the statistician posits the data generating probability distribution with both nonparametric components (in some sense, black-box) and parametric components \citep{bickel1998efficient}. Roughly speaking, the parametric components encode the part of the distribution that corresponds to the actual scientific inquiry and thus calls for transparent statistical modeling and interpretation. The nonparametric or black-box components, or the nuisance parameters (in the parlance of semiparametric statistics), refers to the part that is not directly relevant to the actual scientific inquiry but should nonetheless be estimated to learn the parametric component.
+
+% Modeling nuisance parameters nonparametrically (or a black-box) is both philosophically and practically appealing to prudent data science practitioners, because such choice (1) minimizes the model misspecification bias and (2) encourages using the ``algorithmic approaches'' including DNN \citep{breiman2001statistical, kennedy2020discussion} that are easier to implement and often exhibit superior empirical performance than many traditional statistical tools such as kernel smoothing. Furthermore, when developing causal inference and missing data methodologies in fields such as epidemiology, economics, and political sciences, because the applications mandate transparency about the modeling assumptions and require special care in interpreting the data analysis results, semiparametric statistics become the dominating framework \citep{newey1990semiparametric, robins1994estimation, chernozhukov2018double, farrell2021deep}. It is then unsurprising to witness a fast-growing literature on integrating DNN into semiparametric causal inference and missing data problems \citep{shi2019adapting, farrell2021deep, chen2020causal, xu2022deepmed, kompa2022deep}. In all these cited works, DNN are exploited as a ``fancy'' nonparametric regression technique to estimate the nuisance parameters (except for \citet{kompa2022deep}; see Remark \ref{rem:proximal} for more details), particularly leveraging the statistical guarantees of DNN in nonparametric settings \citep{suzuki2019adaptivity, schmidt2020nonparametric, jiao2021deep}. But is it the only way that DNN can be integrated into semiparametric statistics?
+
+% As tempting as the semiparametric statistics paradigm sounds, the estimator of the parameters of interest, however, often requires solving a system of (linear) operator equations (or more precisely, Fredholm integral equations of the first or second kind \citep{kress2013linear}), which in general does not have closed-form solution \citep{robins1994estimation, scharfstein1999adjusting, robins2004estimation, matsouaka2017instrumental, zhang2019semiparametric, liu2021efficient, zhao2022versatile, yang2021semiparametric} and also depends on the unknown parameters of interest. Operator equations arise because semiparametric estimators, or more generally estimating equations (such as score equations which are often defined as the first-order derivative of the log-likelihood), are usually constructed by ``partialing out'' the information only relevant for the nuisance parameters by $L_{2}$-projection. Numerically solving operator equations can be computationally demanding using traditional numerical methods such as grid search or basis expansion, which impeded the popularity of semiparametric framework in practice. But fortunately, rapid progress in computational mathematics has also made DNN the state-of-the-art solver for a variety of numerical problems, including forward and inverse problems in Partial Differential Equations (PDEs) \citep{e2018deep, yang2019adversarial, li2020multi, raissi2019physics, psaros2023uncertainty, lu2021learning, lu2022machine}, dynamical systems \citep{mardt2018vampnets, lu2021deepxde, yang2020physics, guo2022normalizing}, sampling from complex distributions such as many-body interacting particle systems \citep{noe2019boltzmann, wu2020stochastic}, just to name a few. Inspired by this line of works, it is natural to ask the following question(s):
+% \begin{quote}
+%     Can we improve the quality of parameter estimation by incorporating DNN into the semiparametric statistical pipeline as a numerical solver of operator equations, beyond the current paradigm simply as a nonparametric regression tool of estimating nuisance parameters?
+% \end{quote}
+
+\subsection*{Main Contributions}
+\allowdisplaybreaks
+\begin{itemize}
+\setlength\itemsep{0.5pt}
+    \item We develop a new DNN-based algorithm called $\dnase$ that streamlines solving the integral equations and estimating the parameter of interest simultaneously, by (1) formulating the semiparametric estimation problem as a bi-level optimization problem minimizing loss functions with a ``nested'' structure; and (2) solving this bi-level programming via Alternating Gradient Descent algorithms. To our knowledge, our paper is the first that employs DNN to numerically solve integral equations that arise in semiparametric problems and draws connections between semiparametric statistics and bi-level optimization \citep{chen2021closing}. 
+   % \item We design an iterative deep learning algorithm that successively updates the solution to operator equations, given the current value of the parameters of interest in semiparametric models, and the solution to estimating equations, given the current solution to the operator equations, using doubly stochastic gradient descents optimization algorithms.
+    \item We investigate the empirical performance of $\dnase$, together with the issue of hyperparameter tuning through numerical experiments and a real data analysis, which demonstrates $\dnase$ as a promising practical tool for estimating parameters in semiparametric models,  outperforming traditional methods (e.g. polynomials) \cite{atkinson1967numerical, ren1999simple}.
+    \item We have wrapped $\dnase$ into a python package, which is accessible via \href{https://github.com/liuqs111/DNA-SE}{\underline{this link}}. Semiparametric methods have been viewed as a relatively difficult subject  for some practitioners \citep{ hines2022demystifying}. We envision that $\dnase$ and its future version, together with other related open-source software \citep{lee2023ananke}, can help popularize semiparametric methods in artificial intelligence and other related scientific disciplines \citep{pan2022knowledge, min2023nonparametric, wang2023scientific}.
+\end{itemize}
+
+\subsection*{Other Related Works}
+
+To the best of our knowledge, our work is the first attempt to bring DNN into semiparametric statistics as a numerical solver for integral equations. Recently, there have been a few works using DNN to solve a variety of integral equations \citep{guan2022solving, zappala2023neural}. In semiparametric statistics, however, solving integral equations is only a means to an end (parameter estimation), and more importantly, the integral equations appeared in semiparametric problems often depend on the unknown parameters to be estimated, except in some special cases (e.g. Example \ref{eg:shift}). Therefore these prior works cannot be directly applied to semiparametric statistics in the most general form.
+
+% In this article, we make a novel attempt along this direction and develop a new semiparametric estimation method called $\dnase$ that streamlines solving the operator equations and estimating the parameter of interest, leveraging the superior performance of DNN in solving multi-dimensional numerical problems compared to traditional methods such as basis expansions \cite{REN199915,maleknejad2005numerical,paripour2014expansion}. Specifically, we designed an iterative bi-level algorithm that successively updating the solution to operator equations, given the current value of the parameters of interest, and the solution to estimating equations, given the current solution to the operator equations, using doubly stochastic gradient descents. The finite-sample performance of $\dnase$, together with the issue of hyperparameter tuning, is investigated through both simulation studies and real data analysis, which demonstrates $\dnase$ as a promising practical tool in semiparametric causal inference and missing data analysis. To the best of our knowledge, our work is the first that uses DNN to numerically solve operator equations that arise in semiparametric statistics and causal inference. 
+% $\sigma (\cdot)$ is used to denote activation functions and we may attach subscript to $\sigma$ for specific activation functions: e.g. $\sigma_{\relu}, \sigma_{\tanh}, \sigma_{\sigmoid}$. For the details it is shown in Appendix.
+
+\subsection*{Organization of the Paper}
+The rest of our paper is organized as follows. In Section \ref{sec:algor}, we briefly review semiparametric statistics, describe the problem, and formulate parameter estimation under semiparametric models as a generic bi-level optimization problem, that minimizes a set of nested loss functions. The $\dnase$ algorithm is then proposed to solve this type of problems. Three concrete examples from missing data, causal inference and transfer learning are used to illustrate our algorithm in Section \ref{sec:examples}. As a proof-of-concept, numerical experiments and a real data analysis are, respectively, conducted in Section \ref{sec:sim} and Section \ref{sec:data}. We conclude our article and discuss a few future research avenues in Section \ref{sec:conclude}. Minor details are deferred to the Appendix.
+
+\subsection*{Notation}
+
+Before proceeding, we collect some notation used throughout. Capital letters are reserved for random variables and lower-case letters are used for their realized values. The true data generating distribution is denoted as $\P$, the probability density function (p.d.f.) or the probability mass function (p.m.f.) of which is denoted as $\p$. % $\nu (\cdot)$ denotes an easy-to-sample distribution (e.g. uniform  distribution), which is used for approximating integrals numerically via Monte Carlo sampling. 
+Throughout the paper, $\bbeta$ denotes the parameter of scientific interest (possibly vector-valued) and $\bm{\eta}$ the nuisance parameter. We let $\calF_{L, K}$ be the class of fully-connected feedforward DNN with depth $L$ and width $K$, whose intput and output dimensions will be clear later. This is the type of DNN that will be considered in this paper, although other more complex architectures (e.g. Transformers \citep{vaswani2017attention}) may also be explored in the future. $\bm{\omega}$ is reserved for the neuron weight parameters. Finally, we denote $\{O_i\}_{i = 1}^N$ as the $N$ i.i.d. observed data drawn from $\P$. In general, $O$ has several components, e.g. $O = (O_1, O_2)$. We denote the conditional distribution of $O_{2} | O_{1}$ as $\P_{O_{2} | O_{1}}$.
+
+\section{Main Results: A New Framework and the  $\dnase$ Algorithm}
+\label{sec:algor}
+
+\subsection{Problem Setup of Semiparametric Estimation}
+\label{sec:setup}
+
+We begin by describing the generic setup for parameter estimation that arises ubiquitously from semiparametric problems. Concrete examples that facilitate understanding the high-level description here are provided later in Section \ref{sec:examples}. Let $\bbeta \equiv \bbeta (\P) \in \mathbb{R}^{q}$ denote the parameter of scientific interest, with a fixed dimension $q > 0$. $\bm{\eta} \equiv \bm{\eta} (\P)$ denotes the nuisance parameter, which can be infinite-dimensional. Semiparametric theory \citep{bickel1998efficient, van2002part} often leads to the following system of moment estimating equations that the true $\bbeta^{\ast}$ must satisfy:
+\allowdisplaybreaks
+\begin{equation}
+\small
+\begin{split}
+\E \left[ \psi (O; \sfb^{\ast} (\cdot), \bbeta^\ast) \right] & = 0, \text{where $\sfb^{\ast}$ solves} \\
+\int K(\mathbf{s}, \mathbf{t}, O; \bbeta^\ast) \mathsf{b}^{\ast} (\mathbf{s}, O) \diff \mathbf{s} & = C(\mathbf{t}, O; \bbeta^{\ast})+\sfb^{\ast} (\mathbf{t}, O).
+\end{split}
+\label{general form sum}
+\end{equation}
+Here $\psi \in \mathbb{R}^{q}$ denotes the estimating functions of the same dimension as $\bbeta$ and $\sfb^{\ast} (\cdot)$ with output dimension $q$ is the solution to the system of $q$ integral equations in the second line of \eqref{general form sum}. $K(\cdot)$ is a kernel function known up to the parameter of interest $\bbeta$ and the nuisance parameter $\bm{\eta}$, $C (\cdot)$ is a known vector-valued function of the same dimension as $\bbeta$, also known up to $\bbeta$ and $\bm{\eta}$. To avoid clutter, we omit the dependence on $\bm{\eta}$ of these functions throughout. $\mathbf{s}$ and $\mathbf{t}$ denote variables lying in the same sample space as (possibly parts of) the data $O$ and they will be made explicit in the concrete examples later. In general the solution $\sfb^{\ast} (\cdot)$ implicitly depends on the unknown $\bbeta$, but there are exceptions (e.g. Example \ref{eg:shift} in Section \ref{sec:examples}). In certain cases, the nuisance parameter $\bm{\eta}$ can even be set arbitrarily, and semiparametric theory can help eliminate the dependence of $\hat{\bbeta}$ on $\bm{\eta}$ \textit{entirely}: e.g., see Examples \ref{eg:mnar} and \ref{eg:sensitivity}. An estimator $\hat{\bbeta}$ of $\bbeta^\ast$ can be obtained by solving the empirical analogue of \eqref{general form sum} \citep{van2023weak}.
+
+% \begin{equation} \label{general form: pop}
+%     \begin{split}
+%         & \E \left[ s (O; \mathsf{b}, \beta) \right] = 0 \text{ s.t. } K_{\beta} \circ \mathsf{b} = \mathsf{h}
+%     \end{split}
+% \end{equation}
+% where $\sfs_{\eff}$ is the semiparametric efficient score used to construct estimating equation for the parameter of interest $\boldsymbol{\beta} \in \mathbb{R}^q$, and $K$ is an invertible kernel function known up to the parameter of interest $\boldsymbol{\beta}$, $C(\cdot)$ is a known vector-valued function of the same dimension as $\boldsymbol{\beta}$, and $\sfb (\cdot) : \mathbb{R}^p \rightarrow \mathbb{R}^q$ (where $p$ is the dimension of training data) is the solution to this integral equation: $\int K(\mathbf{s}, \mathbf{t}, \mathbf{x} ; \bbeta) \mathsf{b}(\mathbf{s},\mathbf{x}) \diff \mathbf{s}=C(\mathbf{t},\mathbf{x} ; \boldsymbol{\beta})+\mathsf{b}(\mathbf{t},\mathbf{x})$ which is called the Fredholm integral equation of the second kind.  
+
+% Furthermore, in the integral equation presented in Equation \eqref{general form sum}, the efficient score function samples, denoted as $O_i$ for $i = 1, \cdots, N$, are obtained either from our own data or real data. $\mathbf{t}$ and $\mathbf{x}$ represent the input of the $\mathsf{b}(\cdot)$ function which is often given by Monto Carlo simulation method with a uniform distribution, and the interval is given by us near to $T_l$ ($\min(T_l)-0.5,\max(T_l)+0.5$) for $T_l \subset O_l$, while $\mathbf{s} \in \Omega$ ($\Omega$ is the domain of $\mathbf{s}$) represents the variable of integration for integrating the $K(\mathbf{s}, \mathbf{t}, \mathbf{x} ; \boldsymbol{\beta}) \mathsf{b}(\mathbf{s},\mathbf{x})$ function which often given a working model as the distribution in semiparametric problems. Our aim is to solve $\mathsf{b}(\cdot)$ function in this Fredholm integral equation,  and then use this solved $\mathsf{b}(\cdot)$ to estimate the parameter of interest $\boldsymbol{\beta}$ by solving the semiparametric efficient score equation.
+
+\subsection{Formulating Semiparametric Estimation as a Bi-level Optimization Problem}
+\label{sec:loss}
+ Here, we propose a new framework by formulating the estimating equations \eqref{general form sum} into a bi-level optimization problem, which is amenable to being solved by modern DNN training algorithms. Specifically, we propose to minimize the following nested loss function to simultaneously solve the integral equation and estimate the parameter of interest $\bbeta$:
+\begin{equation}
+\label{loss_func}
+\small
+\begin{split}
+& \hat{\bbeta} \coloneqq \arg\min_{\bbeta \in \bbR^{q}} \mathcal{L}_{\psi} (\bbeta; \hat{\sfb}) \ \st \ \hat{\sfb} \coloneqq \arg\min_{\sfb \in \calF} \mathcal{L}_{K} (\sfb), \text{where} \\
+& \mathcal{L}_{\psi} (\bbeta; \sfb) \coloneqq \left\{ \frac{1}{N} \sum_{i = 1}^{N} \psi (O_{i}; \bbeta, \sfb) \right\}^{2} \text{ and} \\
+& \mathcal{L}_{K} (\sfb) \coloneqq \frac{1}{N} \sum_{i = 1}^{N} \int_{\mathbf{t}} \left( \begin{array}{c}
+\int K (\mathbf{s}, \mathbf{t}, O_{i}; \bbeta) \sfb (\mathbf{s}, O_{i}) \diff \mathbf{s} \\
+- \, C (\mathbf{t}, O_{i}; \bbeta) - \sfb (\mathbf{t}, O_{i})
+\end{array} \right)^{2} \diff \nu (\mathbf{t}),
+\end{split}
+\end{equation}
+where $\nu (\cdot)$ is an easy-to-sample probability distribution over the sample space of $\mathbf{t}$ (default: uniform over a sufficiently large but bounded domain). It is noteworthy that the loss function \eqref{loss_func} converges to its population version (see Appendix \ref{app:loss}) and $K, C$ may depend on the estimate $\hat{\bm{\eta}}$ of $\bm{\eta}$ but again we do not make it explicit.
+% It is partitioned into two components. The first component, denoted as $\mathcal{L}_{\psi}$, corresponds to the loss incurred by the semiparametric efficient score. While for the second, it is represented by $\mathcal{L}_{\sfb}$ as described in Equation \eqref{general form sum}, pertains to the loss associated with the Fredholm integral equation. For our specific algorithmic form,  we propose the loss function as follows:
+% \allowdisplaybreaks
+% \begin{equation}
+% \label{loss_func}
+% \begin{aligned}
+% & \mathcal{L} (\bbeta; \bm{\omega}) 
+% \coloneqq \mathcal{L}_{\psi} + \mathcal{L}_{\sfb} \\
+% \equiv & \frac{1}{N}  \sum _{i=1}^N \bigg\{ \psi^2 (O_i; \tilde{\sfb} (\cdot; \bm{\omega}), \bbeta)  \\
+% + & \frac{1}{L}  \sum_{l=1}^L  \left[ \begin{array}{c}
+% \int K\left(\mathbf{s}, \mathbf{t}_l, O_i ; \boldsymbol{\beta}\right) \widetilde{\mathsf{b}}\left(\mathbf{s},O_i;\boldsymbol{\omega} \right) \diff \mathbf{s} \\
+% -  C\left(\mathbf{t}_k ,O_i; \boldsymbol{\beta}\right)-\widetilde{\mathsf{b}}\left(\mathbf{t}_k,O_i;\boldsymbol{\omega}\right)
+% \end{array} \right]^2 \bigg\}.
+% \end{aligned}
+% \end{equation}
+% where $\widetilde{\mathsf{b}}(\cdot;\boldsymbol{\omega})$ is function of the neural network for $\sfb(\cdot)$. Denote the global minimizer of $\mathcal{L} (\boldsymbol{\beta}; \boldsymbol{\omega})$ as
+% \begin{equation}
+% (\widehat{\boldsymbol{\beta}}, \widehat{\boldsymbol{\omega}})^{\top} = \mathop{\arg\min}_{\boldsymbol{\beta}, \boldsymbol{\omega}} \mathcal{L} (\boldsymbol{\beta}; \boldsymbol{\omega}).
+% \label{update}
+% \end{equation}
+%app general form
+
+Note that the loss function \eqref{loss_func} has a distinctive nested structure, in the sense that the outer loss $\mathcal{L}_{\psi}$ depends on the solution to the inner loss $\mathcal{L}_{K}$. Here $\calF$ is some hypothesis class for approximating $\sfb (\cdot)$; in this paper, we choose $\calF \equiv \calF_{L, K}$, the class of fully-connected feedforward DNN. Then $\sfb (\cdot)$ can be parameterized by the neuron weights as $\sfb (\cdot; \bm{\omega})$ and thus $\hat{\sfb} (\cdot) \equiv \sfb (\cdot; \hat{\bm{\omega}})$, where $\hat{\bm{\omega}}$ denotes the neuron weights trained by minimizing \eqref{loss_func}.
+
+In general, the integrals involved in \eqref{loss_func} need to be evaluated numerically. Here we use Monte Carlo integration \citep{liu2001monte} by drawing $J_{1}$ samples from $\nu$ to approximate the outer integral and $J_{2}$ samples uniformly from the space of $\mathbf{s}$ to approximate the inner integral of $\mathcal{L}_{K} (\sfb)$, although other methods can also be used in principle. For example, for fixed $\mathbf{t}$ and $\bm{\omega}$, the inner integral in $\mathcal{L}_{K} (\sfb)$ is approximated by:
+\begin{equation*}
+\small
+\begin{aligned}
+& \int K \left(\mathbf{s}, \mathbf{t}, O_i; \bbeta \right) \sfb\left(\mathbf{s},O_i;\bm{\omega} \right) \diff \mathbf{s} \\ & \quad \quad \quad \quad \approx 
+\frac{\mathrm{vol}_{\mathbf{s}}}{J_2}\sum_{j=1}^{J_2} K\left(\mathbf{s}_j, \mathbf{t}_l,O_i; \bbeta\right) \sfb \left(\mathbf{s}_j,O_i;  \bm{\omega}\right),
+\end{aligned}
+\end{equation*}
+where $\mathrm{vol}_{\mathbf{s}}$ is the volume of the sample space of $\mathbf{s}$, $\mathrm{vol}_{\mathbf{s}} = \int _\Omega \diff \mathbf{s}$, $\Omega$ is the domain of $\mathbf{s}$. As $J_{1}, J_{2} \rightarrow \infty$, the Monte Carlo approximations converge to the true integrals in probability by the law of large numbers. We recommend that they be set as large as the computational resource allows to minimize the numerical approximation error.
+
+\subsection {The Alternating Gradient-Descent Algorithm}
+\label{sec:opt}
+
+Since minimizing the loss function \eqref{pop loss} constitutes a bi-level optimization problem, we adopt the Alternating Gradient Descent (GD) and its  extensions (e.g. its stochastic/adam version), one of the most natural algorithmic choices for bi-level programming \citep{finn2017model, chen2021closing}.
+
+The algorithm is described in Algorithm \ref{alg:fred}. At the same time, the flow chart and network structure of the whole process are shown in Appendix \ref{app:figs}. We highlight several key features. First, the algorithm alternates between two types of GD updates -- one for minimizing the outer loss $\hat{\mathcal{L}}_{\psi}$ and the other for minimizing the inner loss $\hat{\mathcal{L}}_{K}$. Second, it involves a hyperparameter $\gamma$, the ``alternating frequency'', determining the number of GD updates for the inner loss before switching to GD updates for the outer loss.
+
+% Our approach involves an iterative alternating procedure employing two separate subroutines. The first subroutine updates $\mathsf{b} (\cdot;\boldsymbol{\omega})$  in Equation \eqref{general form sum} by solving the integral equation based on the current value of the parameter of interest, $\boldsymbol{\beta}$. The second subroutine updates $\boldsymbol{\beta}$ by solving the projected score equation given the current $\mathsf{b}$. A distinguishing characteristic of the $\dnase$ framework is the parametrization of the solution $\mathsf{b} (\cdot;\boldsymbol{\omega})$ using a Deep Neural Network (DNN), where $\boldsymbol{\omega}$ represents the weights of the DNN. For simplicity, this paper focuses solely on multi-layer feed-forward neural networks with a given depth of $L$ following with activate functions. The $\dnase$ algorithm is explicated in detail in Algorithm \ref{alg:fred}.
+We end this section with a few remarks.
+\begin{remark}
+Although we ground our work in the context of semiparametric estimation, this new framework can go beyond semiparametric statistics and be adapted to models subject to general (conditional) moment restrictions, commonly encountered in the statistics and econometrics literature \citep{ai2003efficient, chen2018overidentification, cui2023semiparametric}.
+\end{remark}
+\begin{remark}
+In later numerical experiments (Section \ref{sec:sim}), we adopt the Alternating Stochastic GD \citep{wilson2017marginal, zhou2020towards} to solve the optimization problem \eqref{loss_func}. However, we point out that the component $\mathcal{L}_{\psi}$ corresponding to the parameter of interest $\bbeta$ in \eqref{loss_func} often has much fewer degrees-of-freedom than $\mathcal{L}_{K}$ for solving the integral equations. Thus in practice, one could also exploit optimization algorithms with greater computational complexities to minimize $\mathcal{L}_{\psi}$, to ensure a convergence to the actual global minimum. Furthermore, since algorithms for bi-level optimization problems are generally difficult to analyze \citep{chen2021closing}, we decide to leave the theoretical analysis of the proposed training algorithm to future work.
+\end{remark}
+
+\begin{remark}
+Before moving onto concrete examples, we briefly comment on the statistical guarantee of the $\dnase$ algorithm. One could have established convergence rate of $\hat{\sfb} (\cdot)$ to $\sfb^{\ast} (\cdot)$ using standard arguments from $M$-estimation theory \citep{schmidt2020nonparametric, van2023weak}, and hence the asymptotic normality of $\sqrt{N} (\hat{\bbeta} - \bbeta^\ast)$. However, we decide not to take this route and only demonstrate the performance of our proposed algorithm via numerical experiments (see Section \ref{sec:sim}). This is because this proof strategy ignores the effect of the training algorithm \citep{neyshabur2017implicit, goel2020superpolynomial, vempala2019gradient}, and thus the obtained guarantee is misleading \citep{xu2022deepmed}.
+\end{remark}
+
+%Recall that under the true parameters $\beta$ and $\mathsf{b}(\cdot)$, one immediately has
+%\begin{align*}
+%\E_{\beta} \left[ \sfs_{\eff} (O; \sfb (\cdot), \beta) \right] \equiv 0.
+%\end{align*}
+\begin{algorithm}
+\caption{Pseudocode for $\dnase$}\label{alg:fred}
+\begin{algorithmic}[1]
+\STATE \textbf{main hyperparameters}: alternating frequency $\gamma$, Monte Carlo sample sizes $J_{1}$ and $J_{2}$ for approximating the outer and inner integrals of $\mathcal{L}_{K}$, convergence tolerance $\delta$, maximal iteration $M$ and other common hyperparameters for DNN such as width, depth, step size, learning rate, etc;
+\STATE \textbf{input}: data samples: $\{O_i\}_{i=1}^N$; Monte Carlo samples for the outer and inner integrals of $\mathcal{L}_{K}$: $\{\mathbf{t}_l\}_{l=1}^{J_1}$, $\{\mathbf{s}_j\}_{j = 1}^{J_{2}}$;
+\STATE set initial values $\bbeta_{0}$ and $\bm{\omega}_{0}$ randomly;
+% \STATE Compute $K(\cdot)$ and $C(\cdot)$ in Equation \eqref{alg};
+\FOR{$m = 1, \cdots, M$}
+    \STATE fix $\bm{\omega}_{m - 1}$, update $\bbeta_{m - 1}$ to $\bbeta_{m}$ by one-step minimization of $\mathcal{L}_{\psi}$ via GD (or its variants);
+    \STATE fix $\bbeta_{m}$, update $\bm{\omega}_{m - 1}$ to $\bm{\omega}_{m}$ by $\gamma$-step minimization of $\mathcal{L}_{K}$ via GD (or its variants);
+    \STATE set $\hat{\bbeta} \equiv \bbeta_{m}, \hat{\bm{\omega}} \equiv \bm{\omega}_{m}$;
+    \IF{$\Vert \bbeta_{m} - \bbeta_{m - 1} \Vert_2 < \delta$ and $\Vert \bm{\omega}_{m} - \bm{\omega}_{m - 1} \Vert_2 < \delta$}
+    \STATE break the for loop;
+    \ENDIF
+\ENDFOR
+\STATE \textbf{output}: $(\hat{\bbeta}, \widehat{\boldsymbol{\omega}})$.
+\end{algorithmic}
+\end{algorithm}
+
+% For our paper, we mainly consider solving a class of models whose essence is to equation sets by Equation (\ref{general form: pop}) as follows:
+% \begin{equation}
+% \begin{aligned}
+% \sfs_{\eff} (O ; \mathsf{b}(\cdot), \beta) & =0 \\
+% \int K(s, t ; \beta) \mathsf{b}(s) \mathrm{d} s & =C(t ; \beta)+\mathsf{b}(t)
+% \end{aligned}
+% \label{general form sum}
+% \end{equation}
+ %Moreover, the symbol $\cdot$ signifies certain data simulated in $O$, which is employed within the $\mathsf{b}(\cdot)$ function in the efficient score equation.
+
+\section{Motivating Examples}
+\label{sec:examples}
+
+We now provide three concrete motivating examples to illustrate the general formulation detailed in the previous section. These three examples are drawn from, respectively, regression parameter estimation under the Missing-Not-At-Random (MNAR) missing data mechanism, sensitivity analyses in causal inference, and average loss (risk) estimation in transfer learning under dataset shift. These examples demonstrate the generality of the generic estimation problem \eqref{general form sum} in semiparametric statistics.
+
+%Semiparametric theory has been developed for decades to improve from bias to the (asymptotic) variance of semiparametric estimators \citep{bickel1998efficient, tsiatis2007semiparametric} while still preserving robustness against potential model-misspecification.
+
+% In this section, we briefly describe how operator equations arise in constructing estimators for the parameter of interest $\beta$ in a semiparametric model $\mathbb{P}_{\beta, \eta}$. To be concrete, 
+%In this paper, we address a more comprehensive problem in which the computation of the estimator necessitates a projection step onto the tangent space of the model, subsequently resulting in a Fredholm integral equation. Consequently, our primary aim is to resolve the broader problem that emerges after solving the integral equation, treating the solution of the integral equation as an intermediate variable.
+\subsection{A Shadow Variable Approach to MNAR}
+\begin{example}
+\label{mnar_data}
+First, we consider the problem of parameter estimation when the response variable $Y$ is MNAR using the approach introduced in \citet{zhao2022versatile}. The observed data is comprised of $N$ independent and identically distributed (i.i.d.) observations $\{X_{i}, A_{i}, Y_{i}\}_{i = 1}^{N}$ drawn from the following DGP:
+\begin{equation}
+\small
+\label{model-mnar}
+\begin{split}
+X & \sim \calN (0.5, 0.25), \\
+Y | X & \sim \beta_1^\ast + \beta_2^\ast X + \calN (0, 1), \\
+A | Y & \sim \text{Bern} \left( \expit (1 + Y) \right), \\
+\text{and } & \text{$Y$ is missing if $A = 0$}.
+\end{split}
+\end{equation}
+Here, the missing-indicator $A$ depends on the potentially unobserved value of $Y$. The parameter of interest is the coefficients $\bbeta = (\beta_{1}, \beta_{2})^{\top}$, while the nuisance parameter is $\bm\eta = (\p_{X}, \p_{A | Y})$. The difficulty lies in the fact that $\p_{A | Y}$ is unidentified because one never observes $Y$ when $A = 0$. \citet{zhao2022versatile} showed that the following semiparametric estimator $\hat{\bbeta}$ of $\bbeta^{\ast}$ is asymptotically unbiased by positing an arbitrary model $\tilde{\p}_{A | Y}$ for $\p_{A | Y}$:  Let $\eta_{2} (y) \coloneqq \tilde{\P} (A = 1 | Y = y)$, and $\hat{\bbeta}$ is defined as:
+{\small\begin{align}
+\hat{\bbeta} = & \arg\min_{\bbeta \in \bbR^{2}} \left\{ \frac{1}{N} \sum_{i = 1}^{N} \psi (X_{i}, Y_{i}, A_{i}; \bbeta, \hat{\sfb}) \right\}^2, \text{where} \nonumber \\
+\hat{\sfb} = & \arg\min_{\sfb} \frac{1}{N} \sum_{i=1}^N \int_{t} \Bigg( \int \sfb (s,X_i) K (s,t,X_i; \hat{\bbeta}) \diff s \nonumber \\
+& \quad \quad -C (t, X_i; \hat{\bbeta}) - \p_{Y | X} (t,X_i; \hat{\bbeta}) \sfb (t,X_i) \Bigg)^2 \diff \nu (t). \label{mnar_eq1}
+\end{align}}
+Here, we have
+\begin{align*}
+& \ \psi (X_{i}, Y_{i}, A_{i}; \bbeta, \sfb) \\
+\equiv & \ \frac{1}{N} \sum_{i = 1}^{N} \Bigg\{ 
+ A_i \frac{\frac{\partial}{\partial \bbeta} \p_{Y | X} (Y_i, X_{i}; \bbeta)}{\p_{Y | X} (Y_i, X_{i}; \bbeta)} - A_{i} \sfb (Y_{i}, X_{i})  \\ 
+- & \ (1-A_i)\frac{\int \frac{\partial}{\partial \bbeta} \p_{Y | X} (Y_i, X_{i}; \bbeta) \eta_{2} (t) \diff t}{\int \p_{Y | X} (t, X_i; \bbeta) (1 - \eta_{2} (t)) \diff t} \\
+ + & \ (1 - A_{i}) \frac{\int \p_{Y | X} (t, X_{i}; \bbeta) \sfb (t, X_{i}) \eta_{2} (t) \diff t}{\int \p_{Y | X} (t, X; \bbeta) (1 - \eta_{2} (t)) \diff t}  \Bigg\},
+\end{align*}
+and $C (t, X_i; \bbeta)$ and $K (s, t, X_i; \bbeta)$ are known functions up to $\bbeta$ defined as follows:
+\begin{equation*}
+\small
+\begin{split}
+& C (t,X_i; \bbeta) \equiv \frac{\partial}{\partial \bbeta} \p_{Y | X} (t,X_i; \bbeta) \\ 
+  & + \frac {\int \frac{\partial}{\partial \bbeta} \p_{Y | X} (s, X_i; \bbeta) \eta_{2} (s) \diff s} {\int \p_{Y | X} (s, X_i; \bbeta) (1 - \eta_{2} (s)) \diff s} \p_{Y | X} (t,X_i; \bbeta),\\
+& K (s,t, X_i; \bbeta) \equiv \frac{\p_{Y | X} (s, X_i; \bbeta) \p_{Y | X} (t,X_i; \bbeta) \eta_{2} (s)}{\int \p_{Y | X} (s', X_i; \bbeta) (1 - \eta_{2} (s')) \diff s'}.
+\end{split}
+\end{equation*}
+% where $g(X_i) = \int f_{Y | X} (s, X_i; \bbeta) (1 - \eta^{\ast} (s)) \diff s$.
+% Therefore, we can obtain the estimation of $\hat{\sfb}(\cdot)$ by solving the integral equation:
+% \begin{equation*}
+% \label{key_2}
+% \begin{split}
+% & \ \frac{1}{N} \sum_{i = 1}^{N} \left\{ \frac{\partial}{\partial \bbeta} f_{Y | X} (y, X_{i}; \bbeta) \right.\\ 
+% +  & \left.\frac{\int \frac{\partial}{\partial \bbeta} f_{Y | X} (t, X_{i}; \bbeta) \eta^{\ast} (t) \diff t}{\int f_{Y | X} (t, X_{i}; \bbeta) (1 - \eta^{\ast} (t)) \diff t} f_{Y | X} (y, X_{i}; \bbeta) \right\} \\
+% = &  \frac{1}{N} \sum_{i = 1}^{N} \left\{ \hat{\sfb}^{\ast} (y; \bbeta) f_{Y | X} (y, X_{i}; \bbeta) \right. \\
+% +& \left. \frac{\int \hat{\sfb}^{\ast} (t; \bbeta) f_{Y | X} (t, X_{i}; \bbeta) \eta^{\ast} (t) \diff t}{\int f_{Y | X} (t, X_{i}; \bbeta) (1 - \eta^{\ast} (t)) \diff t} f_{Y | X} (y, X_{i}; \bbeta) \right\}.
+% \end{split}
+% \end{equation*}
+% \begin{equation*}
+%     \begin{split}
+%         & S_{\bbeta}^{\ast} (X_{i}, R_{i}, R_{i} Y_{i}) =  R_i \frac{\frac{\partial}{\partial \bbeta} f_{Y | X} (Y_i, X_{i}; \bbeta)}{f_{Y | X} (Y_i, X_{i}; \bbeta)} \\
+%         & - (1-R_i)\frac{\int \frac{\partial}{\partial \bbeta} f_{Y | X} (Y_i, X_{i}; \bbeta) \eta^{\ast} (t) \diff t}{\int f_{Y | X} (t, X_i; \bbeta) (1 - \eta^{\ast} (t)) \diff t}
+%     \end{split}
+% \end{equation*}
+The nuisance parameter $\eta_{1} \equiv \p_{X}$ is ancillary to the parameter of interest $\bbeta$, so it does not appear in the above estimation procedure. The proposed estimator $\hat{\bbeta}$ in \eqref{mnar_eq1} in fact solves the so-called ``semiparametric efficient score equation'' \citep{tsiatis2007semiparametric}, the semiparametric analogue of the score equation in classical parametric statistics. Derivations of the above estimator can also be found in Appendix \ref{app:proofmnar} for the sake of completeness.
+
+\label{eg:mnar}
+\end{example}
+
+\subsection{Sensitivity Analysis in Causal Inference}
+
+\begin{example}
+The second example is about sensitivity analysis in causal inference with unmeasured confounding \citep{robins2000sensitivity}. Specifically, we consider the DGP below with $\bfX$ of higher-dimension than that of \citet{zhang2022semi}:
+\begin{equation}
+\small
+\label{model-sens}
+\begin{split}
+& \bfX \coloneqq (X_{1}, \cdots, X_{10})^{\top} \mathop{\sim}\limits^{\text{i.i.d.}} \text{Uniform} (0, 1), \\
+& U^{\dag} \sim X_1 - X_2 ^2 + \calN (0, 0.1), \\
+& A | \bfX, U^{\dag} \sim \text{Bern} \left( \expit \left\{ 3 \sum_{j=1}^{10} (-1)^{j+1}X_{j} + 2 U^{\dag} \right\} \right), \\
+& Y | \bfX, A, U^{\dag} \sim \text{Bern} \left( \expit \left\{ 4 \sum_{j=1}^{10}(-1)^{j+1}X_{j} + \beta^\ast A + 2 U^{\dag} \right\} \right).
+\end{split}
+\end{equation}
+Here the parameter of interest $\beta \in \mathbb{R}$ with true value $\beta^\ast$ encodes the causal effect of $A$ on $Y$. Since $U^{\dag}$ is unmeasured, $\beta$ is unidentifiable. Sensitivity analyses shall be conducted to evaluate the potential bias resulted from some fictitious $U$ specified by the statistician. \citet{zhang2022semi} first posit an arbitrary working model for (one of the nuisance parameters) $\tilde{\p} (U | \bfX) \coloneqq \eta (U, \bfX)$ inducing a possibly misspecified working joint model $\tilde{\p}$, and then define the following estimator $\hat{\beta}$ of $\beta^{\ast}$ that minimizes the loss as follows:
+\begin{equation}
+\begin{split}
+\hat{\beta} = & \arg\min_{\beta \in \bbR} \left\{ \frac{1}{N} \sum_{i = 1}^{N} \psi (\bfX_{i}, A_{i}, Y_{i}; \beta, \hat{\sfb}) \right\}^2, \text{where}\\
+\hat{\sfb} = & \arg\min_{\sfb} \sum_{i=1}^N \int_{t} \Bigg(\int \mathsf{b} (u', \bfX) K (u', u, \bfX; \hat{\beta}) \diff u' \\
+& \quad \quad - C (u, \bfX; \hat{\beta}) + \lambda \mathsf{b} (u, \bfX) \Bigg)^2 \diff \nu(u),
+\end{split}
+\label{sen_eq1}
+\end{equation}
+% \begin{equation}
+% \label{fred-sensitivity}
+% \int \mathsf{b} (u', \bfX) K (u', u, \bfX) \diff u' = C (u, \bfX) - \lambda \mathsf{b} (u, \bfX),
+% \end{equation}
+where
+\begin{equation*}
+\small
+\begin{aligned}
+& \psi (\bfX_{i}, A_{i}, Y_{i}; \beta,\sfb) \\
+& = \frac{\int f(Y_i,A_i,\bfX_i,u;\beta) \p_{Y, A | \bfX, U} (Y_{i}, A_{i}| \bfX_{i}, u; \beta) \eta (u, \bfX_{i}) \diff u}{\int \p_{Y, A | \bfX, U} (Y_{i}, A_{i}| \bfX_{i}, u; \beta) \eta (u, \bfX_{i}) \diff u}, \\
+&  f (Y_i,A_i,\bfX_i,u;\beta) \coloneqq \tilde{\sfs}_{\beta} (Y_{i}, A_{i}, \bfX_{i}, u;\beta) - \mathsf{b} (u, \bfX_{i}).
+\end{aligned}
+\end{equation*}
+Here $\tilde{\sfs}_{\beta} (y, a, \bfX, u)$ is the score of the working joint model $\tilde{\p}$ with respect to $\beta$, and $C (u, \bfX; \beta)$ and $K (u', u, \bfX; \beta)$ are known functions up to unknown parameters of the forms:
+\begin{equation*}
+\small
+\begin{split}
+& C (u, \bfX;\beta)  =  \int \frac{\int \tilde{\sfs}_{\beta} (y, a, \bfX, u') h (y, a, u', \bfX; \beta) \diff u'}{g(y, a, \bfX;\beta)} \\
+& \quad \quad \quad \quad \quad \quad \quad \ \times \p_{Y, A | \bfX, U} (y, a;\beta | \bfX, u) \diff y \diff a ,\\
+& K (u', u, \bfX;\beta)  = \int \frac{\p_{Y, A | \bfX, U} (y, a | \bfX, u'; \beta) }{g (y, a, \bfX;\beta)} \\
+& \quad \quad \quad \quad \quad \quad \quad \ \times \p_{Y, A | \bfX, U} (y, a | \bfX, u; \beta) \eta (u', \bfX) \diff y \diff a,
+\end{split}
+\end{equation*}
+where
+\begin{equation*}
+\begin{split}
+& h (y, a, u', \bfX;\beta)  = \p_{Y, A | \bfX, U} (y, a| \bfX, u'; \beta) \eta (u', \bfX), \\
+& g(y, a, \bfX;\beta)  = \int \p_{Y, A | \bfX, U} (y, a | \bfX, u'; \beta) \eta (u', \bfX) \diff u'.
+\end{split}
+\end{equation*}
+
+Derivations of the estimator \eqref{sen_eq1} can also be found in Appendix \ref{app:Proof_sens} for the sake of completeness.
+\label{eg:sensitivity}
+\end{example}
+
+\subsection{Transfer Learning: Average Loss Estimation under Dataset Shift}
+\begin{example}
+One of the goals of transfer learning \citep{zhang2020domain, gong2016domain, scott2019generalized, li2023subspace} is to improve estimation and inference of the parameter of interest in the target population by borrowing information from different but similar source populations. Here we consider the scenario where the target and source populations differ under the so-called ``Covariate Shift Posterior Drift'' (CSPD) mechanism introduced in \citet{qiu2023efficient}, building upon \citet{scott2019generalized}. We consider the following DGP restricted by the CSPD mechanism (see Section 6 of \citet{qiu2023efficient}). The data consists of covariates $X$, outcome $Y$, and a binary data source indicator $A$ with $A = 0/1$ for the target/source population. Let $\phi (x)$ be any function with non-zero first derivative and the data is generated as follows:
+\begin{equation}
+\begin{aligned}
+\label{model_data_shift}
+& X \sim \text{Uniform}(1,3), A | X = x \sim \text{Bern} (\expit \circ \pi (x)) \\
+& Y | X = x, A = a \sim \text{Bern} \left( \expit \circ r_{a} (x) \right) \ \text{where } \\
+& \pi (x) \coloneqq \logit \ \P (A = 1 | X = x), \\
+& r_{a} (x) \coloneqq \logit \ \P (Y = 1 | X = x, A = a)\text{ and }\\
+&  r_{1} (x) \equiv \phi \left( r_{0} (x) \right).
+\end{aligned}
+\end{equation}
+The nuisance parameter is $\bm{\eta} = (\p_X, \p_{A|X},\p_{Y|A,X})$, with $\hat{\bm{\eta}} = (\hat{\p}_X,\hat{\p}_{A|X},\hat{\p}_{Y|A,X})$ denoting their estimates. In the procedure shown later, many quantities depend on $\bm{\eta}$ and we also attach $\hat{\cdot}$ to denote their estimates. $\bm{\eta}$ and those related quantities can be estimated by possibly nonparametric methods including DNN \citep{farrell2021deep, xu2022deepmed, chen2024causal} with sample splitting \citep{chernozhukov2018double}, but this is tangential to the main message of this paper. The parameter of interest is the average squared error loss under the target population: $\beta^{\ast} \coloneqq \E [\ell(X,Y) | A = 0] \equiv \E [(Y - f(X))^2 | A = 0]$, where $f (x)$ is any prediction function for $Y$ possibly outputted from some machine learning algorithm. \citet{qiu2023efficient} proposed the following statistically optimal (i.e. semiparametric efficient) estimator $\hat{\beta}$ of $\beta^{\ast}$:
+\begin{equation}
+\small
+\begin{split}
+& \hat{\beta} \coloneqq \frac{1}{N} \sum_{i=1}^N \Bigg\{ \frac{(1 - A_i) \hat{v} (X_{i})}{\hat{\P} (A = 0)} \\
+& \quad + A_i \left\{Y_i - \expit \circ \phi \circ \hat{r}_{0} (X_i) \right\} \hat{g}_1(X_i)\\
+& \quad +(1-A_i)\left\{Y_i - \expit \circ \hat{r}_{0} (X_i)\right\} \hat{g}_2(X_i) \Bigg\},\\
+& \hat{\sfb} = \arg\min_{\sfb} \mathcal{L}_{K} (\sfb)  \text{ where } K (x) \coloneqq \frac{\hat{h} (x, 1)}{\hat{\mu} (x)} \hat{\p}_{X} (x), \\
+& \mathcal{L}_{K} (\sfb) \coloneqq \int \Bigg(
+\int_{x' \in \mathcal{S}(x)} K (x') \sfb(x') \diff x' + C (x) - \sfb(x) \Bigg)^2 \diff \nu(x).
+\end{split}
+\label{datashift_eq}
+\end{equation}
+We now unpack the above definition: here $v (x) \coloneqq \E [\ell (X, Y) | X = x, A = 0]$ is the average conditional squared error loss in the target population with $\hat{v}$ being its estimate, $\mathcal{S}(x) \coloneqq \{x': \hat{r}_{0} (x') = \hat{r}_{0} (x)\}$ is a subset in the sample space of the covariate $X$, and further define
+{\small\begin{align*}
+& \hat{h}(x, a) \coloneqq\hat{\var} (Y | A=a, X=x) \hat{\P}(A=a | X=x), \\
+& \hat{C}(x) \coloneqq\frac{\hat{h}(x , 0) \int_{x' \in \mathcal{S} (x)} \hat{h}(x', 1) \hat{\p}_{X} (x') \diff x'}{\hat{h}(x, 1)\left\{\phi^{\prime} \circ \hat{r}_{0}(x)\right\}^2} \frac{\ell(x, 1)-\ell(x, 0)}{\hat{\P}(A=0)} ,\\
+& \hat{\mu}(x) \coloneqq\int_{x' \in \mathcal{S} (x)} \hat{h}(x', 1) \hat{\p}_{X} (x') \diff x' \left\{1+\frac{\hat{h}(x , 0)}{\hat{h}(x, 1) \phi^{\prime} \circ \hat{r}_{0}(x)^2}\right\}.
+\end{align*}}
+We finally turn to the definitions of $\hat{g}_{1}$ and $\hat{g}_{2}$: first let $\mathscr{A} \sfb (x) \coloneqq \int_{x' \in \mathcal{S}(x)} K (x') \mathsf{b}(x') \diff x'$, and eventually define
+\begin{equation*}
+\small
+\begin{split}
+& \hat{g}_1(x) \coloneqq -\mathscr{A} \hat{\sfb} (x) \cdot \phi^{\prime} \circ \hat{r}_{0} (x) / \mathscr{A} \hat{\mu}(x) + \phi^{\prime} \circ \hat{r}_{0} (x) \cdot \hat{\sfb} (x) / \hat{\mu}(x), \\
+& \hat{g}_2(x) \coloneqq \hat{\sfb} (x) / \hat{\mu}(x).
+\end{split}
+\end{equation*}
+Derivations of the above estimator can also be found in Appendix \ref{app:Proof_transfer} for the sake of completeness. Though not stated as such, $\hat{\beta}$ in \eqref{datashift_eq} can also be written as a minimizer to a loss function, but with a closed form.
+
+% \begin{remark}
+% For this example, we use the truth nuisance $\bm\eta^{\ast}$ to replace the estimate $\hat{\bm\eta}$ given by samples.
+% \end{remark}
+
+\label{eg:shift}
+\end{example}
+% \begin{remark}
+% \label{rem:proximal}
+% Operator equations can also arise in other settings in the causal inference and econometrics literature: for example, nonparametric identification of structural/causal parameters using auxiliary variables, including instruments and proxies, under endogeneity  \citep{newey2003instrumental, tchetgen2020introduction, breunig2021adaptive}. But there is an essential difference between their settings and ours -- the linear integral operators appeared in the operator equations in this paper.
+% \end{remark}
+
+\section{Numerical Experiments}
+\label{sec:sim}
+In this section, we conduct three simulation studies for the three examples given in Section \ref{sec:examples} to demonstrate the empirical performance of our proposed $\dnase$ algorithm.
+
+\subsection{Hyperparameter Tuning}
+\label{sec:Tuning}
+
+In Section \ref{sec:examples}, we present three examples that use semiparametric models for estimation and inference that involves solving integral equations. In the first two examples, our objective is to estimate the regression parameters/causal effects. In the third example, we aim to estimate the risk (average loss) function in transfer learning problems under dataset shift. The hyperparameters of the proposed $\dnase$ model include: the alternating frequency $\gamma$, Monte Carlo sizes $J_1$ and $J_2$ for numerically approximating the integrals for the integral equations and the related loss $\mathcal{L}_{K}$, and other common DNN tuning parameters such as depth, width, step sizes, batch sizes, and etc. These hyperparameters are tuned via grid search using cross-validation. We employ the hyperbolic tangent ($\tanh$) function as the activation function \citep{lu2022machine}, and set the learning rate to be $10^{-4}$. Detailed information regarding hyperparameter tuning can be found in Appendix \ref{app:hyper}.
+
+\subsection{Simulation Results}
+\subsubsection{Example \ref{eg:mnar}: Regression Parameter Estimation under MNAR}
+\label{sec:mnar}
+First, we apply the $\dnase$ algorithm to the problem of  parameter estimation in regression models with the response variable $Y$ being subject to MNAR as described in \eqref{model-mnar} in Example \ref{eg:mnar}.  Here we are interested in estimating the regression coefficient $\bbeta = (\beta_{1}, \beta_{2})^{\top}$, the true value of which is set to be $\bbeta^{\ast} = (0.25, -0.5)^{\top}$ in the simulation. The sample size $N$ is 500.
+
+We choose $\eta_{2} (y) \equiv \tilde{\P} (A = 1 | Y = y) = \expit (1 - y)$ which is completely misspecified compared to the truth, repeat the simulation experiments for 100 times, and numerical summary statistics of all estimators are given in Table \ref{table:simu_1} and boxplots in Figure \ref{fig:simu_1} in Appendix \ref{app:table}. We compare the estimation errors $\hat{\bbeta} - \bbeta^\ast$ over 100 simulated datasets of the $\dnase$ algorithm against polynomials with degrees varying from two to five, together with the estimates from \citet{zhao2022versatile} using the algorithm of \citet{atkinson1967numerical} (Table \ref{table:simu_1}). From Table \ref{table:simu_1}, it is evident that the estimator $\hat{\bbeta}$ from $\dnase$ has smaller bias than polynomials. Our result has similar bias to that of \citet{zhao2022versatile}, while our variance is smaller.
+
+\begin{table}[htbp]
+\caption{This table displays the mean and standard error of $\hat{\beta}_1-\beta^{\ast}_1$ and $\hat{\beta}_2-\beta^{\ast}_2$ over 100 simulations. Our method is displayed as $\dnase$, compared to the other methods using $d$-th degree polynomial, with $d \in \{2,3,4,5\}$, shown as quadratic, cubic, quartic and quintic in the table.}
+\label{table:simu_1}
+\begin{center}
+\begin{small}
+\begin{sc}
+\vskip 0.1in
+\begin{tabular}{ccc}
+\toprule
+Mean(std)    & $\dnase$  & \citet{zhao2022versatile}  \\
+\midrule
+$\hat{\beta}_1 - \beta_1^\ast$ & 0.012(0.142) & -0.016(0.209)   \\ 
+$\hat{\beta}_2 - \beta_2^\ast$  & 0.004(0.104) & 0.004(0.122)  \\
+\toprule
+Mean(std)  &   quintic & quartic \\
+\midrule
+$\hat{\beta}_1 - \beta_1^\ast$  & -0.113(0.070)& -0.081(0.186)   \\ 
+$\hat{\beta}_2 - \beta_2^\ast$  & 0.182(0.095) & 0.124(0.112)   \\
+\toprule
+Mean(std)    &  cubic  & quadratic  \\
+\midrule
+$\hat{\beta}_1 - \beta_1^\ast$ & -0.143(0.133) & -0.033(0.178)   \\ 
+$\hat{\beta}_2 - \beta_2^\ast$   & 0.130(0.158) & 0.092(0.124)  \\
+\bottomrule
+\end{tabular}
+\end{sc}
+\end{small}
+\end{center}
+\end{table}
+
+\subsubsection{Example \ref{eg:sensitivity}: Sensitivity Analysis in Causal Inference}
+\label{sec:sensitivity}
+
+Next, we apply the $\dnase$ algorithm to the problem of sensitivity analyses in causal inference with unmeasured confounding described in \eqref{model-sens} in Example \ref{eg:sensitivity}. Recall in this problem we are interested in estimating the causal effect parameter $\beta$ under user-specified fictitious unmeasured confounder $U$ and sensitivity analyses models. We set the true parameter value $\beta^{\ast} \equiv 2$. The sample size $N$ is 1000.
+
+We choose $\eta (u, \mathbf{x}) = \mathbbm{1} \{u \in [-0.5, 0.5]\}$ (defined in Example \ref{eg:sensitivity}) which is completely misspecified compared to the true $\p_{U | \bfX} (u | \bfx)$. Table \ref{table:simu_2} displays the numerical estimator of $\hat{\beta} - \beta^{\ast}$ over 100 simulated datasets obtained from various methods. It is evident that our proposed $\dnase$ algorithm is less biased and more efficient compared to polynomials with varying degrees. We also compared $\dnase$ with a grid-based method adopted in \citet{zhang2022semi} using their R code; the latter method has longer computation time (about 35 minutes per run) than $\dnase$ (below 30 minutes per run) but larger bias and variance. Table \ref{table:simu_2} provides the summary statistics of the simulation results, supplemented with boxplots in Figure \ref{fig:simu_sens} in Appendix \ref{app:table}.
+
+\begin{table}[htbp]
+\caption{The table displays the mean and standard error $\hat{\beta}-\beta^{\ast}$ over 100 simulations. Our method is displayed as $\dnase$, compared to the other methods including a grid-based method used in \citet{zhang2022semi} and $d$-th degree polynomial, with $d \in \{2, 3\}$, shown as quadratic, cubic in the table.}
+\label{table:simu_2}
+\begin{center}
+\begin{small}
+\begin{sc}
+\vskip 0.1in
+\begin{tabular}{ccc}
+\toprule
+Mean(std)    & $\dnase$  & grid-based method \\
+\midrule
+$\hat{\beta} - \beta^\ast$ & 0.036(0.155) & 0.109(0.426)  \\ 
+\toprule
+Mean(std)    & cubic & quadratic  \\
+\midrule
+$\hat{\beta} - \beta^\ast$ &  0.142(0.189) & 0.145(0.188)   \\ 
+\bottomrule
+\end{tabular}
+\end{sc}
+\end{small}
+\end{center}
+\end{table}
+
+\subsubsection{Example \ref{eg:shift}: Average Loss Estimation in Transfer Learning}
+
+Next we apply $\dnase$ to the transfer learning problem described in \eqref{model_data_shift} in Example \ref{eg:shift}. Recall in this problem we are interested in estimating the average target-population loss $\beta^{\ast}$ given in Example \ref{eg:shift}. Here we simply choose $f (x) \equiv \expit (x^{\frac{1}{2}})$ as the prediction function for $Y$, $\phi (x) \equiv x + 1$ as the outcome shift mechanism function, and $r_{a} (x) \equiv \pi (x) \equiv x$ as the logit-transformed outcome and data-source conditional expectations. Note that to focus on the main issue of this paper, in the simulation we use the true nuisance parameter $\bm{\eta}$ and related quantities such as $v, h, \cdots$ defined in Example \ref{eg:shift}, without using their estimates. The sample size $N$ is 10000.
+
+The numerical summary statistics of the discrepancies between the estimated parameters, $\hat{\beta}$, and the true parameters, $\beta^\ast$, across 100 simulated datasets are presented in Table \ref{table:simu_3}. The corresponding boxplots, which provide a visual representation of these results, have been relegated to Figure \ref{fig:shift}. It is evident that our proposed $\dnase$ method outperforms the traditional polynomial method with different degrees, in particular in terms of variance (reduced by at least 80\%).
+\vskip -0.1in
+\begin{table}[htbp]
+\caption{This table displays $\hat{\beta} - \beta^\ast$ over 100 simulations. Our method is displayed as $\dnase$, compared to methods using $d$-th degree polynomials, with $d \in \{5, 10, 15\}$, respectively displayed as ``quintic'', ``10th-degree'', ``15th-degree'' in the table.}
+\label{table:simu_3}
+\begin{center}
+\begin{small}
+\begin{sc}
+\vskip 0.1in
+\begin{tabular}{ccc}
+\toprule
+Mean(std)    & $\dnase$  &   quintic  \\
+\midrule
+$\hat{\beta} - \beta^*$ & -0.0008(0.0084) & 0.0009(0.0186)  \\ 
+\toprule
+Mean(std)    & 10th-degree &  15th-degree \\
+\midrule
+$\hat{\beta} - \beta^\ast$ &  0.0033(0.0234) & 0.0038(0.0385)  \\
+\bottomrule
+\end{tabular}
+\end{sc}
+\end{small}
+\end{center}
+\end{table}
+
+\section{Real Data Application}
+\label{sec:data}
+
+In this section, we further demonstrate the empirical performance of $\dnase$ by reanalyzing a real dataset that was previously analyzed in \citet{zhao2022versatile}.
+
+\subsection{The Connecticut Children's Mental Health Study}
+
+We now apply our proposed $\dnase$ algorithm to re-analyze a dataset from a comprehensive investigation conducted by \citet{zahner1997factors} on children's mental health in Connecticut, USA. This study employed the Achenbach Child Behavior Checklist (CBCL) as a tool to evaluate the psychiatric status of children. The CBCL consists of three different forms, namely \textit{parent}, \textit{teacher}, and \textit{adolescent self-report}. Here the response $Y$ of interest is teacher's report of the child's psychiatric status, where $Y = 1$ suggests the presence of clinical psychopathology and $Y = 0$ suggests normal psychological functioning. In the study, a logistic regression was conducted to examine the relationship between $Y$ and covariates, including $X_{1}$: father's presence in the household ($X_{1} = 1/0$: absence/presence), $X_{2}$: the child's physical health ($X_{2} = 1/0$: poor/good health), $Z$: parent's report ($Z = 1/0$: abnormal/normal clinical psychopathology):
+\begin{align*}
+\small
+\logit \ \P (Y = 1 | Z, X_{1}, X_{2}) = \beta_{0} + \beta_{1} X_{1} + \beta_{2} X_{2} + \beta_{z} Z,
+\end{align*}
+where the regression coefficients $\bbeta = (\beta_{0}, \beta_{1}, \beta_{2}, \beta_{z})^{\top}$ are the parameters of interest. 
+
+This dataset comprises 2486 subjects, of which 1061 (approximately 42.7\%) exhibit missing values. The presence of such a large amount of missing data poses a significant challenge, as modeling with only the 1425 subjects with complete data may lead to highly biased estimates for $\bbeta$. The missingness $A$ of teacher's report $Y$ is unlikely to be related to the parent's report $Z$, but $Z$ may be highly correlated with $Y$. Hence $Z$ can be viewed as a so-called ``shadow variable'' \citep{miao2024identification} to help identify $\bbeta$ even under MNAR. The semiparametric estimator of $\bbeta$ leveraging the shadow variable has been derived in \citet{zhao2022versatile}. A more detailed exposition can be found in Appendix \ref{app:data} .
+
+% However, the dataset also incorporates \textit{parent reports of children's psychiatric status}, which are coded in the same manner as teacher reports and can therefore be utilized to impute missing teacher reports of children's psychiatric status. It is worth noting that missing data in this research may be associated with unobserved psychopathological states, as teachers are more inclined to document the mental health status of a child when they perceive the child's mental state as abnormal. Consequently, this type of missing data is deemed non-ignorable. The complete dataset can be accessed in Appendix \ref{real_data}.
+
+% We propose the utilization of a dataset obtained from a comprehensive investigation conducted by \cite{Gwendolyn1997mentalhealth} on children's mental health in Connecticut, USA. The dataset comprises two community-based cross-sectional surveys: the New Haven Children's Survey and the Eastern Connecticut Children's Survey. The primary objective of these surveys was to examine the determinants impacting children's utilization of psychological services and enhance child mental health initiatives.
+
+% The New Haven Children's Survey was conducted from 1986 to 1987 and focused on evaluating the mental health status and service utilization patterns of children aged 6-11 years in a stratified proportionate random sample from New Haven city. The Eastern Connecticut Children's Survey, conducted from 1988 to 1989, employed a two-stage cluster sampling approach to select children aged 6-11 years residing in three non-metropolitan counties in eastern Connecticut. In both studies, samples were obtained through random selection of students from lists of public, private, and institutional schools in the respective target areas.
+
+% The present study employed the Achenbach Child Behavior Checklist (CBCL) as the assessment tool for evaluating children's psychiatric status. The CBCL consists of three forms: parent, teacher, and adolescent self-report. Specifically, the study focused on the teacher's report of the child's psychiatric status, where a score of 1 indicates the presence of clinical psychopathology, and a score of 0 indicates normal clinical functioning. Logistic regression models were employed to examine the relationship between children's psychiatric status and other covariates. The covariates of interest included the presence of the father in the household (coded as 0 for presence and 1 for absence) and the child's physical health (coded as 0 for absence of physical health problems and 1 for presence of poor health, chronic illness, or limited activity).
+
+% The dataset consists of 2486 subjects, with 1061 (approximately 42.7\%) exhibiting missing values in the variable "teacher's report of the child's psychiatric status". Handling such a substantial amount of missing data is challenging, as modeling with only the 1425 subjects possessing complete data may lead to biased estimates. However, the dataset also includes parent reports of children's psychiatric status, which are coded in the same manner as teacher reports and can be utilized to impute missing teacher reports. It is important to note that missing data in this research may be associated with unobserved psychopathological states, as teachers are more likely to document the mental health status of a child when they perceive the child's mental state as abnormal. Therefore, this type of missing data is considered non-ignorable. The complete dataset can be found in Appendix \ref{real_data}.
+\subsection{Data Analysis Results}
+
+Besides the estimator computed by $\dnase$, for comparison purposes, we also report the results (1) from the observed-only estimator that completely ignores the missing data and (2) from \citet{zhao2022versatile} using the algorithm of \citet{atkinson1967numerical}. The observed-only estimator is biased under the MNAR assumption for the regression coefficients of the covariates except $Z$, the shadow variable.
+
+To estimate the standard errors of the $\dnase$ estimators of $\bbeta$, we generate 100 bootstrap samples, each of size 2000, rerun the whole $\dnase$ algorithm to obtain the point estimates, and then compute the mean and standard deviation of the point estimates over 100 bootstrap samples. Table \ref{real_data_table} displays the point estimates and the estimated standard errors from different methods, including $\dnase$, the reported estimates from Table 6 of \citet{zhao2022versatile}, and the potentially biased observed-only estimates. First, it is reassuring that all three methods produce roughly the same estimate for regression coefficient $\beta_{z}$ of the shadow variable $Z$ (parent's report), although our method, $\dnase$, has the smallest standard error (the 2nd row, 2nd column of Table \ref{real_data_table}). For the other coefficients, the point estimates of $\dnase$ are very close to those from \citet{zhao2022versatile} but our (estimated) standard errors of $\dnase$ are smaller. Overall, the results of $\dnase$ are consistent with that of \citet{zhao2022versatile}. The ``observed-only'' approach is more likely to produce biased result due to its stronger yet empirically unverifiable assumption on the missing data mechanism.
+\begin{table}[htbp]
+\setlength\tabcolsep{3pt}
+\small
+    \centering
+    \caption{Comparison of different estimators for $\bbeta$ in the real data analysis.}
+    \vskip 0.15in
+    \begin{sc}
+    \begin{tabular}{ccc}
+        \toprule
+        Mean(se) &  $\hat{\beta}_{0}$ &  $\hat{\beta}_{1}$ \\
+        \midrule
+        $\dnase$ & -1.3289(0.1402) & -0.0623(0.1196)  \\
+        \citet{zhao2022versatile} & -1.3585(0.1823) & -0.0718(0.1470)\\
+        observed-only & -1.9307(0.1132) & 0.3652(0.1480) \\
+        \midrule
+        Mean(se) & $\hat{\beta}_{2}$ & $\hat{\beta}_{z}$ \\
+        \midrule
+        $\dnase$ & -0.6159(0.1366) & 1.4620(\textbf{0.0761}) \\
+        \citet{zhao2022versatile} & -0.9817(0.1320) & 1.4623(\textbf{0.1194}) \\
+        observed-only & -0.0516(0.1690) & 1.4621(\textbf{0.1583}) \\
+        \bottomrule
+    \end{tabular}
+    \end{sc}\label{real_data_table}
+\end{table}
+\section{Concluding Remarks}
+\label{sec:conclude}
+
+% In this paper, we make a novel attempt at integrating DNN into semiparametric statistics, in particular its application in causal inference and missing data problems. The current literature \citep{farrell2021deep, chen2024causal, xu2022deepmed, kompa2022deep, ghasempour2023convolutional} exclusively treats DNN as an alternative nonparametric nuisance parameter estimate. Complimentary to this, we instead harness the power of DNN as a new generation of numerical solver, automatically solving operator equations often encountered in semiparametric causal inference and missing data problems. We also write a python/R package called $\dnase$, make it freely available on this \href{https://linliu-stats.github.io/}{\underline{website}} and plan to maintain it and expand its functionalities in the future.
+
+% To end our article, we point out several fronts that the $\dnase$ program will push forward. On the algorithmic side, it is important to provide optimization convergence guarantees of Algorithm \ref{alg:fred}. On the statistical side, we plan to characterize the statistical properties of the final estimator by both the integral and estimating equation simulation size $n$ and $m$ used for solving the operator equations and provide conditions under which the numerical error of solving the operator equation is negligible compared to the statistical error. Moreover, in semiparametric theory for causal inference and missing data, (locally) semiparametric efficient estimators generally require numerically solving operator equations, especially when the underlying causal or missing data graphical models contain latent variables \citep{shpitser2014introduction, shpitser2012parameter, mohan2014graphical, evans2016graphs, bhattacharya2020identification, nabi2020full, mohan2021graphical, nabi2022causal, richardson2023nested} and the observed data distribution is unsaturated \citep{liu2021efficient} (or more abstractly, the model tangent space is not the full space). Our next step is to empower $\dnase$ with graphical model functionalities, such as the \texttt{Ananke} package \citep{lee2023ananke}, to streamline the identification and estimation steps. Finally, not only have DNN-based AI systems been popularized as a new generation of numerical solvers, but also they have become a promising tool for symbolic computation \citep{lamb2021graph, chen2022linear, chen2022mi} and computer-assisted proofs \citep{loos2017deep, davies2021advancing, chen2022stable}, both having important applications in semiparametric causal inference and missing data \citep{balke1994counterfactual, shpitser2014introduction, frangakis2015deductive, carone2019toward, sachs2022general}. We plan to explore this direction as well, towards building a fully automatic end-to-end AI-system for semiparametric statistics. Finally, Fredholm integral equations also appear in many other problems related to statistics and machine learning, game theory \citep{shiffman1953games} and economics. We envision that $\dnase$ can be further extended to fully automate, and hence ``democratize'' semiparametric statistical inference.
+
+In this paper, we first proposed a general framework by formulating the semiparametric estimation problem as a bi-level optimization problem; and then we developed a novel algorithm $\dnase$ that can simultaneously solve the integral equation and estimate the parameter of interest by employing modern DNN as a numerical solver of the integral equations appeared in the estimation procedure. Compared to traditional approaches, $\dnase$ can be scaled to higher-dimensional problems owing to: (1) the universal approximation property \citep{siegel2020approximation}; (2) more efficient optimization algorithms \citep{kingma2015adam}; and  (3) the increasing computing power for deep learning. We also developed a python package that implements the $\dnase$ algorithm. In fact, this proposed framework goes beyond semiparametric estimation and can be adapted more broadly to models subject to general moment restrictions in the statistics and econometrics literature \citep{ai2003efficient, chen2018overidentification}.
+
+There are some recent works introducing modern numerical methods, such as methods based on gradient flows \citep{crucinio2022solving} or tensor networks (e.g. tensor train decomposition) \citep{cichocki2016tensor, cichocki2017tensor, corona2017tensor, chen2023learninggan}, to the problem of purely solving integral equations. It will be interesting to explore how to incorporate these new generations of numerical toolboxes into semiparametric statistics. % , freely available on our website \url{https://github.com/liuqs111/DNA-SE}, which will be further expanded and constantly maintained. 
+Our future plan also includes: (1) providing convergence analysis of Algorithm \ref{alg:fred} and possibly supplementing it with consensus-based methods \citep{carrillo2021consensus} to accelerate the convergence towards global optimizer \textit{in practice}; (2) characterizing statistical properties of the obtained estimator; and more importantly, (3) fully automating and ``democratizing'' semiparametric statistics by eliminating the need of deriving estimators by human, via techniques such as large language models, arithmetic formula learning, differentiable and symbolic computation \citep{frangakis2015deductive, carone2019toward, polu2020generative, garg2020learning, trinh2024solving, luedtke2024simplifying}. 
+%and advancing the theory and practice of semiparametric statistics.
+
+% \section{Code availability}
+% \label{sec:code}
+
+% $\dnase$ is currently written in pytorch, and can be downloaded from \href{https://linliu-stats.github.io/}{\underline{this link}}.
+
+\section*{Acknowledgements}
+The authors would like to thank \href{https://sites.google.com/site/blsunnus/}{BaoLuo Sun} for helpful discussions. Lin Liu is supported by NSFC Grant No.12101397 and No.12090024, Shanghai Science and Technology Commission Grant No.21ZR1431000 and No.21JC1402900, and Shanghai Municipal Science and Technology Major Project No.2021SHZDZX0102. Zixin Wang and Lei Zhang are also supported by Shanghai Science and Technology Commission Grant No.21ZR1431000. Lin Liu is also affiliated with Shanghai Artificial Intelligence Laboratory and the Smart Justice Lab of Koguan Law School of SJTU. Zhonghua Liu is also affiliated with Columbia University Data Science Institute.
+
+\section*{Impact Statement}
+
+The goal of this paper is to advance the field of Machine Learning/Artificial Intelligence by using these tools to boost statistical sciences. There could be many potential positive societal consequences of our work, none of which we feel must be specifically highlighted here.
+ 
+\bibliography{example_paper}
+\bibliographystyle{icml2024}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+\appendix
+% \section{Theoretical results}
+% \label{app:theory}
+
+% \begin{theorem}
+% \label{thm:main}
+% $\hat{\beta}$ is the output of $\dnase$ described in Algorithm \ref{alg:fred}. Then under the regularity conditions given in Appendix \ref{app:regular}, we have
+% \begin{equation}
+% \sqrt{n} \left( \hat{\beta} - \beta \right) = \frac{1}{\sqrt{n}} \sum_{i = 1}^{n} \mathrm{IF}_{i} + o_{\mathbb{P}_{\beta}} (1).
+% \end{equation}
+% where $\nu^{2}$ is the semiparametric efficiency bound.
+% \end{theorem}
+
+% % \begin{remark}\leavevmode
+% % \begin{enumerate}[label = (\arabic*)]
+% % \item The proof of the above theorem is delegated to Appendix \ref{app:proof}.
+% % \end{enumerate}
+% % \end{remark}
+
+% \section{Regularity conditions in Theorem \ref{thm:main}}
+% \label{app:regular}
+
+% \section{Proof of Theorem \ref{thm:main}}
+% \label{app:proof}
+
+% In this section, we prove Theorem \ref{thm:main}.
+
+% \section{Connection to computerized semiparametric statistics}
+% \label{app:vdl}
+
+% As mentioned in the Introduction, a series of works \citep{frangakis2015deductive, carone2019toward, williamson2020unified} has tackled one of the most ambitious goals in semiparametric statistics -- automating/computerizing the derivation of EIFs (abbreviated as the ``CEIF framework''). In this section, we discuss how $\dnase$ differs from but might eventually converge to their frameworks and why ONNs might be a good alternative to the kernel/basis approximation approach taken in \cite{carone2019toward}.
+
+% First, unlike the CEIF framework, $\dnase$ does need the formula of the score equation and the accompanied Fredholm integral equation as input. This is the main disadvantage of the current version of $\dnase$ compared to the CEIF framework. Second, the CEIF framework builds
+
+% \section{Missing Data Theorem}
+% \label{MNAR_Theorem}
+
+% From the model given by Example \ref{mnar_data}, $X$ and $Y$ are covariate and dependent variable in regression model respectively. $R$ is an indicator of whether $Y$ is missing. The real missing mechanism is $\pi(y)=P(R=1 | Y=y)=\operatorname{Sigmoid}(1+y)$. Given a dataset consisting of $N$ observations $(X_i,R_i,R_iY_i)^N_{i=1}$, the density function and score function is given by:
+% $$
+% \begin{aligned}
+%     f & = f_X(x)\left\{f_{Y | X}(y, x ; \beta) \pi(y)\right\}^r\left\{1-\int f_{Y | X}(t, x ; \beta) \pi(t) \mathrm{d} t\right\}^{1-r} \\
+% \sfs_\beta(x, r, r y, \beta) & =r \frac{\frac{\partial}{\partial \beta} f_{Y | X}(y, x ; \beta)}{f_{Y | X}(y, x ; \beta)}-(1-r) \frac{\int \frac{\partial}{\partial \beta} f_{Y | X}(t, x ; \beta) \pi(t) \mathrm{d} t}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) \mathrm{d} t}
+% \end{aligned}
+% $$
+% According to semi-parametric statistical theory, we can get the nuisance tangent space $\Lambda=\Lambda_X \oplus \Lambda_\pi$:
+% $$
+% \begin{aligned}
+% \Lambda_{X} & =\{a(x): \E(a(X))=0\} \\
+% \Lambda_\pi & =\left\{r \mathbf{b}(y)-(1-r) \frac{\int f_{Y | X}(t, x ; \beta) \mathbf{b}(t) \pi(t) \mathrm{d} t}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) \mathrm{d} t}: \forall \mathbf{b}(\cdot)\right\}
+% \end{aligned}
+% $$
+% From the definition of $\Lambda$, we can get:
+% $$
+% \begin{aligned}
+% & \E\left[a^{\mathrm{T}}(X)\left\{R \mathbf{b}(Y)-(1-R) \frac{\int f_{Y | X}(t, X ; \beta) \mathbf{b}(t) \pi(t) d \mu(t)}{\int f_{Y | X}(t, X ; \beta)\{1-\pi(t)\} d \mu(t)}\right\}\right] \\
+% = & \int a^{\mathrm{T}}(x)\left\{r \mathbf{b}(y)-(1-r) \frac{\int f_{Y | X}(t, x ; \beta) \mathbf{b}(t) \pi(t) d \mu(t)}{\int f_{Y | X}(t, x ; \beta)\{1-\pi(t)\} d \mu(t)}\right\} f_{X}(x) \\
+% & \times\left\{f_{Y | X}(y, x ; \beta) \pi(y)\right\}^r\left[\int f_{Y | X}(t, x ; \beta)\{1-\pi(t)\} d \mu(t)\right]^{1-r} d \mu(r) d \mu(x) d \mu(r y) \\
+% = & \int a^{\mathrm{T}}(x) \mathbf{b}(y) f_X(x) f_{Y | X}(y, x ; \beta) \pi(y) d \mu(x) d \mu(y) \\
+% & -\int a^{\mathrm{T}}(x) f_{X}(x) \frac{\int f_{Y | X}(t, x ; \beta) \mathbf{b}(t) \pi(t) d \mu(t)}{\int f_{Y | X}(t, x ; \beta)\{1-\pi(t)\} d \mu(t)} \int f_{Y | X}(t, x ; \beta)\{1-\pi(t)\} d \mu(t) d \mu(x) \\
+% = & \int a^{\mathrm{T}}(x) f_{X}(x) f_{Y | X}(y, x ; \beta) \mathbf{b}(y) \pi(y) d \mu(x) d \mu(y)-\int a^{\mathrm{T}}(x) f_{X}(x) \int f_{Y | X}(t, x ; \beta) \mathbf{b}(t) \pi(t) d \mu(t) d \mu(x) \\
+% = & \mathbf{0}
+% \end{aligned}
+% $$
+% So $\Lambda_X \perp \Lambda_\pi$ and then we can get its orthogonal complement space $\Lambda^{\perp}$:
+% $$
+% \begin{aligned}
+% \Lambda^{\perp}= & {[\mathbf{a}(x, r, r y): \E\{\mathbf{a}(x, R, R Y) | x\}=\mathbf{0}, \text { for all } \mathbf{b}(Y)} \\
+% & \left.\E\left\{\mathbf{a}(X, R, R Y) R \mathbf{b}(Y)-\frac{\mathbf{a}(X, R, R Y)(1-R) \int f_{Y | x}(t, x ; \beta) \mathbf{b}(t) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)}\right\}=\mathbf{0}\right] \\
+% = & {[\mathbf{a}(x, r, r y): \E\{\mathbf{a}(x, R, R Y) | x\}=\mathbf{0}, \E\{\mathbf{a}(X, 1, y)-\mathbf{a}(X, 0,0) | y\}=\mathbf{0}] }
+% \end{aligned}
+% $$
+% Furthermore, the scoring function's projection on its orthogonal complement space $\Lambda^\perp$, which we call the efficient score, can be obtained as followings:
+% $$
+% \begin{aligned}
+% & \E\left\{\mathbf{S}_{\eff} (X, R, R Y)\right\} \\
+% = & \int f_\beta(y, x ; \beta) f_{X}(x) d \mu(x) \pi(y) d \mu(y)-\int \frac{\int f_\beta(t, x, \beta) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)} f_{X}(x) d \mu(x) \\
+% & +\int \frac{\int f_\beta(t, x, \beta) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)} f_{Y | X}(y, x ; \beta) f_{X}(x) d \mu(x) \pi(y) d \mu(y) \\
+% & -\int \mathbf{b}(y) f_{Y | X}(y, x ; \beta) f_{X}(x) d \mu(x) \pi(y) d \mu(y)+\int \frac{\int \mathbf{b}(t) f_{Y | X}(t, x; \beta) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)} f_{X}(x) d \mu(x) \\
+% & -\int \frac{\int \mathbf{b}(t) f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)} f_{Y | X}(y, x ; \beta) f_{X}(x) d \mu(x) \pi(y) d \mu(y) \\
+% = & -\int \frac{\int f_\beta(t, x, \beta) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)} f_{X}(x) d \mu(x)+\int \frac{\int \mathbf{b}(t) f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)} f_{X}(x) d \mu(x)
+% \end{aligned}
+% $$
+% Multiplying both sides of the integral equation by $\pi^{\ast}$ and then integrating, we get:
+% $$
+% \begin{aligned}
+% & \int\left[\int f_\beta(y, x ; \beta) \pi(y) d \mu(y)+\frac{\int f_\beta(t, x, \beta) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)}\left\{\int f_{Y | X}(y, x ; \beta) \pi(y) d \mu(y)\right\}\right] f_{X}(x) \\
+% = & \int\left[\int \mathbf{b}(y) f_{Y | X}(y, x ; \beta) \pi(y) d \mu(y)+\frac{\int \mathbf{b}(t) f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)} \int f_{Y | X}(y, x ; \beta) \pi(y) d \mu(y)\right] \\
+% & \times f_{X}(x) d \mu(x),
+% \end{aligned}
+% $$
+% where 
+% $$
+% \int \frac{\int f_\beta(t, x, \beta) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)} f_{X}(x) d \mu(x)=\int \frac{\int \mathbf{b}(t) f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)} f_{X}(x) d \mu(x)
+% $$
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% On the other hand, we have no knowledge of the true missing mechanism model $\pi(y)$, nor can we estimate it from the missing data. Fortunately, researchers have discovered through computation that when we assume a model $\pi^{\ast}(y)$ different from $\pi(y)$, so we can get the efficient score given by followings:
+% $$
+% \begin{aligned}
+% & \E\left\{\mathbf{S}_{\eff}^{\ast}(x, R, R Y) | x\right\} \\
+% & =\int\left[\mathbf{S}_\beta^{\ast}(x, r, r y ; \beta)-r \mathbf{b}^{\ast}(y)+(1-r) \frac{\int \mathbf{b}^{\ast}(t) f_{Y | X}(t, x ; \beta) \pi^{\ast}(t) d \mu(t)}{\int f_{Y | X}(t, x ; \beta)\left\{1-\pi^{\ast}(t)\right\} d \mu(t)}\right] \\
+% & \times\left\{f_{Y | X}(y, x ; \beta) \pi(y)\right\}^{\ast}\left\{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)\right\}^{1-r} d \mu(r y) d \mu(r) \\
+% & =\int\left\{\mathbf{S}_\beta^{\ast}(x, 1, y ; \beta)-\mathbf{b}^{\ast}(y)\right\} f_{Y | X}(y, x ; \beta) \pi(y) d \mu(y) \\
+% & +\left[\mathbf{S}_\beta^{\ast}(x, 0,0 ; \beta)+\frac{\int \mathbf{b}^{\ast}(t) f_{Y | X}(t, x ; \beta) \pi^{\ast}(t) d \mu(t)}{\int f_{Y | X}(t, x ; \beta)\left\{1-\pi^{\ast}(t)\right\} d \mu(t)}\right]\left\{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)\right\} \\
+% & =\int \mathbf{S}_\beta^{\ast}(x, 1, y ; \beta) f_{Y | X}(y, x ; \beta) \pi(y) d \mu(y)-\int \mathbf{b}^{\ast}(y) f_{Y | X}(y, x ; \beta) \pi(y) d \mu(y) \\
+% & +\mathbf{S}_\beta^{\ast}(x, 0,0 ; \beta)\left\{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)\right\} \\
+% & +\frac{\int \mathbf{b}^{\ast}(t) f_{Y | X}(t, x ; \beta) \pi^{\ast}(t) d \mu(t)}{\int f_{Y | X}(t, x; \beta)\left\{1-\pi^{\ast}(t)\right\} d \mu(t)}\left\{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)\right\} \\
+% & =\int \frac{f_\beta(y, x ; \beta)}{f_{Y | X}(y, x ; \beta)} f_{Y | X}(y, x ; \beta) \pi(y) d \mu(y) \\
+% & -\frac{f_\beta(t, x, \beta) \pi^{\ast}(t) d \mu(t)}{\int f_{Y | X}(t, x ; \beta)\left\{1-\pi^{\ast}(t)\right\} d \mu(t)}\left\{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)\right\} \\
+% & -\int \mathbf{b}^{\ast}(y) f_{Y | X}(y, x ; \beta) \pi(y) d \mu(y) \\
+% & +\frac{\int \mathbf{b}^{\ast}(t) f_{Y | X}(t, x ; \beta) \pi^{\ast}(t) d \mu(t)}{\int f_{Y | X}(t, x ; \beta)\left\{1-\pi^{\ast}(t)\right\} d \mu(t)}\left\{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)\right\} \\
+% & =\int f_\beta(y, x ; \beta) \pi(y) d \mu(y)-\frac{\int f_\beta(t, x, \beta) \pi^{\ast}(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi^{\ast}(t) d \mu(t)}\left\{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)\right\} \\
+% & -\int \mathbf{b}^{\ast}(y) f_{Y | X}(y, x ; \beta) \pi(y) d \mu(y) \\
+% & +\frac{\int \mathbf{b}^{\ast}(t) f_{Y | X}(t, x ; \beta) \pi^{\ast}(t) d \mu(t)}{1-\int f_{Y | X}(t, x ; \beta) \pi^{\ast}(t) d \mu(t)}\left\{1-\int f_{Y | X}(t, x ; \beta) \pi(t) d \mu(t)\right\} \\
+% &
+% \end{aligned}
+% $$
+% From the above deduction, we can get the integral equation and estimate equation as Equation \eqref{mnar_eq1}.
+
+% \section{Proof of Semiparametric Derivation}
+% \label{semi_proof}
+
+% Review that $\Lambda=\Lambda_1+\Lambda_2$ where
+% $$
+% \begin{aligned}
+% & \Lambda_1=\left\{a_1(x): \E\left[a_1(X)\right]=0\right\} \\
+% & \Lambda_2=\left\{\E\left[a_2(U, X) | X, A, Y\right]: \E\left[a_2(U, X) | X\right]=0\right\}
+% \end{aligned}
+% $$
+% We need to project the score function $\sfs_{\beta}(X,Z,Y) =\E[\sfs_{\beta}(X,U,Z,Y)|X,Z,Y]$ onto the space $\Lambda$. Note that since $\E[\sfs_{\beta}(X,Z,Y)|X] = 0$, we have $\E[\sfs_{\beta}(X,Z,Y)]\perp \Lambda_1$.
+
+% Let $h(X,Z,Y) \in \Lambda^{\perp}_2$ be arbitrary. Then, $h(X,Z,Y)$ satisfies $\E[h (X, Z, Y) \E[a_2(U,X)|X,Z,Y]] = 0$. 
+
+% Furthermore, by iterated expectations, we have:
+% \begin{align*}
+% 0 & =\E\left[h^T(X, Z, Y) \cdot \E\left[a_2(U, X) | X, Z, Y\right]\right] \\
+% & =\E\left[\E\left[h^T(X, Z, Y) \cdot a_2(U, X) | X, Z, Y\right]\right] \\
+% & =\E\left[h^T(X, Z, Y) \cdot a_2(U, X)\right]
+% \end{align*}
+% Hence, for any $h(X,Z,Y)$ that satisfies $\E[h(X,Z,Y)|U,X] = 0$, we have $h(X,Z,Y)\in \Lambda^{\perp}_2$. 
+
+% Finally, we can show that the projection of $\sfs_{\beta}(X,Z,Y)$ onto $\Lambda^{\perp}_2$ is $\sfs_{\beta} (X,Z,Y) - \E [a_2 (U,X) \vert X,Z,Y]$, where $a_2(U,X)$ satisfies $\E[a_2(U,X)|X] = 0$ and $\E[\sfs_{\beta} (X,Z,Y) - \E [a_2 (U,X) | X,Z,Y]|U,X] = 0$, i.e.
+% \begin{align*}
+% \E[\sfs_{\beta}(X,Z,Y)|U,X] = \E[\E[a_2(U,X)|X,Z,Y]|U,X] = 0.
+% \end{align*}
+% So it's clear that $\E\left[\sfs_{\eff} (X, Z, Y) | X, U\right]=0$.
+
+% \section{Proof of Dataset Shift}
+% \label{shift_proof}
+
+% Since both $A$ and $Y$ are binary, the density $p$ of a general distribution $P$ can be written as:
+% $$
+% \begin{aligned}
+% p(x,y,a) & =p_X(x) \times p_{A | X}(a | x) \times \operatorname{expit}\left(\phi_P \circ \beta_P(x)\right)^{a y}\left\{1-\operatorname{expit}\left(\phi_P \circ \beta_P(x)\right)\right\}^{a(1-y)} \\
+% & \times \operatorname{expit}\left(\beta_P(x)\right)^{(1-a) y}\left(1-\operatorname{expit}\left(\beta_P(x)\right)\right)^{(1-a)(1-y)}
+% \end{aligned}
+% $$
+% where $p_X$ is the density of $X$ with respext to some dominating measure, $p_{A|X}(a|x)=Pr_P(A=a|X=x),\beta_P \coloneqq \text{logit}Pr_P(A=1|X=x)$ and $\phi_P$ corresponding to $\phi_*$ for $P_*$ is the assumed transformation between the log odds of $Y|A,X$ for the distribution $P$. Now consider a path $\{P^\epsilon:\epsilon$ in a neighbourhood of 0$\}$ that passes through $P_*$ at $\epsilon=0$.
+
+% For this we use a superscript or subscript $\epsilon$ to denote components of $P^\epsilon$. So the score function at $\epsilon=0$ is
+% $$
+% \begin{aligned}
+% x,y,a \mapsto & \left.\frac{\partial \log p^{\varepsilon}(x,y,a)}{\partial \varepsilon}\right|_{\varepsilon=0}=\left.\frac{\partial \log p_X^{\varepsilon}(x)}{\partial \varepsilon}\right|_{\varepsilon=0}+\left.\frac{\partial \log p_{A | X}^{\varepsilon}(a | x)}{\partial \varepsilon}\right|_{\varepsilon=0} \\
+% & +a y\left\{1-\operatorname{expit} \circ \phi_* \circ \beta_*(x)\right\}\left\{\left.\frac{\partial \phi_{\varepsilon}\left(\beta_*(x)\right)}{\partial \varepsilon}\right|_{\varepsilon=0}+\left.\phi_*^{\prime} \circ \beta_*(x) \frac{\partial \beta_{\varepsilon}(x)}{\partial \varepsilon}\right|_{\varepsilon=0}\right\} \\
+% & -a(1-y) \operatorname{expit} \circ \phi_* \circ \beta_*(x)\left\{\left.\frac{\partial \phi_{\varepsilon}\left(\beta_*(x)\right)}{\partial \varepsilon}\right|_{\varepsilon=0}+\left.\phi_*^{\prime} \circ \beta_*(x) \frac{\partial \beta_{\varepsilon}(x)}{\partial \varepsilon}\right|_{\varepsilon=0}\right\} \\
+% & +\left.(1-a) y\left\{1-\operatorname{expit} \circ \beta_*(x)\right\} \frac{\partial \beta_{\varepsilon}(x)}{\partial \varepsilon}\right|_{\varepsilon=0}-\left.(1-a)(1-y) \operatorname{expit} \circ \beta_*(x) \frac{\partial \beta_{\varepsilon}(x)}{\partial \varepsilon}\right|_{\varepsilon=0}
+% \end{aligned}
+% $$
+% Further equals
+% $$
+% \begin{aligned}
+% x,y,a \mapsto & \left.\frac{\partial \log p_X^{\varepsilon}(x)}{\partial \varepsilon}\right|_{\varepsilon=0}+\left.\frac{\partial \log p_{A | X}^{\varepsilon}(a | x)}{\partial \varepsilon}\right|_{\varepsilon=0} \\
+% & +a\left\{y-\operatorname{expit} \circ \phi_* \circ \beta_*(x)\right\} \times\left\{\left.\frac{\partial \phi_{\varepsilon}\left(\beta_*(x)\right)}{\partial \varepsilon}\right|_{\varepsilon=0}+\left.\phi_*^{\prime} \circ \beta_*(x) \frac{\partial \beta_{\varepsilon}(x)}{\partial \varepsilon}\right|_{\varepsilon=0}\right\} \\
+% & +\left.(1-a)\left\{y-\operatorname{expit} \circ \beta_*(x)\right\} \frac{\partial \beta_{\varepsilon}(x)}{\partial \varepsilon}\right|_{\varepsilon=0} .
+% \end{aligned}
+% $$
+% In this equation, the first two terms are arbitrary elements of $\mathcal{T}_X$ and $\mathcal{T}_{A|X}$. Therefore the tangent space $\mathcal{T}_{\mathrm{cspd}} \subseteq \mathcal{T}_X \oplus \mathcal{T}_{A | X} \oplus \mathcal{T}_{\mathrm{cspd}, Y | X, A}$, where $\mathcal{T}_{\mathrm{cspd}}$ is the tangent space of this problem set and $\mathcal{T}_{\mathrm{cspd}, Y | X, A}$ is the $L^2_0(P_*)$-closure of 
+% $$
+% \tilde{\mathcal{F}}\coloneqq\left\{G=F\left(\tilde{\lambda}_1 \circ \beta_*+\phi_*^{\prime} \circ \beta_* \cdot \tilde{\lambda}_2, \tilde{\lambda}_2\right): \tilde{\lambda}_1, \tilde{\lambda}_2 \text { such that } G \in L^2\left(P_*\right)\right\} \text {. }
+% $$
+% So from this equation we give bounded function $s \in \mathcal{T}_X \oplus \mathcal{T}_{A | X} \oplus \tilde{F}$, there exists a regular path $\{P^\epsilon\}$ for $\epsilon$ sufficiently small such that the score function equals $s$. Then we let $s = s_X + s_{A|X} + s_{Y|X,A}$. For all $\epsilon$ sufficiently close to 0, let the density of $P^\epsilon$ be
+% $$
+% \begin{aligned}
+% & x,y,a \mapsto P_{*, X}(x)\left\{1+\varepsilon s_X(x)\right\} \times P_{*, A | X}(a | x)\left\{1+\varepsilon s_{A | X}(a | x)\right\} \\
+% & \times \operatorname{expit}\left\{\left(\phi_*+\varepsilon \tilde{\lambda}_1\right) \circ\left(\beta_*+\varepsilon \tilde{\lambda}_2\right)(x)\right\}^{a y} \times\left[1-\operatorname{expit}\left\{\left(\phi_*+\varepsilon \tilde{\lambda}_1\right) \circ\left(\beta_*+\varepsilon \tilde{\lambda}_2\right)(x)\right\}\right]^{a(1-y)} \\
+% & \times \operatorname{expit}\left\{\left(\beta_*+\varepsilon \tilde{\lambda}_2\right)(x)\right\}^{(1-a) y} \times\left[1-\operatorname{expit}\left\{\left(\beta_*+\varepsilon \tilde{\lambda}_2\right)(x)\right\}\right]^{(1-a)(1-y)}
+% \end{aligned}
+% $$
+% It is straightforward to verify that the score function of $P^\epsilon$ at $\epsilon=0$ equals $s$ and $\{P^\epsilon\}$ is a regular path through $P_*$ at $\epsilon=0$. Therefore, we have proved that $\mathcal{T}_{\mathrm{cspd}} \supseteq \mathcal{T}_X \oplus \mathcal{T}_{A | X} \oplus \mathcal{T}_{\mathrm{cspd}, Y | X, A}$. So combined with the original tangent space we can get $\mathcal{T}_{\mathrm{cspd}} = \mathcal{T}_X \oplus \mathcal{T}_{A | X} \oplus \mathcal{T}_{\mathrm{cspd}, Y | X, A}$.
+
+% Also since the tangent space is the entire space $L_0^2(P_*)=\mathcal{T} \oplus \mathcal{T}_{A | X} \oplus \mathcal{T}_{Y|X,A}$. So $\mathcal{T}_{\mathrm{cspd}}$ only restricts the subspace $\mathcal{T}_{Y|X,A}$ and $\mathcal{T}_{\mathrm{cspd}}^{\perp}$ is also a subspace of $\mathcal{T}_{Y|X,A}$. Since $A$ and $Y$ are binary, any function in $\mathcal{T}_{Y|X,A}$ can be written as $F(f_1,f_2)$ for some functions $f_1,f_2 \in L^2(P_{*,X})$. So 
+% $$
+% \mathcal{T}_{\text {cspd }}^{\perp}=\left\{f \in \mathcal{T}_{Y \mid X, A}: \E[f(O) g(O)]=0, \text { for all } g \in \mathcal{T}_{\text {cspd }, Y | X, A}\right\}
+% $$
+% So we can get
+% $$
+% \begin{aligned}
+% & \E[f(O) g(O)]=\E\left[F\left(f_1, f_2\right) F\left(\tilde{\lambda}_1 \circ \beta_*+\phi_*^{\prime} \circ \beta_* \cdot \tilde{\lambda}_2, \tilde{\lambda}_2\right)\right] \\
+% & =\E\left[\left(A\{Y-\E(Y | A=1, X)\} f_1(X)+(1-A)\{Y-\E(A | Y=0, X)\} f_2(X)\right)\right. \\
+% & \left.\times\left(A\{Y-\E(Y | A=1, X)\}\left[\tilde{\lambda}_1 \circ \beta_*+\phi_*^{\prime} \circ \beta_* \cdot \tilde{\lambda}_2\right](X)+(1-A)\{Y-\E(A | Y=0, X)\} \tilde{\lambda}_2(X)\right)\right] \\
+% & =\E\left[\left(A\{Y-\E(Y | A=1, X)\}^2 f_1(X)\left[\tilde{\lambda}_1 \circ \beta_*+\phi_*^{\prime} \circ \beta_* \cdot \tilde{\lambda}_2\right](X)\right.\right. \\
+% & \left.\quad+(1-A)\{Y-\E(A | Y=0, X)\}^2 f_2(X) \tilde{\lambda}_2(X)\right] .
+% \end{aligned}
+% $$
+% Therefore,
+% $$
+% \begin{aligned}
+% & \left\{F\left(f_1, f_2\right): \E\left[\operatorname{var}(Y | A=1, X) f_1(X)\left\{\tilde{\lambda}_1 \circ \beta_*(X)+\phi_*^{\prime} \circ \beta_*(X) \cdot \tilde{\lambda}_2(X)\right\} P_1(X)\right.\right. \\
+% & \left.\left.\quad+\operatorname{var}(Y | A=0, X) f_2(X) \tilde{\lambda}_2(X)\left(1-P_1(X)\right)\right]=0, \text { for all functions } \tilde{\lambda}_1, \tilde{\lambda}_2\right\}
+% \end{aligned}
+% $$
+% With the notations defined in \ref{ex3}, since $\tilde{\lambda}_1$ and $\tilde{\lambda}_2$ are arbitrary, we have,
+% $$
+% \mathcal{T}_{\mathrm{cspd}}^{\perp}=\left\{F\left(f_1, f_2\right): \E\left[v(X ; 1) \cdot f_1(X) \mid \beta_*(X)\right]=0, f_2(x)=-\frac{v(x ; 1) \cdot \phi_*^{\prime} \circ \beta_*(x) \cdot f_1(x)}{v(x ; 0)}\right\} .
+% $$
+% From \cite{qiu2023efficient}, we can decompose the influence function $D_{\text{np}}(\rho_*,r_*)(x,y,a)$ as
+% $$
+% D_{\mathrm{np}}\left(\rho_*, r_*\right)(x,y,a)=\underbrace{\frac{1-a}{\rho_*}\left\{\ell(x, y)-\mathcal{E}_*(x)\right\}}_{\text {projection of } D_{\mathrm{np}}\left(\rho_*, r_*\right) \text { onto } \mathcal{T}_{Y | X, A}}+\underbrace{\frac{1-a}{\rho_*}\left\{\mathcal{E}_{*, X}(x)-r_*\right\}}_{\text {projection of } D_{\mathrm{np}}\left(\rho_*, r_*\right) \text { onto }} .
+% $$
+% We now characterize the two projection. For the first $x,y,a \mapsto \frac{1-a}{\rho_*}\left\{\ell(x, y)-\mathcal{E}_*(x)\right\}$ in the form of $F(f_1,f_2)$ by noting that $Y$ is binary:
+% $$
+% \begin{aligned}
+% & \frac{1-a}{\rho_*}\left\{\ell(x, y)-\mathcal{E}_*(x)\right\} \\
+% & =\frac{1-a}{\rho_*}\left\{y \ell(x, 1)+(1-y) \ell(x, 0)-\operatorname{expit} \circ \beta_*(x) \ell(x, 1)-\left\{1-\operatorname{expit} \circ \beta_*(x)\right\} \ell(x, 0)\right\} \\
+% & =(1-a)\left\{y-\operatorname{expit} \circ \beta_*(x)\right\} \frac{\ell(x, 1)-\ell(x, 0)}{\rho_*}=F\left(0, \frac{\ell(\cdot, 1)-\ell(\cdot, 0)}{\rho_*}\right)(x,y,a) .
+% \end{aligned}
+% $$
+% From the projection of $F\left(0, \frac{\ell(\cdot, 1)-\ell(\cdot, 0)}{\rho_*}\right)$ onto $\mathcal{T}_{\mathrm{cspd}, Y | X, A}$ equals $F(\tilde{\lambda}_1 \circ \beta_* + \phi'_* \circ \beta_* \cdot \tilde{\lambda}_2, \tilde{\lambda}_2)$ for some functions $\tilde{\lambda}_1$ and $\tilde{\lambda}_2$. Then we have 
+% \begin{equation}
+% \begin{aligned}
+% \label{eq19}
+% & \E\left[v(X ; 1)\left\{\tilde{\lambda}_1 \circ \beta_*(X)+\phi_*^{\prime} \circ \beta_*(X) \cdot \tilde{\lambda}_2(X)\right\} | \beta_*(X)=\beta_*(x)\right]=0, \\
+% & \tilde{\lambda}_2(x)-\frac{\ell(x, 1)-\ell(x, 0)}{\rho_*}=-\frac{v(x ; 1) \cdot \phi_*^{\prime} \circ \beta_*(x)\left\{\tilde{\lambda}_1 \circ \beta_*(x)+\phi_*^{\prime} \circ \beta_*(x) \cdot \tilde{\lambda}_2(x)\right\}}{v(x ; 0)} .
+% \end{aligned}
+% \end{equation}
+% Equation \eqref{eq19} implies that 
+% $$
+% \tilde{\lambda}_1 \circ \beta_*(x)=-\frac{\E\left[v(X ; 1) \tilde{\lambda}_2(X) | \beta_*(X)=\beta_*(x)\right] \phi_*^{\prime} \circ \beta_*(x)}{\E\left[v(X ; 1) | \beta_*(X)=\beta_*(x)\right]}
+% $$
+% and 
+% $$
+% \begin{aligned}
+% & v(x ; 0)\left\{\frac{\ell(x, 1)-\ell(x, 0)}{\rho_*}-\tilde{\lambda}_2(x)\right\} \\
+% & =-v(x ; 1) \frac{\E\left[v(X ; 1) \tilde{\lambda}_2(X) | \beta_*(X)=\beta_*(x)\right]}{\E\left[v(X ; 1) | \beta_*(X)=\beta_*(x)\right]}\left\{\phi_*^{\prime} \circ \beta_*(x)\right\}^2+v(x ; 1)\left\{\phi_*^{\prime} \circ \beta_*(x)\right\}^2 \tilde{\lambda}_2(x) .
+% \end{aligned}
+% $$
+% So the above equation is equivalent to the linear integral equation
+% $$
+% \mathscr{A} \zeta+\kappa=\zeta .
+% $$
+% where $\zeta \coloneqq \tilde{\lambda}_2\mu$. With $\zeta_*$ being the solution, we can get $\tilde{\lambda}_2 = \zeta_* / \mu$ and $\tilde{\lambda}_1 \circ \beta_*(x)=-\mathscr{A} \zeta_* \cdot \phi^{\prime} \circ \beta_* / \mathscr{A} \mu$ . And it can be used to calculate influence function for estimation.
+\section{The flow chart of $\dnase$}
+\label{app:figs}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width = 1.0\textwidth]{figure_DNA-SE.pdf}
+    \caption{Depicted here is an illustration of our $\dnase$ algorithm and the neural network architecture employed for modeling $\sfb$, the solution to the integral equations. Left: We present a comprehensive flowchart that outlines the algorithmic procedure. Right: The architecture of $\sfb$ is chosen to be the standard Multilayer Perceptron (MLP) or feedforward neural networks in this paper with tanh activation function. Notably, the MLP is constructed with a depth of $2L+1$, indicating a strategic layering to optimize performance.}
+    \label{fig:fred}
+\end{figure}
+
+\section{Further remarks on the loss function \eqref{loss_func}}
+\label{app:loss}
+
+As mentioned in Section \ref{sec:loss}, the (empirical) loss function \eqref{loss_func} originates from the following population loss function:
+\begin{equation}
+\label{pop loss}
+\begin{split}
+& \bbeta^{\ast} \coloneqq \arg\min_{\bbeta \in \bbR^{q}} \mathcal{L}_{\psi} (\bbeta, \sfb^{\ast}) \ \st \ \sfb^{\ast} (\cdot) \coloneqq \arg\min_{\sfb \in \calF} \mathcal{L}_{K} (\sfb, \bbeta^\ast), \\
+& \text{where } \mathcal{L}_{\psi} (\bbeta, \sfb) \coloneqq \left\{ \E \left[ \psi (O; \sfb (\cdot), \bbeta) \right] \right\}^{2}, \\
+& \mathcal{L}_{K} (\sfb) \coloneqq \int_{o} \int_{\mathbf{t}} \left( \int K(\mathbf{s}, \mathbf{t}, o; \bbeta) \mathsf{b} (\mathbf{s}, o) \diff \mathbf{s} - C(\mathbf{t}, o); \bbeta)-\sfb (\mathbf{t}, o) \right)^2 \diff \nu (\mathbf{t}) \diff \P (o).
+\end{split}
+\end{equation}
+We first turn the estimating equation \eqref{general form sum} into the above population loss and then replace the integral with respect to $\diff \P (o)$ by the empirical average.
+
+We would like to make another remark on this loss function. One can in principle first draw many samples from the space where the parameter of interest $\bbeta$ lies, and then solve the integral equations over all these possible values. However, the Alternating GD type of algorithms can explore the $\bbeta$ space more efficiently.
+
+Finally, it is noteworthy that we are interested in the global minimizer of the loss \eqref{pop loss}. Since the $\dnase$ algorithm relies on GD, when multiple local minimizers exist, one could in principle consider a trial-and-error approach and initialize multiple starting points for $\bbeta$ and the function $\sfb(\cdot)$ to ensure convergence to the global minimizer. One could also use the idea from consensus-based optimization \citep{carrillo2021consensus} by initializing different starting points using Interacting Particle Systems to accelerate the trial-and-error approach by injecting benign correlations among those starting points.
+
+\section{Derivations for Section \ref{sec:examples}}
+
+To make our paper relatively self-contained, we provide derivations of the estimators for the examples in Section \ref{sec:examples}. We want to remark that these derivations are not new and have appeared in the cited works in Section \ref{sec:examples}.
+
+\subsection{Derivations for Example \ref{eg:mnar}}
+\label{app:proofmnar}
+From the model given by Example \ref{mnar_data}, the true missing-data mechanism is $\P (A = 1 | Y = y) = \expit (1 + y)$. Given a dataset consisting of $N$ i.i.d. observations $(X_i, A_i, A_i Y_i)^N_{i=1}$, the observed-data joint likelihood and the observed-data score are given below:
+\begin{align*}
+    & \p (x, a, y; \bbeta, \eta) = \p_X (x) \left\{\p_{Y | X} (y, x; \bbeta) \P (A = 1 | Y = y) \right\}^a \left\{1-\int \p_{Y | X} (t, x; \bbeta) \P (A = 1 | Y = t) \mathrm{d} t \right\}^{1 - a}, \\
+& \sfs_\bbeta(x, a, a y; \bbeta) = a \frac{\frac{\partial}{\partial \beta} \p_{Y | X}(y, x ; \bbeta)}{\p_{Y | X} (y, x ; \bbeta)} - (1 - a) \frac{\int \frac{\partial}{\partial \bbeta} \p_{Y | X}(t, x ; \bbeta) \P (A = 1 | Y = t) \mathrm{d} t}{1-\int \p_{Y | X}(t, x; \bbeta) \P (A = 1 | Y = t) \mathrm{d} t},
+\end{align*}
+where $\p_{Y | X} (y, x; \bbeta)$ is assumed to be known up to the parameter value $\bbeta$, but $\eta$ is completely unknown to the statistician. From semiparametric theory, the nuisance tangent space is $\Lambda=\Lambda_1 \oplus \Lambda_2$, where
+\begin{align*}
+\Lambda_{1} = \{h(x): \E h (X) = 0\}, \Lambda_2 & =\left\{a g (y)-(1-a) \frac{\int \p_{Y | X}(t, x ; \bbeta) g (t) \eta(t) \mathrm{d} t}{1-\int \p_{Y | X}(t, x ; \bbeta) \eta(t) \mathrm{d} t}: \forall \ g (\cdot)\right\}.
+\end{align*}
+By definition, one can obtain the observed-data efficient score $\sfs_{\eff, \bbeta} (x, a, ay)$ with respect to $\bbeta$ by subtracting from $\sfs_{\bbeta} (x, a, ay)$ its projection onto the observed-data nuisance tangent space $\Lambda$. The projection operation leads to the terms involving function $\sfb (\cdot)$ (corresponding to the function $g$ in $\Lambda_2$) in the display below:
+\begin{equation*}
+    \sfs_{\eff, \bbeta}(x, a, a y)=\sfs_\bbeta(x, a, a y, \bbeta)-a \sfb(y)+(1-a) \frac{\int \p_{Y \mid X}(t, x; \bbeta) \sfb(t ; \bbeta) \pi(t) \mathrm{d} t}{1-\int \p_{Y \mid X}(t, x ; \bbeta) \pi(t) \mathrm{d} t},
+\end{equation*}
+where $\sfb(y)$ satisfies the following function:
+\begin{equation*}
+    \begin{aligned}
+& \int\left\{\frac{\partial}{\partial \bbeta} \p_{Y \mid X}(y, x ; \bbeta)+\frac{\int \frac{\partial}{\partial \bbeta} \p_{Y \mid X}(t, x ; \beta) \eta(t) \mathrm{d} t}{\int \p_{Y \mid X}(t, x ; \bbeta)(1-\eta(t)) \diff t} \p_{Y \mid X}(y, x ; \bbeta)\right\} \p_X(x) \mathrm{d} x \\
+= & \int\left\{\sfb(y ; \bbeta) \p_{Y \mid X}(y, x ; \bbeta)+\frac{\int \sfb(t ; \bbeta) \p_{Y \mid X}(t, x ; \bbeta) \eta(t) \mathrm{d} t}{\int \p_{Y \mid X}(t, x ; \bbeta)(1-\eta(t)) \mathrm{d} t} \p_{Y \mid X}(y, x ; \bbeta)\right\} \p_X(x) \mathrm{d} x.
+\end{aligned}
+\end{equation*}
+\citet{zhao2022versatile} showed that a working model $\eta (y)$ can be used to replace the true missing mechanism $\P (A = 1 | Y = y)$, which eventually leads to the estimator $\hat{\bbeta}$ that solves the following empirical version of the estimating equation:
+\begin{equation*}
+\begin{aligned}
+& \ \frac{1}{N} \sum_{i=1}^N \Bigg\{\sfs_\bbeta \left(X_i, A_i, A_i Y_i\right)-A_i \sfb\left(Y_i ; \bbeta\right)+\left(1-A_i\right) \frac{\int \p_{Y \mid X}\left(t, X_i ; \bbeta\right) \sfb(t ; \bbeta) \eta(t) \mathrm{d} t}{\int \p_{Y \mid X}(t, X ; \bbeta)\left(1-\eta(t)\right) \mathrm{d} t}\Bigg\}=0, \\
+ \text{where} & \\
+& \ \frac{1}{N} \sum_{i=1}^N\left\{\frac{\partial}{\partial \bbeta} \p_{Y \mid X}\left(y, X_i ; \bbeta\right)+\frac{\int \frac{\partial}{\partial \bbeta} \p_{Y \mid X}\left(t, X_i ; \bbeta\right) \eta (t) \mathrm{d} t}{\int \p_{Y \mid X}\left(t, X_i ; \bbeta\right)\left(1-\eta(t)\right) \mathrm{d} t} \p_{Y \mid X}\left(y, X_i ; \bbeta\right)\right\} \\
+= & \ \frac{1}{N} \sum_{i=1}^N\left\{\sfb (y ; \bbeta) \p_{Y \mid X}\left(y, X_i ; \bbeta\right)+\frac{\int \sfb(t ; \bbeta) \p_{Y \mid X}\left(t, X_i ; \bbeta\right) \eta (t) \mathrm{d} t}{\int \p_{Y \mid X}\left(t, X_i ; \bbeta\right)\left(1-\eta(t)\right) \mathrm{d} t} \p_{Y \mid X}\left(y, X_i ; \bbeta\right)\right\} .
+\end{aligned}
+\end{equation*}
+Intuitively, this is because one eliminates the information from the nuisance parameters (in particular the guessed model for $A | Y$) in the observed-data efficient score by projecting onto the orthocomplement of the observed-data nuisance tangent space.
+
+\subsection{Derivations for Example \ref{eg:sensitivity}}
+\label{app:Proof_sens}
+
+In this example, the likelihood of the complete data can be factorized as follows:
+\begin{align*}
+\begin{split}
+\p (\bfX = \bfx, U = u, A =  a, Y = y)  = \p_{\bfX} (\bfx) \p_{U | \bfX} (u | \bfx) \p_{A | \bfX, U} (a | \bfx, u) \p_{Y | \bfX, U, A} (y | \bfx, u, a; \beta).
+\end{split}
+\end{align*}
+Here the parameter of interest is $\beta$ and the remaining pieces of the joint likelihood are treated as the nuisance parameters $\bm{\eta}$. 
+One can derive the observed-data score with respect to $\beta$ as the conditional expectation of the full-data score with respect to $\beta$: $\sfs_{\beta} (\bfX, A, Y) = \E \left[\sfs_\beta(\bfX, U, A, Y) | \bfX, A, Y\right]$ \citep{robins1994estimation, van2003unified}. However, one could obtain more efficient estimators which also rely on fewer modeling assumptions by calculating the observed-data efficient score based on $\sfs_{\beta} (\bfx, a, y)$ as:
+$$
+\sfs_{\eff, \beta}(\bfX, A, Y) \equiv \sfs_\beta (\bfX, A, Y) - \E \left[ \sfb (U, \bfX) \mid \bfX, A, Y \right],
+$$
+where the second term in the above display is simply the projection of $\sfs_{\beta} (\bfX, A, Y)$ onto the orthocomplement of the observed-data nuisance tangent space $\Lambda$ to be defined later, which further implies that $\sfb (u,\bfx)$ solves the following the integral equation:
+$$
+\E\left[\sfs_\beta(\bfX, A, Y) \mid \bfX, U\right]=\E\left\{\E [\sfb (U, \bfX) \mid \bfX, A, Y] \mid \bfX, U\right\}.
+$$
+
+To derive the observed-data nuisance tangent space, one first obtains the complete-data nuisance tangent space $\Lambda^F$:
+\begin{equation*}
+\begin{aligned}
+& \Lambda^F=\Lambda_1^F \oplus \Lambda_2^F, \\
+& \Lambda_1^F=\left\{a_1(\bfx): \E\left[a_1(\bfX)\right]=0\right\}, \\
+& \Lambda_2^F=\left\{a_2(u, \bfx): \E\left[a_2(U, \bfX) \mid \bfX\right]=0\right\}.
+\end{aligned}
+\end{equation*}
+It is well-known that the observed-data model tangent space is the expectation of the complete-data model tangent space conditioning on the observed data \citep{robins1994estimation, van2003unified}. Hence the observed-data tangent space $\Lambda$ is:
+\begin{equation*}
+    \begin{split}
+        & \Lambda = \Lambda_1 \oplus \Lambda_2,\\
+& \Lambda_1 \equiv \E [\Lambda_1^F | \bfX, A, Y] \equiv \Lambda_1^F \equiv \left\{a_1(\bfx): \E\left[a_1(\bfX)\right]=0\right\}, \\
+& \Lambda_2 \equiv \E [\Lambda_2^F | \bfX, A, Y] \equiv \left\{a_2' (\bfx, a, y) \equiv \E \left[a_2(U, \bfX) \mid \bfX = \bfx, A = a, Y = y\right]: \E\left[a_2(U, \bfX) \mid X\right]=0\right\}.
+    \end{split}
+\end{equation*}
+Then the projection of $\sfs_{\beta} (\bfX, A, Y)$ onto $\Lambda$ is simply to find the function $\sfb (U, \bfX)$ such that $\E [\sfs_{\beta} (\bfX, A, Y) -  \E [\sfb (U, \bfX) | \bfX, A, Y] | \bfX, U] \equiv 0$ (for this step, see Equation (6) in the online supplementary materials of \citet{zhang2022semi}), which is a Fredholm integral equation of the first kind, an ill-posed problem. However, one can turn this ill-posed problem to a well-posed problem by introducing Tikhonov regularization, which is the route taken in \citet{zhang2022semi}.
+
+Since $\p_{U | \bfX} (u | \bfx)$ cannot be identified from the observed data distribution, one postulate a working model for $\p_{U | \bfX} (u | \bfx)$ as $\tilde{\p} (u| \bfx) \coloneqq \eta (u, \bfx) \mathbbm{1} \{u \in [-B, B]\} / 2 B$ where $B$ is sufficiently large. Thus, under this working model, the integral equation (after Tikhonov regularization by a possibly very small tuning parameter $\lambda$) becomes
+\begin{equation*}
+\int \sfb^\ast (u', \bfX) K (u', u, \bfX) \diff u' = C (u, \bfX) - \lambda \sfb^{\ast} (u, \bfX).
+\end{equation*}
+where $C (u, \bfX)$ and $K (u, u', \bfX)$ are known functions up to the unknown parameters. In particular, $C (u, \bfX)$ and $K (u', u, \bfX)$ are of the forms
+\begin{equation*}
+\begin{split}
+C (u, \bfX)  = & \int \frac{\int \tilde{\sfs}_{\beta} (y, a, \bfX, u') h (y, a, u', \bfX) \diff u'}{g(y, a, \bfX)} \p_{Y, A | \bfX, U} (y, a | \bfX, u) \diff y \diff a ,\\
+K (u', u, \bfX)  = & \int \frac{\p_{Y, A | \bfX, U} (y, a | \bfX, u') \p_{Y, A | \bfX, U} (y, a | \bfX, u)\eta (u', \bfX)}{g (y, a, \bfX)} \diff y \diff a ,
+\end{split}
+\end{equation*}
+where
+\begin{equation*}
+\begin{split}
+h (y, a, u', \bfX) & = \p_{Y, A | \bfX, U} (y, a | \bfX, u') \eta (u', \bfX), \\
+g(y, a, \bfX) & = \int \p_{Y, A | \bfX, U} (y, a | \bfX, u') \eta (u', \bfX) \diff u'.
+\end{split}
+\end{equation*}
+Eventually, one obtains the estimator $\hat{\beta}$ parameter of interest $\beta$ by solving:
+\begin{equation*}
+\begin{aligned}
+& 0 = \frac{1}{N} \sum_{i = 1}^{N} \psi (\bfX_{i}, A_{i}, Y_{i}; \beta), \text{ where }\\
+& \psi (\bfX_{i}, A_{i}, Y_{i}; \beta)  = \frac{\int f (Y_i,A_i,\bfX_i,u) \p_{Y, A | \bfX, U} (Y_{i}, A_{i} | \bfX_{i}, u) \eta (u, \bfX_{i}) \diff u}{\int \p_{Y, A | \bfX, U} (Y_{i}, A_{i} | \bfX_{i}, u) \eta (u, \bfX_{i}) \diff u},\\
+& f (Y_i,A_i,\bfX_i,u) \coloneqq \tilde{\sfs}_{\beta} (Y_{i}, A_{i}, \bfX_{i}, u) - \sfb^{\ast} (u, \bfX_{i}),
+\end{aligned}
+\end{equation*}
+where we let $\tilde{\p} (\bfx, u, a, y)$ denote the joint likelihood induced by the working model:
+$$\tilde{\p} (\bfx, u, a, y) = \p_{X} (\bfx) \eta (u, \bfx) \p_{A | \bfX, U} (a | \bfx, u) \p_{Y | \bfX, U, A} (y | \bfx, u, a; \beta)$$ 
+and the score for the working joint law with respect to $\beta$ is simply $\tilde{\sfs}_{\beta} (\bfX, U, A, Y) = \frac{\partial \log \tilde{\p} (\bfX, U, A, Y; \beta)}{\partial \beta}$.
+\citet{zhang2022semi} showed that even when the working model is completely misspecified, the estimator based on the observed-data efficient score, not the observed-data score, is still consistent. Intuitively, this is because one eliminates the information from the nuisance parameters (in particular the guessed distribution for $U | X$) in the observed-data efficient score by projecting onto the orthocomplement of the observed-data nuisance tangent space. Proof details are provided in \citet{zhang2022semi} for the aforementioned equations.
+
+\subsection{Derivations for Example \ref{eg:shift}}
+\label{app:Proof_transfer}
+
+In the example of target-population average loss estimation in the context of transfer learning, the main structural assumption of \citet{qiu2023efficient} is the following relationship of the logit conditional outcome models between the target ($A = 0$) and the source ($A = 1$) population: let $\phi: \bbR \rightarrow \bbR$ be a strictly increasing function with non-zero first derivative, and \citet{qiu2023efficient} impose the following:
+\begin{equation}
+\label{constraint}
+\logit \ \P (Y = 1 | X = x, A = 1) = \phi \left(\logit \ \P (Y = 1 | X = x, A = 0) \right).
+\end{equation}
+As mentioned in the main text, the parameter of interest is the average squared-error loss of prediction $Y$ using a (possibly arbitrary) prediction function $f (\cdot)$ in the target population (i.e. conditioning on $A = 0$):
+\begin{equation*}
+\begin{split}
+\beta^* & \coloneqq \E [\ell(X,Y) | A=0], \text{ where } \ell(x,y) = (y- f (x))^2.
+\end{split}
+\end{equation*}
+
+The full derivation of the semiparametric efficient estimator $\hat{\beta}$ can be found in Section S9.6 of \citet{qiu2023efficient}. But we recapture the main idea here for readers' convenience. To avoid clutter, we do not repeat the definitions of the notation already appeared in Example \ref{eg:shift}. Similar to the above two examples, the derivation starts from the observed-data joint likelihood:
+\begin{align*}
+\p (X = x, A = a, Y = y) = & \ \p_{X} (x) \p_{A | X} (a | x) \P (Y = 1 | X = x, A = 1)^{a y} \P (Y = 0 | X = x, A = 1)^{a (1 - y)} \\
+& \times \P (Y = 1 | X = x, A = 0)^{(1 - a) y} \P (Y = 0 | X = x, A = 0)^{(1 - a) (1 - y)} \\
+= & \ \p_{X} (x) \p_{A | X} (a | x) \{\expit \circ \phi \circ r_{0} (x)\}^{a y} \{1 - \expit \circ \phi \circ r_{0} (x)\}^{a (1 - y)} \\
+& \times \{\expit \circ r_{0} (x)\}^{(1 - a) y} \{1 - \expit \circ r_{0} (x)\}^{(1 - a) (1 - y)}.
+\end{align*}
+In this example, since the parameter of interest $\beta^\ast$ and the nuisance parameters are not in separate pieces of the joint likelihood decomposition, one needs to first derive one influence function $\mathsf{IF}$ of $\beta^\ast$ (a mean-zero random variable that is the functional first-order derivative of $\beta^\ast$ \citep{van2002part}), then characterize the model tangent space $\mathcal{T}$, and finally obtain the efficient influence function $\mathsf{EIF}$ of $\beta^\ast$ by projecting $\mathsf{IF}$ onto the model tangent space $\mathcal{T}$ \citep{van2003unified, tsiatis2007semiparametric}.
+
+First, one can easily obtain one influence function of $\beta^\ast$ following standard functional differentiation argument recently reviewed in \citet{hines2022demystifying}:
+\begin{align*}
+\IIF = \frac{1 - A}{\P (A = 0)} (\ell (X, Y) - \beta^\ast).
+\end{align*}
+
+The model tangent space $\mathcal{T}$ under constraint \eqref{constraint} can be derived from the observed-data joint likelihood as the closure of the direct sum of the space of all scores with respect to each piece of the joint likelihood. Here since one does not model the joint likelihood parametrically, the score with respect to each piece is defined via paths of parametric submodels that go through the underlying likelihood; for details, see \citet{van2002part} or Section S9.6 of \citet{qiu2023efficient}. With constraint like \eqref{constraint}, it is often easier to derive the orthocomplement $\mathcal{T}^{\perp}$ of $\mathcal{T}$. In particular, \citet{qiu2023efficient} showed the following:
+\begin{align*}
+\mathcal{T}^{\perp} \equiv \left\{ \begin{array}{c}
+A (Y - \expit \circ \phi \circ r_{0} (X)) f (X) - (1 - A) (Y - \expit \circ r_{0} (X)) \frac{h (X, 1) \cdot \phi' \circ r_{0} (X)}{h (X, 0)} f (X): \\
+\forall \ f \ \st \ \E [h (X, 1) f (X) | r_{0} (X)] \equiv 0
+\end{array} \right\}.
+\end{align*}
+
+With $\mathcal{T}^{\perp}$, one can obtain $\EIF$ by subtracting from $\IIF$ the projection of $\IIF$ onto $\mathcal{T}^{\perp}$ to obtain the final semiparametric efficient estimator $\hat{\beta}$. In particular, this projection operation in order to determine the unique $f \equiv \sfb^\ast$ in $\mathcal{T}^{\perp}$ leads to the following integral equation:
+% \begin{equation}
+% \mathscr{A} \zeta+\kappa=\zeta .
+% \label{datashift_eq}
+% \end{equation}
+% Where $\mathscr{A}$ is a linear integral operator such that for any function $g \in L^2(P_{*,X})$,
+\begin{equation*}
+\int _{x' \in \mathcal{S}(x)}\sfb^{\ast}(x') \frac{v(x' ; 1)}{\mu(x')} \p_{X}(x') \diff x' + C(x) = \sfb^{\ast}(x).
+\end{equation*}
+where $\mathcal{S}(x) = \{x' :r_{0} (x')=r_{0}(x)\}$ and the definition of $C$ can be found in Example \ref{eg:shift} (with all the $\hat{\cdot}$ removed in $\hat{C}$).
+%app
+As in the main text, let:
+$$
+\mathscr{A} g(x)=\int _{x' \in \mathcal{S}(x)}g(x') \frac{v(x' ; 1)}{\mu(x')} \p_{X} (x') \diff x'.
+$$
+The efficient influence function $\EIF$ for $\beta^*$ is then
+\begin{align*}
+\EIF = \frac{1 - A}{\P (A = 0)} (v (X) - \beta^\ast) + A (Y - \expit \circ \phi \circ r_0 (X)) g_1 (X) + (1 - A) (Y - \expit \circ r_0 (X)) g_2 (X),
+\end{align*}
+with $g_1, g_2$ defined as in the main text, except removing all the $\hat{\cdot}$.
+
+\section{Hyperparameter tuning}
+\label{app:hyper}
+
+The tuning parameters that vary the most include the width and depth of the network, as well as the alternating frequency $\gamma$. Through grid search and 5-fold cross-validation, for MNAR, the optimal network width and depth are 5 and 3, respectively, resulting in the lowest average MSE. Conversely, in the sensitivity analysis, the optimal network width and depth are 33 and 23, respectively. In the case of transfer learning, which differs from the other two examples in that the integral equations do not depend on the parameter of interest $\bbeta$, the optimal width and depth are 5 and 3. The effect of different choices of $\gamma$ is depicted in Figure \ref{sim1_fig} and \ref{sim2_fig}. In all the examples, we choose the activation function as $\tanh$, which is more commonly used in DNN for problems in scientific computing \citep{lu2022machine}. We choose the Monte Carlo sample sizes $J_1$ and $J_2$ to be 1000.
+
+\subsection{Hyperparameter tuning for Example \ref{eg:mnar}}
+\label{app:tuning_1} 
+
+We find that in this example the alternating frequency $\gamma$ heavily affects the speed and stability of convergence, for the detail see Figure \ref{sim1_fig}. When $\gamma$ is set to 1, i.e. when the neuron parameters $\omega$ and the target parameter $\beta$ are updated in every other iteration, the training process fails to converge and oscillates with extremely high frequency (not shown in Figure \ref{sim1_fig}). When we increases $\gamma$, the training process starts to stabilize after a certain number of iterations and $\dnase$ eventually outputs $\hat{\bbeta} \approx \bbeta = (0.25, -0.5)^{\top}$ (Figure \ref{sim1_fig}). However, there exists a trade-off: when $\gamma = 5$, the training process converges steeply but also exhibits some instability as the iteration continues; whereas when $\gamma = 20$, it takes much longer time for the training process to converge. For the time being, we recommend practitioners try multiple $\gamma$'s (higher than 5) and check if they all eventually converge to the same values. It is an interesting research problem to study an adaptive procedure of choosing $\gamma_{\opt}$ that optimally balances speed and stability of the training. Finally, we found that the results are not sensitive to the Monte Carlo sample sizes $J_1, J_2$ as long as they are sufficiently large.
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[width = 0.85\textwidth]{Alternating_Frequency_No_1epoch.pdf}
+\end{center}
+\caption{The evolution of training processes in one simulated dataset of Example \ref{sec:mnar} by setting the alternating frequency $\gamma$ as $5, 10$, or $20$. The horizontal axis is the number of iterations. The upper panels show the evolution of $\beta_{1}$ (left) and $\beta_{2}$ (right) over iterations, while the lower panels show the evolution of the loss corresponding to the score equation (left) and the integral equation (right) over iterations.}
+\label{sim1_fig}
+\end{figure}
+
+\subsection{Hyperparameter tuning for Example \ref{eg:sensitivity}}
+\label{app:tuning_2}
+
+Similar to the last example, it is imperative to examine whether various alternating frequencies will impact the outcomes. However, in contrast to Example \ref{mnar_data}, all training processes stabilize at different rates that are directly proportional to the alternating frequency. The tuning details for simulations described in Section \ref{sec:sensitivity} are presented in Figure \ref{sim2_fig}. The depicted figure provides a comprehensive analysis of the alternate frequencies $\gamma$ employed, namely 1, 5, 10, and 20, revealing their performance similarities. Notably, the convergence rate appears to be faster when $\gamma$ is set to 1, as observed from the figure. For the regularization parameter $\lambda$, we simply choose $\lambda = 0.001$ in this paper.
+
+% Also it is crucial to discuss the tuning of the parameter $\lambda$ in Equation \eqref{fred-sensitivity}. Our objective is for the output $\hat{\beta}$ to be close to 2 when the sensitivity analysis model coincides with the true parameters (the coefficients in front of $U$ in Data Simulation \eqref{model-sens}). $\lambda$ represents the Tikhonov regularization parameter, and the actual integral equation has $\lambda = 0$, which is an ill-posed inverse problem. Hence, as $\lambda \rightarrow 0$, our estimated $\hat{\beta}$ should approach 2. However, we observed in our experiments that a slightly larger $\lambda=0.001$ leads to more accurate estimation which is used for our experiment.
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = \textwidth]{alternating_beta_sens.png}
+\caption{}
+\end{center}
+\end{subfigure}\par\medskip
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = \textwidth]{alternating_loss_ee_sens.png}
+\caption{}
+\end{center}
+\end{subfigure}
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = \textwidth]{alternating_loss_ie_sens.png}
+\caption{}
+\end{center}
+\end{subfigure}
+\caption{The evolution of training processes in one simulated dataset of Example \ref{sec:sensitivity} by setting the alternating frequency $\gamma$ as $1, 5, 10$, or $20$. The horizontal axis is the number of iterations. The upper panels show the evolution of (a) $\beta$  over iterations, while the lower panels show the evolution of the loss corresponding to (b) the score equation  and (c) the integral equation over iterations.}
+\label{sim2_fig}
+\end{figure}
+
+\newpage
+
+\subsection{Hyperparameter tuning for Example \ref{eg:shift}}
+\label{app:Tuning3}
+
+Compared to the two previous examples, the main distinctive feature of this example is that the integral equation does not depend on the parameter of interest $\beta$. Thus in this special case, there is no need to use Alternating GD type of algorithms and regular GD type of algorithms suffices. As a result, there is no need to tune the alternating frequency $\gamma$ in Algorithm \ref{alg:fred}.
+
+\section{Supplementary figures for Section \ref{sec:sim}}
+\label{app:table}
+
+This section collects supplementary figures (Figures \ref{fig:simu_1} to \ref{fig:simu_sens}) for the numerical experiments that were only referenced in Section \ref{sec:sim} due to space limitation.
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}{0.45\textwidth}
+\begin{center}
+\includegraphics[width = 1.0\textwidth]{mnar_beta1.pdf}
+\caption{}\label{}
+\end{center}
+\end{subfigure}
+\begin{subfigure}{0.45\textwidth}
+    \begin{center}
+        \includegraphics[width = 1.0\textwidth]{mnar_beta2.pdf}
+        \caption{}
+    \end{center}
+\end{subfigure}
+\caption{The boxplots of (a) and (b) display $\hat{\beta}_{1} - \beta_1$ and $\hat{\beta}_{2} - \beta_2$ over 100 simulations. Our method is displayed as $\dnase$, compared to the methods using $d$-th degree polynomials, with $d \in \{2, 3, 4, 5\}$, respectively displayed as ``quadratic'', ``cubic'', ``quartic'', and ``quintic'' on the horizontal axis of the plot.}
+\label{fig:simu_1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{center}
+\includegraphics[width = 0.5\textwidth]{senbeta1.pdf}
+\end{center}
+\caption{The boxplot displays $\hat{\beta} - \beta$ over 100 simulations. Our method is displayed as $\dnase$, compared to the grid-based method of \citet{zhang2022semi} and the methods using $d$-th degree polynomials, with $d \in \{2, 3\}$, respectively displayed as ``quadratic'' and ``cubic'' on the horizontal axis of the plot.}
+\label{fig:simu_sens}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width = 0.5\textwidth]{risk.pdf}
+    \caption{The boxplot displays $\hat{\beta} - \beta^\ast$ over 100 simulations. Our method is displayed as $\dnase$, compared to methods using $d$-th degree polynomials, with $d \in \{5, 10, 15\}$, respectively displayed as ``quintic'', ``10th-degree'', ``15th-degree'' on the horizontal axis of the plot.}
+    \label{fig:shift}
+\end{figure}
+
+\section{The estimators used for real data analysis}
+\label{app:data}
+
+Following \citet{zhao2022versatile}, the missing data mechanism is posited to be $\eta^{\ast} (Y, X_{1}, X_{2})$, as a function of the response \textit{teacher's report}, covariates $X_{1}$ (father's presence) and $X_{2}$ (child's health):
+\begin{equation*}
+\begin{split}
+& \ \eta^{\ast} (Y, X_{1}, X_{2}) = \logit \ \P (A = 1 | Y, X_{1}, X_{2}) = 1.058 - 2.037 Y -0.002 X_{1} + 0.298 X_{2}.
+\end{split}
+\end{equation*}
+\citet{zhao2022versatile} also posited the following model for the shadow variable $Z$, as:
+\begin{equation*}
+\begin{split}
+& \ \logit \ \P(Z = 1| X_{1}, X_{2}) = -2.106 + 0.623 X_{1} + 0.890 X_{2}.
+\end{split}
+\end{equation*}
+The parameters of interest are $\bbeta = (\beta_{0}, \beta_{1}, \beta_{2}, \beta_{z})^{\top}$ and the estimator $\hat{\bbeta}$ is given below:
+\begin{equation*}
+\begin{split}
+\hat{\bbeta} = & \arg\min_{\bbeta \in \bbR^{2}} \left\{ \frac{1}{N} \sum_{i = 1}^{N} \psi (\bfX_{i},Z_i, Y_{i}, A_{i}; \bbeta, \hat{\sfb}) \right\}^2, \text{where} \\
+\hat{\sfb} = & \arg\min_{\sfb} \frac{1}{N} \sum_{i=1}^N \int_{t} \Bigg( \int \sfb (s,\bfx) K (s,t,\bfx,\bfX_i, Z_i; \hat{\bbeta}) \diff s -C (t, \bfx,Z_i; \hat{\bbeta}) - \p_{Y | \bfX, Z} (t | \bfx,Z_i; \hat{\bbeta}) \sfb (t,\bfx) \Bigg)^2 \diff \nu (t).
+\end{split}
+\end{equation*}
+Here,
+\begin{equation*}
+\begin{aligned}
+& \psi(\bfX_{i},Z_i, A_i, Y_i, \boldsymbol{\beta}, \sfb)  = \frac{1}{N} \sum_{i = 1}^{N} \Bigg\{ 
+ A_i \frac{\frac{\partial}{\partial \bbeta} \p_{Y | \bfX, Z} (Y_i | \bfX_{i},Z_i; \bbeta)}{\p_{Y | \bfX, Z} (Y_i | \bfX_{i},Z_i; \bbeta)} - A_{i} \sfb (Y_{i},\bfX_{i}) \\ 
+& - (1-A_i)\frac{\int \frac{\partial}{\partial \bbeta} \p_{Y | \bfX, Z} (Y_i | \bfX_{i},Z_i; \bbeta) \eta^{\ast} (t) \diff t}{\int \p_{Y | \bfX, Z} (t | \bfX_{i},Z_i; \bbeta) (1 - \eta^{\ast} (t)) \diff t}  +  \ (1 - A_{i}) \frac{\int \p_{Y | \bfX, Z} (t | \bfX_{i},Z_i; \bbeta) \sfb (t,\bfX_{i}) \eta^{\ast} (t) \diff t}{\int \p_{Y | \bfX, Z} (t | \bfX_{i}, Z_i; \bbeta) (1 - \eta^{\ast} (t)) \diff t} \Bigg\},
+\end{aligned}
+\end{equation*}
+and $C(\cdot)$ and $K(\cdot)$ are defined as follows:
+\begin{equation*}
+\label{app:key_2}
+\begin{split}
+& C (t,\bfx,Z_i; \bbeta) \equiv \frac{\partial}{\partial \bbeta} \p_{Y | \bfX, Z} (t | \bfx,Z_i; \bbeta)  + \frac {\int \frac{\partial}{\partial \bbeta} \p_{Y | \bfX, Z} (s | \bfx,Z_i; \bbeta) \eta^{\ast} (s) \diff s} {\int \p_{Y | X} (s,\bfx,Z_i; \bbeta) (1 - \eta^{\ast} (s)) \diff s} \p_{Y | X} (t,\bfx,Z_i; \bbeta),\\
+& K (s,t,\bfx,\bfX_i, Z_i; \bbeta) \equiv \frac{\p_{Y | \bfX, Z} (s | \bfx,Z_i; \bbeta) \p_{Y | \bfX, Z} (t | \bfx,Z_i; \bbeta) \eta^{\ast} (s)}{\int \p_{Y | \bfX, Z} (s' | \bfx,Z_i; \bbeta) (1 - \eta^{\ast} (s')) \diff s'} \text{Kernel}_{h} (\bfX_i-\bfx).
+\end{split}
+\end{equation*}
+Here $\text{Kernel}_{h} (\cdot) \coloneqq \text{Kernel} (\cdot / h) / h$ and the kernel function is chosen based on the criteria outlined in Section 4 of \citet{zhao2022versatile}. In the simulation, we choose the same kernel function as in \citet{zhao2022versatile} with the same bandwidth $h = 3 N^{-1/5}$:
+\begin{equation*}
+\text{Kernel} (t)=\frac{45}{32}\left(1-\frac{7}{3} t^2\right)\left(1-t^2\right) I_{\{|t| \leq 1\}}.
+\end{equation*}
+
+% \section{Solution to the integral equations}
+% \label{b_function_simu}
+
+% In Section \ref{sec:algor}, we present simulations of the integral function denoted as $\sfb(\cdot)$. The $\mathsf{b}(\cdot)$ function appears both inside and outside the integral, making it challenging to obtain the exact value, which is crucial for computing the solution of the loss through the integral equation. To assess the quality of the fitting effect of our $\mathsf{b}(\cdot)$ function, we examine the fitting performance by evaluating both sides of the equation by Example \ref{eg:mnar}. The simulation results are illustrated in Figure \ref{simu_b_function_fig}.
+
+% \begin{figure}[htbp]
+% \centering
+% \begin{subfigure}{0.45\textwidth}
+% \begin{center}
+% \includegraphics[width = \textwidth]{plot_b0.pdf}
+% \caption{Fitting of $\mathsf{b}_0$ function.}
+% \end{center}
+% \end{subfigure}\par\medskip
+% \begin{subfigure}{0.45\textwidth}
+% \begin{center}
+% \includegraphics[width = \textwidth]{plot_b1.pdf}
+% \caption{Fitting of $\mathsf{b}_1$ function.}
+% \end{center}
+% \end{subfigure}
+% \caption{The simulation is conducted for both sides of the $\mathsf{b}(\cdot)$ function in Example \ref{eg:mnar}. The blue curve represents the calculated results obtained through simulation, while the red line represents the fitting results generated by a neural network. The x-axis corresponds to the input of the $\mathsf{b}(\cdot)$ function, and the y-axis represents the calculated and fitting solutions.}\label{simu_b_function_fig}
+% \end{figure}
+
+\iffalse
+\section{Real dataset}
+\label{real_data}
+
+This dataset comprises 2486 subjects, with 1061 of them exhibiting missing outcome values for \textit{Teacher's report}. The complete dataset is presented in the following table.
+\begin{table}[htbp]
+    \centering
+    \caption{Full Real Data of real data given on the
+subject of children’s mental health in Connecticut, USA.}
+    \vskip 0.15in
+    \begin{sc}
+    \begin{small}
+    \begin{tabular}{ccccc}
+    
+     \toprule
+     \textit{Father figure present} & \textit{Health problems} & \textit{Teacher's report} &  \textit{Parents' report} & \textit{Percentage(\%)} \\
+     \midrule
+     No & No & Missing  & Abnormal & 1.0861 \\
+     No & No & Missing  & Normal & 4.0225 \\
+     No & No & Abnormal  & Abnormal & 0.5229 \\
+     No & No & Abnormal  & Normal & 0.6436 \\
+     No & No & Normal  & Abnormal & 0.5229 \\
+     No & No & Normal  & Normal & 3.5398 \\
+     No & Yes & Missing  & Abnormal & 1.3274 \\ 
+     No & Yes & Missing  & Normal & 3.4191  \\
+     No & Yes & Abnormal  & Abnormal & 1.0056 \\
+     No & Yes & Abnormal  & Normal & 0.6034 \\
+     No & Yes & Normal  & Abnormal & 1.1263 \\
+     No & Yes & Normal  & Normal & 2.8560 \\
+     Yes & No & Missing  & Abnormal & 2.2928 \\
+     Yes & No & Missing  & Normal & 16.3717 \\
+     Yes & No & Abnormal  & Abnormal & 0.6034 \\
+     Yes & No & Abnormal  & Normal & 3.0571 \\
+     Yes & No & Normal  & Abnormal & 1.5286 \\
+     Yes & No & Normal  & Normal & 18.9461 \\
+     Yes & Yes & Missing  & Abnormal & 2.9767 \\
+     Yes & Yes & Missing  & Normal & 11.1826 \\
+     Yes & Yes & Abnormal  & Abnormal & 2.2526 \\
+     Yes & Yes & Abnormal  & Normal & 1.8101 \\
+     Yes & Yes & Normal  & Abnormal & 3.3387 \\
+     Yes & Yes & Normal  & Normal & 14.9638 \\
+     \bottomrule
+    \end{tabular}
+    \end{small}
+    \end{sc}
+    \label{full_real_data}
+\end{table}
+\fi
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
+% Modified again in 2023 by Sivan Sabato and Jonathan Scarlett.
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.

@@ -1,0 +1,84 @@
+\subsection{GOTV Data Example and Simulation} \label{section:Appendix-GOTV} \label{sec:simulatedGOTV}
+In this section, we describe how the simulations for the GOTV example in the main paper were done and we discuss the results of a much bigger simulation study with 51 experiments which is summarized in Tables \ref{table:LM}, \ref{table:RF}, and \ref{table:RF1}.
+
+\subsubsection{Data Generating Processes for Our Real World Example}
+For our data example, we took one of the experiments conducted by \cite{gerber2017generalizability}. The study took place in 2014 in Alaska and 252,576 potential voters were randomly assigned in a control and a treatment group. Subjects in the treatment group were sent a mailer as described in the main text and their voting turnout was recorded. 
+
+To evaluate the performance of different CATE estimators we need to know the true CATEs, which are unknown due to the fundamental problem of causal inference.
+To still be able to evaluate CATE estimators researchers usually estimate the potential outcomes using some machine learning method and then generate the data from this estimate. This is to some extend also a simulation, but unlike classical simulation studies it is not up to the researcher to determine the data generating distribution.
+The only choice of the researcher lies in the type of estimator she uses to estimate the response functions. To avoid being mislead by artifacts created by a particular method, we used a linear model in \textbf{Real World Data Set 1} and random forests estimator in \textbf{Real World Data Set 2}.
+
+Specifically, we generate for each experiment a true CATE and we simulate new observed outcomes based on the real data in four steps.
+\begin{enumerate}
+\item We first use the estimator of choice (e.g., a random forests estimator) and train it on the treated units and on the control units separately to get estimates for the response functions, $\mu_0$ and $\mu_1$.
+\item Next, we sample $N$ units from the underlying experiment to get the features and the treatment assignment of our samples $(X_i, W_i)_{i=1}^N$.
+\item We then generate the true underlying CATE for each unit using $\tau_i = \tau(X_i) = \mu_1(X_i) - \mu_0(X_i)$.
+\item Finally we generate the observed outcome by sampling a Bernoulli distributed variable around mean $\mu_i$. 
+  \begin{align*}
+  	&\Yobs_i \sim \mbox{Bern}(\mu_i),&
+    &\mu_i = 
+    \begin{cases}
+    \mu_0(X_i) ~ ~ \mbox{if} ~ ~ W = 0,\\
+    \mu_1(X_i) ~ ~ \mbox{if} ~ ~ W = 1.
+    \end{cases}&
+  \end{align*}
+\end{enumerate}
+
+After this procedure, we have 17 data sets corresponding to the 17 experiments for which we know the true CATE function, which we can now use to evaluate CATE estimators and CATE transfer learners.
+
+\subsubsection{Data Generating Processes for Our Simulation Study}
+Simulations motivated by real-world experiments are important to assess whether our methods work well for voter persuasion data sets, but it is important to also consider other settings to evaluate the generalizability of our conclusions. 
+
+To do this, we first specify the control response function, $\mu_0(x) = \E[Y(0)|X = x] \in [0,1]$, 
+and the treatment response function, $\mu_1(x) = \E[Y(1)|X = x] \in [0,1]$.
+
+We then use each of the 17 experiments to generate a simulated experiment in the following way: 
+\begin{enumerate}
+\item We sample $N$ units from the underlying experiment to get the features and the treatment assignment of our samples $(X_i, W_i)_{i=1}^N$.
+\item We then generate the true underlying CATE for each unit using $\tau_i = \tau(X_i) = \mu_1(X_i) - \mu_0(X_i)$.
+\item Finally we generate the observed outcome by sampling a Bernoulli distributed variable around mean $\mu_i$. 
+  \begin{align*}
+  	&\Yobs_i \sim \mbox{Bern}(\mu_i),&
+    &\mu_i = 
+    \begin{cases}
+    \mu_0(X_i) ~ ~ \mbox{if} ~ ~ W = 0,\\
+    \mu_1(X_i) ~ ~ \mbox{if} ~ ~ W = 1.
+    \end{cases}&
+  \end{align*}
+\end{enumerate}
+
+The experiments range in size from 5,000 units to 400,000 units per experiment and the covariate vector is 11 dimensional and the same as in the main part of the paper.
+We will present here three different setup. 
+
+\textbf{Simulation LM} (Table \ref{table:LM}):
+We choose here $N$ to be all units in the corresponding experiment.
+Sample $\beta^0 = (\beta^0_1, \ldots, \beta^0_d) \overset{iid}{\sim} \N(0,1)$ and
+$\beta^1 = (\beta^1_1, \ldots, \beta^1_d) \overset{iid}{\sim} \N(0,1)$ and define,
+\begin{align*}
+\mu_0(x) &= \mbox{logistic}\left(x \beta^0\right), \\
+\mu_1(x) &= \mbox{logistic}\left(x \beta^1\right).
+\end{align*}
+\\ \textbf{Simulation RF} (Table \ref{table:RF}):
+We choose here $N$ to be all units in the corresponding experiment.
+\begin{enumerate}
+	\item Train a random forests estimator on the real data set and define $\mu_0$ to be the resulting estimator,
+	\item Sample a covariate $f$ (e.g., age),
+    \item ample a random value in the support of $f$ (e.g., 38),
+    \item Sample a shift $s \sim \N(0, 4).$
+\end{enumerate}
+Now define the potential outcomes as follows:
+\begin{align*} 
+\mu_0(x) &= \mbox{trained Random Forests algorithm}\\
+\mu_1(x) &= \mbox{logistic}\left(\mbox{logit}\left(\mu_0(x) + s * 1_{f\ge v} \right)\right)
+\end{align*}
+\\ \textbf{Simulation RFt} (Table \ref{table:RF1}):
+This experiment is the same as Simulation RF, but use only one percent of the data, $N = \frac{\# units}{100}$.
+
+
+\subsubsection*{Results of 42 Simulations}
+Even though we combine each Simulation setup with 17 experiments, we only report the first 14, because the last three don't add any new insight, but they don't fit well on the page. 
+Looking at Tables \ref{table:LM}, \ref{table:RF}, and \ref{table:RF1}, we observe that MLRW is the best performing transfer learner. In fact, for Simulation LM it is the best in 8 out of 17 experiments, in Simulation RF it is the best in 11 out of 17 experiments, and in Simulation RFt it is best in 10 out of 17 experiments. We also notice that in cases, where it is not the best performing estimator, it is usually very close to the best and it does not fail terribly anywhere. 
+For the other transfer method, we note that frozen features, multi-head, and SF works very well and consistently improves upon the baseline learners which are not using outside information. Warm Start, however, does not work well and often even leads to worse results than the baseline estimators.  
+
+
+

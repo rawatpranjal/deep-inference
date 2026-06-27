@@ -1,0 +1,52 @@
+\section{Optimization over step functions}
+\label{app:step}
+\import{appendix/}{lemma_step}
+
+\subsubsection{Discrete search approaches}
+Let $\widehat{\Ycal}=\{\y_i \in \Ycal\}_{i=1}^{k}$ be a set of $k$ values of $\y$, then
+\begin{equation*}
+    \begin{split}
+         \underline{\mu}_{\params}^{H}(\x, \tf) &= \min_{\ystar} \left\{ \widehat{\kappa}_{\params}(\x, \tf; \Lambda, H(\ystar - \y)): \ystar \in \widehat{\Ycal} \right\}, \\
+         \overline{\mu}_{\params}^{H}(\x, \tf) &= \max_{\ystar} \left\{ \widehat{\kappa}_{\params}(\x, \tf; \Lambda, H(\y - \ystar)): \ystar \in \widehat{\Ycal} \right\}.
+    \end{split}
+\end{equation*}
+
+\begin{equation*}
+    H(\y) \coloneqq 
+    \begin{dcases*}
+        1, \y > 0 \\
+        0, \y \leq 0
+    \end{dcases*}
+\end{equation*}
+
+\begin{algorithm}
+    \caption{Line Search Interval Optimizer}
+    \label{alg:line-search}
+    \begin{algorithmic}[1]
+        \Require{$\x^{*}$ is an instance of $\X$, $\tf^{*}$ is a treatment level to evaluate, $\Lambda$ is a belief in the amount of hidden confounding, $\params$ are optimized model parameters, $\widehat{\Ycal}$ is a set of unique values $\y \in \Ycal$ \emph{sorted in ascending order}.}
+        \Function{LineSearch}{$\x^{*}$, $\tf^{*}$, $\Lambda$, $\params$, $\widehat{\Ycal}$}
+            \State $\overline{\mu} \gets -\infty$, $\overline{\kappa} \gets \infty$
+            \State $\underline{\mu} \gets \infty$, $\underline{\kappa} \gets -\infty$
+            \State $\underline{\delta} \gets $ True, $\overline{\delta} \gets $ True
+            \While{$\underline{\delta}$}
+                \State $\ystar \gets \textsc{Pop}(\widehat{\Ycal}_c)$ \Comment{$\widehat{\Ycal}_c$ a copy of $\widehat{\Ycal}$}
+                \State $\underline{\kappa} \gets \widehat{\kappa}_{\params}(\x, \tf; \Lambda, H(\ystar-\y))$
+                \If{$\underline{\kappa} < \underline{\mu}$}
+                    \State $\underline{\mu} \gets \underline{\kappa}$
+                \Else 
+                    \State $\underline{\delta} \gets $ False
+                \EndIf
+            \EndWhile
+            \While{$\overline{\delta}$}
+                \State $\ystar \gets \textsc{Pop}(\widehat{\Ycal}_c)$ \Comment{$\widehat{\Ycal}_c$ a copy of $\widehat{\Ycal}$}
+                \State $\overline{\kappa} \gets \widehat{\kappa}_{\params}(\x, \tf; \Lambda, H(\y - \ystar))$
+                \If{$\overline{\kappa} > \overline{\mu}$}
+                    \State $\overline{\mu} \gets \overline{\kappa}$
+                \Else 
+                    \State $\overline{\delta} \gets $ False
+                \EndIf
+            \EndWhile
+            \State \Return $\underline{\mu}, \overline{\mu}$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
