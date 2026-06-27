@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-06-27
+
+- Added `literature/causal-deep-learning-2016-2026/`: a reproducible causal deep learning literature pack with 86 indexed treatment-effect / neural semiparametric causal-inference records, `websource` batch inputs/logs, retrieval notes, and local PDF status (79 public PDFs downloaded; 7 publisher/title records indexed but unresolved through public routes).
+
 ## 2026-06-09
 
 - **Repeated cross-fitting + undersmoothing knobs (Part A — coverage-fix program).** Added `n_repeats` to `run_crossfit`/`inference`/`structural_dml` implementing the Chernozhukov et al. (2018) median DML rule (`engine.variance.median_dml_aggregate`): `μ̂=median_r(μ_r)`, `se²=median_r(se_r²+(μ_r−μ̂)²)` — folds the across-split variation *into* the SE (the principled fix for cross-fit SE underestimation, FLM ref line ~998). `n_repeats=1` (default) is byte-identical to the prior single-split path (tested to atol=1e-12). Exposed previously-hardcoded undersmoothing knobs: `three_way_theta_frac` (0.6), `dropout` (0.1, no-op when a `network_factory` overrides architecture), `weight_decay` (0.0, now wired into the Adam optimizer). CLI-ified the experiment harnesses: `simulations/sim_02_image.py` + `run_all.py` (`--n-repeats --lambda-method --M --n --n-folds --epochs --patience`) and `evals/eval_14_did_nn.py` (argparse). New `tests/test_repeated_crossfit.py` (9 tests); full suite 39 green.
