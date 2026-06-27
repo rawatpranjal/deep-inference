@@ -1,0 +1,70 @@
+\subsection{A ``Dual'' C-Learner and Connections to Covariate Balancing}
+\label{sec:balance}
+\Cref{eq:c-learner} starts by fitting and fixing a propensity score $\what\pi$, and then finding the best fitting outcome model $\what \mu^C$  subject to a constraint that depends on $\what\pi$ to ensure efficiency of the direct plug-in estimator that uses $\what \mu^C$. One could alternatively first fit an outcome model $\what \mu$, and then find the best fitting propensity model $\what \pi^C$ subject to a constraint to ensure efficiency of the resulting estimator. We call this the ``dual'' C-Learner:
+\begin{align}
+\label{eq:c_learner_dual}
+    &\what \pi^C\in \argmax_{\tilde \pi\in \mathcal F_\pi} \left\{
+P_{\rm train}[ A\log \tilde \pi(X) +(1-A)\log (1-\tilde \pi(X))] : 
+\frac{1}{n}\sum_{i=1}^n \left(1-\frac{A_i}{\tilde \pi(X_i)}\right) \what\mu(X_i)=0
+    \right\},\nonumber
+    \\
+    &\what\psi^\text{C-Learner-Dual}:=\frac{1}{n}\sum_{i=1}^n \frac{A_i}{\what \pi^C(X_i)}Y_i  
+.\end{align}
+While this constraint is algebraically distinct from the constraint for the usual C-Learner~\eqref{eq:c-learner}, both are chosen by the same principle: enforce a condition that eliminates the first-order bias term. In the usual C-Learner, the constraint sets the projected canonical gradient $P[\varphi_X(Z;\hat P)]$ to zero. In the dual C-Learner, we instead impose a balancing condition that plays an analogous role, which sets $P[\varphi(Z;\hat P)]$ to zero without relying on the projected canonical gradient $\varphi_X$. See \Cref{sec:asymptotics_dual} for details.
+
+
+\looseness=-1 Other parts of this paper focuses on the C-Learner in Equation~\eqref{eq:c-learner}, and we include the dual C-Learner here primarily to relate to existing literature.
+The dual C-Learner formulation is connected to covariate balancing propensity scores (CBPS)~\cite{imai2014covariate}. Specifically, 
+the covariate balancing condition from \citep{imai2014covariate} for estimating the (full) ATE can be written as 
+\begin{align}
+\label{eq:imai_cbps}
+\E\left[\frac{A f(X)}{ \pi\left(X\right)}-\frac{\left(1-A\right) f(X)}{1-\pi\left(X\right)}\right]=0
+\end{align}
+where $f(X)$ can be any function of $X$. For example, one practical choice could be $f(X)=X$ so that ensuring the condition in \eqref{eq:imai_cbps} results in balancing each covariate dimension. %
+
+As our paper focuses on the mean missing outcome setting (equivalent to the ATE with $Y(0):=0$ for cleaner notation), 
+we focus on a corresponding balancing condition, i.e. \citep{tan2010bounded}
+\begin{align}
+\label{eq:cbps_mmo}
+\E\left[\left( 1 - \frac{A}{ \pi(X)}\right) f(X) \right]=0,   
+\end{align}
+again for any choice of $f$; note that if \eqref{eq:cbps_mmo} holds for both $A$ and $1-A$, i.e. that
+\begin{align}
+\E[f(X)]=\E\left[\frac{A}{ \pi(X)} f(X) \right]
+\quad\text{ and }\quad
+\E[f(X)]=\E\left[\frac{1-A}{ 1-\pi(X)} f(X) \right]
+\end{align}
+then \eqref{eq:imai_cbps} must also hold. A finite-sample counterpart of  \eqref{eq:cbps_mmo} can also be written \citep{tan2010bounded} as 
+\vspace{-0.3em}
+\begin{align}
+\label{eq:cbps_mmo_finite}
+\frac{1}{n}\sum_{i=1}^n \left(1-\frac{A_i}{\what\pi(X_i)}\right) f(X) = 0
+.\end{align}
+Notably, this condition is exactly the constraint in \Cref{eq:c_learner_dual} when we take $f$ to be $\what\mu$. 
+CBPS can then be used to enforce this constraint if, for example, $\mu$ is linear in some basis of functions $\{f_1,\ldots,f_J\}$, and balance is enforced for all elements in this basis. In this way, covariate balancing can result in semiparametric efficiency. 
+ 
+
+
+\paragraph{Related works}
+\citet{tan2010bounded} produces semiparametrically efficient IPW-based estimators, similar to a dual C-Learner, but their methods are analogous to targeting, as they learn an extended propensity score that is a parametric fluctuation from an initial propensity score model, where the magnitude of the fluctuation is determined by maximizing likelihood. %
+Unlike targeting, their estimators have additional constraints to ensure boundedness of their estimator, improved local efficiency (better variance for a given fixed estimated outcome model; this is outside of the scope of our work), and double robustness. In contrast to our setting, their theoretical results focus on parametric nuisance models and notions of efficiency when certain nuisance parameters are well-specified or not. Similar to our proposed method, their estimators also achieve the semiparametric efficiency bound. 
+
+
+
+
+
+
+\citet{zhao2019covariate} proposes a loss function to minimize for learning a nonparametric propensity model, where the first-order conditions of the loss are the balancing conditions in CBPS. %
+They also show their corresponding inverse propensity weighted estimators are efficient, but under different assumptions:  
+\citet{zhao2019covariate} shows efficiency using a sieve approach with a growing basis of functions %
+to model the propensity score through a logistic link,
+while we assume standard non-parametric rates of convergence for nuisance parameters. %
+
+
+
+
+\vspace{-0.3em}
+\paragraph{Low-overlap settings} In \Cref{sec:theory_simple} we present a simple theoretical low-overlap setting in which the IPW estimator $\frac{1}{n}\sum_{i=1}^n \frac{1}{\pi(X_i)}Y_i$ has infinite variance, even with perfectly known propensity scores. 
+In contrast, the (usual) C-Learner does have finite variance, suggesting one possible advantage of the usual C-Learner over more general inverse propensity weighting-based methods such as covariate balancing methods and the dual C-Learner.
+
+\label{sec:balance-end}

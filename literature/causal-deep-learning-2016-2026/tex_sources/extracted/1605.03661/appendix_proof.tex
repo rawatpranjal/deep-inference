@@ -1,0 +1,56 @@
+\appendix
+\section{Proof of Theorem 1}\label{app:proof}
+We use a result implicit in the proof of Theorem 2 of \citet{cortes2014domain}, for the case where $\hypspace$ is the set of linear hypotheses over a fixed representation $\Phi$. \citet{cortes2014domain} state their result for the case of domain adaptation: in our case, the factual distribution is the so-called ``source domain'', and the counterfactual distribution is the ``target domain''.
+\begin{customthm}{A1}\label{thrmA1}[\citet{cortes2014domain}]
+Using the notation and assumptions of Theorem 1, for \emph{both} $Q = P^F$ and $Q=P^{CF}$:
+\begin{align}\label{eq:discineq}
+&\frac{\lambda}{\mu r} (\mathcal{L}_{Q}(\bfp)-\mathcal{L}_{Q}(\bcp))^2 \leq \nonumber \\
+& \discPQHl  + \nonumber \\
+& \min_{h\in \hypspace_l} \frac{1}{n} \left( \sum_{i=1}^n | \hat{y}_i^F(\Phi,h)- y_i^F |  + |\hat{y}_i^{CF}(\Phi,h)  - y_i^{CF}|\right)
+\end{align}
+\end{customthm}
+
+In their work, \citet{cortes2014domain} assume the $\hypspace$ is a reproducing kernel Hilbert space (RKHS) for a universal kernel, and they do not consider the role of the representation $\Phi$. Since the RKHS hypothesis space they use is much stronger than the linear space $\hypspace_l$, it is often reasonable to assume that the second term in the bound \ref{eq:discineq} is small. We however cannot make this assumption, and therefore we wish to explicitly bound the term $\min_{h\in \hypspace_l} \frac{1}{n} \left( \sum_{i=1}^n | \hat{y}_i^F(\Phi,h)- y_i^F |  + |\hat{y}_i^{CF}(\Phi,h)  - y_i^{CF}|\right)$, while using the fact that we have control over the representation $\Phi$.
+
+\begin{lemma}\label{lemma1}
+Let $\{(x_i,t_i,y_i^F)\}_{i=1}^n$,  $x_i \in \mathcal{X}$, $t_i \in \{0,1\}$ and $y_i^F \in \mathcal{Y} \subseteq \R $. We assume that $\mathcal{X}$ is a metric space with metric $\mathrm{d}$, and that there exist two function $Y_0(x)$ and $Y_1(x)$ such that $y_i^F = t_i Y_1(x_i) + (1-t_i)Y_0(x_i)$, and in addition we define $y_i^{CF} = (1-t_i) Y_1(x_i) + t_i Y_0(x_i)$. We further assume that the functions $Y_0(x)$  and $Y_1(x)$ are Lipschitz continuous with constants $K_0$ and $K_1$ respectively, such that $\mathrm{d}(x_a,x_b) \leq c \implies |Y_t(x_a) - Y_t(x_b)| \leq K_t c$. Define  $j(i) \in \argmin_{j \in \{1\ldots n\} \text{ s.t. } t_j = 1-t_i} \mathrm{d}(x_j,x_i)$ to be the nearest neighbor of $x_i$ among the group that received the opposite treatment from unit $i$, for all $i \in \{1 \ldots n\}$. Let $\mathrm{d}_{i,j} = \mathrm{d}(x_i,x_j)$
+
+For any $b \in \mathcal{Y}$ and $h \in \hypspace$:
+\begin{align*}
+|b-y_i^{CF} | \leq | b - y_{j(i)}^F| + K_{1-t_i} \mathrm{d}_{i,j(i)}
+\end{align*}
+\end{lemma}
+\begin{proof}
+By the triangle inequality, we have that:
+$$|b-y_i^{CF} | \leq | b - y_{j(i)}^F|  + |y_{j(i)}^F - y_i^{CF}|.$$
+By the Lipschitz assumption on $Y_{1-t_i}$, and since $\mathrm{d}(x_i,x_{j(i)}) \leq \mathrm{d}_{i,j(i)}$, we obtain that $$ |y_{j(i)}^F - y_i^{CF}| = |Y_{1-t_i}(x_{j(i)}) - Y_{1-t_i}(x_i) | \leq \mathrm{d}_{i,j(i)} K_{1-t_i}.$$
+By definition $y_i^{CF} = Y_{1-t_i}(x_i)$. In addition, by definition of $j(i)$, we have $t_{j(i)} = 1-t_i$, and therefore $y_{j(i)}^F = Y_{1-t_i}(x_{j(i)})$, proving the equality. The inequality is an immediate consequence of the Lipschitz property.
+\end{proof}
+
+We restate Theorem 1 and prove it.
+\begin{apptheorem}
+For a sample $\{(x_i,t_i,y_i^F)\}_{i=1}^n$,  $x_i \in \mathcal{X}$, $t_i \in \{0,1\}$ and $y_i \in \mathcal{Y} $,  recall that $y_i^F = t_i Y_1(x_i) + (1-t_i)Y_0(x_i)$, and in addition define $y_i^{CF} = (1-t_i) Y_1(x_i) + t_i Y_0(x_i)$. For a given representation function $\Phi :\mathcal{X} \rightarrow \R^d$, let $\pF = (\Phi(x_1), t_1),  \ldots, (\Phi(x_n), t_n)$, $\pC = (\Phi(x_1), 1-t_1),  \ldots, (\Phi(x_n), 1-t_n) $. We assume that $\mathcal{X}$ is a metric space with metric $\mathrm{d}$, and that the potential outcome functions $Y_0(x)$  and $Y_1(x)$ are Lipschitz continuous with constants $K_0$ and $K_1$ respectively, such that $\mathrm{d}(x_a,x_b) \leq c \implies |Y_t(x_a) - Y_t(x_b)| \leq K_t c$.
+
+Let $\hypspace_l \subset\R^{d+1}$ be the space of linear functions, and
+for $\beta \in \hypspace_l$, let $\mathcal{L}_{P}(\beta) = \mathbb{E}_{(x,t,y) \sim P} \left[L(\beta(x,t),y)\right]$ be the expected loss of $\beta$ over distribution $P$. Let $r = max\left(\mathbb{E}_{(x,t) \sim P^F}\left[\|[\Phi(x), t]\|_2\right],\mathbb{E}_{(x,t) \sim P^{CF}}\left[\|[\Phi(x), t]\|_2\right]\right)$.
+For $\lambda >0$, let $\bfp = \argmin_{\beta \in \hypspace_l} \mathcal{L}_{\pF}(\beta) + \lambda \|\beta\|_2^2$, and  $\bcp$ similarly for $\pC$, i.e. $\bfp$ and $\bcp$ are the ridge regression solutions for the factual and counterfactual empirical distributions, respectively.
+
+Let $\hat{y}_i^F(\Phi,h) = h^\top [\Phi(x_i) , t_i]$ and $\hat{y}_i^{CF}(\Phi,h) = h^\top [\Phi(x_i) , \, 1-t_i]$ be the outputs of the hypothesis $h \in \hypspace_l$ over the representation $\Phi(x_i)$ for the factual and counterfactual settings of $t_i$, respectively. Finally, for each $i \in \{1 \ldots n\}$, let $j(i) \in \argmin_{j \in \{1\ldots n\} \text{ s.t. } t_j = 1-t_i} \mathrm{d}(x_j,x_i)$ be the nearest neighbor of $x_i$ among the group that received the opposite treatment from unit $i$. Let $\mathrm{d}_{i,j} = \mathrm{d}(x_i,x_j)$.
+
+Then for \emph{both} $Q = P^F$ and $Q=P^{CF}$ we have:
+\begin{align}
+&\frac{\lambda}{\mu r} (\mathcal{L}_{Q}(\bfp)-\mathcal{L}_{Q}(\bcp))^2 \leq \label{ineq1} \\
+& \discPQHl  + \nonumber\\
+& \min_{h\in \hypspace_l} \frac{1}{n} \sum_{i=1}^n \left( | \hat{y}_i^F(\Phi,h)- y_i^F |  + |\hat{y}_i^{CF}(\Phi,h)  - y_i^{CF}|\right)  \leq  \label{ineq2} \\
+& \discPQHl +  \nonumber \\
+& \min_{h\in \hypspace_l} \frac{1}{n} \sum_{i=1}^n \left( | \hat{y}_i^F(\Phi,h)- y_i^F |  + |\hat{y}_i^{CF}(\Phi,h)  - y_{j(i)}^F|\right) + \nonumber\\
+& \frac{K_0}{n} \sum_{i: t_i=1} \mathrm{d}_{i,j(i)} + \frac{K_1}{n} \sum_{i: t_i=0} \mathrm{d}_{i,j(i)}. \nonumber
+\end{align}
+\end{apptheorem}
+\begin{proof}
+Inequality \eqref{ineq1} is immediate by Theorem \ref{thrmA1}. In order to prove inequality \eqref{ineq2}, we apply Lemma \ref{lemma1}, setting $b = \hat{y}_i^{CF}$ and summing over the $i$.
+\end{proof}
+
+
+
+

@@ -1,0 +1,530 @@
+\begin{abstract}
+%Automatic debiasing is great at overcoming inverse probability/ density weighting issues. The resulting representers, however, do not necessarily achieve known properties even in the training data. Additionally, there is a longstanding belief that the choice of estimand should, in some way inform, the original outcome learner. We propose a new approach to learning the Riesz representer, and conditional mean outcome that produces targetable RR estimates. Our approach to estimation relies on learning, in a previous learning step, the best approximation to the mean outcome/ treatment, that evaluates to zero under the estimand mapping.
+
+Causal and nonparametric estimands in economics and biostatistics can often be viewed as the mean of a linear functional applied to an unknown outcome regression function.  Naively learning the regression function and taking a sample mean of the target functional results in biased estimators, and a rich debiasing literature has developed where one additionally learns the so-called Riesz representer (RR) of the target estimand (targeted learning, double ML, automatic debiasing etc.). Learning the RR via its derived functional form can be challenging, e.g. due to extreme inverse probability weights or the need to learn conditional density functions. Such challenges have motivated recent advances in automatic debiasing (AD), where the RR is learned directly via minimization of a bespoke loss. We propose moment-constrained learning as a new RR learning approach that addresses some shortcomings in AD, constraining the predicted moments and improving the robustness of RR estimates to optimization hyperparamters. Though our approach is not tied to a particular class of learner, we illustrate it using neural networks, and evaluate on the problems of average treatment/derivative effect estimation using semi-synthetic data. Our numerical experiments show improved performance versus state of the art benchmarks.
+\end{abstract}
+
+
+
+
+%The need for debiasing arises because the outcome learner controls its bias-variance trade off with reference to a generic loss function that does not adequately control for biases in the downstream estimation task. We propose new estimand-informed estimators based on constrained learners with constraints determined by the known linear functional. Specifically, we solve two Lagrangian dual problems (for the outcome and RR) constructed of mean squared error losses with average moment constraints. An estimator is obtained by comparing the resulting residuals on a separate sample. Though our approach is not bound to a particular class of learner, we illustrate it using neural networks, and evaluate on the problems of average treatment/derivative effect estimation using semi-synthetic data. Our numerical experiments show competitive performance of the proposed `estimand-informed' neural network estimators versus state of the art benchmarks.
+
+
+% ADE is important. Density estimation is hard. Sub-optimal bias correction. Auto diff. \citep{Chernozhukov2022}.
+
+
+\section{Introduction}
+
+Several problems in causal inference, economics, and biostatistics can be viewed as inferring the average moment estimand $\Psi \equiv\E[m(\mu, W)]$, where $W = (Y,Z)$ consists of an outcome $Y$ and inputs $Z = (A,X)$ often comprised of a treatment $A$ and covariates $X$, with $\mu(z) \equiv \E[Y|Z=z]$, and $m(f,W)$ is a known functional that is linear in $f$. Examples of this setup include average treatment, policy and derivative effects, as outlined below. For such estimands, naively plugging in regression estimates $\hat{\mu}$ and taking the sample mean of $m(\hat{\mu}, W)$, given i.i.d. observations of $W$, generally leads to biased estimates which converge to $\Psi$ at less than the parametric $\sqrt{n}$ rate.
+
+These biases arise because the bias-variance trade off of the regression estimator is controlled by a generic loss (e.g. mean squared error, cross-entropy) that does not adequately control for biases in the downstream estimation task. In particular, the true regression function $\mu$ satisfies $\E[\alpha(Z)\{Y-\mu(Z)\}] = 0$ for any function $\alpha$, but the same is not true of the empirical mean $\E_n[\alpha(Z)\{Y-\hat{\mu}(Z)\}]$, which may converge to zero slower than the $\sqrt{n}$ rate. Biases for average moment estimands take this form for an estimand-specific function $\alpha$. Specifically, the `plug-in bias' is characterized by the Riesz representer (RR) $\alpha$, which is an unknown function such that $\Psi = \langle \mu, \alpha \rangle$, where $\langle f, g \rangle \equiv \E[f(Z)g(Z)]$ denotes an inner product over a Hilbert space $\mathcal{H}$ equipped with norm $||f|| \equiv \langle f, f \rangle ^{1/2} < \infty$ and it is assumed that $\mu\in \mathcal{H}$. Existence of a unique $\alpha \in \mathcal{H}$ follows by Riesz's representation theorem since $f \mapsto h(f) \equiv \E[m(f, W)]$ is a bounded linear map. % We describe the RR for various estimands in the following examples.
+
+%Simply plugging in regression estimates $\hat{\mu}$ and taking the sample mean of $m(\hat{\mu}, W)$, given i.i.d. observations of $W$, generally leads to biased estimates which converge to $\Psi$ at less than the parametric $\sqrt{n}$ rate. This issue arises since the true function satisfies $\E[\alpha(Z)\{Y-\mu(Z)\}] = 0$ for any function $\alpha$, but the same is not true for the sample analogue $\E_n[\alpha(Z)\{Y-\hat{\mu}(Z)\}]$, which may converge to zero slower than the $\sqrt{n}$-rate. So called plug-in biases for average moment estimands are of this form for some function $\alpha$ that is unique to the estimand. Fundamentally these biases arise because the bias-variance trade off of the regression estimator is controlled by a generic loss function (e.g. mean squared error, cross-entropy) that does not adequately control for plug-in biases in the downstream estimation task. 
+
+% \begin{figure}
+%     \centering
+%     \begin{tikzpicture}
+%     \begin{axis}[
+%         view={25}{15},
+%         hide axis,
+%         xtick=\empty,
+%         ytick=\empty,
+%         ztick=\empty,
+%         zlabel={$\alpha$},
+%         width=0.8\textwidth
+%         ]
+%         \addplot3[opacity=0.2,surf,shader=interp]{0};
+%         \coordinate (O) at (0.0, 0.0, 0.0); % origin
+%         \coordinate (A) at (3.0, 3.0, 0.5); % gamma
+%         \coordinate (B) at (3.0, 3.0, 0.0); % gamma_perp
+%         \coordinate (C) at (0.0, 0.0, 0.5); % gamma - gamma_perp
+%         \coordinate (D) at (0.0, 0.0, 0.7); % alpha
+%         \draw[-latex] (O) -- (A) node[midway, above left] {$\beta$};
+%         \draw[-latex] (O) -- (B) node[midway, below right] {$\beta_\perp$};
+%         \draw[-latex] (O) -- (C) node[midway, left] {$\beta-\beta_\perp$};
+%         \draw[-latex] (O) -- (D) node[above] {$\alpha$};
+%         \draw[dashed] (A) -- (B);
+%         \draw[dashed] (A) -- (C);
+%     \end{axis}
+%     \end{tikzpicture}
+%     \caption{Illustration of moment-constrained function. The plane represents the space of zero average moment functions, i.e. $f$ such that $h(f) = \langle f, \alpha \rangle = 0$. The non-zero function $\beta - \beta_\perp$ is orthogonal to the plane, hence it is a scalar multiple of the Riesz representer $\alpha$.
+%     }
+%     \label{fig:geometrical}
+% \end{figure}
+
+
+% \begin{table}[ht]
+% \caption{Summary of causal estimand examples.}
+% \label{tab:causal-estimands}
+% \resizebox{\textwidth}{!}{%
+% \begin{tabular}{@{}llll@{}}
+% \toprule
+% Name                            & Estimand, $\Psi$                                        & Moment functional, $m(f, W)$         & Riesz representer, $\alpha(z)$                         \\ \midrule
+% Average Treatment Effect (ATE)  & $\mathbb{E}[\mu(1,X) - \mu(0,X)]$                       & $f(1,X) - f(0,X)$                    & $\frac{a - p(x)}{p(x)(1 - p(x))}$                           \\
+% Average Policy Effect (APE)     & $\mathbb{E}[\pi(X) \{\mu(1,X) - \mu(0,X)\} + \mu(0,X)]$ & $\pi(X)\{f(1,X) - f(0,X)\} + f(0,X)$ & $\frac{\pi(x)(a - p(x)) + p(x)(1 - a)}{p(x)(1 - p(x))}$ \\
+% Average Derivative Effect (ADE) & $\mathbb{E}[\mu^\prime(A,X)]$                           & $f^\prime(A, X)$                     & $\frac{p^\prime(a|x)}{p(a|x)}$                              \\
+% Incremental Policy Effect (IPE) & $\mathbb{E}[\pi(X)\mu^\prime(A,X)]$                     & $\pi(X)f^\prime(A,X)$                & $\frac{\pi(x)p^\prime(a|x)}{p(a|x)}$                        \\ \bottomrule
+% \end{tabular}%
+% }
+% \end{table}
+
+\textbf{Example 1: Average treatment effect (ATE)}.
+\textit{
+For a binary treatment $A \in \{0,1\}$, the ATE is the difference in mean outcome when an intervention assigns treatment versus no-treatment uniformly across the population \citep{Rosenbaum1983}. Under standard causal assumptions, the ATE is identified by $\Psi = \E[\mu(1,X) - \mu(0,X)]$, which is an average moment estimand for the moment functional $m(f, W) \equiv f(1, X) - f(0,X)$. Letting $p(x) \equiv \E[A|X=x]$, and assuming $p(x) \in (0,1)$, the ATE has the RR $\alpha(z) = \{a-p(x)\} / [ p(x) \{1-p(x)\}]$.
+% \begin{align*}
+%     \alpha(z) = \frac{a-p(x)}{p(x) \{1-p(x)\}}
+% \end{align*}
+}
+
+\textbf{Example 2: Average policy effect (APE)}
+\textit{
+Using the setup from Example 1, the APE considers the mean outcome when an intervention assigns treatment according to a known treatment policy $x\mapsto \pi(x) \in \{0,1\}$ \citep{Dudik2011,VanderLaan2014,Athey2021}. The APE is identified by $\Psi = \E[\pi(X) \{\mu(1,X) - \mu(0,X)\} + \mu(0,X)]$, which is an average moment estimand for the moment functional $m(f, W) \equiv \pi(X) \{f(1,X) - f(0,X)\} + f(0,X)$. The APE has the RR $\alpha(z) = [\pi(x)\{a-p(x)\} + p(x)\{1-a\}]/[ p(x) \{1-p(x)\}]$.
+% \begin{align*}
+%     \alpha(z) = \pi(x)\frac{a-p(x)}{p(x)\{1-p(x)\}} + \frac{1-a}{1-p(x)}.
+% \end{align*}
+}
+
+\textbf{Example 3: Average derivative effect (ADE)}
+\textit{
+For a continuous treatment $A \in \mathbb{R}$, the ADE, $\Psi = \E[\mu^\prime(A,X)]$ is average derivative of the conditional response function, where superscript prime denotes the derivative w.r.t. $a$, and we assume that $\mu^\prime$ exists \citep{Hardle1989,Newey1993,Imbens2009,Rothenhausler2019}. The ADE is an average moment estimand for the moment functional $m(f, W) \equiv f^\prime(A, X)$. Letting $p(a|x)$ denote the conditional density of $A$ given $X$, and assuming $p(a|x) > 0$, and $p(a|x) = 0$ for $a$ on the boundary of the support of $A$, then the ADE has the RR $\alpha(z) = -p^\prime(a|x) / p(a|x)$.
+}
+
+\textbf{Example 4: Incremental policy effect (IPE)}
+\textit{
+Using the setup from Example 3, the IPE \citep{Athey2021} is $\Psi = \E[\pi(X)\mu^\prime(A,X)]$, where $x\mapsto \pi(x) \in [-1,1]$ is a known policy function. The IPE is an average moment estimand for the moment functional $m(f, W) \equiv \pi(X)f^\prime(A, X)$ and has the RR $\alpha(z) = -\pi(x)p^\prime(a|x) / p(a|x)$.
+}
+
+Following semiparametric efficiency results \citep{Robins1994,Newey1994}, a rich literature has developed in recent years that compensates for plug-in biases either by estimating the RR then shifting the naive estimator (double machine learning \citep{Chernozhukov2018}), or retrospectively modifying the estimates $\hat{\mu}$ such that the estimated plug-in bias is negligible (targeted learning \citep{van_der_laan_cross-validated_2011}). Both approaches are celebrated for constructing efficient estimators that converge at $\sqrt{n}$ rate even when learners for the conditional mean outcome and the RR converge at a slower e.g. $n^{1/4}$ rate. %, as may be the case when machine learning (ML) methods are used. % Possibly should also cite \citep{Robins1994,Newey1994}.
+
+As exemplified above, the RR can be a complicated function of the data distribution making learning the RR using its derived form challenging. For instance, the RR of the ATE and APE can be estimated using a learner $\hat{p}$ of the propensity score $p$, but the resulting estimates may be overly sensitive to the error $\hat{p}(x) - p(x)$ when $\hat{p}(x)$ is close to 0 or 1, since $p$ appears in the denominator of the RR. Similarly, RR estimators for the ADE typically use kernel estimators and are overly sensitive to the bandwidth \citep{Cattaneo2013}.
+
+To overcome such issues, recent work has sought to learn the RR directly from the data, without using knowledge of its functional form. Initial approaches for binary treatments used balancing weights rather than propensity scores to estimate plug-in biases \citep{Zubizarreta2015,Athey2018}. These approaches have been generalized through the adversarial RR learner of \citep{Chernozhukov2020} that builds on the (also adversarial) augmented minimax linear estimator \citep{Hirshberg2021} and similar estimators for conditional moment models \cite{Dikkala2020}. More recently, automatic debiasing (AD) \citep{Chernozhukov2021,Chernozhukov2022} has been proposed to bypass the need to solve a computationally challenging adversarial learning problem by constructing a simple loss that is equivalent to minimizing the mean squared error in the RR. AD generalizes similar approaches using approximately sparse linear regression \cite{Chernozhukov2022b} and reproducing kernel Hilbert spaces \cite{Singh2023}.
+
+Despite the success of AD, there are several areas for improvement which we address in our work. First, the AD loss is unbounded, and includes a negative average moment term that can lead to extreme moment predictions in the final RR estimator. In practice, early stopping using an external validation set is recommend to avoid such issues, however the resulting learners may be overly sensitive to e.g. early stopping and learning rate hyperparameters. Second, oftentimes the RR admits known inner products which are ignored by the AD loss. For instance, we know \emph{a priori} that for the ADE/ATE $h(a) = \E[A\alpha(Z)] = 1$. Methods which estimate the RR using its derived form approximately encode such identities, but this is not the case when the RR is learned by AD.
+
+%We address a key question that these RR learning approaches leave unanswered: \textit{how should the outcome learner be constructed to reduce the need for debiasing?} The status quo in this regard is that the analyst must make model selection choices based on intuition and heuristics. For instance, decision tree based learners are piecewise constant, thus are poorly suited to outcome learning when the downstream estimand is the ADE. The analyst should therefore deselect such learners even though they may perform well in the regression task, as determined by a generic prediction loss. Moreover, when the downstream estimand is the ATE, the outcome could be learned using a single learner on the whole sample or two separate learners on the treated and untreated subsamples (S- versus T-learner \citep{Kunzel2019}). The T-learner is usually recommended for treatment effect analysis \citep{Hines2023b}, since the S-learner regularizes the treatment covariate, and thus biases the predicted effect of switching treatments towards zero, especially when treatment is strongly associated with other predictors. This heuristic is not apparent from comparing generic prediction losses.
+
+\textbf{Contributions:} We propose average moment estimators based on a new decomposition of the RR in terms of the moment-constrained function $\beta_\perp(z)$. Specifically, $\beta_\perp$ minimizes the mean squared error in predicting a known function $\beta(z)$ subject to $h(\beta_\perp) = 0$, where $\beta$ is chosen such that one knows \emph{a priori} that $h(\beta) \neq 0$. We propose an approach to learning $\beta_\perp$ and derive debiased estimators of $\Psi$ based on initial ML estimates $\hat{\mu}$ and $\hat{\beta}_\perp$.
+
+The advantage of learning the RR via $\beta_\perp$ rather than the AD loss is that the resulting RR estimates better control for extreme out-of-sample RR predictions since constants of proportionality in the RR are estimated using the estimation sample rather than the training sample. Moreover, our proposed estimator for $\beta_\perp$ is robust to overfitting issues that may arise when using the AD loss and thus is less sensitive to the tuning of optimization/model hyperparameters. Our proposal remains `automatic' in the sense of not requiring the functional form of the RR to be derived. However, unlike AD, which only requires knowledge of the moment function $m$, we additionally require a known function $\beta$ with $h(\beta) \neq 0$. The need to construct such a function may be viewed as a limitation of our proposal, though we contend that doing so is straightforward, as we demonstrate for Examples 1 to 4.
+% Based on initial ML estimates $\hat{\mu}$ and $\hat{\beta}_\perp$, we propose debiased estimators for $\Psi$ that are characterized by empirical approximations of the constraint violation terms $h(\hat{\beta}_\perp)$. It follows that the learning task reduces plug-in bias in the downstream estimator by controlling the empirical violations in the training data. The proposed debiased estimators adjust for residual plug-in biases which may remain, e.g. due to random variation between the training and estimation samples during cross-fitting.
+
+Though our approach is not tied to a particular machine learning method, we evaluate our estimators on two semi-synthetic datasets using multi-tasking neural networks, making comparisons with RieszNet \citep{Chernozhukov2022} for ADE/ATE estimation, and DragonNet \citep{Shi2019}, Reproducing Kernel Hilbert Space (RKHS) Embedding \citep{Singh2023}, Neural Net (NN) Embedding \citep{Xu2022} for ATE estimation. % and TARNet \citep{Shalit2017} for ATE estimation. 
+To ensure a fair comparison we re-implement RieszNet and DragonNet learners and estimators, with reproduction code available at \url{https://github.com/crimbs/madnet}.
+%\url{https://github.com/anonymized}.
+%\url{https://github.com/crimbs/madnet}. % Our repository includes all reproduction code and proofs are provided in the supplementary material.
+
+\section{Estimation}
+
+\subsection{Debiased estimation}
+\label{sect:standard_theory}
+
+% Debiased estimators of $\Psi$, \cite{Hines2022, Kennedy2022} for pedagogical reviews. 
+Given a sample of $n$ i.i.d. observations, estimators of $\Psi$ are typically based on the empirical distribution $\mathbb{E}_n[.] = n^{-1}\sum_{i=1}^n (.)_i$, the regression function $\hat{\mu}$, and the estimated RR function $\hat{\alpha}$. An estimator $\hat{\psi}$ of $\Psi$ is said to be regular asymptotically linear (RAL) if its error behaves like an empirical process, i.e. $\sqrt{n}(\hat{\psi} - \Psi)= G_n[\varphi(W)] + o_p(1)$ for some finite variance function $\varphi(W)$, where $G_n[.] \equiv \sqrt{n} (\mathbb{E}_n[.]- \E[.])$ is the empirical process operator. RAL estimators are unbiased since, by the central limit theorem, $\sqrt{n}(\hat{\psi} - \Psi)$ converges (in distribution) to a mean zero normal random variable with variance $\Var[\varphi(W)]$. Results from nonparametric efficiency theory \citep{Newey1994} imply that $\Var[\varphi(W)]$ is minimized when $\varphi(W) = m(\mu, W) + \alpha(Z)\{Y - \mu(Z)\}$ is the uncentered influence curve \citep{Hampel1974,Ichimura2022} of $\Psi$, also called the pseudo-outcome \citep{Kennedy2020, Hines2023b} (see \cite{Hines2022, Kennedy2022} for pedagogical reviews). Thus, one can construct standard errors for $\hat{\psi}$ by approximating $\varphi$ with some $\hat{\varphi}$ and taking a sample variance. To consider specific estimators we use the identity
+\begin{align}
+    \sqrt{n}(\hat{\psi} - \Psi) = G_n \left[\varphi(W) \right] - \underbrace{\sqrt{n}\E_n \left[\hat{\varphi}(W) - \hat{\psi} \right]}_{\text{plug-in bias}} + \underbrace{\sqrt{n}\E[\hat{\varphi}(W) - \Psi]}_{\text{first-order remainder}} +  \underbrace{ G_n \left[\hat{\varphi}(W) - \varphi(W) \right] }_{\text{second-order remainder}} \label{von_miesz}
+\end{align}
+which can be shown to hold (by canceling terms on the right hand side) for any $\hat{\psi}$ and pair of measurable functions $\varphi, \hat{\varphi}$. The second-order remainder above is usually not a concern and is $o_p(1)$ under weak assumptions, e.g. when $\E[\{\varphi(W) - \hat{\varphi}(W)\}^2] = o_p(1)$ and $\hat{\varphi}$ is obtained from an independent sample. In practice, the latter assumption motivates estimators which apply some form of sample-splitting/cross-fitting to estimate $\hat{\varphi}$ and evaluate the estimator \citep{van_der_laan_cross-validated_2011,Chernozhukov2018}.
+
+Letting $h_n(f) \equiv \mathbb{E}_n [m(f, W)]$, a naive estimator is $\hat{\Psi}^{(\text{Direct})} \equiv h_n(\hat{\mu})$, which does not use the RR estimates $\hat{\alpha}$. To examine the bias properties of the naive estimator, consider \eqref{von_miesz} when $\hat{\psi} = \hat{\Psi}^{(\text{Direct})}$ and $\hat{\varphi}(W) = m(\hat{\mu}, W) + \hat{\alpha}(Z)\{Y - \hat{\mu}(Z)\}$. Following \citep{Chernozhukov2020}, the first-order remainder reduces to the `mixed bias', $- \sqrt{n} \langle \hat{\mu} - \mu, \hat{\alpha} - \alpha  \rangle$, the square of which is bound by Cauchy-Schwarz as $n  \langle \hat{\mu} - \mu, \hat{\alpha} - \alpha  \rangle^2 \leq n||\hat{\mu} - \mu||^2 ||\hat{\alpha} - \alpha||^2$. The first-order remainder will therefore be $o_p(1)$ when $\hat{\mu}$ or $\hat{\alpha}$ converge to their true counterparts at sufficiently fast rates with sample size. Moreover, one can trade off accuracy in $\hat{\mu}$ and $\hat{\alpha}$, a property known as rate double robustness.
+
+The plug-in bias $\sqrt{n}\mathbb{E}_n [\hat{\varphi}(W) - \hat{\Psi}^{(\text{Direct})} ] = \sqrt{n}\mathbb{E}_n[\hat{\alpha}(Z)\{Y - \hat{\mu}(Z)\}]$, however, is generally not $o_p(1)$, and hence $\hat{\Psi}^{(\text{Direct})}$ is not RAL. The main challenge in obtaining RAL estimators is therefore removing plug-in biases and there are two main strategies for doing so. One-step debiased estimators simply add the plug-in bias to both sides of \eqref{von_miesz}, resulting in the (double robust) RAL estimator $\hat{\Psi}^{(\text{DR})} \equiv \mathbb{E}_n[\hat{\varphi}(W)]$, or equivalently
+\begin{align}
+    \hat{\Psi}^{(\text{DR})} &= \underbrace{h_n(\hat{\mu})}_{\text{direct estimator}} + \underbrace{\mathbb{E}_n[\hat{\alpha}(Z)\{Y - \hat{\mu}(Z)\}]}_{\text{bias correction}}. \label{eq_dr}
+\end{align}
+%$\hat{\Psi}^{(\text{DR})} \equiv \hat{\psi} + \mathbb{E}_n [\hat{\varphi}(W)  - \hat{\psi} ] = \mathbb{E}_n[\hat{\varphi}(W)]$. 
+%Estimating equations estimators obtain an estimator as the solution $\hat{\psi}$ to $\mathbb{E}_n[\hat{\varphi}(W) - \hat{\psi}] =0$, which is solved by $\hat{\psi} = \hat{\Psi}^{(\text{DR})}$ since $\hat{\varphi}(W)$ does not depend on $\hat{\psi}$.
+
+Targeted maximum likelihood estimators (TMLEs) 
+%are similar, in a sense, to estimating equations estimators, but
+are direct estimators of the form $\hat{\Psi}^{(\text{TMLE})} \equiv h_n(\hat{\mu}^*)$ where $\hat{\mu}$ is replaced with a `targeted' alternative $\hat{\mu}^*$ that solves %the score equation 
+\begin{align}
+    \mathbb{E}_n[\hat{\alpha}(Z)\{Y - \hat{\mu}^*(Z)\}] = 0. \label{tmle_score}
+\end{align}
+Like one-step debiased estimators, TMLEs are double robust, with the mixed bias condition $\langle \hat{\mu}^* - \mu, \hat{\alpha} - \alpha  \rangle = o_p(n^{-1/2})$. Targeting can be achieved in many ways, for example by first defining the linear parametric submodel $\hat{\mu}_t(z) = \hat{\mu}(z) + t \hat{\alpha}(z)$ for a univariate indexing parameter $t\in \mathbb{R}$. Then obtaining an optimal $t^* = \argmin_{t \in \mathbb{R}} \mathbb{E}_n[\{Y-\hat{\mu}_t(Z)\}^2]$ which improves the fit of the outcome learner in the estimation sample, and ensures that $\hat{\mu}^* = \hat{\mu}_{t^*}$ is a solution to \eqref{tmle_score}. For the linear parametric submodel $t^* = \mathbb{E}_n[\hat{\alpha}(Z)\{Y - \hat{\mu}(Z)\}] / \mathbb{E}_n [ \hat{\alpha}^2(Z)]$ and $\hat{\Psi}^{(\text{TMLE})} = h_n(\hat{\mu}) + t^* h_n(\hat{\alpha})$, or equivalently
+\begin{align}
+    \hat{\Psi}^{(\text{TMLE})} = \underbrace{h_n(\hat{\mu})}_{\text{direct estimator}} + \underbrace{ \left(\frac{h_n(\hat{\alpha})}{\mathbb{E}_n [ \hat{\alpha}^2(Z)]}\right)}_{\text{scale factor}}  \underbrace{\mathbb{E}_n[\hat{\alpha}(Z)\{Y - \hat{\mu}(Z)\}]}_{\text{bias correction}} . \label{tmle}
+\end{align}
+Comparing $\hat{\Psi}^{(\text{TMLE})}$ with $\hat{\Psi}^{(\text{DR})}$ in \eqref{eq_dr}, we see that the TMLE introduces a scale factor $h_n(\hat{\alpha}) / \mathbb{E}_n [ \hat{\alpha}^2(Z)]$, which is an empirical approximation to the population value $h(\alpha) / ||\alpha||^2 = 1$, thereby rescaling the bias correction of the DR estimator. Variations of the TMLE method often include canonical generalized linear model (GLM) link functions in the parametric submodel definition, and maximize the associated GLM log-likelihood (hence the name TMLE), see e.g. \citep{VanDerLaan2016} for submodel proposals. GLM variations of this type may be used e.g. when $Y$ is binary and a cross-entropy outcome loss is preferred. Finally, to motivate new RR learning methodologies, we remark that \eqref{tmle_score} and \eqref{tmle} are invariant to constants of proportionality in $\hat{\alpha}$, thus one might consider RR learners that are agnostic to such constants.
+% Finally, we note that for TMLE estimators, the mixed bias assumption $\langle \hat{\mu} - \mu, \hat{\alpha} - \alpha  \rangle = o_p(n^{-1/2})$ is replaced with the assumption $\langle \hat{\mu}^* - \mu, \hat{\alpha} - \alpha  \rangle = o_p(n^{-1/2})$.
+
+%We remark that the TMLE score equation requires only obtaining $\hat{\alpha}$ up to constants of proportionality, thus, following from \eqref{new_ident_1}, one could instead construct a TMLE by replacing $\hat{\alpha}$ with $\beta - \hat{\beta}_\perp$.
+
+
+% TMLE offers a number of theoretical and practical advantages over one-step debiasing and estimating equations estimation. Firstly, TMLEs are invariant to certain reparameterisations of the estimand, for instance $\exp(\hat{\Psi}^*)$ is a RAL estimator of $\exp(\Psi)$, but the same is not true of $\exp(\hat{\Psi}^{(OS)})$. Moreover, $\hat{\Psi}^*$ is guaranteed to lie on the codomain of $f \mapsto h(f)$, but $\hat{\Psi}^{(OS)}$ is not. Most relevant to the current work, however, is that the TMLE debiasing condition $\mathbb{E}_n\left[\hat{\alpha}(Z)\{Y - \hat{\mu}^*(Z)\}\right] = 0$ only requires estimating $\hat{\alpha}$ up to constants of proportionality, a property that we also exploit by only estimating $\beta - \beta_\perp \propto \alpha$.
+
+\subsection{Debiased estimation with moment constraints}
+
+Our main contribution is to propose average moment estimators based on the identity
+\begin{align}
+    \alpha(z) &= \frac{h(\beta)}{||\beta-\beta_\perp||^2}\{\beta(z) - \beta_\perp(z)\} \label{new_ident_1}
+\end{align}
+where $\beta \in \mathcal{H}$ is a known function with $h(\beta) \neq 0$ and $\perp$ denotes projection on to orthogonal complement set $\mathcal{C}^\perp \equiv \{f\in \mathcal{H} \mid  h(f) = 0 \}$. Specifically, $\beta_\perp = \argmin_{f \in \mathcal{C}^\perp} ||\beta - f||$. A geometric illustration of this result is provided in Figure \ref{fig:geometrical_alt}.
+
+\textbf{Proof of \eqref{new_ident_1}}:
+\textit{
+Note that $\mathcal{C}^\perp = \{f\in \mathcal{H} \mid  \langle f, \alpha \rangle = 0 \}$. By Hilbert's projection theorem, $\beta_\perp$ exists, with
+\begin{align*}
+    \beta_\perp(z) \equiv \beta(z) - \frac{\langle \beta, \alpha \rangle}{||\alpha||^2} \alpha(z) \quad\iff\quad \alpha(z) = \frac{||\alpha||^2}{h(\beta)}\{\beta(z) - \beta_\perp(z)\}
+\end{align*}
+where we use $\langle \beta, \alpha \rangle = h(\beta)$. Taking the norm of both sides and solving for $||\alpha|| \neq 0$ gives $||\alpha|| = |h(\beta)|/||\beta-\beta_\perp||$ which completes the proof.
+}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.35\textwidth]{plots/paper-pic-math-only-gamma.png}
+    \caption{Illustration of moment-constrained functions. The plane represents the space of zero average moment functions, i.e. $f$ such that $h(f) = \langle f, \alpha \rangle = 0$. The non-zero function $\beta - \beta_\perp$ is orthogonal to the plane, and thus is a scalar multiple of $\alpha$.
+    }
+    \label{fig:geometrical_alt}
+\end{figure}
+
+The identity in \eqref{new_ident_1} offers new avenues for debiased estimation of $\Psi$ via learning $\beta_\perp$ and $\mu$. One limitation of this proposal, however, is that we require construction of a function $\beta \in \mathcal{H}$ such that $h(\beta) \neq 0$ \emph{a priori} (and $||\beta|| < \infty$ since $\beta \in \mathcal{H}$). Due to the variety of possible moment functionals $m(f, W)$, we do not offer a general algorithm for constructing such functions, however, we have found in practice that there are usually candidates for $\beta$, where $m(\beta, W)$ is a known constant, and hence $h(\beta)$ is known \emph{a priori}. For instance, for the ADE we set $m(\beta, W) = \beta^\prime(A, X) = 1$ and integrate to obtain $\beta(z) = \beta(a, x) = a$ with $h(\beta) = 1$ \emph{a priori}. 
+This choice is not unique, however, since $\beta(z) = \exp(a)$ is also a valid choice for the ADE, with $h(\beta) = \E[\exp(A)] \neq 0$. As for the other estimands in Examples 1 to 4: for the ATE $h(\beta) = 1$ when $\beta(z) = a$; for the APE, $h(\beta) = 1$ when $\beta(z) = a + 1 - \pi(x)$; for the IPE, $h(\beta) = 1$ when $\beta(z) = a /\pi(x)$, or if there is concern that $\pi(X)$ can be zero, one can instead let $\beta(z) = a /\pi(x) $ when $\pi(x) \neq 0$ and $\beta(z) = 0$ otherwise, then estimate $h(\beta) = \Pr[\pi(X) \neq 0]$. For full generality we develop estimators in the setting where $h(\beta)$ must be estimated, but our results simplify slightly when $h(\beta)$ is known.
+
+\textbf{Example ATE:} \textit{
+Denoting $\beta(z) = \beta(a,x) = a$, the known RR and \eqref{new_ident_1} imply
+\begin{align*}
+    \beta_\perp(a,x) = p(x) + \{a - p(x)\}\left(1 - \frac{1}{p(x)\{1 - p(x)\}}\E\left[\frac{1}{p(X)\{1 - p(X)\}}\right]^{-1}\right). % \label{true_perp}
+\end{align*}
+It is insightful to compare $\beta_\perp$, which minimizes $\E[\{A - f(A,X)\}^2]$ given $\E[f(1,X)] = \E[f(0,X)]$, with $p(x)$, which minimizes the same mean squared error, under the stronger constraint $f(1,X) = f(0,X)$. We notice that $p(x)$ lies on the interval $(0,1)$, but the same is not true of $\beta_\perp$, which has weaker restrictions on its outputs: $\beta_\perp(1,x) < 1$ and $\beta_\perp(0,x) > 0$. Also $p$ and $\beta_\perp$ are related by the identity $p(x) = \E[\beta_\perp(A,X)|X=x]$. % This can be used to inform learners for $\beta_\perp$, which we discuss in the next Section.
+}
+
+\textbf{Example ADE:} \textit{
+Denoting $\beta(z) = \beta(a,x) = a$, the known RR and \eqref{new_ident_1} imply
+\begin{align*}
+    \beta_\perp(a,x) = a - \E\left[\left(\frac{p^\prime(A|X)}{p(A|X)} \right)^2 \right]^{-1} \frac{p^\prime(a|x)}{p(a|x)},
+\end{align*}
+which minimizes $\E[\{A - f(A,X)\}^2]$ given $\E[f^\prime(A, X)] = 0$. As in the previous example, we remark that $\E[\beta_\perp(A,X)|X=x] = \E[A|X=x]$.
+}
+
+In Section \ref{sect:moment_constrained_learning} below, we propose methods for learning $\beta_\perp$, however, we first show how the standard debiased estimators from Section \ref{sect:standard_theory} look when debiasing is achieved using initial estimates $\hat{\beta}_\perp$ instead of $\hat{\alpha}$. Specifically, we consider
+\begin{align*}
+    \hat{\alpha}(z) &= \frac{h_n(\beta-\hat{\beta}_\perp) \{\beta(z) - \hat{\beta}_\perp(z)\} }{ \mathbb{E}_n [\{\beta(Z) - \hat{\beta}_\perp(Z)\}^2] }. % \label{alpha_hat_new}
+\end{align*}
+Under this parameterization, the DR
+% (and estimating equations) 
+estimator in \eqref{eq_dr} and TMLE in \eqref{tmle} both become
+\begin{align}
+\hat{\Psi}^{(\perp, \text{DR})} &\equiv \underbrace{h_n(\hat{\mu})}_{\text{direct estimator}} + \underbrace{ \left(\frac{h_n(\beta-\hat{\beta}_\perp)}{\mathbb{E}_n [\{\beta(Z) - \hat{\beta}_\perp(Z)\}^2]} \right)}_{\text{scale factor}} \underbrace{ \mathbb{E}_n [\{\beta(Z) - \hat{\beta}_\perp(Z)\}\{Y - \hat{\mu}(Z)\}] }_{\text{unscaled bias correction}},
+\end{align}
+which is of the same form as \eqref{tmle} but with $\beta - \hat{\beta}_\perp$ replacing $\hat{\alpha}$. Moreover, since the the TMLE score equation in \eqref{tmle_score} only requires estimating the RR up to constants of proportionality, TMLEs can be derived using parametric submodels where $\hat{\alpha}$ is replaced with $\beta - \hat{\beta}_\perp$, e.g. by using the linear submodel $\hat{\mu}_t(z) = \hat{\mu}(z) + t \{\beta(z) - \hat{\beta}_\perp(z)\}$, which gives $h_n(\hat{\mu}^*) = \hat{\Psi}^{(\perp, \text{DR})}$. Theorem \ref{main_theorem} gives general conditions under which a TMLE $h_n(\hat{\mu}^*)$ based on $\hat{\beta}_\perp$ is RAL, with $\hat{\Psi}^{(\perp, \text{DR})}$ being a special case. Essentially, this theorem controls the first-order remainder of \eqref{von_miesz} using the mixed-bias condition $\langle \hat{\mu}^* - \mu , \hat{\beta}_{\perp}  - \beta_\perp\rangle = o_p(n^{-1/2})$, and uses empirical process assumptions to control the second-order remainder of \eqref{von_miesz}.
+
+% Hence, for the linear parametric submodel, the TMLE recovers $\hat{\Psi}^{(\text{TMLE})} = \hat{\Psi}^{(\text{DR})}$, though for other parametric submodels the TMLE is not generally equal to the DR estimator.
+
+%This equality arises because constants of proportionality in the RR are estimated using the estimation sample, rather than through an RR learner.
+%This is already the case for TMLEs under the standard theory, but is now true for one-step debiased estimators due to the proposed RR learner in \eqref{alpha_hat_new}.
+
+%Finally, the estimators in Section \ref{sect:standard_theory} rely on the mixed bias assumption $\langle \hat{\mu} - \mu, \hat{\alpha} - \alpha  \rangle = o_p(n^{-1/2})$ to control the first-order remainder. In the moment-constrained learning setting, this assumption can be replaced by $\langle \hat{\mu}^* - \mu, \hat{\beta}_{\perp} - \beta_{\perp}  \rangle = o_p(n^{-1/2})$, where $\hat{\mu}^*$ is the conditional mean estimator which is used to construct $\hat{\Psi}^{(\text{TMLE})} = h(\hat{\mu}^*)$.
+
+% As before, the TMLE is similar to the one-step estimator but introduces empirical correction terms, in this case $h_n(\hat{\beta}_\perp)$, which approximates $h(\beta_\perp) = 0$.
+
+\begin{theorem}
+    \label{main_theorem}
+    Let $\hat{\beta}_\perp$ be an estimator for $\beta_\perp$, and let $\hat{\mu}^*$ be an estimator for $\mu$ that is targeted such that $\E_n[\{\beta(Z) - \hat{\beta}_\perp(Z)\}\{Y - \hat{\mu}^*(Z)\}] = 0$. Assume that each of the following terms are $o_p(1)$: $\sqrt{n}\langle \hat{\mu}^* - \mu , \hat{\beta}_{\perp}  - \beta_\perp\rangle$, $G_n[m(\hat{\mu}^* - \mu, W)]$, $G_n\left[\{\hat{\beta}_\perp(Z) - \beta_\perp(Z)\}\{\hat{\mu}^*(Z) - \mu(Z)\}\right]$, $G_n\left[\{\beta(Z) - \beta_\perp(Z)\}\{\hat{\mu}^*(Z) - \mu(Z)\}\right]$, and $G_n\left[\{\hat{\beta}_\perp(Z) - \beta_\perp(Z)\}\{Y - \mu(Z)\}\right]$.
+    Then $h_n(\hat{\mu}^*)$ is a RAL estimator of $\Psi$ with uncentered influence curve $\varphi(W)$, and hence $\sqrt{n}(h_n(\hat{\mu}^*)-\Psi)$ converges in distribution to a mean-zero normal random variable with variance $\Var[\varphi(W)]$. Proof in Supplement \ref{main_theorem_proof}.
+\end{theorem}
+
+
+
+
+
+
+
+
+%\textbf{Robustness:}
+%Theorem \ref{main_theorem} relies on a mixed bias condition $\langle \hat{\mu}_{\perp, s} - \mu_\perp , \hat{\beta}_{\perp, t}  - \beta_\perp\rangle = o_p(n^{-1/2})$, and a non-mixed bias condition $||\hat{\beta}_{\perp, t} - \beta_\perp||^2 = o_p(n^{-1/2})$, which essentially control for first-order remainders terms when estimating the conditional expectations in the numerator and denominator of \eqref{new_cov_var} respectively. The mixed bias condition is satisfied when rate double robustness holds, i.e. when $||\hat{\mu}_{\perp, s} - \mu_\perp||^2 ||\hat{\beta}_{\perp, t} - \beta_\perp||^2 = o_p(n^{-1})$. Combined with the non-mixed bias condition, rate-double robustness here implies a one-sided robustness: $\hat{\mu}_{\perp, s}$ may have a slow estimation rate provided that $\hat{\beta}_{\perp, t}$ has a fast estimation rate, but the converse is not true. Similar one-sided robustness is seen in efficient estimators of the model projection estimand discussed in Section \ref{sect:related} \citep{Hines2023}. 
+
+%Together, these conditions imply that $\beta - \hat{\beta}_{\perp, t}$ must approximate the RR (up to constant of proportionality) only for test functions of the form $f=\hat{\mu}_{\perp, s} - \mu_\perp$ and $f = \hat{\beta}_{\perp, t} - \beta_\perp$. 
+%Essentially, estimating $\beta_\perp$ is more important than estimating $\mu_\perp$, since it appears in the conditional expectations of both the numerator and denominator of \eqref{new_cov_var}.
+
+%\textbf{Sample splitting:} 
+
+% \ollie{possibly we get rid of this projection thing.}
+% \textbf{Nonparametric model projection estimands}: An additional implication of \eqref{new_ident_2} is that
+% \begin{align*}
+%     \frac{\Psi}{h(\beta)} &= \argmin_{\theta \in \mathbb{R}} \E\left[\left(Y -  \mu_{\perp}(Z) - \theta\{\beta(Z) - \beta_\perp(Z)\} \right)^2 \right].
+% \end{align*}
+% Nonparametric estimands defined thorough similar least-squares expressions have been considered elsewhere in literature on model projection \citep{Robinson1988,Chambaz2012,Buja2019}. Consider a semi-parametric model class $\mathcal{M} \subseteq \mathcal{H}$. The nonparametric model `projection' of $\mu \in \mathcal{H}$ on $\mathcal{M}$ is the element $\tilde{\mu} \in \mathcal{M}$ which is in some sense closest to to $\mu$. For instance, let $\mathcal{M}$ be the set of functions of the form $g(x) + \theta a$, where $\theta \in \mathbb{R}$ and $g \in \mathcal{H}$ depends only on $x$, (rather than $z=(a,x)$). Using a least-squares projection, one obtains $\argmin_{f \in \mathcal{M}} ||\mu - f|| = \mu_X(x) + \Theta \{a-p(x)\} $, where $\mu_X(x) \equiv E(Y|X=x)$ and
+% \begin{align*}
+%     \Theta \equiv \frac{\E[\{A - p(X)\}\{Y -  \mu_X(X)\}]}{\E[\{A - p(X)\}^2]} = \frac{\E[\Cov[A,Y|X]]}{\E[\Var[A|X]]}.
+% \end{align*}
+% The `least-squares estimand' $\Theta$ is nonparametrically defined and can be interpreted like a linear model coefficient even when $\mu \not\in \mathcal{M}$, see \cite{Vansteelandt2022}. It is of the form $\Theta  = \langle \mu , \alpha \rangle$ for $\alpha(z) = \{a - p(x)\}/\E[\Var[A|X]]$. It is possible to write down representations of the form $\Theta  = \E[\omega(Z) m(\mu, W)]$, but these include unknown weights $\omega$, and therefore fall outside of the setup in the current paper \citep{Hines2023, Kallus2020, Crump2009}. Despite this, $\Theta $ has a simple RAL estimator $\Lambda_n(\hat{\mu}_X, \hat{p})$, where $\beta(z) = a$.
+% By establishing a connection between average moment estimands and projection estimands, one might also hope to extend recent results on the fundamental limits of estimating $\E[\Cov[A,Y|X]]$, i.e. the numerator of $\Theta$ \citep{Balakrishnan2023}. Such results imply that debiased estimators are, in some sense, optimal even when requisite learners converge slower than is required for the estimator to be RAL.
+
+
+\subsection{Moment-constrained learning}
+\label{sect:moment_constrained_learning}
+
+We propose learners for the moment-constrained function $\beta_\perp$ using the property that $\beta_\perp$ is the function $f\in\mathcal{H}$ that solves
+\begin{align}
+    \text{minimize:}& \quad ||\beta - f||^2\nonumber \\
+    \text{subject to:}& \quad h(f) = 0 \label{constraint}
+\end{align}
+Similar constrained learning problems have been studied in the context of ML with fairness constraints \citep{Nabi2024}. E.g. \cite{Zafar2017, Akhtar2021} minimize a classification loss, while ensuring that predictions are uncorrelated with specific sensitive attributes (race, sex etc.). The primal problem in \eqref{constraint} is characterized by the Lagrangian
+\begin{align}
+    \Lagrangian(f, \lambda) \equiv \E\left[\{\beta(Z) - f(Z)\}^2 + \lambda m(f, W)\right] \label{pop_lagrangian}
+\end{align}
+%The constrained solution is the values $f,\lambda$ which solve $\inf_{f \in \mathcal{H}} \sup_{\lambda \in {\mathbb{R}}} L(f, \lambda|\beta)$.
+% Since the mean-squared error is convex [something to do with strong duality], t
+where $\lambda \in \mathbb{R}$ is a Lagrange multiplier, 
+and a solution is obtained by finding $f^*$ and $\lambda^*$ such that $\Lagrangian(f^*, \lambda^*) =\max_{\lambda \in {\mathbb{R}}} \min_{f \in \mathcal{H}} \Lagrangian(f, \lambda)$. Naively, therefore, one might learn $f$ by performing gradient descent over parameters indexing $f$ and gradient ascent on $\lambda$, as in the basic differential multiplier method (BDMM) of \cite{Platt1987}.
+
+In our numerical experiments, we consider the setting where $f = f_w$ is the output of a multilayer perceptron (MLP) with weights $w$. We observe that application of BDMM to a sample analogue of $\Lagrangian(f_w, \lambda)$ leads to empirical constraint violations that oscillate around zero, as the number of ascent/descent iterations increases (shown in Figure~\ref{fig:damping-plot} of the supplement). Similar behavior is documented elsewhere for adversarial function learners \citep{Schafer2019, Mokhtari2020}. Instead, stable constraint violations were achieved by effectively replacing the constraint in \eqref{constraint} with the equivalent constraint $|h(f)| \leq 0$, yielding the Lagrangian
+\begin{align}
+    \Tilde{\Lagrangian}(f, \Tilde{\lambda}) \equiv \E\left[\{\beta(Z) - f(Z)\}^2\right] + \Tilde{\lambda} |h(f)| \label{pop_star_lagrangian}
+\end{align}
+with empirical MLP analogue $\Tilde{\Lagrangian}_n(f_w, \Tilde{\lambda}) \equiv \E_n\left[\{\beta(Z) - f_w(Z)\}^2\right] + \Tilde{\lambda} |h_n(f_w)|$.
+% \begin{align*}
+%     \Tilde{\Lagrangian}_n(f_w, \Tilde{\lambda}) \equiv \E_n\left[\{\beta(Z) - f_w(Z)\}^2\right] + \Tilde{\lambda} |h_n(f_w)|. % \label{sample_star_lagrangian}
+% \end{align*}
+In this formulation, $\Tilde{\lambda} \geq 0$ penalizes the sample average moment of $f_w$ in a similar way to the smoothing parameters in conventional Lasso/ridge regression. The key difference between these classical methods, however, is that the penalty $|h_n(f_w)|$ depends on the observed data, and not only on the weights $w$. In practice we set $\Tilde{\lambda}$ to a constant value during training, and minimize over $w$ using gradient descent, though one might consider alternative methods e.g. where $\Tilde{\lambda}$ increases monotonically with the number of descent iterations (epochs).
+
+
+% Rather than set a fixed value for $\Tilde{\lambda}$, as in e.g. conventional Lasso regression, we consider increasing $\Tilde{\lambda}$ using gradient ascent, starting at $\Tilde{\lambda} = 0$. Applying the constraint in this gradual way prioritizes minimization of the mean squared error loss during early descent iterations, with aggressive penalization of constraint violations during later iterations.
+
+% Finally, following the empirical success of multi-headed architectures (discussed in Section \ref{sect:related}), we propose Estimand-informed nets which learn $\beta_\perp$ and $\mu_\perp$ simultaneously using a multi-headed MLP with two output nodes $f_{w}(z) = (f_{1,w}(z), f_{2,w}(z) )$. Moreover, multi-tasking architectures may be well-suited to this problem since both target functions satisfy the same average moment constraints, thus, shared MLP layers allow the two tasks to share information about the space of constrained functions. In particular, we propose the population Lagrangian
+% \begin{align}
+%     \Lagrangian^{(EI)}_\rho(f_w, \Tilde{\lambda}) \equiv \Lagrangian^*(f_{1,w}, \Tilde{\lambda}_1 |\beta) + \rho \Lagrangian^*(f_{2,w}, \Tilde{\lambda}_2|y)
+% \end{align}
+% where $\rho > 0$ is a fixed parameter that controls the trade off between learning $\beta_\perp$ and $\mu_\perp$. In practice, we set $\rho$ to an empirical estimate of $\Var[\beta(Z)] / \Var[Y]$, i.e. rescaling the mean squared errors of $Y$ and $\beta$ similarly to the $R^2$, thereby, in some sense, giving equal weight to the two learning tasks.
+
+
+
+
+%In our work, we found that this approach delivers solutions $f$, with 
+
+
+% We use the basic differential multiplier method (BDMM) due to \cite{Platt1987}, to solve a sample analogue of this constrained optimization problem. In short, we simultaneously perform gradient descent on the function $f$ and gradient ascent on the Lagrange multiplier. [notes:] Maybe include some comments about stochastic gradient descent \cite{Yu2017, Akhtar2021}. Also this paper \citep{Mokhtari2020}.
+% https://proceedings.neurips.cc/paper/1987/file/a87ff679a2f3e71d9181a67b7542122c-Paper.pdf
+
+% Given a sample of observations we consider the analogous sample Lagrangian
+% \begin{align*}
+%     L_n(f, \lambda|\beta) \equiv \mathbb{E}_n \left[\{\beta(W) - f(Z)\}^2 + \lambda m(f,W)\right].
+% \end{align*}
+
+
+% \textbf{Example ATE:} The known functional form in \eqref{true_perp} motivates dual outcome learners of $\beta_\perp$ and $\mu_\perp$ of the form $f(a,x) = a f_1(x) + (1-a) f_0(x)$, where $f_0$ and $f_1$ are functions to be determined by the learner, e.g. two output nodes of a neural network given inputs $x$. For $\beta_\perp$, we might additionally ensure $f_1(x) < 1 $ and $f_0(x) > 0$, whereas for $\mu_\perp$ we apply no such constraints.
+
+% \textbf{Example ADE:}  Consider the ADE in Example 3 and let $\beta(z) = a$ so that $h(\beta) = h_n(\beta) = 1$. ... some comments on physics informed neural networks \citep{Raissi2017} and auto-diff.
+
+
+\subsection{Comparison with Automatic debiasing (AD)}
+
+AD \citep{Chernozhukov2021, Chernozhukov2022} is an RR learning method based on the identity
+\begin{align*}
+    \alpha &= \argmin_{\hat{\alpha}\in \mathcal{H}} || \alpha - \hat{\alpha}||^2 \\
+    &= \argmin_{\hat{\alpha}\in \mathcal{H}} || \hat{\alpha}||^2 -2 \langle \hat{\alpha}, \alpha \rangle \\
+    &= \argmin_{\hat{\alpha}\in \mathcal{H}} \E\left[\hat{\alpha}(Z)^2 - 2m(\hat{\alpha},W) \right].
+\end{align*}
+% \begin{align*}
+%     \alpha &= \argmin_{f\in \mathcal{H}} || \alpha - f ||^2 \\
+%     &= \argmin_{f\in \mathcal{H}} ||f||^2 - 2\langle f, \alpha \rangle \\
+%     &= \argmin_{f\in \mathcal{H}} \E\left\{f^2(Z) - 2m(f,W) \right\}.
+% \end{align*}
+The AD RR learner minimizes a sample analogue of this expectation.
+We connect AD to our proposal as follows. Consider that $\hat{\alpha}\in\mathcal{H}$ can be written as $\hat{\alpha}(z) = 2\lambda^{-1}\{\beta(z) - f(z)\}$ where $\lambda \neq 0$ is constant and $f\in \mathcal{H}$. Thus, the AD population minimization becomes
+\begin{align*}
+    \beta_\lambda &\equiv \argmin_{f \in \mathcal{H}} \E\left[4\lambda^{-2}\{\beta(Z) - f(Z)\}^2 - 4\lambda^{-1} m(\beta - f,W) \right]\\
+    &=\argmin_{f \in \mathcal{H}} \E\left[\{\beta(Z) - f(Z)\}^2 + \lambda m(f,W) \right].
+\end{align*}
+with $\alpha(z) = 2\lambda^{-1}\{\beta(z) - \beta_\lambda(z)\}$. The objective above is the Lagrangian $\Lagrangian(f, \lambda)$ in \eqref{pop_lagrangian}. In this construction $\lambda$ is unrestricted, therefore provided that $\lambda_\perp \equiv \argmax_{\lambda \in \mathbb{R}}\min_{f \in \mathcal{H}} \Lagrangian(f, \lambda)$ is finite and non-zero, one can write $\alpha(z) = 2\lambda_\perp^{-1}\{\beta(z) - \beta_{\lambda_\perp}(z)\}$. Appealing to the primal problem in \eqref{constraint}, we see that $\beta_{\lambda_\perp} = \beta_\perp$ and, $\lambda_\perp = 2 ||\beta - \beta_\perp||^2/h(\beta)$ as in \eqref{new_ident_1}.
+
+Moment-constrained learning, therefore, reinterprets the AD loss as a Lagrangian when one has access to a function $\beta$ such that $h(\beta) \neq 0$, and one is agnostic to constants of proportionality in the RR. When estimating $\Psi$, these constants are estimated using the estimation sample rather than by the RR learner directly. By connecting the RR to the primal problem, one is able to leverage constrained learning methods that may have better empirical performance, e.g. using the Lagrangian $\Tilde{\Lagrangian}$ in \eqref{pop_star_lagrangian}. Moreover, this connection hints at future theoretical study of RRs and AD via constrained function learning theory.
+
+%, we are able to propose alternative constrained learning methods that may have better empirical performance, e.g. using the Lagrangian $\Tilde{\Lagrangian}$ in \eqref{pop_star_lagrangian}.
+
+%Additionally, our estimators effectively use a parametric submodel to target the RR estimates according to average moment constraint violations in the estimation sample. Finally, we use the same constrained learning approach to learn $\mu_\perp$ and $\beta_\perp$, thus one could say that our proposal is `double automatic debiased', since estimand-specific outcome and RR learners are automatically constructed without any estimand-specific derivation required.
+
+
+
+
+
+\section{MADNet: Moment-constrained Automatic Debiasing Networks}
+
+% \textbf{Multi-headed MLP learners}: 
+Multi-headed MLPs, as illustrated through the schematic in Figure \ref{fig:sharedmlps}, are emerging as a popular architecture for estimating average moment estimands using deep learning. Initial efforts focused on the binary treatment setting, such as the multi-headed MLP outcome learner TARNet (Treatment Agnostic Representation Network) \citep{Shalit2017}. TARNet takes inputs $X$ and produces two scalar outputs representing $\mu(1, X)$ and $\mu(0, X)$ respectively. During training, an outcome prediction error (e.g. mean-squared error) is minimized, with predictions of $\mu(A,X)$ obtained from one of the scalar outputs according to whether an observation is treated/untreated. The resulting outcome learner can be used to obtain plug-in estimates for e.g. the ATE/APE, optionally with debiasing by a separate RR learner as described in Section \ref{sect:standard_theory}.
+
+DragonNet \citep{Shi2019} also focuses on binary treatments, extending TARNet by introducing a third scalar output MLP of zero depth, which is used to estimate the propensity score $p(X)$, and hence the RR of the ATE/APE. The authors reason that the propensity score MLP should have zero depth so that the shared MLP learns representations of $X$ that are predictive of the RR, since, for ATE estimation it is sufficient to learn the outcome conditional on $A$ and $p(X)$ only. This approach is generalized by \citet[Lemma 3.1]{Chernozhukov2022}, where it is shown that: for estimation of $\Psi$ it is sufficient to learn the outcome conditional on the RR only, i.e $E[Y|\alpha(Z) = \alpha(z)]$. Similarly, for estimation of $\Psi$, we show (Supplement \ref{proof_of_suff}) that it is sufficient to learn the outcome conditional on $\beta(Z) - \beta_\perp(Z)$ only. Moreover, we show (Supplement \ref{proof_of_ortho}) that $\mu(Z) = \mu_\perp(Z) + \Psi \{\beta(Z) - \beta_\perp(Z)\} / h(\beta)$
+% \begin{align*}
+%     \mu(Z) = \mu_\perp(Z) + \frac{\Psi}{h(\beta)} \{\beta(Z) - \beta_\perp(Z)\} % = \nu_\perp(Z) + \frac{\Psi}{h(\beta)} \beta(Z) 
+% \end{align*}
+where $\mu_\perp$ is the projection of $\mu$ on $\mathcal{C}^{\perp}$. This result further highlights the role of the RR when learning the outcome for average moment estimation.
+% , and $\nu_\perp \in \mathcal{C}^{\perp}$. 
+
+RieszNet is similar in structure to DragonNet, except with input $Z = (A, X)$ rather than $X$. Both also use a multi-tasking loss to learn $\mu$ and $\alpha$ simultaneously. We propose MADNet which uses the same network structure as RieszNet and a multi-tasking loss to learn $\mu$ and $\beta_\perp$ simultaneously. Specifically we consider the loss $\Tilde{\Lagrangian}_n(f_{w, 1}, \Tilde{\lambda}) + \rho\,\text{REGLoss}_n(f_{w, 2})$
+% \begin{align}
+%     \Tilde{\Lagrangian}_n(f_{w, 1}, \Tilde{\lambda}) + \rho\,\text{REGLoss}_n(f_{w, 2}) \label{loss_ours}
+% \end{align}
+where $\rho \geq 0$ is a hyperparameter, $\text{REGLoss}_n$ is a regression loss, e.g. the mean-squared error in the outcome prediction $\text{REGLoss}_n(f) = \E_n[\{Y - f(Z)\}^2]$, and $f_w(z) = (f_{w,1}(z), f_{w,2}(z))$ represents two outputs from a multi-headed MLP. Note that e.g. $f_{w,1}$ depends only on the weights of the shared MLP and the first non-shared MLP, but we write it as a function of all multi-headed MLP weights $w$ for convenience. Like RieszNet, for ATE/ADE estimation we replace $f_{w, 2}(z)$ in the regression loss with $\tilde{a} f_{w, 2}(z) + (1-\tilde{a})f_{w, 3}(z)$, where $\tilde{a}$ represents the min-max normalized treatment $a$ scaled on to the interval $[0, 1]$, i.e. $\tilde{a}_i = \{a_i - \min_n(a_i)\} / \{\max_n(a_i) - \min_n(a_i)\}$.
+
+% DragonNet uses a multi-tasking loss constructed as the (weighted) sum of the error in predicting outcome, and the cross entropy in predicting treatment. As with TARNet, the outcome and RR estimates produced by DragonNet can be combined using the debiased estimators outlined in Section \ref{sect:standard_theory}.
+
+% RieszNet \citep{Chernozhukov2022} extends the DragonNet to arbitrary average moment estimands by learning the RR directly using an automatic debiasing loss rather than via the propensity score. This necessitates extending the inputs to $Z=(A,X)$. In the binary setting, the RisezNet produces three separate scalar outputs for $\mu(1, X)$, $\mu(0, X)$, and $\alpha(A, X)$. In the setting of continuous treatment (e.g. for ADE estimation), recommendations are less clear. The RieszNet uses a multi-tasking loss constructed as the (weighted) sum of the mean-squared error in predicting outcome, the automatic debasing loss, and a so-called TMLE loss, based on the targeting methods described in Section \ref{sect:standard_theory}, and an additional real valued parameter which must be learned.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{plots/multiheaded-mlps.png}
+    \caption{Multi-headed MLP architecture with three outputs. Typically the intermediate representation has the same width as the internal layers of the shared MLP, and the non-shared MLPs have internal layers with half the width of the shared MLP. During training, a single loss is used based on all scalar outputs, and MLP weights are learned using back-propagation over the entire multi-headed MLP.
+    }
+    \label{fig:sharedmlps}
+\end{figure}
+
+\textbf{Convergence rates}: The standard theory in Section \ref{sect:standard_theory} controls first-order remainders by requiring estimators to converge to their true counterparts at sufficiently fast rates. For neural network learners, recent convergence rate results have been obtained using the theory of critical radii \citep{Wainwright2019,Foster2023,Chernozhukov2020}. In particular, results are provided for MLPs with Rectified Linear Unit (ReLU) activation functions \citep{Farrell2021}, describing $L_2$ convergence rates in terms of the number of training observations and the network width/depth. Similar results exist for AD learners with moments satisfying the mean-squared continuity property $\E[\{m(u, W) - m(v, W)\}^2] \leq M ||u - v||^2$ for $M\geq 1$ and $u, v \in \mathcal{A}_n$, where $\mathcal{A}_n$ is a function set described by \citet{Chernozhukov2021}. We expect similar theoretical guarantees to hold in the current context due to the connection of AD with moment-constrained learning discussed above.
+
+%Due to the connection of AD with moment-constrained learning discussed above, we expect similar theoretical guarantees to hold in the current context for mean-squared continuous moments.
+
+\textbf{Sample-splitting:} To obtain valid inference from a single sample, the standard theory in Section \ref{sect:standard_theory} relies on cross-fitting to control the second-order remainder terms in \eqref{von_miesz}. Cross-fitting is used to bypass Donsker class assumptions \citep{Bickel1982,van_der_laan_cross-validated_2011,Chernozhukov2018}, which restrict the complexity of the initial estimators and are usually not satisfied by ML algorithms. Recent work has sought to bypass Donsker conditions by instead relying on entropic arguments \citep{VanDeGeer2014} or leave-one-out stability \citep{Chen2022}. In practice DragonNet and RieszNet do not use sample splitting due to the associated computational burden. Instead, implementations of both algorithms split the data into training and validation sets, with the validation set used to control early stopping of the training algorithm. For estimation, the full dataset is used (training + validation). We also use this strategy for moment-constrained learning.
+
+ % or theory of critical radii \citep{Wainwright2019,Chernozhukov2020}. Critical radius results for neural networks provided by \citep{Farrell2021}, with \cite{Chernozhukov2021} applying these to AD losses. Whilst eliminating sample-splitting is beneficial in increasing the effective sample size, splitting does have other theoretical benefits in terms of controlling `own observation' bias \citep{Newey2018}. In our work, we do not offer theoretical results without sample splitting, but we do evaluate the performance of our estimator in numerical simulations under no sample-splitting. Note that when the same sample is used for training and estimation, the constraint violations $h_n(\hat{\mu}_{\perp})$ and $h_n(\hat{\beta}_{\perp})$ are directly controlled by the moment-constrained learning algorithm.
+
+\section{Numerical experiments} \label{sec:num-exp}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{plots/ipw_plot.png}
+    \caption{
+    % Top row: mean and standard error of the treatment moment bias $\E_n[A\hat{\alpha}(Z)] - \E[A\alpha(Z)]$ with $\E[A\alpha(Z)] = 1$ known \emph{a priori}. Bottom row: mean and standard error of the outcome moment bias $\hat{\Psi}^{(\text{IPW})} - h_n(\mu)$.
+    % Both plots use 20 datasets of IHDP data whereby predictions are made on a 20\% validation set and the outcome moment is scaled by the standard deviation of the outcome. The zero bias line is accentuated for clarity.
+    Mean and standard error of $\E_n[A\hat{\alpha}(Z)] - 1$ (top row) and of $\hat{\Psi}^{(\text{IPW})} - h_n(\mu)$ (bottom row) using 20 datasets of IHDP data where predictions are made on a 20\% validation set and the outcome is scaled by its standard deviation.
+    }
+    \label{fig:pred-plot}
+\end{figure}
+
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=\textwidth]{plots/bias.png}
+%     \caption{Density plot of the outcome moment estimate bias $\Psi - \hat{\Psi}$.}
+%     \label{fig:bias-plot}
+% \end{figure}
+
+We consider ATE and ADE estimation in the following semi-synthetic data scenarios.
+
+\textbf{IHDP:} (Infant Health and Development Program). IHDP is a randomized experiment on the effects of home visits by specialists (binary treatment, $A$) on infant cognition scores ($Y$), given 25 baseline covariates. The data consists of n = 747 infants. Synthetic outcomes are drawn from a normal distribution given $(A,X)$, as described by \citep{Hill2011}. We consider 1000 synthetic IHDP datasets in total.
+
+% \textbf{ACIC:} (American Causal Inference Conference)\footnote{Before 2022 the conference was called the Atlantic Causal Inference Conference.} \citep{Shimoni2018}. Challenge synthetic datasets were prepared for the 2018 ACIC based on linked birth and infant death data, with 177 covariates. The challenge consisted of inferring ATEs for synthetic treatments and outcomes, across several data generating mechanisms. Following the experiments of \cite{Shi2019, Xu2022}, we consider 101 total datasets with sample sizes of n = 5,000, or n = 10,000. ACIC is considered more challenging than IHDP due to the high covariate dimension, presence of propensity scores close to 0,1, and extreme outcomes. For the latter, we apply the quantile outcome filter described by \cite{Xu2022}.
+
+\textbf{BHP:} (Blundell, Horowitz and Parey) \citep{Blundell2017}. BHP consists of 3,640 household level observations from the 2001 (U.S.) National Household Travel Survey, with the goal of estimating the price elasticity of gasoline consumption given 18 confounding variables. Price elasticity can be defined through the ADE of log price ($A$) on the log quantity of gasoline sold ($Y$). Following \citep{Chernozhukov2022}, we draw synthetic treatments from a normal distribution, with conditional mean and variance obtained from random forest predictions of the mean and variance of the true log price. Conditionally normal synthetic outcomes are then generated, given $(A,X)$, with a mean function that is cubic in treatment. The results in Table \ref{tab:ate-mae} are evaluated over 200 random seeds.
+%  (household income, number of drivers, geographic variables, ...)
+
+% \ollie{Possibly drop IWPC and save it for the revisions? Especially since it needs some modifications.}
+% \textbf{IWPC:} (International Warfarin Pharmacogenetics Consortium) \cite{Cunningham2009}. IWPC is a pharmacogenetic study of the affects of Warfarin (a widely used anticoagulant, continuous treatment $A$) on blood clotting function ($Y$). We consider a subset of 1,732 patients, identified by \citep{Wallace2018}. Weighted ADEs from IWPC were estimated by \citep{Hines2023} given 13 patient characteristics ($X$), some of which are genetic variants, encoded as 0,1,2. We generate semi-synthetic IWPC data by drawing synthetic outcomes from gamma distribution, where conditional shape and scale parameters are obtained as outputs from an MLP, that is fitted on the true outcome. IWPC is a new synthetic benchmark that we introduce in the current paper.
+
+The first experimental research question is: to what extent do RR predictions from moment-constrained auto-debiasing learners satisfy oracle RR properties that are known \emph{a priori}? To answer this, we consider Inverse Probability Weighted (IPW) estimators of $\E[A\alpha(Z)] = 1$, and $\Psi$. The corresponding IPW estimators $\E_n[A\hat{\alpha}(Z)]$ and $\hat{\Psi}^{(\text{IPW})} \equiv \E_n[Y\hat{\alpha}(Z)]$ do not depend on the outcome model, thus are a convenient way of comparing RR learners. Figure \ref{fig:pred-plot} shows, using IHDP data, how the mean error evolves over gradient descent iterations (epochs) for two different learning rates. These plots show that the MADNet RR estimator converges rapidly to a stable optimum, and is therefore more robust to changes in learning rate and early stopping hyperparameters.
+
+Next we compare absolute errors of MADNet estimators versus several alternatives: DragonNet \citep{Shi2019}, Reproducing Kernel Hilbert Space (RKHS) Embedding \citep{Singh2023}, Neural Net (NN) Embedding \citep{Xu2022}, and RieszNet \citep{Chernozhukov2022}, with only the latter applying to ADE estimation in the BHP scenario. The main proposal of our work is the Double Robust MADNet estimator, though to examine the effect of RR based bias correction, we have also provide results for the Direct (outcome model only without RR bias corrections), and IPW (RR model only) estimators.
+
+Results in Table \ref{tab:ate-mae} show that the MADNet DR estimator has improved empirical performance (reduced mean absolute error) versus all alternatives in both scenarios. Interestingly, for the IHDP scenario, this improvement in performance is observed despite the MADNet Direct estimator performing poorly compared to its RieszNet counterpart. Moreover, the MADNet DR estimator effectively combines two estimators with poor performance (Direct and IPW) to create an estimator with good performance. One possible explanation for this could be that MADNet results in estimators for which the mixed bias term $\langle \hat{\mu} - \mu, \hat{\beta}_\perp - \beta_\perp \rangle$ is small, i.e. errors in the outcome and RR learners are uncorrelated. Further work is needed, however, to examine this effect.
+%This suggests that the improved performance of the MADNet DR estimator versus the RieszNet DR estimator may be due to an improved bias correction.
+% , which for MADNet uses the moment constrained learning approach proposed in the current paper. 
+Similar results are obtained when the multi-headed architectures of MADNet and RieszNet are ablated and replaced with simple feedforward NNs (Supplement Table~\ref{tab:repro-results}). Furthermore, MADNet results with a reduced constraint penalization ($\tilde{\lambda} = 1$) show slightly worse performance, highlighting the importance of satisfying the constraint in our procedure (Supplement Table~\ref{tab:hyperparam-sensitivity}).
+
+%On the basis of these results, future numerical experimentation should investigate 
+
+Detailed implementation notes are provided in Supplement \ref{supp_numerical} alongside DragonNet/RieszNet results obtained using our implementation (Table~\ref{tab:repro-results}). We highlight, however, three main differences in our implementation: (i) our implementation is built on a JAX + Equinox computational stack \citep{jax2018github,kidger2021equinox}; (ii) for ADE estimation we use automatic differentiation of NN outputs, rather than a finite difference approximation; (iii) the original RieszNet uses a  complicated learning rate / early stopping scheme %to circumvent the stability issues in Figure \ref{fig:pred-plot}; 
+but we use a slightly simpler scheme.
+%Our implementation is built on a JAX + Equinox computational stack \citep{jax2018github,kidger2021equinox}. Supplement \ref{supp_numerical} provides detailed implementation notes alongside DragonNet/RieszNet results obtained using our implementation (Table~\ref{tab:repro-results}). We highlight, however, two main differences in our implementation: (i) for ADE estimation we use automatic differentiation of NN outputs, rather than a finite difference approximation; (ii) the original RieszNet uses a  complicated learning rate / early stopping scheme to circumvent the stability issues in Figure \ref{fig:pred-plot}; we use a slightly simpler scheme.
+%Specifically, the original RieszNet uses two training phases with an external validation set, an initial training phase with high learning rate and low stopping patience, followed by a `fine-tuning' phase with a higher stopping patience, and a smaller learning rate with a `reduction on plateau' mechanism to further reduce the learning rate. 
+Overall we found that replication via re-implementation of the RieszNet results was challenging, possibly due to the stability issues in Figure \ref{fig:pred-plot}.
+
+%which leverages JAX \citep{jax2018github} and Equinox \citep{kidger2021equinox} for automatic differentiation instead of the finite difference scheme used to evaluate the ADE.
+
+
+% \begin{table}[htbp]
+% \caption{Mean and standard deviation of absolute errors.}
+% \label{table:mae}
+% \centering
+% \begin{tabular}{|l|l|l|l|l|}
+% \hline
+%  Learner & Estimator & IHDP & ACIC & BHP \\ \hline
+%  TARNet    & Plug-in   &  &  & -\\
+%  DragonNet & Plug-in   &  &  & -\\
+%  DragonNet & IPW       &  &  & -\\
+%  DragonNet & One-step  &  &  & -\\
+%  RieszNet  & Plug-in   &  &  &  \\
+%  RieszNet  & IPW       &  &  &  \\
+%  RieszNet  & One-step  & 0.1 ± 0.1 &  &  \\ \hline \rowcolor{Gray}
+%  EINet     & Plug-in  &  &  &  \\ \rowcolor{Gray}
+%  EINet     & EE       & \textbf{0.009 ± 0.001} &  0.009 ± 0.001 &  0.009 ± 0.001 \\ \rowcolor{Gray}
+%  EINet     & One-step &  &  &  \\ \hline
+% \end{tabular}
+% \end{table}
+
+% \begin{table}[t]
+% \centering
+% \caption{Absolute error (mean $\pm$ standard error) of the ATE and ADE estimates across the semi-synthetic data scenarios described in Section \ref{sec:num-exp}. IHDP benchmark figures are retrieved from \citet[Table 1]{Xu2022}.}
+% \label{tab:ate-mae}
+% \begin{tabular}{@{}lcccc@{}}
+% \toprule
+% Estimator         & IHDP              & ACIC              & BHP              & Citation                 \\ \midrule
+% DragonNet         & 0.146 $\pm$ 0.010 & 0.241 $\pm$ 0.123 & -- & \citep{Shi2019}          \\
+% RKHS Embedding    & 0.166 $\pm$ 0.003 & 1.785 $\pm$ 1.398 & -- & \citep{Singh2023}        \\
+% NN Embedding      & 0.117 $\pm$ 0.002 & 0.231 $\pm$ 0.112 & -- & \citep{Xu2022}           \\
+% RieszNet (Direct) & 0.123 $\pm$ 0.004 & 0.334 $\pm$ 0.133 & 0.424 $\pm$ 0.024 & \citep{Chernozhukov2022} \\
+% RieszNet (IPW)    & 0.122 $\pm$ 0.037 & 52.73 $\pm$ 40.71 & 0.272 $\pm$ 0.015 & \citep{Chernozhukov2022} \\
+% RieszNet (DR)     & 0.110 $\pm$ 0.003 & 1.071 $\pm$ 0.555 & 0.260 $\pm$ 0.014 & \citep{Chernozhukov2022} \\
+% \textbf{MADNet} (Direct) & 0.504 $\pm$ 0.016 &          & 0.285 $\pm$ 0.028 & Proposed   \\
+% \textbf{MADNet} (IPW)    & 0.719 $\pm$ 0.039 &          & 0.291 $\pm$ 0.016 & Proposed   \\
+% \textbf{MADNet} (DR)     & 0.094 $\pm$ 0.002 &          & 0.237 $\pm$ 0.011 & Proposed   \\
+% % \textbf{MADNet} (TMLE)   & 0.097 $\pm$ 0.003 &          & Proposed   \\ 
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Absolute error (mean $\pm$ standard error) of the ATE and ADE estimates for both semi-synthetic data scenarios. % The lowest mean absolute error (MAE) is shown in bold for each dataset. 
+For the RieszNet IHDP benchmark 
+%values deviate from those reported in \citet{Chernozhukov2022}. 
+we report values obtained by running \texttt{RieszNet\_IHDP.ipynb} from \url{https://github.com/victor5as/RieszLearning} without modification. 
+%(the code repository that accompanies \cite{Chernozhukov2022}) 
+MAEs for the BHP scenario are not reported by \cite{Chernozhukov2022}, and we instead use values from our RieszNet re-implementation. %(Table~\ref{tab:repro-results} in the supplement contains full reproduction results). 
+DragonNet and RKHS/NN embedding values are retrieved from \citet[Table~1]{Xu2022}.}
+\label{tab:ate-mae}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Estimator         & IHDP              & BHP              & Citation                 \\ \midrule
+DragonNet (DR)        & 0.146 $\pm$ 0.010 & -- & \citep{Shi2019}          \\
+RKHS Embedding    & 0.166 $\pm$ 0.003 & -- & \citep{Singh2023}        \\
+NN Embedding      & 0.117 $\pm$ 0.002 & -- & \citep{Xu2022}           \\
+% RieszNet (Direct) & 0.123 $\pm$ 0.004 & 0.424 $\pm$ 0.024 & \citep{Chernozhukov2022} \\
+% RieszNet (IPW)    & 0.122 $\pm$ 0.037 & 0.272 $\pm$ 0.015 & \citep{Chernozhukov2022} \\
+% RieszNet (DR)     & 0.110 $\pm$ 0.003 & 0.260 $\pm$ 0.014 & \citep{Chernozhukov2022} \\
+RieszNet (Direct) & 0.128 $\pm$ 0.004 & 0.692 $\pm$ 0.040 & \citep{Chernozhukov2022} \\
+RieszNet (IPW)    & 0.789 $\pm$ 0.036 & 0.449 $\pm$ 0.025 & \citep{Chernozhukov2022} \\
+RieszNet (DR)     & 0.114 $\pm$ 0.003 & 0.428 $\pm$ 0.023 & \citep{Chernozhukov2022} \\
+MADNet (Direct) & 0.504 $\pm$ 0.016 & 0.471 $\pm$ 0.026 & Proposed   \\
+MADNet (IPW)    & 0.719 $\pm$ 0.039 & 0.474 $\pm$ 0.026 & Proposed   \\
+MADNet (DR)     & \textbf{0.094 $\pm$ 0.002} & \textbf{0.391 $\pm$ 0.019} & Proposed   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% \section{Related work}
+% Here we highlight some related work on nonparametric model projection. It follows from \ref{new_ident_3} that
+% \begin{align*}
+%     \frac{\Psi}{h(\beta)} &= \argmin_{\theta \in \mathbb{R}} \E\left[\left(Y -  \mu_{\perp}(Z) - \theta\{\beta(Z) - \beta_\perp(Z)\} \right)^2 \right].
+% \end{align*}
+% Nonparametric estimands defined thorough similar least-squares expressions have been considered elsewhere in literature on model projection \citep{Robinson1988,Chambaz2012,Buja2019}. Consider a semi-parametric model class $\mathcal{M} \subseteq \mathcal{H}$. The nonparametric model `projection' of $\mu \in \mathcal{H}$ on $\mathcal{M}$ is the element $\tilde{\mu} \in \mathcal{M}$ which is in some sense closest to to $\mu$. For instance, let $\mathcal{M}$ be the set of functions of the form $g(x) + \theta a$, where $\theta \in \mathbb{R}$ and $g \in \mathcal{H}$ depends only on $x$, (rather than $z=(a,x)$). Using a least-squares projection, one obtains $\argmin_{f \in \mathcal{M}} ||\mu - f|| = \mu_X(x) + \Theta \{a-p(x)\} $, where $\mu_X(x) \equiv E(Y|X=x)$ and
+% \begin{align*}
+%     \Theta \equiv \frac{\E[\{A - p(X)\}\{Y -  \mu_X(X)\}]}{\E[\{A - p(X)\}^2]} = \frac{\E[\Cov[A,Y|X]]}{\E[\Var[A|X]]}.
+% \end{align*}
+% The `least-squares estimand' $\Theta$ is nonparametrically defined and can be interpreted like a linear model coefficient even when $\mu \not\in \mathcal{M}$, see \cite{Vansteelandt2022}. It is of the form $\Theta  = \langle \mu , \alpha \rangle$ for $\alpha(z) = \{a - p(x)\}/\E[\Var[A|X]]$. It is possible to write down representations of the form $\Theta  = \E[\omega(Z) m(\mu, W)]$, but these include unknown weights $\omega$, and therefore fall outside of the setup in the current paper \citep{Hines2023, Kallus2020, Crump2009}. Despite this, $\Theta $ has a simple RAL estimator $\Lambda_n(\hat{\mu}_X, \hat{p})$, where $\gamma(z) = a$.
+% By establishing a connection between average moment estimands and projection estimands, one might also hope to extend recent results on the fundamental limits of estimating $\E[\Cov[A,Y|X]]$, i.e. the numerator of $\Theta$ \citep{Balakrishnan2023}. Such results imply that debiased estimators are, in some sense, optimal even when requisite learners converge slower than is required for the estimator to be RAL.
+
+\section{Conclusion}
+
+We present a new algorithm for estimating average moment estimands.
+%, inspired by recent work on automatic debiasing (AD).
+Our approach leverages functions for which the average moment is known \emph{a priori} to be non-zero, though the need to construct such functions may also be viewed as a limitation. Nonetheless, we contend that constructing such functions is significantly simpler than deriving the functional form of the RR, which is required for non-automatic RR learning methods. Our proposal is therefore `automatic' in the sense of not requiring complicated estimand-specific machinery. Moreover, rather than learning the full RR, as in conventional AD, we instead learn a moment-constrained function that is sufficient for debiasing the naive (direct) average moment estimator. From a practical perspective, the need to learn a constrained function requires additional techniques and hyperparameter tuning to ensure that constraints are approximately satisfied. In our work, we propose a Lagrange-type penalization method for moment-constrained learning and apply this method using multi-tasking neural networks, though experimenting with other approaches to constrained function learning represents an important direction for future study.
+
+There are several other directions which one might extend our work. First, our set up considers estimands that represent the average moment of a regression functions, but extensions of AD to so-called generalized regressions (e.g. quantile functions) could also be considered \citep{Chernozhukov2021}. %Similar extensions for moment-constrained learning should also be possible in these settings. 
+Second, we consider neural network learners, but similar extensions for gradient boosted trees / random forests should also be possible. % Third, our numerical experiments consider two common estimands for binary and continuous treatments, but further empirical comparisons for other estimands are needed. 
+Finally, our approach to moment-constrained function learning may be applied to other problems with stochastic constraints e.g. those related to fairness of ML predictions.
+
+% First, our setup considers known moment functions, but extensions to data dependent moment functions seem possible, as we highlight with reference to model projection estimands that have similar efficient estimators to ours. Second, the asymptotic theory of our estimators relies on sample splitting, but there is scope to relax this by appealing to recent theory for critical radii. Third, we consider neural network learners, but extensions for e.g. for gradient boosted trees / random forests should be possible. Finally, our numerical experiments consider two common estimands for binary and continuous treatments, but further empirical comparisons for other average moment estimands are needed. 
+
+%Second, it may be possible to improve on our moment-constrained function learners, for instance by pretraining on an unconstrained tasks to provide warm starts for the constrained tasks, or else by combining the two constrained learning tasks via multitasking. Finally, our work is mainly theoretical, and further empirical comparisons would be useful.
+
+\section*{Acknowledgments}
+
+We acknowledge insightful conversations on this topic with Alejandro Schuler and Stijn Vansteelandt.

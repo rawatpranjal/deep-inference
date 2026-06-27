@@ -1,0 +1,18 @@
+The goal of stage 1 is to estimate the conditional expectation $\expect[X|z]{\vec{\psi
+}_{\theta_X}(X)} \simeq \vec{V} \vec{\phi}_{\theta_Z}(z)$ by learning the matrix $\vec{V}$ and parameter $\theta_Z$, with $\theta_X=\hat{\theta}_X$ given and fixed. Given the stage 1 data $(x_i, z_i)$, this can be done by minimizing the empirical estimate of $\mathcal{L}_1$,
+\begin{align}
+    \hat{\vec{V}}^{(m)}, \hat{\theta}_Z = \argmin_{\vec{V} \in \mathbb{R}^{d_1\times d_2}, \theta_Z \in \Theta_Z} \mathcal{L}_1^{(m)}(\vec{V}, \theta_Z),~ \mathcal{L}_1^{(m)} = \frac1m \sum_{i=1}^m \|\vec{\psi}_{\hat\theta_X}(x_i) - \vec{V}\vec{\phi}_{\theta_Z}(z_i)\|^2 + \lambda_1 \|\vec{V}\|^2. \label{eq:stage1-empirical-loss}
+\end{align}
+Note that the feature map $\vec{\psi}_{\hat\theta_X}(X)$ is fixed during stage 1, since this is the ``target variable.'' 
+If we fix $\theta_Z$, the minimization problem \eqref{eq:stage1-empirical-loss} reduces to a  linear ridge regression problem with multiple targets, whose solution as a function of $\theta_X$ and $\theta_Z$ is given analytically by
+\begin{align}
+    \hat{\vec{V}}^{(m)}(\theta_X, \theta_Z) = \Psi_1^\top \Phi_1 (\Phi_1^\top \Phi_1 + m\lambda_1 I)^{-1}, \label{eq:stage1-sol}
+\end{align}
+where $\Phi_1, \Psi_1$ are feature matrices defined as
+$
+    \Psi_1 = [\vec{\psi}_{\theta_X}(x_1), \dots, \vec{\psi}_{\theta_X}(x_m)]^\top \in \mathbb{R}^{m \times d_1}$ and $
+    \Phi_1 = [\vec{\phi}_{\theta_Z}(z_1), \dots, \vec{\phi}_{\theta_Z}(z_m)]^\top \in \mathbb{R}^{m \times d_2}.
+$
+We can then learn the parameters $\theta_Z$ of the adaptive features $\vec{\psi}_{\theta_Z}$ by minimizing the loss $\mathcal{L}^{(m)}_1$ at $\vec{V} = \hat{\vec{V}}^{(m)}(\hat\theta_X, \theta_Z)$ using gradient descent.
+For simplicity, we introduce a small abuse of notation by denoting as $\hat{\theta}_Z$ the result of a user-chosen number of gradient descent steps on the loss \eqref{eq:stage1-empirical-loss} with $\hat{\vec{V}}^{(m)}(\hat\theta_X, \theta_Z)$ from \eqref{eq:stage1-sol}, even though $\hat{\theta}_Z$ need not attain the minimum of the non-convex loss \eqref{eq:stage1-empirical-loss}. We then write $ \hat{\vec{V}}^{(m)}:=\hat{\vec{V}}^{(m)}(\hat\theta_X, \hat{\theta}_Z)$.
+While this trick of using an analytical estimate of the linear output weights of a deep neural network might not lead to significant gains in standard supervised learning, it turns out to be very important in the development of our 2SLS algorithm. As shown in the following section, the analytical estimate $\hat{\vec{V}}^{(m)}(\theta_X,\hat{\theta}_Z)$ (now considered as a function of $\theta_X$) will be used to backpropagate to $\theta_X$ in stage 2. 

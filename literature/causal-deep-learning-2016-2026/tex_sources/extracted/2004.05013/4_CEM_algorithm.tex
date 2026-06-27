@@ -1,0 +1,170 @@
+%\subsection{General algorithm}
+\label{Causal_EM_theory}
+Our learning problem amounts to estimate the mixing coefficients $\{\pi_k\}_{k \in \{R,D,S,A\}}$, the  distributions parameters $\theta=\{\theta_k\}_{k \in \{R,D,S,A\}}$ and the latent distribution $q(z)$. For that matter, we consider the Expectation-Maximization (EM) algorithm, originally introduced in~\cite{Dempster_1977}, which is known to be an appropriate optimization algorithm for estimating the data distribution of hidden variables. %\textcolor{red}{
+We provide the EM algorithm with extra information about the possible groups for every observation (in spirit similarly to~\cite{ambroise2000algorithm} where a concept of authorized label set is used or to~\cite{come2009learning} which uses partial information). However, contrary to~\cite{ambroise2000algorithm, come2009learning}, we enrich this extra information with causal constraints derived from the structure of the problem.
+%}
+ % the conditionally to the factual outcome and the hypothetical counterfactual outcome. As the Expectation-Maximization (EM) algorithm, originally introduced in~\cite{Dempster_1977}, is known to be an appropriate optimization algorithm for estimating the data distribution of hidden variables $q(z)$, we have enhanced it with the causal constraints. 
+%in presence of missing or hidden data, such as a mixture estimation problem, we modify it in order to take into account the causal constraints.
+
+\begin{algorithm}[!ht]
+\caption{Expectation-Causality-Maximisation}\label{algo:causal_em}
+\begin{algorithmic} 
+\State \textbf{Initialisation:} initialise $q_0$ and compute $\pi_0$ and $\theta_0$ (M-step).
+\State \textbf{While}(Not Converged) do
+	\State \hspace{0.5 cm} Expected step:
+	$q_{t+1} = \argmax_q(\mathcal{L}(q, \theta_t,\pi_t))$
+	\State \hspace{0.5 cm} Causality step:
+	Constraints on $q_{t+1}$ with $C^*$ (Table~\ref{tab:causality_constraints})
+	\State \hspace{0.5 cm} Maximization step:
+	$(\theta_{t+1},\pi_{t+1}) = \argmax_{\theta,\pi}(\mathcal{L}(q_{t+1},\theta,\pi))$
+\State \textbf{End While}
+\end{algorithmic}
+\end{algorithm}
+
+In Algorithm~\ref{algo:causal_em}, the Expectation step estimates the latent variables, the Causality step projects the solution on the causality constraints\footnote{Forcing to zero the probabilities $z_{ik}$ of the  two impossible groups and normalizing the sum.}
+displayed in Table~\ref{tab:causality_constraints}, while the Maximization step maximises the likelihood $\mathcal{L}(q,\theta,\pi)$ as if the latent variables were not hidden. For a faster convergence, we initialize $q_0$ with a probability of half on each of the two remaining causal populations.
+Our algorithm converges as by construction it necessarily increases the log-likelihood at each iterations and remains bounded by an evidence lower bound similar to EM given by
+$\sum_{z|q(z|x,\theta,\pi) \neq 0} q(z|x,\theta,\pi) \log \frac{p(x,z|\theta,\pi)}{q(z|x,\theta,\pi)}$ .
+%\textcolor{red}{
+Note that without information on the input features X, the distribution $q(z)$ is uniformly distributed between the two authorized groups.
+%} 
+In addition, the causality constraints enforce that two population labels are ruled out as they are not admissible. Under some specific assumptions, we can do even better and recover the true label (cf Proposition~\ref{CausalEM}). Thanks to this true label, the maximum likelihood problem is cast into four decoupled single-density maximum likelihood problems.  Under concavity of the likelihood for every distribution in the mixture, the log-likelihood converge not only locally but to a unique global maximum (corollary~\ref{CausalEM2}). We can summarize these findings by saying that the unsupervised learning problem, implied by our model of mixture, is transformed into a semi-supervised problem.
+
+\begin{proposition}\label{CausalEM} 
+Under causality constraints which excludes two populations (depending on treatment and observed outcome), and assuming the feature distribution conditionally to the group is the same  and independent of the treatment (i.e. $p(x|t, y) = p(x)$), each group will be identified to a unique causal population.
+
+\end{proposition}
+\begin{proof} (sketch)
+    Under only the information of the causal constraints, $q(z|y,t)$ is distributed with the probability $\frac{1}{2}$ between the two possible populations. If we note $p(.)=p(.|\theta,\pi)$, then 
+    $q(z|x,y,t)=\frac{p(x|z,y,t)q(z|y,t)}{p(x|y,t)} \propto \frac{p(x|z)}{p(x)}$ under causal constraints and assumption of uniform features.
+\end{proof}
+
+\begin{corollary}
+\label{CausalEM2} Under causality constraints, if the log-likelihood of the distribution for a single mixture is concave, the ECM algorithm reaches the global optimum.
+\end{corollary}
+\begin{proof} (sketch)
+    Preserving the properties of the EM algorithm, ECM converges to a local maximum. As a result of the identifiability (Prop.~\ref{CausalEM}) and the concavity for a single mixture, the local optimum is also global.
+\end{proof}
+
+%The algorithm allows us to obtain the parameters of the four groups as well as to identify each of the parameters to the corresponding group (R, D, S and A). In this way, the unsupervised learning problem (implied by our model of mixture) is transformed into a semi-supervised problem. 
+%Obviously, to make causal EM fast, like one  would do for the EM algorithm, this distribution should be taken such that it has a closed form for the maximum likelihood optimization in the M-Step.
+%, as it is satisfied in a Gaussian mixture.
+
+\begin{comment}
+
+
+\subsection{Convergence property}
+\begin{definition}\label{def:ELBO}
+Let $q$ be a probability mass function (pmf), the evidence lower bound (ELBO) writes as:
+\begin{multline}
+    \mathcal{F}(q,\theta,\pi)= 
+    \sum_{z|q(z|x,\theta,\pi) \neq 0} q(z|x,\theta,\pi) \log \frac{p(x,z|\theta,\pi)}{q(z|x,\theta,\pi)}
+\end{multline}
+\end{definition}
+
+\begin{proposition}\label{CausalEM}
+%Algorithm~\ref{algo:causal_em} is an algorithm of alternate maximization with respect to $q$ and $(\theta,\pi)$. 
+The sequence  $\mathcal{F}(q_t,\theta_t,\pi_t)$ converges and bounds the conditional log likelihood $\log p(x|\theta,\pi)$,
+\begin{equation}
+\forall \theta, \forall \pi, \forall q, \mathcal{F}(q,\theta,\pi) \leq  \log p(x|\theta,\pi)
+\end{equation}
+It reaches the optimum if and only if we recover the conditional log probability: $q(z|x,\theta,\pi)\!=\!p(z| x,\theta,\pi)$.
+\end{proposition}
+
+\begin{proof}
+See proof provided in the Supplementary Materials.%in Section~\ref{proof1}.
+\end{proof}
+
+\begin{remark}
+Proposition \ref{CausalEM} shows that algorithm~\ref{algo:causal_em} provides an Evidence Lower Bound (ELBO) for the problem of the complete log likelihood maximization. Note that at this stage we have demonstrated convergence only to a local maximum. %, but that there is no guarantee of convergence to a global maximum. 
+In the sequel, we will prove that by adding causality constraints and some additional assumption, CEM converges to a single solution that is the true global optimum.
+\end{remark}
+
+%In a traditional likelihood maximization, we assume that the log-likelihood $\log p_{\theta}(x)$  is concave in terms of the variable $\theta$, which implies with the Salter condition (existence of an interior solution) the existence and unicity of the maximum for the log likelihood. Marginalizing by $Z$, our optimization amounts to maximize $\log p_{\theta}(x| t, y) = \log \sum_z p_{\theta}(x,z| t, y)$. Because of the summation over the latent variable, the log likelihood is not any more a log concave function. Sadly, the fact that the negative log likelihood of our distributions was convex in terms of the parameters does not imply at all that the negative log-likelihood of the distribution mixture $\log \sum_z p_{\theta}(x,z| t, y)$ is convex. In the simple case of normal distributions, for instance, it is well known that the negative log likelihood of Gaussian mixture distribution is not any more convex in terms of the parameters. More generally mixture of distributions that are log concave is not any more log concave. 
+%In the simple case of normal distributions, for instance, it is well known that the negative log likelihood of Gaussian mixture distribution is not any more concave in terms of the parameters. This explains why we need to use expectation maximization procedure to solve this issue.
+
+%In a traditional log-likelihood maximization, we assume that the log-likelihood $\log p_{\theta}(x)$  is concave, or equivalently that its opposite is convex in terms of the variable $\theta$, making the maximization of the log likelihood a simple convex optimization problem. A typical distribution is for instance the normal distribution for which parameters are mean and variance denoted by $\theta=(\mu, \sigma)$. The negative log likelihood of a normal is trivially convex in terms of the mean and the variance (take for instance the second order derivative to prove it easily). But in our case, we have to deal with $(X,Z)$ random variables, with $X$ observed (features) and $Z$ non-observed (latent variable), knowing the treatment $T$ and its outcome $Y$. Marginalizing by $Z$, our optimization amounts to maximize $\log p_{\theta}(x| t, y) = \log \sum_z p_{\theta}(x,z| t, y)$. Because of the summation over the latent variable, the log-likelihood maximization problem is not any more a convex problem as we are now looking for the maximum likelihood solution of a mixture of distribution. Sadly, the fact that the negative log likelihood of our distributions was convex in terms of the parameters does not imply at all that the negative log-likelihood of the distribution mixture $\log \sum_z p_{\theta}(x,z| t, y)$ is concave. In the simple case of normal distributions, for instance, it is well known that the negative log likelihood of Gaussian mixture distribution is not any more concave in terms of the parameters. More generally mixture of distributions that are log concave are not any more log concave. This explains why we need to use expectation maximization procedure to solve this issue.
+
+
+\subsection{Identification of causal populations}
+
+%The CEM is an alternate ascent algorithm where we successively maximize in $q$ and ($\theta,\pi$). At this stage, there is no guarantee that it converges to a global maximum since the objective function is non convex. 
+We will prove that if we make additional assumptions, we can recover \emph{the four population classes (or labels)} and under equality of model and oracle classes (as defined below), we can attain global optimum of the maximum likelihood thanks to the causality constraints. It is the major difference between standard EM and CEM. We start by defining the difference between model and oracle classes.
+
+\begin{definition}
+We call {\em mixture group} $(G_k)_{k=1..4}$ the set of points $i$ whose latent variable $z_{ik}$ has a model probability strictly highest to those of others: 
+$
+x_i \in G_k \,\, \text{ if } \,\,\forall l\neq k, \,\, p(x_i|z_{ik},\theta_k,\pi_k) > p(x_i|z_{il},\theta_l,\pi_l).
+$
+\end{definition}
+
+\begin{definition}
+We say a mixture model \emph{can recover classes (or labels)} if there exists a one to one mapping between groups and classes $\Phi: G_k \mapsto C_i $, such as the group model probability of belonging to class $C_i$ is strictly highest to those of others:
+$
+\forall j\neq i, \,\, \prod_{x \in G_k}p(z_{ik}\!|X\! =\! x, \theta_k,\pi_k) > \prod_{x \in G_k}p(z_{jk}\!|X\! =\! x,\theta_k,\pi_k).
+$\\
+
+If a model is able to recover classes, i.e. assigns each distribution to its class (R,D,S,A), the images of the mixture groups are called \emph{model classes}. The groups being dependent on the parameters, we call \emph{oracle} model a model that realizes the global optimum of the maximum likelihood. It is in a sense the truth, regardless if there are potentially multiple truths possible. We call \emph{oracle classes} the model classes of the oracle model.
+
+%They are model dependent through $p_{\theta}$. We call \emph{oracle} model a model that realizes the global optimum of the maximum likelihood. This model may not be unique as the maximum likelihood is non convex. But the oracle model is in a sense the truth, regardless if there are potentially multiple truths possible. We call \emph{oracle classes} the model classes of the oracle model.
+\end{definition}
+
+
+\begin{proposition}\label{prop:accurate_label_0}
+For a model obtained by CEM, any point belongs to a unique group $G_k$ almost surely.
+\end{proposition}
+
+\begin{proof}
+See proof provided in the Supplementary Materials.%in  Section~\ref{proof2}.
+\end{proof}
+
+
+\begin{lemma}\label{lemma1}
+If  the pmf $q(z|\theta,\pi)$ is known, it is possible to determine if a model obtained by CEM can recover causal populations or not.
+%If we know both the p.m.f. of any class $i$ given treatment and expected value, $\P(Z=i|t,y)$ and the p.m.f.  of $(T,Y)$, $\P(T=t,Y=y)$, we can determine if a model obtained by CEM can recover causal populations or not.
+\end{lemma}
+
+\begin{proof}
+See proof provided in the Supplementary Materials.%in  Section~\ref{proof3}.
+\end{proof}
+
+This raises the remark that the knowledge of $q(z|\theta,\pi)$ is somehow an \emph{Axiom of choice} by design. In the absence of further information on the data distribution, and knowing treatment and expected values, the optimal solution is to assume equivalent probabilities between the two possibles classes.
+
+\begin{definition}
+Given treatment and expected value (t,y), we call {\em informative prior on $Z$}, the assignment $\frac{1}{2}$ probability to the two possibles classes.
+\end{definition}
+
+\begin{definition}
+If the probability to observe a feature is the same across all the four classes, we say that the feature is {\em uniform}.
+\end{definition}
+
+\begin{proposition}\label{prop:accurate_label}
+Under informative priors  and uniform features, the CEM is able to recover causal populations with a one to one mapping corresponding to the identity.
+\end{proposition}
+
+\begin{proof}
+See proof provided in the Supplementary Materials.%in Section~\ref{proof4}.
+\end{proof}
+
+
+
+
+\begin{proposition}\label{prop:global_optimum}
+If the model Classes and oracle Classes are the same point wise and if the log-likelihood of the distribution for a single mixture is concave, CEM reaches the global optimum.
+\end{proposition}
+
+
+\begin{proof}
+See proof provided in the Supplementary Materials. % in Section~\ref{proof5}.
+\end{proof}
+
+The general idea is that by adding constraints, which depend on treatment and expected values and which exclude two classes at each iteration, each group will converge to a unique class, leading the convergence of the algorithm to the global maximum. In this way, the unsupervised learning is transformed into a semi-supervised learning.
+%Propositions \ref{prop:accurate_label} and \ref{prop:global_optimum} stating identifiability of the causal populations (recovering true classes) and attainability of the global minimum are major differences between standard EM and CEM, making CEM somehow a semi-supervised learning method as opposed to standard EM purely unsupervised.
+Informative prior assumption is very mild and can be considered valid in practice without further knowledge about the four causality groups. The assumption of getting same model and oracle classes point-wise is not as restrictive as it may seem as the model is attracted somehow to the solution, as CEM ensures in any case a local optimum. Should this attraction zone be large enough, we should attain the global optimum easily. We have not made any specific parametric assumption on the conditional distribution $p_{\theta}(x | z, t, y)$. Obviously, to make CEM fast, like one would do for the EM algorithm, this distribution should be taken such that it has a closed form for the maximum likelihood optimization in the M-Step, as it is satisfied in a Gaussian mixture.
+
+
+\end{comment}
+
+
+
+

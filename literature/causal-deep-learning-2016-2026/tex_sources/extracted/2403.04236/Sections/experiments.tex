@@ -1,0 +1,171 @@
+\section{Numerical Experiments}\label{sec:experiment}
+
+
+In this section, we evaluate our proposal by numerical simulation.  In particular, we present the performance of RDIV when we use neural networks as the function approximator and the validity of the proposed model selection procedure. We show that with model selection, our method can achieve state-of-the-art performance in a wide range of data-generating processes.  
+
+\subsection{Experimental Settings}
+
+
+\begin{figure}
+    \centering
+\begin{tikzpicture}
+\node[draw, circle, text centered, minimum size=0.75cm, line width= 1] (x) {$S'$};
+\node[draw, circle, above=1 of x,
+text centered, minimum size=0.75cm, dashed,line width= 1] (u) {$U$};
+\node[draw, circle,left=2.5 of x, minimum size=0.75cm, text centered,line width= 1] (z) {$Q'$};
+\node[draw, circle,right=2.5 of x, minimum size=0.75cm, text centered,line width= 1] (w) {$W'$};
+\node[draw, circle, below left = 1 and 1 of x, minimum size=0.75cm, text centered,line width= 1] (a) {$A$};
+\node[draw, circle, below right = 1 and 1 of x, minimum size=0.75cm, text centered,line width= 1] (y) {$Y$};
+\draw[-latex, line width= 1] (x) -- (a);
+\draw[-latex, line width= 1] (x) -- (y);
+\draw[-latex, line width= 1, dashed] (x) -- (z);
+\draw[-latex, line width= 1, dashed] (x) -- (w);
+\draw[-latex, line width= 1, dashed] (u) -- (x);
+\draw[-latex, line width= 1] (u) -- (z);
+\draw[-latex, line width= 1] (u) -- (w);
+\draw[-latex, line width= 1] (u) -- (a);
+\draw[-latex, line width= 1] (u) -- (y);
+\draw[-latex, line width= 1] (a) -- (y);
+\draw[-latex, line width= 1, dashed] (z) -- (a);
+\draw[-latex, line width= 1, dashed] (w) -- (y);
+\end{tikzpicture}
+\caption{A typical causal diagram for negative controls. The dashed edges may be absent, and the dashed circle around $S'$ indicates that $U$ is unobserved.}
+    \label{fig:causal_dag}
+\end{figure}
+
+
+\paragraph{Experiment Design.} In our experiment, we test our method on a synthetic dataset. We adjust the data generating process (DGP) for proximal causal inference used in \cite{cui2020semiparametric,miao2018confounding,deaner2021many}. Concretely, we generate multi-dimensional
+variables $U',S', W',Q',A$, where $U$ is an unobserved confounder, $S'\in d_{S}$ is the observed covariate, $W'\in d_{W}$ is the negative control outcomes, $Q'\in d_{Q}$ is the negative control actions, and $A$ is the selected treatment, as described in \pref{fig:causal_dag}. We left the detailed generation process in Appendix \ref{sec:exp-details}.  For a detailed understanding of this setup, we refer the reader to Section 2 of \citet{kallus2021causal}. It is well known that there exists a bridge function $h_0'$ such that the following moment condition holds \citep{cui2020semiparametric,kallus2021causal}: $$
+\E[Y - h_0'(W',A,S')|Q',A,S'] = 0,
+$$
+which allows the concrete form of \eqref{eq:cond-mom-condi}.
+To introduce nonlinearity, we transform $(S', W',Q')$ into $(S,W,Q)$ via $S = g(S'), W = g(W'), Q=g(Q')$, where $g(\cdot)$ is a nonlinear invertible function
+applied elementwise to $S',W',Q'$ respectively. We consider several forms of $g(\cdot)$, including identity, polynomial, sigmoid design, and exponential function.  In the final data, we only observe $(S,W,Q)$ but not $(S',W',Q')$.  Here we use 6 different $g(\cdot)$: Id$(t) = t$, Poly$(t)$ = $t^3$, LogSigmoid$(t)= \log(1+ |16*x - 8|) \cdot \operatorname{sign}(x)$, Piecewise$(t) = 3(x-2)1_{x\leq1}+ \log(8x-8)1_{x\geq1}$, Sigmoid$(t) = \frac{5}{1+\exp(-0.1*x)}$ and CubicRoot = $x^{1/3}$.
+
+\paragraph{Methods to compare.}
+
+In this experiment, our goal is to estimate the counterfactual mean parameter $\E[Y(1)]$, which is unique as long as \eqref{eq:cond-mom-condi} holds. We learn $h_0$ in \eqref{eq:cond-mom-condi} by RDIV, which corresponds to the procedure in Algorithm \ref{alg:dbiv-noniterative} with MLE for conditional density estimation.   We show results for different values for $\alpha \in \{0.01,0.1\}$, and compare the performance of our approach to that of several different methods, including KernelIV \citep{singh2019kernel}, DeepIV \citep{hartford2017deep}, DeepFeatureIV \citep{xu2021deep}, and AGMM \citep{DikkalaNishanth2020MEoC}. Note that DeepIV can be viewed as a special case of our methods, with $\alpha$ fixed to be 0. In the first stage of our algorithm, we use a three-layer mixture density network \citep{hartford2017deep,rothfuss2019conditional} as the approximator of the conditional density. In the second stage, we use a three-layer fully-connected neural network as the approximators for RDIV, DeepIV, AGMM, and DFIV. We present the results of our method and its comparison with previous benchmarks in terms of MSE normalized by the true estimand value in Table \ref{table:15-1-500}-\ref{table:20-15-1000}. Every estimate is calculated by 100 random replications.  The confidence interval is calculated by 2 times the standard deviation. 
+
+\paragraph{Hyperparameter settings.} For RDIV, we use Adam as the optimizer for both density estimation and Tikhonov regression, with a default learning rate of $10^{-4}$, a batch size of $50$, and a training epoch of $300$. We will show how to choose these hyperparameters with our model selection procedure (Algorithm \ref{alg:model_selection}) in Section~\ref{subsec:model_seleciton}. For all baselines except for AGMM, we adapt the hyperparameters in their original codebase. For AGMM, we tune the learning rate for the learner and adversary for every $g(\cdot)$ independently. We follow \cite{singh2019kernel} to use Gaussian RKHS for function approximation and their method for tuning the regularization parameter. When $n=500$, the learning rate of the learner and adversary in AGMM are manually set to $10^{-4}$ for LogSigmoid, Piecewise, and Sigmoid, and $10^{-3}$ for Id, Poly, and CubicRoot. When $n=1000$, the learning rate of the learner and adversary in AGMM are manually set to $10^{-4}$ for Piecewise and Sigmoid, and $10^{-3}$ for LogSigmoid, Piecewise, and CubicRoot.  The training parameter of DFIV is adopted from \citet{xu2021deep}. Note that tuning DFIV is highly intractable in practice, as their method is essentially a bilevel optimization, which is known to be hard to solve \citep{hong2023two}.
+
+\subsection{Results}
+
+First, we can observe that although our estimator resembles DeepIV, the later fix $\alpha =0$ in \eqref{eq: emp-iter}, RDIV outperforms DeepIV for all $g(\cdot)$.  This is due to the nonzero regularization term, which improves the performance of our estimator by a better tradeoff between bias and variance. Second, in most cases, AGMM and DFIV are outperformed by algorithms that only need single-level optimization (RDIV, KernelIV, DeepIV). This would be because, in these methods, optimization of the loss function is much harder, which results in the inaccuracy of estimators. Thirdly, while it is seen that Kernel IV is comparable to RDIV in some scenarios such as in Table \ref{table:20-15-500} and \ref{table:20-15-1000}, in the next section, we will show that our RDIV equipped with a model selection procedure can generally outperform KernelIV. 
+
+% \masa{I think this tuning-free is not the right way to checaretrize these algorithms. I feel our algorithms also need tuning as well. I would say something like " For most cases, AGMM and DFIV are outperformed by tuning-free algorithms (RDIV, KernelIV, DeepIV. This would be because, in these methods, optimization of loss function is much harder, which results in the inaccuracy of estimators.     }
+
+
+% \masa{Write interpretation like our method beats the kernel IV, etc. }
+
+\begin{table}[t!]
+\centering
+\caption{ $\mathbb{E}[Y(1)]$: $d_S = d_Q = 15$, $d_W = 1$, $n_1 = 500$.  }
+\label{table:15-1-500}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lcccccr@{}}
+\toprule
+$g(t)$ & RDIV ($\alpha = 0.01$) & RDIV ($\alpha =0.1$) & KernelIV & DeepIV & DFIV & AGMM \\ \midrule
+Id$(t)$  & 0.0077 $\pm$ 0.0012  & \bf{0.0021 $\pm$ 0.0007}  & 0.0193 $\pm$ 0.0018  & 0.0089 $\pm$ 0.0015   & 0.1069 $\pm$ 0.0218  &  0.0198 $\pm$ 0.0011 
+ \\
+Poly$(t)$ & \bf{0.0150 $\pm$ 0.0057}  & 0.0904 $\pm$ 0.0202  & 0.0439 $\pm$ 0.0062  & 0.0887 $\pm$ 0.0276   & 0.0920 $\pm$ 0.0046   & 0.0453 $\pm$ 0.0023 \\
+LogSigmoid$(t)$ & 0.0094 $\pm$ 0.0013  & \bf{ 0.0022 $\pm$ 0.0009 } & 0.0031 $\pm$ 0.0008  & 0.0152 $\pm$ 0.0026   & 0.1444 $\pm$ 0.0080  & 0.0042 $\pm$ 0.0010     \\
+Piecewise$(t)$   & 0.0070 $\pm$ 0.0017  & \bf{0.0024 $\pm$ 0.0009}  & 0.0041 $\pm$ 0.0012  & 0.0076 $\pm$ 0.0012  & 0.0150 $\pm$ 0.0026   & 0.0128 $\pm$ 0.0024 
+\\ 
+Sigmoid$(t) $  & 0.0206 $\pm$ 0.0026  & \bf{0.0021 $\pm$ 0.0006}  & 0.0380 $\pm$ 0.0025  & 0.0278 $\pm$ 0.0025   & 0.1846 $\pm$ 0.0092 & 0.0070 $\pm$ 0.0014   \\
+CubicRoot$(t)$ & 0.0095 $\pm$ 0.0014  & \bf{0.0024 $\pm$ 0.0007}  & 0.0511 $\pm$ 0.0039  & 0.0161 $\pm$ 0.0018  & 0.1357 $\pm$ 0.0200  & 0.0536 $\pm$ 0.0021   \\
+
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+\begin{table}[t!]
+\centering
+\caption{ $d_S = d_Q = 15$, $d_W = 1$, $n_1 = 1000$.}
+\label{table:15-1-1000}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lcccccr@{}}
+\toprule
+$g(t)$ & RDIV ($\alpha = 0.01$) & RDIV ($\alpha =0.1$) & KernelIV & DeepIV & DFIV & AGMM \\ \midrule
+Id$(t)$ & 0.0106 $\pm$ 0.0013  & \bf{0.0014 $\pm$ 0.0003}  & 0.0145 $\pm$ 0.0013  & 0.0128 $\pm$ 0.0015  & 0.1162 $\pm$ 0.0052  & 0.0217 $\pm$ 0.0135 \\
+Poly$(t)$ & 0.0164 $\pm$ 0.0020  & \bf{0.0037 $\pm$ 0.0027}  & 0.0396 $\pm$ 0.0038  & 0.0182 $\pm$ 0.0023  & 0.1256 $\pm$ 0.0044 & 0.0054 $\pm$ 0.0031 
+ \\
+LogSigmoid$(t)$ & 0.0078 $\pm$ 0.0009  & \bf{0.0009 $\pm$ 0.0003}  & 0.0259 $\pm$ 0.0023  & 0.0262 $\pm$ 0.0023  & 0.1618 $\pm$ 0.0482  & 0.0053 $\pm$ 0.0010  \\
+Piecewise $(t)$ & \bf{0.0017 $\pm$ 0.0004}  & 0.0059 $\pm$ 0.0008  & 0.0080 $\pm$ 0.0008  & {0.0019 $\pm$ 0.0005}  & 0.1623 $\pm$ 0.0674 & 0.0014 $\pm$ 0.0011 \\ 
+Sigmoid$(t)$ & \bf{0.0077 $\pm$ 0.0016}  & {0.0082 $\pm$ 0.0023}  & 0.0311 $\pm$ 0.0014  & 0.0110 $\pm$ 0.0019  & 0.2085 $\pm$ 0.0443& 0.0296 $\pm$ 0.0023  \\
+CubicRoot$(t)$ & 0.0254 $\pm$ 0.0021  & \bf{0.0048 $\pm$ 0.0008}  & 0.0459 $\pm$ 0.0024  & 0.0248 $\pm$ 0.0022  & 0.1401 $\pm$ 0.0047  & 0.0650 $\pm$ 0.0035  \\
+
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+\begin{table}[t!]
+\centering
+\caption{ $d_S = d_Q = 20$, $d_W = 10$, $n_1 = 500$.}
+\label{table:20-15-500}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lcccccr@{}}
+\toprule
+$g(t)$ & RDIV ($\alpha = 0.01$) & RDIV ($\alpha =0.1$) & KernelIV & DeepIV & DFIV & AGMM \\ \midrule
+Id$(t)$  & 0.0272 $\pm$ 0.0022  & \bf{0.0055 $\pm$ 0.0009}  & 0.0088 $\pm$ 0.0016  & 0.0364 $\pm$ 0.0025   & 0.0291 $\pm$ 0.0060  & 0.3291 $\pm$ 0.0115 
+ \\
+Poly$(t)$ & \bf{0.0067 $\pm$ 0.0016}  & 0.0230 $\pm$ 0.0051  & 0.0697 $\pm$ 0.0041  & 0.0263 $\pm$ 0.0050  & 0.0997 $\pm$ 0.0046  & 0.0409 $\pm$ 0.0225    \\
+LogSigmoid$(t)$ & 0.0905 $\pm$ 0.0058  & 0.0525 $\pm$ 0.0054  & 0.0335 $\pm$ 0.0014  & 0.0960 $\pm$ 0.0066  & 0.2059 $\pm$ 0.0826  & \bf{0.0218 $\pm$ 0.0027 }
+     \\
+Piecewise$(t)$   & 0.0305 $\pm$ 0.0043  & \bf{0.0104 $\pm$ 0.0021}  & 0.0359 $\pm$ 0.0010  & 0.0225 $\pm$ 0.0031  & 0.7626 $\pm$ 0.9996  & 0.0136 $\pm$ 0.0010 
+\\ 
+Sigmoid$(t) $  & 0.1481 $\pm$ 0.0083  & {0.0106 $\pm$ 0.0028}  & \bf{0.0018 $\pm$ 0.0004}  & 0.1983 $\pm$ 0.0117   & 0.3545 $\pm$ 0.0494  &0.0307 $\pm$ 0.0195    \\
+CubicRoot$(t)$ & 0.0810 $\pm$ 0.0039  & 0.0288 $\pm$ 0.0025  &\bf{ 0.0021 $\pm$ 0.0004 } & 0.0949 $\pm$ 0.0050  & 0.0956 $\pm$ 0.0453  & 0.3461 $\pm$ 0.0121    \\
+
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+\begin{table}[t!]
+\centering
+\caption{ $d_S = d_Q = 20$, $d_W = 10$, $n_1 = 1000$.}
+\label{table:20-15-1000}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+$g(t)$ & RDIV ($\alpha = 0.01$) & RDIV ($\alpha =0.1$) & KernelIV & DeepIV & DFIV & AGMM \\ \midrule
+Id$(t)$  & 0.0652 $\pm$ 0.0035  & 0.0269 $\pm$ 0.0020  & \bf{0.0009 $\pm$ 0.0002}  & 0.0639 $\pm$ 0.0033   & 0.1442 $\pm$ 0.2461  & 0.1321 $\pm$ 0.0029 
+ \\
+Poly$(t)$ & 0.0861 $\pm$ 0.0076  & \bf{0.0224 $\pm$ 0.0034}  & 0.0465 $\pm$ 0.0021  & 0.1148 $\pm$ 0.0082  & 0.0951 $\pm$ 0.0031  & 0.1796 $\pm$ 0.0023    \\
+LogSigmoid$(t)$ & 0.0649 $\pm$ 0.0046  & 0.0280 $\pm$ 0.0025  & \bf{0.0197 $\pm$ 0.0014}  & 0.0759 $\pm$ 0.0045  & 0.2949 $\pm$ 0.2917  & 0.0247 $\pm$ 0.0013 \\
+Piecewise$(t)$   & {0.0039 $\pm$ 0.0008}  & \bf{0.0037 $\pm$ 0.0006}  & 0.0215 $\pm$ 0.0006  & 0.0065 $\pm$ 0.0012   & 0.5442 $\pm$ 0.4784  & 0.0133 $\pm$ 0.0009 
+\\ 
+Sigmoid$(t) $   & 0.1112 $\pm$ 0.0053  & 0.0091 $\pm$ 0.0028  & \bf{0.0037 $\pm$ 0.0005}  & 0.1493 $\pm$ 0.0058   & 0.3332 $\pm$ 0.0652  & 0.0650 $\pm$ 0.0029   \\
+CubicRoot$(t)$ & 0.0990 $\pm$ 0.0042  & 0.0802 $\pm$ 0.0046  &\bf{ 0.0021 $\pm$ 0.0004 } & 0.1070 $\pm$ 0.0043   & 0.0956 $\pm$ 0.0453  & 0.3461 $\pm$ 0.0121    \\
+
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{table}[t!]
+\centering
+\caption{ Model selection results based on Best ERM. The left tabular is generated from a data size of $n_1 = 500$, while the right tabular is generated from a dataset with $n_1 = 1000$. Both datasets satisfies $d_S = d_Q = 20, d_W = 10$.}
+\resizebox{\textwidth}{!}{
+\label{table:model-sel-erm}
+\begin{tabular}{lccc|ccc}
+\toprule
+$g(t)$ & RDIV ($\alpha = 0.01$) & RDIV ($\alpha =0.1$) & KernelIV  & RDIV ($\alpha = 0.01$) & RDIV ($\alpha =0.1$) & KernelIV  \\ \midrule
+Id$(t)$  & \bf{0.0017 $\pm$ 0.0017}  & 0.0047 $\pm$ 0.0021  &0.0088 $\pm$ 0.0016  &0.0102 $\pm$ 0.0028 & 0.0014 $\pm$ 0.0009 &\bf{0.0009 $\pm$ 0.0002}
+ \\
+Poly$(t)$ & \bf{0.0032 $\pm$ 0.0024}   & 0.0272 $\pm$ 0.0097 &0.0697 $\pm$ 0.0041  &0.0313 $\pm$ 0.0137 &\bf{0.0049 $\pm$ 0.0026}    & 0.0465 $\pm$ 0.0021\\
+LogSigmoid$(t)$ & 0.0121 $\pm$ 0.0055   & \bf{0.0019 $\pm$ 0.0007} & 0.0335 $\pm$ 0.0014  & 0.0078 $\pm$ 0.0020 &\bf{0.0008 $\pm$ 0.0004} & 0.0197 $\pm$ 0.0014\\
+Piecewise$(t)$   & 0.0159 $\pm$ 0.0121   & \bf{0.0020 $\pm$ 0.0019} & 0.0359 $\pm$ 0.0010  &\bf{0.0024 $\pm$ 0.0013}  & 0.0034 $\pm$ 0.0027&0.0215 $\pm$ 0.0006
+\\ 
+Sigmoid$(t) $  & 0.1655 $\pm$ 0.0144   & 0.0937 $\pm$ 0.0174& \bf{0.0018 $\pm$ 0.0004}  &0.1538 $\pm$ 0.0078 &  0.0863 $\pm$ 0.0187&  \bf{0.0037 $\pm$ 0.0005} \\
+CubicRoot$(t)$ & 0.0034 $\pm$ 0.0017   & \bf{0.0019 $\pm$ 0.0021}& 0.0021 $\pm$ 0.0004  &0.0148 $\pm$ 0.0048 &  0.0036 $\pm$ 0.0035  & \bf{0.0021 $\pm$ 0.0004} \\
+
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+\subsection{Model selection}
+\label{subsec:model_seleciton}
+
+We also report our results in model selection for the second stage by implementing Best-ERM in Algorithm \ref{alg:model_selection} and demonstrate how it improves our results. 
+Specifically, our models $h_1, \dots, h_M$ are trained by different hyperparameters. First, we employ model selection for the density function by Best ERM. Then with the trained density function in the first stage, we further apply Best ERM to the models in the second stage.  In the model selection experiments, we fix the dimension of our dataset to be $d_S = d_Q = 20$, $d_W = 10$. We compute the mean and confidence interval with 10 independent trials. We set the candidate training parameters as follows: the number of epochs $\in\{300,400\}$, the batch size for the 1st stage $\in\{30,50\}$ and the batch size for the 2nd stage $\in\{50,60,100\}$, the learning rate $\in\{10^{-4},10^{-3}\}$, the number of mixture components $\in\{40,50,60\}$. As shown in Table \ref{table:model-sel-erm}, when RDIV is equipped with model selection techniques, our method outperforms KernelIV in all but one case when the dataset size is 500, and outperforms KernelIV in 3 out of 6 settings when the dataset size is 1000. Our approach demonstrates its effectiveness by outperforming previous benchmarks across a diverse set of Data Generating Processes (DGP). This achievement is attributed to both the ease of optimization of RDIV and its theoretically sound integration with model selection procedures.
+

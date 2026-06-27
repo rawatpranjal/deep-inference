@@ -1,0 +1,85 @@
+\subsection{Estimating Aerosol-Cloud-Climate Effects from Satellite Data}
+\label{sec:clouds}
+\textbf{Background}
+The development of the model above, and the inclusion of treatment as a continuous variable with multiple, unknown confounders, is motivated by a real-life use case for a prime topic in climate science. Aerosol-cloud interactions (ACI) occur when anthropogenic emissions in the form of aerosol enter a cloud and act as cloud condensation nuclei (CCN). An increase in the number of CCN results in a shift in the cloud droplets to smaller sizes which increases the brightness of a cloud and delays precipitation, increasing the cloud's lifetime, extent, and possibly thickness \citep{twomey1977influence, albrecht1989aerosols, toll2017volcano}. However, the magnitude and sign of these effects are heavily dependent on the environmental conditions surrounding the cloud \citep{douglas2020quantifying}. Clouds remain the largest source of uncertainty in our future climate projections \citep{ipcc6ts}; it is pivotal to understand how human emissions may be altering their ability to cool. Our current climate models fail to accurately emulate ACI, leading to uncertainty bounds that could offset global warming completely or double the effects of rising CO\(_{2}\) \citep{boucher2013clouds}.
+
+\textbf{Defining the Causal Relationships}
+Clouds are integral to multiple components of the climate system, as they produce precipitation, reflect incoming sunlight, and can trap outgoing heat \citep{stevens2009untangling}. Unfortunately, their interconnectedness often leads to hidden sources of confounding when trying to address how anthropogenic emissions alter cloud properties.
+
+% \begin{wrapfigure}{r}{0.5\textwidth}
+\begin{figure}[t]
+    % \vspace{-1em}
+    \centering
+    \begin{subfigure}[b]{0.8\textwidth}
+        \includegraphics[width=\textwidth]{figures/longlegend.png}
+    \end{subfigure}
+    
+    \begin{subfigure}[b]{0.4\textwidth}
+        \includegraphics[width=\textwidth]{figures/simple_causal.png}
+        \caption{}
+        \label{fig:simplecausaldiag}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.4\textwidth}
+        \includegraphics[width=\textwidth]{figures/causaldiagram.png}
+        \caption{}
+        \label{fig:causaldiag}
+    \end{subfigure}
+    \caption{
+        Causal diagrams. \Cref{fig:simplecausaldiag}, a simplified causal diagram representing what we are reporting within; aerosol optical depth (AOD, regarded as the treatment T) modulates cloud optical depth (\(\tau\), Y), which itself is affected by hidden confounders (U) and the meteorological proxies (X).
+        \Cref{fig:causaldiag}, an expanded causal diagram of ACI. The aerosol (a) and aerosol proxy (AOD), the true confounders (light blue), their proxies (dark blue), and the cloud optical depth (red).}
+    \label{fig:causaldiagram}
+    \vspace{-1em}
+% \end{wrapfigure}
+\end{figure}
+Ideally, we would like to understand the effect of aerosols ($a$) on the cloud optical thickness, denoted $\tau$. However, this is currently impossible. Aerosols come in varying concentrations, chemical compositions, and sizes \citep{schutgens2016will} and we cannot measure these variables directly. Therefore, we use aerosol optical depth (AOD) as a continuous, 1-dimensional proxy for aerosols. \Cref{fig:causaldiag} accounts for the known fact that AOD is an imperfect proxy impacted by its surrounding meteorological environment \citep{christensen2017unveiling}.
+The meteorological environment is also a confounder that impacts cloud thickness $\tau$ and aerosol concentration $a$. 
+Additionally, we depend on simulations of the current environment in the form of reanalysis to serve as its proxy.
+
+Here we report AOD as a continuous treatment and the environmental variables as covariates. 
+However, aerosol is the actual treatment, and AOD is only a confounded, imperfect proxy (\Cref{fig:simplecausaldiag}). 
+This model cannot accurately capture all causal effects and uncertainty due to known and unknown confounding variables. 
+We use this simplified model as a test-bed for the methods developed within this paper and as a demonstration that they can scale to the underlying problem. 
+Future work will tackle the more challenging and realistic causal model shown in \Cref{fig:causaldiag}, noting that the treatment of interest $a$ is multi-dimensional and cannot be measured directly.
+
+\textbf{Model}
+We use daily observed $1^{\circ} \times 1^{\circ}$ means of clouds, aerosol, and the environment from sources shown in \Cref{tab:datasources} of \Cref{app:datasets}. 
+To model the spatial correlations between the covariates on a given day, we use multi-headed attention \citep{vaswani2017attention} to define a transformer-based feature extractor.
+Modeling the spatial dependencies between meteorological variables is motivated by confounding that may be latent in the relationships between neighboring variables.
+These dependencies are unobserved from the perspective of a single location.
+This architectural change respects both the assumed causal graph (\cref{fig:simplecausaldiag}) and some of the underlying physical causal structure.
+We see in \Cref{fig:CODresults} (Left) that modeling \emph{context} with the transformer architecture significantly increases the predictive accuracy of the model when compared to a simple feed-forward neural network (\emph{no context}).
+\textbf{Discussion \& Results}
+The results for the APO of cloud optical depth (\(\tau\)) as the ``treatment'', AOD, increases are shown in \Cref{fig:CODresults}. 
+As the assumed strength of confounding increases (\(\Lambda > 1\)), the range of uncertainty in the treatment outcome increases. 
+Within this range of confounding, the modeled outcomes agree with two conflicting hypotheses.
+First, that aerosol acts to invigorate the cloud, inducing a large response that would follow a maximum curve within this uncertainty range \citep{christensen2011microphysical, douglas2021global}. 
+And second, that aerosol has little impact on cloud depth, and the actual response is a minimal, flat line \citep{gryspeerdt2019constraining}. 
+We further find the reported dose-response curves in agreement with multiple estimates of aerosol-cloud interactions using satellite observations \citep{breon2002aerosol, myhre2007aerosol, toll2019weak}. 
+The upper bound for $\log \Lambda = .2$ agrees with measurements of the in-cloud environment and aerosol-cloud interactions from aircraft-mounted sensors \citep{painemal2013first}, this may indicate the need for additional control variables when using satellite data.
+
+% \begin{wrapfigure}{r}{0.7\textwidth}
+    % \vspace{-1em}
+\begin{figure}[t]
+    \centering
+     \begin{subfigure}[b]{.4\textwidth}
+         \includegraphics[width = \textwidth]{figures/scatter_tau.png}
+         \label{fig:CODresults_scatter}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.4\textwidth}
+        \includegraphics[width=\textwidth]{figures/COD/dr_tau_attn.png}
+         \label{fig:CODresults_apo}
+    \end{subfigure}
+    \caption{Left: The values of the observed, true \(\tau\) against the modeled \(\tau\). Right: The curve for continuous treatment outcome of our aerosol proxy (AOD) on cloud optical depth (\(\tau\)). The darkest shaded region (\(\Lambda\) = 1) represents the uncertainty in the treatment outcome from the ensemble due to finite data. As the strength of confounders increases ($\Lambda > 1.0$), the range of uncertainty in the treatment outcome increases. }
+    \label{fig:CODresults}   
+    \vspace{-1em}
+\end{figure}
+% \end{wrapfigure}
+
+The resolution of the satellite observations ($1^{\circ} \times 1^{\circ}$ daily means) could be averaging various cloud types and obscuring the signal. 
+Future work will investigate how higher resolution (20km $\times$ 20km) data with constraints on cloud type may resolve some confounding influences.
+However, even our more detailed causal model (\Cref{fig:causaldiag}) cannot account for all confounders; we expected, and have seen, imperfections in our model of this complex effect. 
+The model's results require further expert validation to interpret the outcomes and uncertainty.
+
+\textbf{Societal Impact}
+Geoengineering of clouds by aerosol seeding could offset some amount of warming due to climate change, but also have disastrous global impacts on weather patterns \cite{diamond2022opinion}. 
+Given the uncertainties involved in understanding aerosol-cloud interactions, it is paramount that policy makers are presented with projected outcomes if a proposals assumptions are wrong or relaxed.

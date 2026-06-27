@@ -1,0 +1,6 @@
+
+The computational complexity of the algorithm is $O(md_1d_2 + d_2^3)$ for stage 1, while stage 2 requires additional $O(nd_1d_2 + d_1^3)$ computations. This is small compared to KIV \citep{Singh2019}, which takes $O(m^3)$ and $O(n^3)$, respectively. We can further speed up the learning by using mini-batch training as shown in Algorithm~\ref{algo}. Here, $\hat{\vec{V}}^{(m_b)}$ and $\hat{\vec{u}}^{(n_b)}$ are the functions given by \eqref{eq:stage1-sol} and \eqref{eq:stage2-sol} calculated using mini-batches of data. Similarly, $\mathcal{L}_1^{(m_b)}$ and $\mathcal{L}_1^{(n_b)}$ are the stage 1 and 2 losses for the mini-batches. We recommend setting the batch size large enough so that $\hat{\vec{V}}^{(m_b)}, \hat{\vec{u}}^{(n_b)}$ do not diverge from $\hat{\vec{V}}^{(m)}, \hat{\vec{u}}^{(n)}$ computed on the entire dataset. Furthermore, we observe that setting $T_1 > T_2$, i.e. updating $\theta_Z$ more frequently than $\theta_X$, stabilizes the learning process.
+
+\input{Method/algorithm.tex}
+
+In Appendix~\ref{sec:consistency}, we provide regularity conditions under which the function learned by DFIV converges to the true structural function in probability. The derivation is based on Rademacher complexity bounds \citep{FoundationOfML}.%, which is applicable not only to neural networks but also to various machine learning techniques.

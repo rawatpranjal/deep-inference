@@ -1,0 +1,74 @@
+\ifdefined\response\newpage\newpage\clearpage\pagebreak\else\fi
+\label{sec:ass_d_note}
+We shortly identify sufficient conditions that guarantee asymptotic optimality  (Assumption~\ref{ass:empirical_proc_mean}), in addition to standard conditions on the nuisance parameters $\what{\pi}_{-k,n},\what{\mu}^C_{-k,n}$ (\Cref{ass:overlap}, \Cref{ass:consistency}) and on outcomes (\Cref{ass:bounded_outcomes}). 
+\begin{assumption}[Overlap]
+\label{ass:overlap}
+    For some $\eta>0$ and for all $k,n$, we have  
+    \vspace{-0.2em}
+    $$
+    \eta\leq  \pi(X) \le 1-\eta, \quad \eta \leq \what \pi_{-k,n}(X) \leq 1-\eta \quad \text{a.s.}
+    $$  
+\end{assumption}
+\vspace{-1.2em}
+\begin{assumption}[Convergence rates of propensity and constrained outcome models]
+\label{ass:consistency}
+For all~$k \in \{1,\ldots,K\}$, 
+both $\what\pi, \what\mu^C$ are consistent,\vspace{-0.3em}
+    $$
+    \|\what\pi_{-k,n} - \pi\|_{L_2(P)}=o_P(1), \quad  \|\what\mu_{-k,n}^C - \mu\|_{L_2(P)}=o_P(1)
+    $$ 
+$$\text{and also} \quad    \|\what\pi_{-k,n} - \pi\|_{L_2(P)} \cdot  \|\what\mu_{-k,n}^C - \mu\|_{L_2(P)}=o_P(n^{-\frac{1}{2}}).$$
+\end{assumption}
+\noindent As we discuss below, we can relax these assumptions
+when guaranteeing double robustness (consistency under misspecified nuisance parameters).
+As is typical, we assume that outcomes do not differ too much from their means, conditional on covariates. 
+\begin{assumption}
+[Outcomes close to conditional means] \label{ass:bounded_outcomes} For all $k,n$ and some $0<B<\infty$, 
+\vspace{-0.3em}
+$$\|A(Y-P[Y\mid X])\|_{L_2(P)} =\|A(Y-\mu(X))\|_{L_2(P)} \leq B. $$
+\end{assumption}
+
+We also require the following condition (\Cref{ass:empirical_proc_mean}) on the C-Learner outcome model. This condition is new to our setting, and warrants discussion. %
+
+\begin{assumption}[Empirical process assumption]%
+\label{ass:empirical_proc_mean}\ \vspace{-0.3em}
+$$(P_{k,n}-P)(  \what\mu_{-k,n}^C(X)- \mu(X)) =o_P(n^{-1/2}).$$
+\end{assumption}
+\noindent In \cref{sec:other_methods}, we showed how versions of one-step estimation  and targeting can also be considered C-Learners. We show in \cref{sec:show_constant_shift} and \cref{sec:show_tmle} that cross-fitted versions of the self-normalized AIPW and TMLE for continuous and unbounded outcomes, under standard assumptions on $\what\pi_{-k,n}, \what \mu_{-k,n}$ (with $\what \mu_{-k,n}$ the usual outcome model learned using Equation~\eqref{eq:regular_outcome}) also satisfy Assumption~\ref{ass:empirical_proc_mean}. Thus, C-Learner results in Theorems~\ref{thm:asymp},~\ref{thm:dr} (to come) apply directly to these estimators. %
+One future research direction is to understand the model classes and constrained optimization methods for which this assumption holds. 
+
+\Cref{ass:empirical_proc_mean} is not implied by previous assumptions. Consider the following example: 
+
+\begin{example}[Assumption \ref{ass:empirical_proc_mean} does not follow from Assumptions \ref{ass:overlap}, \ref{ass:consistency}, \ref{ass:bounded_outcomes}]\label{ex:ass_D}
+Assume \Cref{ass:overlap}.
+Let $\what\mu_{-k,n}$ be an \emph{unconstrained} solution to
+$\what\mu_{-k,n}\in \argmin_{\tilde\mu\in\mathcal F} P_{-k,n}[A(Y-\tilde \mu(X))^2]$,
+in contrast txo the constrained problem in \eqref{eq:constraint}. 
+Then, define 
+$\what\mu^C_{-k,n}(x)=\what\mu_{-k,n}(x)+\sum_{i=1}^{n/K} \mathbf{1} \left\{x=x_i\right\}$, with the sum of indicators over elements in the $P_{k,n}$ fold.
+Then 
+\begin{align}
+\label{eq:01_counterex}
+    P\left|\what\mu^C_{-k,n}(X)-\what\mu_{-k,n}(X)\right|=0\;\text{ and } \;
+P_{k,n}\left(\what\mu^C_{-k,n}(X)-\what\mu_{-k,n}(X)\right)=1.
+\end{align}
+We make the following additional assumptions for this example. 
+We also assume that $\|\what\mu_{-k,n}(X)-\mu(X)\|=o_P(1)$ (analogous to \Cref{ass:consistency}).
+Let $\what\mu$ denote $\argmin_{\tilde \mu\in\mathcal F} P[A(Y-\tilde\mu(X))^2]$, the best fitted model over the entire population. For simplicity, assume that $Y$ is bounded to satisfy \Cref{ass:bounded_outcomes}, and that $\what\mu(X)$ is bounded as well. Then
+\vspace{-0.7em}
+\begin{align*}
+(P_{k,n}-P)\left(\what\mu^C_{-k,n}(X)-\mu(X)\right)&=
+(P_{k,n}-P)\left(\what\mu^C_{-k,n}(X)-\what\mu_{-k,n}(X)\right)
+\\&+
+(P_{k,n}-P)\left(\what\mu_{-k,n}(X)-\what\mu(X)\right)\\
+&+(P_{k,n}-P)\left(\what\mu(X)-\mu(X)\right)  
+\end{align*}
+where the first term on the RHS is 1 from \eqref{eq:01_counterex}, the second is $o_P(1)$ by the cross-fitting lemma (\Cref{lem:cross_fitting} in \Cref{sec:show_for_aipw_tmle}), and the third is $o_P(1)$ by Chebyshev. 
+Therefore, 
+\vspace{-0.7em}
+$$(P_{k,n}-P)\left(\what\mu^C_{-k,n}(X)-\mu(X)\right)=1+o_P(1)$$
+so that 
+Assumption~\ref{ass:empirical_proc_mean} does not hold for this example, while Assumptions \ref{ass:overlap}, \ref{ass:consistency}, \ref{ass:bounded_outcomes} do. 
+\end{example}
+\label{sec:ass_d_note-end}
+\ifdefined\response\newpage\newpage\clearpage\pagebreak\else\fi

@@ -1,0 +1,134 @@
+\section{C-Learner Has Finite Variance in a Simple Low-Overlap Setting, While AIPW and TMLE Do Not}
+\label{sec:theory_simple}
+We have discussed how the direct method (naive plug-in estimator) is stable, including in challenging settings with low overlap, but lacks the asymptotic properties of debiased methods like one-step estimation and targeting. On the other hand, basic versions of one-step estimation and targeting achieve asymptotic optimality but are unstable in settings with low overlap. It appears C-Learner is the best of both worlds, as it has desirable asymptotic properties (\Cref{sec:theory_text}) while producing stable estimates (\Cref{sec:experiments}). 
+Here, we use a simple theoretical example to show how C-Learner inherits the stability of the direct method. 
+As C-Learner, AIPW, and TMLE are all asymptotically equivalent under (roughly) standard assumptions (\Cref{sec:theory_text}), the assumptions in this section are necessarily nonstandard. 
+We do not claim that C-Learner is strictly superior to AIPW or TMLE; rather, we articulate specific scenarios in which C-Learner outperforms AIPW and TMLE. 
+
+
+The intuition is that we have outcome models that are well-behaved, but inverse propensity terms (such as $A/\what\pi(X)\cdot (Y-\what\mu(X))$) that are very poorly behaved, so that estimators that are plug-ins of outcome models have finite variance but estimators with additive inverse propensity terms have infinite variance. Such poorly-behaved inverse propensity terms can happen when there is low overlap. 
+
+
+More specifically, we can specify the function class of outcome models $\mathcal F$ to only consist of outcome models contained within some square-integrable envelope $C(x)$ with $P[C(X)^2]<\infty$, so that $P_{k,n}[f(X)]$ for any $f\in \mathcal F$ has finite variance. 
+At the same time, we make assumptions so that the inverse propensity term in the AIPW and TMLE have infinite variance, for example, because $1/\pi(X)$ is heavy-tailed and not integrable due to low overlap. 
+For simplicity, we also assume the true propensity weights are known and used for estimation. 
+Under these assumptions, the AIPW and TMLE estimators do not have finite variance, while C-Learner does have finite variance. 
+Note that the assumption of heavy-tailed $1/\pi(X)$ is a departure from standard assumptions in Section~\ref{sec:theory_text}, where we assume that $\pi(X)$ is bounded away from 0. 
+
+
+
+
+Although assuming known propensity scores is quite strong, the results are still interesting as AIPW, TMLE, and C-Learner all use these propensity weights but only C-Learner has finite variance. 
+Additionally, although our example will show that the direct method has finite variance like the C-Learner, our goal is to compare with estimators that are asymptotically optimal under more standard assumptions (\Cref{sec:theory_text}).
+
+\subsection{Setting}
+We focus on the mean missing outcome setting, as described in \Cref{sec:ate}.
+Consider binary treatments (actions) $A\in\{0,1\}$, covariates $X\in\R^d$, and potential outcomes $Y(1)$ and $Y(0):=0$. Let $(X,A,Y)$ be i.i.d. observations drawn from distribution $P$. Our goal is to estimate the mean missing outcome $\psi:=\int Y(1) dP$, which we assume is finite.  
+
+
+
+
+Let $\|\cdot \|$ denote the Euclidean norm. For consistency with previous sections, let $P[\cdot]$ denote the expectation operator under $P$. 
+We consider the cross-fitted~\citep{van2011cross,ChernozhukovChDeDuHaNeRo18} estimators as defined in \Cref{sec:data_splitting}, but using true propensities $\pi$ instead of fitted ones $\what\pi_{-k,n}$. 
+
+
+
+\subsection{Assumptions}
+To show that C-Learner remains well-behaved even when inverse propensity terms blow up, we assume all outcome models lie within a square-integrable envelope $C(x)$, %
+i.e. for any $f\in \mathcal F$,
+$|f(X)|\leq C(X)$ almost surely, and $P[C(X)^2]<\infty$. %
+This is much weaker than assuming that the model class is bounded everywhere, for example. Below we provide examples, such as where $C(x)$ is a maximum of linear functions of $x$. Note that bounding a function class with square-integrable envelopes is also standard in empirical process theory. 
+
+We note that while our proposed methodology for C-Learner (\Cref{sec:methodology})  does not constrain outcome models to be within any specific bounded envelopes, one can choose a wide enough envelope to encompass reasonable outcome models for the setting, and then proceed with C-Learner within this newly constrained function class (i.e. let $\mathcal F$ be outcome models constrained to be within the chosen envelope). 
+
+\begin{assumption}[Outcome models are contained within a square-integrable envelope]
+\label{ass:envelope}
+There is a square-integrable envelope $C(x)$ (i.e. $P[C(X)^2]<\infty$) such that all elements in the model class $f\in \mathcal F$ are contained in the envelope (i.e. $|f(X)|\leq C(X)$ almost surely).\end{assumption}
+Below we give examples to show that a linear function is square-integrable if $X$ has finite second moments, and that the maximum of square-integrable functions is also square-integrable. Thus, if we assume $X$ has finite second moments, then one can construct square-integrable envelopes $C(x)$ that are the maximum of linear functions;
+this shows that assuming $f$ is contained in a square-integrable envelope is a weaker assumption than assuming $f$ is bounded everywhere by constants, for example.
+
+\begin{example}[Linear models with finite coefficients are square-integrable if $X$ has finite second moments]
+\label{ex:linear_square_int}
+    Let $g(x):=\beta^\top x$ for some fixed $\beta$. Assume $P[\|X\|^2]<\infty$. Then $g(x)$ is square-integrable. %
+    This follows by Cauchy-Schwarz: 
+    $P[(\beta^\top X)^2]\leq \|\beta\|^2 P[\|X\|^2]<\infty.$
+\end{example}
+
+
+\begin{example}[Maximum of a finite number of square-integrable functions is square-integrable]\label{ex:max_square_int}
+Consider $g_1,\ldots,g_k$ that are all square-integrable so that $P[g_i(X)^2]<\infty$ for $i=1,\ldots,k$. 
+Note that $\max(g_1(x)^2,\ldots,g_k(x)^2)\leq |g_1(x)|^2+\ldots+ |g_k(x)|^2$
+so that taking expectations %
+$$P[\max(|g_1(X)|,\ldots,|g_k(X)|)^2]
+= P[\max(g_1(X)^2,\ldots,g_k(X)^2)]
+\leq \sum_{i=1}^k P[|g_i(X)|^2]<\infty$$
+with the last inequality by square-integrability of each $g_i$. 
+\end{example}
+
+Below, we also assume that a feasible solution to the constraint exists in $\mathcal F$ with high probability. This high probability depends on the size of the envelope. In Example~\ref{ex:feasible_envelope_whp} we present a simple example where for a fixed $\epsilon>0$, we can choose $\mathcal F$ (and envelope $C(x)$) such that the feasible solution to the constraint exists in $\mathcal F$  with probability $\geq 1-\epsilon$. 
+
+\begin{assumption}[C-Learner solution exists in $\mathcal F$]
+\label{ass:soln_exists}
+With probability $\geq 1-\epsilon$ over draws of data of size $n$, 
+the C-Learner solution exists in $\mathcal F$. \end{assumption}
+A simple sufficient (but not necessary) condition for the C-Learner solution to exist in $\mathcal F$ is that the constant functions corresponding to the maximum and minimum values in $P_{k,n}$, which we denote $f_+$ and $f_-$, respectively, are both in $\mathcal F$, and $\mathcal F$ is closed under convex combinations. This is sufficient because 
+$P_{k,n}\left[\frac{A}{\pi(X)}(Y-f_+(X))\right]\leq 0$ and $P_{k,n}\left[\frac{A}{\pi(X)}(Y-f_-(X))\right]\geq 0$, 
+so there will be a convex combination of $f_+$ and $f_-$ for which the constraint is exactly 0. In Example~\ref{ex:feasible_envelope_whp} below we construct a model class $\mathcal F$ contained in envelope $C(x)$ where $\mathcal F$ and $C(x)$ are defined in such a way that the maximum and minimum values of $Y$ in the sample $P_{k,n}$ are within $\mathcal F$ and envelope $C(x)$ at least $1-\epsilon$ of the time. Note that randomness over $P_{-k,n}$ is not directly relevant to this condition. 
+
+\begin{example}[Constructing $\mathcal F$ where C-Learner solution exists in $\mathcal F$ with high probability]
+\label{ex:feasible_envelope_whp}
+Consider a model class $\mathcal F_0$ that contains functions of choice, and also all constant functions, that is closed under convex combinations. Also consider an envelope function of choice $C_0(x)$ that is chosen to contain most reasonable unconstrained solutions. There are many choices for $C_0$ (\Cref{ex:linear_square_int},~\Cref{ex:max_square_int}). It is not required that $|f(X)|\leq C_0(X)$ almost surely for all $f\in \mathcal F_0$. 
+Fix $m$, the number of samples in $P_{k,n}$, and probability threshold $\epsilon>0$. 
+Assume $Y$ is continuous and that the CDF of $Y$ is known: $F(x)=P(Y\leq x)$. 
+Let $\alpha=\frac{1}{2}(1-(1-\epsilon)^{1/m})$. 
+Then consider lower and upper bounds
+$a=F^{-1}(\alpha), \; b=F^{-1}(1-\alpha).$
+By construction of $a$ and $b$, 
+$P( \cap_{i=1}^m \{Y_i\in[a,b]\})\geq 1-\epsilon$
+so that we can choose a new envelope
+$$C(x)=\max(C_0(x), |a|, |b|)$$
+that contains each of $Y_1,\ldots,Y_m$ with probability $\geq 1-\epsilon$ and is square-integrable (\Cref{ex:max_square_int}). 
+Then define $\mathcal F$ to be all $f\in\mathcal F_0$ for which $|f(x)|\leq C(x)$ almost surely.
+\end{example}
+
+Lastly, we make the following assumption so that the inverse propensity terms in AIPW and TMLE have infinite variance. We state the assumption, then discuss its two parts. 
+\begin{assumption}[Inverse propensity term is not square-integrable]
+\label{ass:prop_not_square_int}
+(I) There is some $v_0>0$ such that 
+for all $X$ in the support of $P$, $\text{Var}(Y\mid X, A=1)\geq v_0.$ (II) Also, $\pi(X)>0$ almost surely and
+$P\left[\frac{1}{ \pi(X)}\right]=\infty.$
+\end{assumption}
+In the first part of the assumption above, we assume that the conditional variance of the outcome, conditional on $X$ and treatment $A=1$, is above a threshold $v_0>0$. In the vast majority of real settings, the conditional variance of the outcome will be nonzero, and it may be plausible to assume a lower bound.
+
+In the second part of the assumption above, we require that 
+$P[1/\pi(X)]=\infty$, which corresponds to low overlap settings.
+We also assume $\pi(X)>0$ almost surely so the estimators are well-defined. %
+There are many choices of $\pi(X)$ for which $P[1/\pi(X)]=\infty$; we provide simple examples. %
+
+
+\begin{example}[Beta $\pi(X)$]
+Let $\pi(X)\sim \text{Beta}(a,1)$ with density
+$f(p)=a\,p^{a-1}$, then $P[1/\pi(X)]=a/(a-1)$ if $a>1$, and $P[1/\pi(X)]=\infty$ otherwise. 
+As a simple example, if $\pi(X)\sim\text{Unif}(0,1)$ then $\pi(X)\sim\text{Beta}(1,1)$, and $P[1/\pi(X)]=\infty$. 
+\end{example}
+\subsection{Result}
+Now we proceed to the main result, which is that in the specific theoretical scenario defined above, C-Learner has finite variance, while AIPW and TMLE do not. 
+\begin{theorem}
+\label{thm:simple_variance}
+Assume Assumptions~\ref{ass:envelope},~\ref{ass:soln_exists},~\ref{ass:prop_not_square_int}, 
+i.e. fix an $\epsilon>0$, assume true propensities $\pi(x)$ are known, and assume the following:
+\begin{enumerate}
+    \item There is an envelope $C(x)$ with  $P[C(X)^2]<\infty$ such that for all $f\in \mathcal F$, $|f(X)|\leq C(X)$ almost surely. 
+    \item With probability $\geq 1-\epsilon$ over draws of data of size $n$,  C-Learner solution exists in $\mathcal F$.
+\item There is a $v_0>0$ such that 
+$\text{Var}(Y\mid X, A=1)\geq v_0$
+for all $X$ in the support of $P$. Also, $\pi(X)>0$ almost surely and
+$P\left[\frac{1}{ \pi(X)}\right]=\infty$.
+\end{enumerate}
+Then the TMLE and AIPW estimators have infinite variance. In contrast, 
+with probability $\geq 1-\epsilon$,
+the C-Learner estimator has finite variance. 
+\end{theorem}
+See \Cref{sec:theory_simple_more} for the proof of \Cref{thm:simple_variance}. 
+
+\label{sec:theory_simple-end}

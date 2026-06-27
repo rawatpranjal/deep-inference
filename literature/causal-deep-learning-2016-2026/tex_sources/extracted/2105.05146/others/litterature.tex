@@ -1,0 +1,156 @@
+We give a brief summary of some of the conceptual steps that led to today's mathematical understanding of the universal approximation theorems. For a thorough and extensive historical bibliography on neural networks, \cite{schmidhuber2015deep} compiled 888 references. See \cite{goodfellow2016deep} for an elementary well documented introduction to the subject.
+
+\section{Universal approximation theorems}
+
+A neural network (NN; for a definition, see e.g. \cite{pinkus1999approximation} or \cite{calin2020deep}) transforms an input $x\in D\subset\mathbb{R}^{n}$ into an output $\widetilde{y}=\Phi\left(  x\right)  \in\mathbb{R}$. As such it is a concrete real function of $n$ real variables, $n$ being a priori an arbitrary positive integer. A natural question that has been asked for a long time is the following: can this NN (with an appropriate architecture) approximate functions of a given class (common example: multivariate continuous functions defined on $D=K$, a compact subset of $\mathbb{R}^{n}$, but more general function spaces, such as $L^{p}$ spaces, are usually the proper framework from an abstract mathematical viewpoint) \citep{mhaskar1996system}? In other words, can a NN generate a topologically dense subset of the function class in question? For example, in the case of a normed vector space, given $\epsilon>0$, is there and, if so, can one actually construct at a reasonable cost a NN such that
+
+\[
+\left\Vert f-\widetilde{y}\right\Vert <\epsilon\text{ ?}%
+\]
+
+A related question (among many other researchers are addressing \citep{fan2020universal}) is: to what extent does the choice of the norm (topology) affect this existence and/or construction?
+
+The proper mathematical interpretation of NN is based on the universal
+approximation theorems (UAT). The UAT are roughly divided into two categories:
+
+\begin{enumerate}
+\item arbitrary number of neurons in the case of {\it shallow} neural networks (SNN, arbitrary width). This is the classical case. It goes back to the pioneering work of the 1940-1980's;
+
+\item arbitrary number of layers with {\it deep} neural networks (DNN, arbitrary
+depth). In practice, the latter have proven to be more efficient
+\citep{mhaskar2019function}. It is always possible to build a SNN to emulate a DNN. However the number of neurons grows exponentially in order to obtain a
+comparable performance (in terms of error) \citep{telgarsky2016benefits,eldan2016power}.
+\end{enumerate}
+
+In this sense, the UAT are representations of classical existence theorems. They implement the construction (i.e. find the appropriate weights) of the approximation of large classes of functions \citep{paluzo2020two}. However, they do not say how one explicitly (with a formula or an algorithm) finds this approximation (weights).
+
+We give a brief summary of some of the conceptual steps that led to today's mathematical understanding of the UAT.
+
+\begin{itemize}
+\item The Kolmogorov--Arnold representation (or superposition) theorem \citep{kolmogorov1957representation} states that any continuous real multivariate function can be represented by a superposition of real one-variable continuous functions $f:\mathbb{R}^{n}\rightarrow\mathbb{R}$:
+\[
+f(x)  =\sum_{i=0}^{2n}\Phi_{i}\left(  \sum_{j=1}^{n}\phi
+_{i,j}(x_{j})  \right)
+\]
+This theorem gives a partial answer to Hilbert's 13th problem \citep{akashi2001application,khesin2014arnold}. A construction is proposed by \cite{polar2020urysohn}.
+
+\item Prior to the 1980s \citep{mcculloch1943logical,fukushima1975cognitron}, NN architectures were shallow. An understanding of SNN gives a good appreciation of DNN.
+
+\item The Kolmogorov-Arnold theorem gives an exact representation of the function $f(x)$. This representation proves to be very complex (fractal nature) and computationally very slow, therefore unusable in NN. The accuracy condition had to be relaxed for an approximation condition ($L^{p}$
+or uniform norm). The optimal solution is sought by iterative methods (the
+gradient descent, introduced by Jacques Hadamard in 1908, being the most
+popular). Pioneering modern work is due to \cite{cybenko1989approximation} for
+sigmoid activation functions (arbitrary width), \cite{funahashi1989approximate}, \cite{hornik1991approximation} (he showed that UAT was
+potentially constructible using a multilayer architecture of the NN rather
+than a specific choice of the activation function), \cite{barron1993universal} (bounds on smooth function errors), etc...
+
+\item  \cite{leshno1993multilayer} and \cite{pinkus1999approximation} have
+shown that the universal approximation property (see \cite{kratsios2019universal} for a
+definition) is equivalent to a non polynomial activation function.
+\end{itemize}
+
+\begin{theorem}
+(\cite{cybenko1989approximation,hornik1991approximation,pinkus1999approximation}). Let $n\in\mathbb{N}$, $K\subset\mathbb{R}^{n}$ compact, $f:K\rightarrow\mathbb{R}$ continuous, $\rho:\mathbb{R}\rightarrow\mathbb{R}$ non polynomial and continuous, and let $\epsilon>0$. Then there exists a
+two-layer NN $\Phi$ with activation function $\rho$ such that
+\[
+\left\Vert \Phi-f\right\Vert _{\infty}<\epsilon.
+\]
+\end{theorem}
+
+We also note that DNN have demonstrated their capabilities in the approximation of functions \citep{liang2016deep,yarotsky2017error,fan2020universal}. They are found to have good experimental (empirical) performance, but it is largely unknown why. This is a very active area of research \cite{caterini2018deep}.
+
+\begin{theorem}
+(\cite{lu2017expressive}) Let  $f:\mathbb{R}^{n}\rightarrow\mathbb{R}$ be Lebesgue-integrable and $\epsilon>0$. Then there exists a ReLU
+network of width $\leq n+4$ such that
+\[
+\int_{\mathbb{R}^{n}}\left\vert \Phi\left(  x\right)  -f\left(  x\right)  \right\vert dx<\epsilon
+\]
+
+\end{theorem}
+
+\begin{definition}
+(\cite{kidger2020universal}) Let $\rho:\mathbb{R}\rightarrow\mathbb{R}$ and $n,m,k\in\mathbb{N}$. Then let $NN_{n,m,k}$ represent the class of functions $\mathbb{R}^{n}\rightarrow\mathbb{R}^{m}$ described by feedforward neural networks with $n$ neurons in the input layer, $m$ neurons in the output layer, and an arbitrary number of hidden layers, each with $k$ neurons with activation function $\rho$. Every neuron in the output layer has the identity activation function.
+\end{definition}
+
+\begin{theorem}
+(\cite{kidger2020universal}) Let $\rho:\mathbb{R}\rightarrow\mathbb{R}$ be any non-affine continuous function which is continuously differentiable at
+at least one point, with non-zero derivative at that point. Let $K\subset\mathbb{R}^{n}$ be compact. Then NN$_{n,m,n+m+2}$ is dense in $C\left(  K,\mathbb{R}^{m}\right)$ with respect to the uniform norm.
+\end{theorem}
+
+
+\section{Low-rank approximation}
+
+Due to its fundamental role in Machine Learning, a huge literature is devoted
+to the singular value decomposition (SVD) of a matrix. We refer to some of the
+well respected texts: \cite{strang1993introduction}, \cite{trefethen1997numerical}, \cite{watkins2004fundamentals}, \cite{gentle2007matrix}, \cite{elden2007matrix}, \cite{lange2010numerical},
+and \cite{yanai2011projection} for
+instance. Let $A\in \mathbb{R}^{m\times n}$ be a matrix of rank $r$. Its SVD consists in factoring $A$ as
+\[
+A=U\Sigma V^\top=\sum_{i=1}^{r}\sigma_{i}\u_{i}\v_{i}^\top
+\]
+where $U\in\mathbb{R}^{m\times m}$ and $V\in\mathbb{R}^{n\times n}$ are orthogonal square matrices, and $\Sigma\in\mathbb{R}^{m\times n}$ (\textquotedblleft diagonal\textquotedblright\ rectangular matrix of the ordered singular values: $\sigma_{1}\geq\ldots\geq\sigma _{r}>\sigma_{r+1}=\ldots=0=\sigma_{\min\{m,n\}}$). This
+decomposition, and the related principal component analysis (PCA), has several
+uses in Data Analysis. Written as $AV=U\Sigma$, SVD says that there exist orthogonal matrices $U$ and $V$ such that $A$ maps the columns $\v_{i}$ of $V$ (right singular vectors of $A$, directions or principal axes in the PCA parlance) into the columns $\u_{i}$ of $U$ (left singular vectors of $A$) such as
+\[
+A\v_{i}=\sigma_{i}\u_{i},
+\]
+the principal components.
+
+Given a positive integer $1\leq k\leq r$, introduce the truncated matrices
+$U_{k}=\left[  \u_{1},\ldots,\u_{k}\right]  \in \mathbb{R}^{m\times k}$, $V_{k}=\left[  \v_{1},\ldots,\v_{k}\right]  \in \mathbb{R}^{k\times n}$, and $\Sigma_{k}=\mathrm{diag}(  \sigma_{1},\ldots,\sigma_{k}) \in \mathbb{R}^{k\times k}$. Then the matrix of rank $k$
+\[
+A_{k}=U_{k}\Sigma_{k}V_{k}^\top=\sum_{i=1}^{k}\sigma_{i}\u_{i}\v_{i}^\top
+\]
+is an optimal lower-rank approximation of $A$ in the sense of both the
+Frobenius norm and the $L_2$-norm. Indeed, the Eckart--Young--Mirsky theorem (for
+a proof, see \cite{markovsky2012low}) states that among all matrices $B\in\mathbb{R}^{m\times n}$ of a given rank $k\leq r$, the one closest to $A$ is
+$\hat{A}=A_{k}$, i.e.
+
+\begin{align*}
+\inf_{\mathrm{rank}(B)=k}\left\Vert A-B\right\Vert _{F} &  =\left\Vert
+A-\hat{A}\right\Vert _{F}=\sqrt{\sum_{i=k+1}^{r}\sigma_{i}^{2}},\\
+\inf_{\mathrm{rank}(B)=k}\left\Vert A-B\right\Vert _{2} &  =\left\Vert
+A-\hat{A}\right\Vert _{2}=\sigma_{k+1}.
+\end{align*}
+
+Furthermore, the approximating matrix $\hat{A}$ is unique if and only if
+$\sigma_{k+1}\neq\sigma_{k}$ \citep{markovsky2012low}. The theorem was proved in 1907 by Schmidt (of the Gram-Schmidt procedure) for the Frobenius norm \citep{leon2013gram}. A constructive solution was given by \cite{eckart1936approximation}. This solution was
+shown by \cite{mirsky1960symmetric} to hold for all unitarily invariant norms. A further generalization addressing collinearity issues was proposed by \cite{golub1987generalization}. See \cite{stewart1993early} for historical details. 
+
+One interpretation of the decomposition $A_{k}=U_{k}\Sigma_{k}V_{k}^{T}$ is as
+a compression/learning linear procedure of the data matrix $A$ (in other
+words, a dimension reduction method). Indeed, since the SVD extracts data in
+the direction with the highest variance (and going down to those with the
+lowest variance), matrix $U_{k}$ is the compression matrix in the first $k$
+directions, matrix $\Sigma_{k}$ contains the amount of error (cost function)
+we tolerate, and $V_{k}$ is the decompression matrix. If we keep all the non
+zero singular values ($k=r$), there is theoretically no loss in the
+compression (assuming that the data in $A$ are exact). If we drop the small
+singular values (set them to $0$), it is not possible to reconstruct the
+initial matrix $A$ exactly, but we obtain a matrix $A_{k}$ that is close. In
+other words, the SVD decomposition is a way to control the loss of information
+from $A$ under a predetermined level.
+
+The assumption (routinely validated in image processing, for example) in the
+above approach is that the components (columns of $U$) of the small singular
+values contain little information (mostly \textquotedblleft
+noise\textquotedblright) and should be discarded. However, the low-rank matrix approximation is easily seen not to be optimal if used to solve the linear regression problem (hence as a predictive tool) $y=A\beta+\epsilon$, that is to minimize
+\begin{equation}
+    \inf_{\mathrm{rank}(B)=k}\left\Vert \y-B\bbeta\right\Vert . 
+    \label{eq:svd_regression}
+\end{equation}
+
+While the SVD picks the parameter $k-$vector $\bbeta$ of minimum norm
+\citep{elden2007matrix,lange2010numerical},
+
+\begin{equation}
+    \hat{\bbeta}=A_{k}^{\dag} \y=\sum_{i=1}^{k}\frac{1}{\sigma_{i}} \u_{i}^\top \y \v_{i},
+    \label{eq:svd_reg_solution}
+\end{equation}
+
+where $A_{k}^{\dag}$ is the pseudoinverse of $A_{k}$, the general solution of
+\eqref{eq:svd_regression} is unknown \citep{xiang2012optimal}. See also \cite{talwalkar2010matrix} for a discussion in the Machine Learning context.
+
+Some authors \citep{jolliffe1982note,hadi1998some} warned against the misconceived (mainly due to collinearity considerations) use of \eqref{eq:svd_reg_solution} in an ordinary linear regression setting. Dropping some of the small singular values may result in ignoring significant variables, mainly because the approximation does not take into account the response variable $\y$. A partial solution is provided by the ridge regression \citep{hoerl1970ridge}. However, still from a predictive viewpoint, SVD may prove to be an interesting approach in deep neural networks \citep{bermeitinger2019singular}. Used for initialization in the first layer, SVD gave promising experimental results. Theoretical issues still need to be addressed.
+
+\newpage

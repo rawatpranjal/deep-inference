@@ -1,0 +1,63 @@
+\ifdefined\response\newpage\newpage\clearpage\pagebreak\else\fi
+\label{sec:linear_cbps_ks}
+\begin{table}[t]
+\footnotesize
+\centering
+\hfill
+\begin{subtable}{.53\linewidth}
+\centering
+\caption{$N=200$} %
+\begin{tabular}{lrrrr}
+\toprule
+ Method & \multicolumn{2}{c}{Bias} & \multicolumn{2}{c}{Mean Abs Err} \\
+\cmidrule(lr){1-1}
+\cmidrule(lr){2-3}
+\cmidrule(lr){4-5}
+CBPS-IPW & -6.92 & (0.26) & 8.52 & (0.21) \\
+CBPS-IPW-SN & -2.98 & (0.10) & 3.66 & (0.08) \\
+\greymidrule
+CBPS-AIPW & -1.68 & (0.36) & 3.11 & (0.24) \\
+CBPS-AIPW-SN &  -1.69 & (0.36) & 3.11 & (0.24) \\ 
+CBPS-TMLE &  -7.20 & (5.14) & 9.50 & (5.10) \\ 
+CBPS-C-Learner &  -1.70 & (0.36) & 3.10 & (0.24) \\ 
+\greymidrule
+CBPS-TMLE-L & -2.01 & (0.33) & 3.07 & (0.24) \\ 
+CBPS-C-Learner-L & \textbf{-1.85} & (0.34) & \textbf{2.97} & (0.24) \\ 
+\bottomrule
+\end{tabular}
+\end{subtable}
+\hspace{-3.15em}
+\begin{subtable}{.42\linewidth}
+\centering
+\caption{$N=1000$} %
+\begin{tabular}{rrrr}
+\toprule
+ \multicolumn{2}{c}{Bias} & \multicolumn{2}{c}{Mean Abs Err} \\
+\cmidrule(lr){1-2}
+\cmidrule(lr){3-4}
+1.76 & (0.15) & 4.00 & (0.10) \\
+\textbf{-1.55} & (0.06) & \textbf{1.88} & (0.04) \\
+\greymidrule
+-3.54 & (0.37) & 3.58 & (0.37) \\ 
+-3.44 & (0.33) & 3.49 & (0.33) \\ 
+-7.54 & (2.48) & 7.55 & (2.48) \\
+-3.10 & (0.20) & 3.15 & (0.19) \\ 
+\greymidrule
+-2.76 & (0.15) & 2.79 & (0.14) \\ 
+-2.76 & (0.18) & 2.83 & (0.17) \\ 
+\bottomrule
+\end{tabular}
+\end{subtable}
+\hfill
+\hspace*{\fill}
+\caption{%
+Comparison of estimator performance on misspecified datasets from \citet{KangSc07} in 1000 tabular simulations, for linear outcome models (\Cref{sec:ks_linear}) using propensity scores fitted via covariate balancing. We include only methods that makes use of propensity scores.  We highlight the best-performing method in \textbf{bold}. Standard errors are displayed within parentheses to the right of the point estimate.
+}
+    \label{tb:linear_cbps}
+\end{table}
+
+As discussed in \Cref{sec:background}, covariate balancing techniques imply constraints, possibly via customized loss functions, to equate the covariates of samples in treatment and control for a given propensity score model $\hat \pi$, thus, informing how to constraint or estimate the propensity model $\hat \pi$. Naturally, methods that make use of propensity score such as IPW (the basic CBPS approach), AIPW, TMLE and C-Learner, may also benefit from a tailored propensity score function $\hat \pi$. 
+
+Therefore, we also provide in \Cref{tb:linear_cbps} a comparison with the Covariate Balancing Propensity Score (CBPS). We discuss the implementation details of CBPS in \Cref{sec:ks_experiment_details}. Roughly speaking, all asymptotically optimal methods improve or maintain its performance when using propensity scores via covariate balancing, despite an increase in the MAE standard error. For the sample size of 200, C-Learner with covariate balancing and logistic loss is the best performance method for the MAE point estimate, although most of the asymptotically optimal methods are statistically the same. When the sample size is 1000, covariate balancing with self-normalization is the best performing method. %
+\label{sec:linear_cbps_ks-end}
+\ifdefined\response\newpage\newpage\clearpage\pagebreak\else\fi

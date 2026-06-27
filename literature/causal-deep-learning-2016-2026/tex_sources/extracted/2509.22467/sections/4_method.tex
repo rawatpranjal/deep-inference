@@ -1,0 +1,94 @@
+\section{Causal Kolmogorov--Arnold networks}
+\label{sec:causalkans}
+
+We introduce \emph{\ours}, a framework that replaces the neural components of standard potential–outcome regressors with Kolmogorov--Arnold Networks (KANs), and augments training with \emph{pruning} and \emph{auto–symbolic search} to yield analytic, interpretable CATE formulas. The approach is model–agnostic: any causalNN can be converted by swapping MLP blocks with KAN (or MultKAN) blocks while keeping inputs and outputs unchanged, and using the same loss functions as their neural counterparts but augmented with  regularization terms.
+
+\subsection{Interpretable causal learning}
+\label{sec:pipeline}
+
+Our goal is to deliver \emph{closed-form} and \emph{auditable} estimates of $\hcate{\samplecov}=\hpoone(\samplecov)-\hpozero(\samplecov)$ without sacrificing the flexibility of deep learning. To this end, we expose a pipeline in which the practitioner controls each simplification step, chooses which steps to perform, and sets explicit performance budgets that cap the error introduced by simplification. The five stages are shown in \cref{fig:causalkan-pipeline}; architecture substitution is illustrated in \cref{fig:kanify}, and implementation details are in \cref{sec:app:causalkans_details}.
+
+\begin{enumerate}
+    \item \textbf{KAN-ification (architecture swap).} Choose a causalNN (e.g., \skan, \tkan, \tarkan, \dragonkan) and replace each MLP subnetwork by a KAN block with matching input/output dimensions. When the original network has multiple subnetworks, intermediate widths and representation sizes need not be preserved; KAN widths can be reduced to encourage parsimony. MultKAN nodes are optional and only used when explicit interactions are needed (\cref{sec:kans}).
+
+    \item \textbf{Hyperparameter selection \& training.} Tune depth, width, spline grid size, and regularization. During training we employ:
+    \itemi \emph{edge activity} penalty ($\ell_1$) 
+    $
+    \lambda_1 \sum_{\indexlayer,\indexsix,\indexfive}\E\big|\kanlayer_{\indexlayer,\indexsix,\indexfive}(\samplekan_{\indexlayer,\indexfive})\big|
+    $
+    to promote sparse parent sets;
+    \itemii \emph{spline coefficient} regularization 
+    $
+    \lambda_c \sum |\splinecoef| \;+\; \lambda_s \sum |\splinecoef-\splinecoef'|
+    $
+    to shrink magnitudes and encourage smoothness; and
+    \itemiii an \emph{entropy} penalty on fan-in/fan-out to discourage diffuse connectivity.
+    These terms stabilize pruning and symbolification. Early stopping is applied on a validation split. For notational brevity, all penalties are aggregated into $\regularization$ in later formulas. Among models with statistically indistinguishable validation metrics, we select the simplest (fewer layers, coarser grids, fewer nodes, no multiplication nodes), which is supported by an ablation study in \cref{sec:app:ablation}. We also compare the predictive loss (excluding $\regularization$) to the original causalNN; if the causalKAN loss exceeds the baseline by more than a user budget $\budget_\text{arch}$, we revise the KAN design.
+
+    \item \textbf{Pruning (structure simplification).} On a held-out set, compute edge importance scores
+    \begin{equation}
+    \score_{\indexlayer,\indexsix,\indexfive} \;=\; \E\!\left[\,\big|\kanlayer_{\indexlayer,\indexsix,\indexfive}(\samplekan_{\indexlayer,\indexfive})\big|\,\right],
+    \end{equation}
+    remove edges (and isolated nodes) with $\score_{\indexlayer,\indexsix,\indexfive}<\threshold$, and retrain briefly if desired. There are alternative pruning techniques, that remove edges based on other metrics, see \citep{liu2024kan2}. This step is optional: if the held-out loss rises beyond a pruning budget $\budget_\text{prune}$, we revert the change. Pruning exposes smaller parent sets and simplifies the subsequent symbolification.
+
+    \item \textbf{Auto–symbolic search (function simplification).} For each remaining edge function, fit a simple atom from a dictionary (identity, polynomials, $\tanh$, $\sin$, $\cos$, $\log$, $\exp$, etc.) via
+    \begin{equation}
+    \min_{m,a,b,c,d}\ \frac{1}{|\mathcal{V}|}\sum_{\samplekan\in\mathcal{V}}\!\Big(\kanlayer_{\indexlayer,\indexsix,\indexfive}(\samplekan)-\big[c\,f_m(a\samplekan+b)+d\big]\Big)^2.
+    \end{equation}
+    We introduce an interpretability-first inductive bias: attempt the simplest atoms first (polynomials); if the $R^2$ exceeds a threshold $\threshold_{R^2}$, accept immediately without testing more complex atoms. Otherwise, continue through the dictionary and accept a substitution only if the validation loss increases by at most $\budget_\text{symb}$. If the increase exceeds the budget, revert. This design makes the loss–simplicity trade-off explicit and user-controllable.
+
+    \item \textbf{CATE extraction and interpretation.} Compose the simplified univariate functions to obtain closed-form heads $\hpozero(\samplecov)$ and $\hpoone(\samplecov)$ and thus an explicit $\hcate{\samplecov}$, which we also simplify algebraically. These expressions are executable and auditable, and they can be inspected term by term or transported across settings by substituting domain-grounded functions if needed.
+\end{enumerate}
+
+At stages (3) and (4) we enforce an accept–reject gate: a structural or symbolic change is kept only if the held-out performance stays within its budget $(\budget_\text{prune},\budget_\text{symb})$; otherwise it is reverted. Practitioners may also choose to \emph{skip} pruning and/or symbolification entirely, yielding a continuum from fully flexible KANs (budgets set to $0$) to sparse, fully symbolified formulas (larger budgets). This is crucial in regulated or high-stakes settings: one can freeze the pipeline at the desired interpretability level and document any accuracy impact.
+
+When $\nLayers=1$ and no MultKAN nodes are used, each head reduces to a Kolmogorov--Arnold Additive Model (KAAM). In this setting, we provide \itemi \emph{probability radar plots} (PRPs) summarizing each variable’s contribution relative to the average outcome, and \itemii \emph{partial dependence plots} (PDPs) showing the variation of the outcome as a function of a single covariate \citep{knottenbelt2024coxkan,pati25kaam}. For deeper KANs or any use of MultKAN nodes, we currently provide only the closed-form expressions; visualization tools for these more complex models are left as future work. A detailed description and examples for KAAM-based plots appear in \cref{app:sec:results_visualizations}.
+
+In summary, the pipeline makes the accuracy–interpretability trade-off \emph{controlled and reproducible}. Budgets $(\budget_{\text{arch}},\budget_{\text{prune}},\budget_{\text{symb}})$ bound the deviation from the original predictive performance; every accepted change is logged, and every rejected change is reverted. The procedure is architecture-agnostic, produces executable closed-form $\hpozero(\samplecov)$, $\hpoone(\samplecov)$, and $\hcate{\samplecov}$, and can be halted at any stage depending on the practitioner’s needs. We adopt this protocol across all \ours variants and experiments that follow.
+
+\add{1}{Beyond the universal approximation, KANs are most useful when their inductive biases match the data generating process, in particular when response surfaces are smooth and approximately decomposable into low dimensional additive components. This is consistent with evidence from physics informed and PDE benchmarks, where KANs outperform MLPs under smooth, structured dynamics \citep{wang2025kolmogorov}, and with the original KAN work, which argues that many real world systems admit sparse and smooth functional structure \citep{liu2024kan}. From a causal perspective, treatment effect functions are often simpler than the underlying potential outcomes \citep{curth2021inductive}, so \ours can leverage pruning and symbolic substitution as implicit regularizers that bias toward simple, interpretable effect formulas, in contrast to standard MLP backbones. This behavior is illustrated in our SCM experiment (Section~\ref{sec:identifiability}), where symbolic KANs recover the correct smooth additive structure and outperform both MLPs and non symbolic KANs, and suggests that \ours are particularly suitable in domains where smoothness and approximate additivity are plausible, such as physics based models, biomedical dose–response, or structured policy applications.}
+
+
+\subsection{\Ours variants}
+\label{sec:architectures}
+
+We instantiate four canonical architectures, standard baselines in the CATE literature, to enable fair comparisons with prior work. These are representative examples: the same substitution process applies to other causalNNs, \add{1}{see the \cref{app:sec:other_kans} for an extended discussion}. \cref{fig:causalNN} shows a schematic view where each block can be a KAN, and \cref{sec:app:causalkans_details} details specific implementations.
+
+\textbf{\skan} (\emph{\our for S-Learner}) uses a single KAN to predict outcomes:
+\begin{equation}
+\label{eq:skan}
+\hpo(\samplecov,\sampletreat)=KAN(\samplecov,\sampletreat),\quad
+\hpozero(\samplecov)=\hpo(\samplecov,0),\;\;\hpoone(\samplecov)=\hpo(\samplecov,1).
+\end{equation}
+With one KAN layer, \cref{eq:skan} reduces to an additive model (KAAM). \skan naturally supports continuous treatments, since $\pot(\samplecov,\treatment)$ can be evaluated for $\treatment \in \R$.
+
+\textbf{\tkan} (\emph{\our for T-Learner}) employs two independent KAN heads:
+\begin{equation}
+\label{eq:tkan}
+\hpozero(\samplecov)=KAN_0(\samplecov),\qquad \hpoone(\samplecov)=KAN_1(\samplecov).
+\end{equation}
+Each head is updated only with its respective treatment group, using
+\begin{equation}
+\label{eq:tkan-loss}
+\Loss_{\text{\tkan}}=\tfrac{1}{\samplesize}\sum_{i=1}^{\samplesize}\Big[\sampletreat_\indexone\big(\sampleoutcomei_\indexone-\hpoone(\samplecov_\indexone)\big)^2+(1-\sampletreat_\indexone)\big(\sampleoutcomei_\indexone-\hpozero(\samplecov_\indexone)\big)^2\Big]+\regularization.
+\end{equation}
+This setup allows treatment-specific fits but may increase variance due to data splitting. Either head can be restricted to KAAM for maximal simplicity.
+
+\textbf{\tarkan} (\emph{\our for TARNet}) first computes a representation vector,
+\begin{equation}
+\label{eq:tarkan}
+\latent(\samplecov)=KAN_z(\samplecov)\in\R^{\latentsize},
+\end{equation}
+then feeds it to two KAN heads as in \tkan:
+\begin{equation}
+\hpozero(\samplecov)=KAN_0(\latent(\samplecov)),\quad
+\hpoone(\samplecov)=KAN_1(\latent(\samplecov)).
+\end{equation}
+Training follows the T-style loss \cref{eq:tkan-loss}, applied after the representation. This design parallels TARNet and relates to \citet{mehendale2025kanite}, though we do not impose explicit distribution-matching on $\latent$.
+
+\textbf{\dragonkan} (\emph{\our for DragonNet}) augments \tarkan with a propensity head:
+\begin{equation}
+\label{eq:dragonkan}
+\hpropensity(\samplecov)=\sigma\!\big(KAN_e(\latent(\samplecov))\big),
+\end{equation}
+where $\sigma$ is the sigmoid function. Training adds a cross-entropy penalty on $\hpropensity(\samplecov)$ to the outcome losses in \cref{eq:tkan-loss}, encouraging $\latent$ to capture confounding. We omit targeted regularization layers to preserve formula simplicity, focusing on potential–outcome regression and CATE estimation. Unlike \skan, these architectures (T-KAN, TARKAN, DragonKAN) are limited to binary or discrete treatments.

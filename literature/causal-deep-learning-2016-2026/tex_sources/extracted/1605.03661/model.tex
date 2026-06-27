@@ -1,0 +1,60 @@
+\section{Balancing counterfactual regression}\label{Sec:model}
+\begin{algorithm}[tbp]
+\caption{Balancing counterfactual regression}
+\label{alg:model}
+\begin{algorithmic}[1]
+  \STATE \textbf{Input:} $X, T, Y^F; \hypspace, \repspace; \alpha, \gamma, \lambda$
+  \STATE $\displaystyle \Phi^*, g^* = \argmin_{\Phi\in \repspace, g\in \hypspace} B_{\hypspace, \alpha, \gamma}(\Phi, g)$ \;\;\; \eqref{eq:modelbound}
+  \vspace{0.1em}
+  \STATE $h^* = \argmin_{h \in \cH} \frac{1}{n}\sum_{i=1}^n(h(\Phi,t_i) - y^F_i)^2 + \lambda\|h\|_{\hypspace} $
+  \vspace{0.2em}
+  \STATE \textbf{Output:} $h^*, \Phi^*$
+\end{algorithmic}
+\end{algorithm}
+\vskip -5pt
+We propose to perform counterfactual inference by amending the direct modeling approach, taking into account the fact that the learned estimator $h$ must generalize from the factual distribution to the counterfactual distribution.
+
+Our method, see Figure \ref{fig:model}, learns a representation $\Phi : \mathcal{X} \rightarrow \mathbb{R}^d$, (either using a deep neural network, or by feature re-weighting and selection), and a function $h : \mathbb{R}^d \times \mathcal{T} \rightarrow \mathbb{R}$, such that the learned representation trades off three objectives: (1) enabling low-error prediction of the observed outcomes over the factual representation, (2) enabling low-error prediction of unobserved counterfactuals by taking into account relevant factual outcomes, and (3) the distributions of treatment populations are similar or \emph{balanced}.
+
+We accomplish low-error prediction by the usual means of error minimization over a training set and regularization in order to enable good generalization error. We accomplish the second objective by a penalty  that encourages counterfactual predictions to be close to the nearest observed outcome from the respective treated or control set. Finally, we accomplish the third objective by minimizing the so-called \emph{discrepancy distance}, introduced by \citet{mansour2009domain}, which is a hypothesis class dependent distance measure tailored for domain adaptation. For hypothesis space $\hypspace$, we denote the discrepancy distance by $\disc_\hypspace$. See Section \ref{Sec:theory} for the formal definition and motivation. Other discrepancy measures such as Maximum Mean Discrepancy \citep{gretton2012mmd} could also be used for this purpose. 
+
+Intuitively, representations that reduce the discrepancy between the treated and control populations prevent the learner from using ``unreliable'' aspects of the data when trying to generalize from the factual to counterfactual domains. For example, if in our sample almost no men ever received medication A, inferring how men would react to medication A is highly prone to error and a more conservative use of the gender feature might be warranted.
+
+Let $X = \{x_i\}_{i=1}^n$, $T = \{t_i\}_{i=1}^n$, and $Y^F = \{y_i^F\}_{i=1}^n$ denote the observed units, treatment assignments and factual outcomes respectively. We assume $\mathcal{X}$ is a metric space with a metric $\mathrm{d}$. Let $j(i) \in \argmin_{j \in \{1\ldots n\} \text{ s.t. } t_j = 1-t_i} \mathrm{d}(x_j,x_i)$ be the nearest neighbor of $x_i$ among the group that received the opposite treatment from unit $i$. Note that the nearest neighbor is computed once, in the input space, and does \emph{not} change with the representation $\Phi$. The objective we minimize over representations $\Phi$ and hypotheses $h \in \hypspace$ is
+\vspace{-2mm}
+\begin{align}
+& B_{\hypspace, \alpha, \gamma}(\Phi, h) = \frac{1}{n} \sum_{i=1}^n | h(\Phi(x_i),t_i)- y_i^F |\, + \label{eq:modelbound}\\
+& \alpha \disc{}_\hypspace(\pF,\pC) +  \frac{\gamma}{n} \sum_{i=1}^n |h(\Phi(x_i),1-t_i)  - y_{j(i)}^F|~,\nonumber
+\vspace{-2mm}
+\end{align}
+where $\alpha, \gamma > 0$ are hyperparameters to control the strength of the imbalance penalties, and $\disc{}$ is the discrepancy measure defined in \ref{sec:lindisc}.
+When the hypothesis class $\hypspace$ is the class of linear functions, the term $\disc{}_\hypspace(\pF,\pC)$ has a closed form brought in \ref{sec:lindisc} below, and $h(\Phi,t_i) = h^\top [\Phi(x_i) \, \, t_i]$. For more complex hypothesis spaces there is in general no exact closed form for $\disc{}_\hypspace(\pF,\pC)$.
+
+Once the representation $\Phi$ is learned, we fit a final hypothesis minimizing a regularized squared loss objective on the factual data. Our algorithm is summarized in Algorithm~\ref{alg:model}. Note that our algorithm involves two minimization procedures.
+In Section \ref{Sec:theory} we motivate our method, by showing that our method of learning representations minimizes an upper bound on the regret error over the counterfactual distribution, using results of \citet{cortes2014domain}.
+
+
+
+\subsection{Balancing variable selection} \label{sec:varsel}
+A na\"{i}ve way of obtaining a balanced representation is to use only features that are already well balanced, i.e. features which have a similar distribution over both treated and control sets. However, imbalanced features can be highly predictive of the outcome, and should not always be discarded. A middle-ground is to restrict the influence of imbalanced features on the predicted outcome. We build on this idea by learning a sparse re-weighting of the features that minimizes the bound in Theorem~\ref{thrm1}. The re-weighting determines the influence of a feature by trading off its predictive capabilities and its balance.
+
+We implement the re-weighting as a diagonal matrix $W$, forming the representation $\Phi(x) = Wx$, with $diag(W)$ subject to a simplex constraint to achieve sparsity. Let $\repspace = \{x \mapsto Wx : W = \diag(w), \; w_i \in [0,1], \; \sum_i w_i = 1\} $ denote the space of such representations. We can now apply Algorithm \ref{alg:model} with $\hypspace_l$ the space of linear hypotheses.
+Because the hypotheses are linear, $\disc(\Phi)$ is a function of the distance between the weighted population means, see Section~\ref{sec:lindisc}. With $p = \mathbb{E}[t], c = p - 1/2$, $n_t = \sum_{i=1}^n t_i$, $\mu_1 = \frac{1}{n_t}\sum_{ i: t_i = 1}^n x_i$, and $\mu_0$ analogously defined,
+\begin{align*}
+\disc{}_{\hypspace_l}(XW) = c + \sqrt{c^2 + \|W(p\mu_1 - (1-p)\mu_0)]\|_2^2}
+\end{align*}
+To minimize the discrepancy, features $k$ that differ a lot between treatment groups will receive a smaller weight $w_k$. Minimizing the overall objective $B$, involves a trade-off between maximizing balance and predictive accuracy. We minimize~\eqref{eq:modelbound} using alternating sub-gradient descent.
+
+\subsection{Deep neural networks}
+
+Deep neural networks have been shown to successfully learn good representations of high-dimensional data in many tasks~\cite{bengio2013representation}. Here we show that they can be used for counterfactual inference and, crucially, for accommodating imbalance penalties.
+We propose a modification of the standard feed-forward architecture with fully connected layers, see Figure~\ref{fig:neuralnet}. The first $d_r$ hidden layers are used to learn a representation $\Phi(x)$ of the input $x$. The output of the $d_r$:th layer is used to calculate the discrepancy  $\disc_\hypspace(\pF,\pC)$. The $d_o$ layers following the first $d_r$ layers take as additional input the treatment assignment $t_i$ and generate a prediction $h([\Phi(x_i), \, t_i])$  of the outcome.
+
+\begin{figure}[t!]
+  \centering
+  \includegraphics[width=0.95\columnwidth]{neuralnet_mmd_flip.pdf}
+  \caption{\label{fig:neuralnet}Neural network architecture.}
+\end{figure}
+
+\subsection{Non-linear hypotheses and individual effect}
+We note that both in the case of variable re-weighting, and for neural nets with a single linear outcome layer,  the hypothesis space $\hypspace$ comprises linear functions of $[\Phi, t]$ and the discrepancy, $\disc_{\hypspace}(\Phi)$ can be expressed in closed-form. A less desirable consequence is that such models cannot capture difference in the individual treatment effect, as they involve no interactions between $\Phi(x)$ and $t$. Such interactions could be introduced by for example (polynomial) feature expansion, or in the case of neural networks, by adding non-linear layers after the concatenation $[\Phi(x), t]$. For both approaches however, we no longer have a closed form expression for $\disc{}_\hypspace(\pF,\pC)$.

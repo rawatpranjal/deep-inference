@@ -1,0 +1,94 @@
+\documentclass[12pt]{colt2024} % Anonymized submission
+%\documentclass[final,12pt]{colt2024} % Include author names
+
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\newtheorem{assumption}[theorem]{Assumption}
+\usepackage{booktabs} % for professional tables
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows,decorations,decorations.markings,decorations.pathreplacing,decorations.pathmorphing,shadows,positioning,arrows.meta,matrix,fit}
+
+\newcommand{\E}{\mathbb{E}}
+\usepackage{mkolar_definitions}
+\input{Note/notation}
+\input{notation}
+% The following packages will be automatically loaded:
+% amsmath, amssymb, natbib, graphicx, url, algorithm2e
+
+\title[Regularized DeepIV with Model Selection]{Regularized DeepIV with Model Selection} 
+%%%Fast and Adaptive Rates for Regularized MLE-based IV}
+\usepackage{times}
+% Use \Name{Author Name} to specify the name.
+% If the surname contains spaces, enclose the surname
+% in braces, e.g. \Name{John {Smith Jones}} similarly
+% if the name has a "von" part, e.g \Name{Jane {de Winter}}.
+% If the first letter in the forenames is a diacritic
+% enclose the diacritic in braces, e.g. \Name{{\'E}louise Smith}
+
+% Two authors with the same address
+% \coltauthor{\Name{Author Name1} \Email{abc@sample.com}\and
+%  \Name{Author Name2} \Email{xyz@sample.com}\\
+%  \addr Address}
+
+% Three or more authors with the same address:
+% \coltauthor{\Name{Author Name1} \Email{an1@sample.com}\\
+%  \Name{Author Name2} \Email{an2@sample.com}\\
+%  \Name{Author Name3} \Email{an3@sample.com}\\
+%  \addr Address}
+
+% Authors with different addresses:
+\coltauthor{%
+ \Name{Zihao Li}\thanks{Equal contribution} \Email{zl9045@princeton.edu}\\
+ \addr Princeton University
+ \AND
+ \Name{Hui Lan}\thanks{Equal contribution} \Email{huilan@stanford.edu}\\
+ \addr Stanford University
+ \AND
+ \Name{Vasilis Syrgkanis}
+ \Email{Vasilis Syrgkanis@stanford.edu}\\
+ \addr Stanford University
+ \AND
+ \Name{Mengdi Wang} \Email{mengdiw@princeton.edu}\\
+ \addr Princeton University
+ \AND
+ \Name{Masatoshi Uehara}\thanks{This work was done at Cornell University} \Email{ueharam1@gene.com}\\
+ \addr Genentech 
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}%
+In this paper, we study nonparametric estimation of instrumental variable (IV) regressions. While recent advancements in machine learning have introduced flexible methods for IV estimation, they often encounter one or more of the following limitations: (1) restricting the IV regression to be uniquely identified; (2) requiring minimax computation oracle, which is highly unstable in practice; (3) absence of model selection procedure.  In this paper, we present the first method and analysis that can avoid all three limitations, while still enabling general function approximation. Specifically, we propose a minimax-oracle-free method called Regularized DeepIV (RDIV) regression that can converge to the least-norm IV solution. Our method consists of two stages: first, we learn the conditional distribution of covariates, and by utilizing the learned distribution,  we learn the estimator by minimizing a Tikhonov-regularized loss function. We further show that our method allows model selection procedures that can achieve the oracle rates in the misspecified regime. When extended to an iterative estimator, our method matches the current state-of-the-art convergence rate. Our method is a Tikhonov regularized variant of the popular DeepIV method with a non-parametric MLE first-stage estimator, and our results provide the first rigorous guarantees for this empirically used method, showcasing the importance of regularization which was absent from the original work.
+ %%%%Empirical validation through numerical simulations supports the efficacy of our proposed method.
+\end{abstract}
+
+\begin{keywords}%
+  Nonparametric regression, causal inference, instrumental variable, general function approximation%
+\end{keywords}
+
+
+
+\input{Sections/intro}
+\input{Sections/related_works}
+\input{Sections/pre}
+\input{Sections/method}
+
+\input{Sections/experiments}
+\section{Conclusion}
+In this paper, we study NPIV regression with general function approximation. We propose a new estimator defined by the loss that organically combines Tikhonov regularization and an MLE estimator, namely the Regularized DeepIV (RDIV).  We show that our estimator converges to the least norm solution, and derive its convergence rate. Notably, our method does not rely on uniqueness or minimax computation oracle. We further illustrate that our method can be incorporated into model selection and show that our procedure can achieve the oracle rate with respect to the minimal model misspecification error. When extended to an iterative estimator, our method achieves the state-of-the-art convergence rate. Moreover, we justify our method through numerical simulations. Our experiments show that RDIV outperforms existing benchmarks in a wide range of circumstances.
+\newpage
+\bibliography{Note/rl}
+\newpage
+\appendix
+
+\input{Sections/appdx}
+
+
+
+
+
+\end{document}

@@ -1,0 +1,58 @@
+			\def\layersep{1.75cm}
+\begin{tikzpicture}[shorten >=1pt,->,draw=black!50, node distance=\layersep]
+	\tikzstyle{every pin edge}=[<-,shorten <=1pt]
+	\tikzstyle{neuron}=[circle,fill=black!25,minimum size=20pt,inner sep=0pt]
+	\tikzstyle{input neuron}=[neuron, fill=blue!50];
+	\tikzstyle{hidden neuron}=[neuron, fill=gray!50];
+	\tikzstyle{parameter neuron}=[neuron,minimum size=40pt,fill=green!50];
+	\tikzstyle{output neuron}=[neuron, fill=red!50];
+	
+	\tikzstyle{annot} = [text width=4em, text centered]
+	
+	% Draw the input layer nodes	
+	\node[input neuron] (I-1) at (0,-1) {$x_1$};
+	%				\node[input neuron] (I-2) at (0,-2) {$x_2$};
+	\node[input neuron] (I-2) at (0,-2) {};
+	\node[input neuron] (I-3) at (0,-3) {$x_d$};
+	\node[output neuron] (I-4) at (0,-4) {$\bt$};
+	
+	% Draw the hidden layer nodes
+	\foreach \name / \y in {1,...,5}
+	\path[yshift=0.5cm]
+	node[hidden neuron] (Ha-\name) at (\layersep,-\y cm) {};
+	
+	% Draw the hidden layer nodes
+	\foreach \name / \y in {1,...,5}
+	\path[yshift=0.5cm]
+	node[hidden neuron,right of=Ha-\name] (Hb-\name) at (\layersep,-\y cm) {};
+	
+	
+	% Draw the prediction layer nodes
+%	\node[output neuron, right of=Hb-3] (O) { \ $G\big( \widehat\eta(\bx,\bt) \big)$ \ };
+    \node[output neuron, pin={[pin edge={->}]right:$\widehat{y} = G(\cdot) $}, right of=Hb-3] (O) { \ $\widehat\eta(\bx,\bt)$ \ };
+    
+	% Connect every node in the input layer with every node in the
+	% hidden layer.
+	\foreach \source in {1,...,4}
+	\foreach \dest in {1,...,5}
+	\path (I-\source) edge (Ha-\dest);
+	
+	% Connect hidden layers.
+	\foreach \source in {1,...,5}
+	\foreach \dest in {1,...,5}
+	\path (Ha-\source) edge (Hb-\dest);            
+	
+	
+	% Connect every node in the hidden layer with two nodes in the parameter alpha/beta layer
+	\foreach \source in {1,...,5}
+	\path (Hb-\source) edge (O);
+	
+	
+	% Annotate the layers
+	\node[annot,above of=Ha-1, xshift=\layersep/2, node distance=1cm] {Hidden layers};
+	\node[annot,above of=Ha-1, node distance=1cm] (hal) {};
+	\node[annot,above of=Hb-1, node distance=1cm] (hbl) {};
+	\node[annot,left of=hal] {Inputs};
+	\node[annot,right of=hbl] {Prediction};
+	
+\end{tikzpicture}

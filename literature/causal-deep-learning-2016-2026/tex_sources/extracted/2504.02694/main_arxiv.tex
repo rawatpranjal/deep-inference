@@ -1,0 +1,492 @@
+\section{Introduction}
+\label{sec:intro}
+
+Counterfactuals (or potential outcomes) describe how certain aspects of the world would have been different under hypothetical scenarios. They are widely employed in causal inference to explore questions like “what would have happened if X had occurred”, even when X never actually took place. In fact, causal inference tasks can be understood as comparing outcomes, or, more generally, functionals, across two or more counterfactual distributions.
+
+Recently, counterfactuals have proven useful for predicting outcomes in deployment settings that differ significantly from the training phase. This is commonly referred to as \textit{counterfactual prediction}. In counterfactual prediction, the goal is to map input features to outcomes under hypothetical scenarios that may differ substantially from the observed world (e.g., what if treatment access were limited to 50\% of individuals compared to current practice?). This can be particularly useful to inform decision-making in clinical practice, where we need to address abrupt shifts in treatment patterns \citep[e.g.,][]{hernan2019second, dickerman2020counterfactual, van2020prediction, dickerman2022predicting}. The recent strikes of junior doctors in South Korea may serve as a representative example \citep{pacific2024junior, park2024junior}. Moreover, certain interventions in the training data may be undesirable or incompatible with the target deployment setting, requiring their removal via prediction under a hypothetical intervention that completely excludes them \citep[e.g.,][]{sperrin2018using}. This is especially relevant in clinical research when predicting risk as to treatments initiated after baseline \citep{schulam2017reliable, van2020prediction, lin2021scoping}. 
+
+More generally, counterfactual prediction may be used when transferring a model from a source population to a similar target population that differs only in post-baseline treatment patterns. Therefore, counterfactual prediction is closely related to domain adaptation and out-of-distribution generalization, especially when distributional shifts result from specific interventions. In principle, retraining the model with data collected from the new setting is preferred, but due to cost or as an interim solution, one may instead seek to adapt the existing model to approximate outcomes under a hypothetical intervention that aligns with treatment patterns in the target setting.
+
+Counterfactual prediction presents challenges absent in standard prediction tasks, as the data required to construct predictive models are inherently unobservable in their entirety. Surprisingly, while recent advances in predictive modeling have significantly enhanced causal inference, the reverse, leveraging causal inference to address challenges in predictive modeling, has received much less attention. Counterfactual prediction is closely related to the estimation of the conditional average treatment effect (CATE), which is represented as the contrast between two distinct counterfactual regression functions. However, unlike counterfactual prediction, efficient estimation of the CATE can exploit a structure much simpler than that of individual counterfactual regression functions \citep{kennedy2020optimal}. Also, in multi-valued treatment settings, estimating each counterfactual regression function separately is often more practical than computing all relative-effect combinations.
+
+Some recent progress has been made for counterfactual prediction beyond its role within the CATE estimation framework. To address covariate distributional shifts induced by varying treatments, several studies have adopted direct modeling, or plug-in, approaches grounded in the parametric g-formula. \citep[e.g.,][]{li2016predictive, schulam2017reliable,nguyen2020counterfactual, lin2021scoping,dickerman2022predicting}. \citet{coston2020RuntimeConfounding, coston2020counterfactual} introduced a nonparametric method for counterfactual prediction and associated risk, addressing runtime confounding and fairness. Other approaches utilize representation learning techniques to construct a common representation space that balances the source and target domains \citep[e.g.,][]{johansson2016learning, shalit2017estimating, hassanpour2019counterfactual, hassanpour2019learning}. While previous work has focused primarily on deterministic interventions, \citet{mcclean2024nonparametric} develop nonparametric methods for estimating conditional effects, defined under a specific class of stochastic interventions known as incremental interventions. However, a generic learning framework to efficiently and flexibly predict counterfactual outcomes still remains absent. 
+
+Our work aims to fill this gap in the literature. We propose doubly robust-style estimators for counterfactual regression that can accommodate a broad class of risk functions and flexible constraints (e.g., shape, fairness), leveraging techniques at the intersection of semiparametric theory and stochastic optimization. As in \citet{mcclean2024nonparametric}, our hypothetical interventions, or treatment policies, are formulated using incremental interventions \citep{kennedy2019nonparametric}, which shift the propensity score rather than assigning treatments to fixed values, while still allowing recovery of standard deterministic interventions as a special case. Our target estimand approximates the regression function by projecting it onto a finite-dimensional model space, guided by a specific class of risk and constraints. We show that the target parameters can be framed as optimal solutions to a stochastic program. Subsequently, we propose an estimation strategy by formulating and solving an appropriate approximating program, which is derived by characterizing the efficient influence functions of each coefficient in the true stochastic optimization problem. We go on to derive a closed-form expression for the asymptotic distribution of our estimator, and show that the proposed estimator can be $\sqrt{n}$-consistent and asymptotically normal under relatively weak regularity conditions. Experiments demonstrate that the proposed estimator not only effectively adapts to unseen counterfactual scenarios but also attains parametric rates of convergence.
+
+
+\section{Framework}
+
+\subsection{Setup}
+Suppose that we have access to an i.i.d. sample $(Z_{1}, ... , Z_{n})$ of $n$ tuples $Z=(Y,A,X) \sim \Pb$,
+where $Y \in \mathcal{Y}$ represents the outcome, $A \in \{0,1\}$ denotes a binary intervention, and $X \in \mathcal{X} \subseteq \R^p$ comprises observed covariates. Here, we assume $A$ is binary for simplicity, but in principle it can be multi-valued. In general, we consider $\mathcal{Y}$ as a subset of Euclidean space, though it may also be discrete. We let $Y^a$ denote the counterfactual (or potential) outcome that would be observed under treatment assignment $A = a$, $a \in \mathcal{A}$. Throughout, we refer to a \emph{factual prediction} as a mapping from a set of predictors to the observable outcome $Y$.
+
+In contrast to previous approaches to counterfactual prediction discussed in Section \ref{sec:intro}, we employ incremental interventions to generate our target counterfactual scenarios with greater flexibility. \emph{Incremental interventions} are a specialized type of stochastic intervention that shifts the exposure propensity of each unit by a predetermined amount \citep{kennedy2019nonparametric}. Specifically, let $\pi(X)=\Pb(A=1 \mid X)$ denote the observational propensity score. Then the incremental intervention replaces $\pi$ with the distribution defined by
+\begin{align*}
+    q(X; \delta, \pi) = \frac{\delta \pi(X)}{\delta \pi(X) + 1 - \pi(X)} \quad \text{for} \quad 0 < \delta < \infty,
+\end{align*}
+where $\delta$ is a user-specified increment parameter, indicating  how the intervention changes the odds of receiving treatment; if $\delta > 1$ ($< 1)$, then the intervention increases (decreases) the odds. This corresponds to a counterfactual scenario in which individuals receive a hypothetical treatment $A^*$, where $A^*\mid X \sim \text{Bernoulli} \{ q(X; \delta, \pi) \}$. There are at least two key reasons why incremental interventions are particularly appealing. First, they more accurately capture treatment variations that may naturally occur in practice. More importantly, they completely eliminate the need for the stringent positivity assumption. Their extensions have also been explored in studies on dropout \citep{kim2021incremental}, conditional effects \citep{mcclean2024nonparametric}, and continuous exposures \citep{schindl2024incremental}, among others.
+
+Let $Q(a | x;\delta)$ denote the \emph{intervention distribution}, the probability distribution of treatment assignment $A=a$ for the incremental intervention associated with $q(X; \delta, \pi)$, i.e., $dQ(a | X;\delta)=q(X; \delta, \pi)^a\{1-q(X; \delta, \pi)\}^{1-a}$. Let $Q(\delta)$ represent draws from $Q(a | x;\delta)$. In our counterfactual prediction tasks, the primary quantity of interest is the counterfactual outcome $Y^{Q(\delta)}$. Throughout, we assume \emph{consistency}, $Y=Y^a$ if $A=a$, and \emph{no unmeasured confounding}, $A \ind Y^a \mid X$. \citet{kennedy2019nonparametric} showed that under the assumptions of consistency and no unmeasured confounding, the mean counterfactual outcome under $Q(a | x;\delta)$ can be identified as
+\begin{align}
+\mathbb{E}(Y^{Q(\delta)}) &= \int_{\mathcal{A}} \int_{\mathcal{X}} \mathbb{E}(Y \mid X = x, A = a) \, dQ(a \mid x;\delta) \, d\mathbb{P}(x) \nonumber \\
+& = \mathbb{E} \left[ \frac{\delta \pi(X) \mu_1(X) + \{1 - \pi(X)\} \mu_0(X)}{\delta \pi(X) + \{1 - \pi(X)\}} \right] = \mathbb{E} \left[ \frac{Y(\delta A + 1 - A)}{\delta \pi(X) + \{1 - \pi(X)\}}\right] \label{eqn:mean-inc-outcome-identification},
+\end{align}
+where $\mu_a(X)=\E(Y \mid X,A=a)$. However, in counterfactual regression, our goal is to obtain an accurate prediction of $Y^{Q(\delta)}$ given $X$, rather than to estimate the marginal mean $\E(Y^{Q(\delta)})$. We allow $\delta = 0$ and $\delta = \infty$, which correspond to the deterministic interventions $A = 0$ and $A = 1$, respectively. Note that this requires the \emph{positivity assumption}, $\varepsilon < \pi(X) < 1-\varepsilon \text{ a.s. for some } \varepsilon >0$, in addition to the assumptions of consistency and no unmeasured confounding.
+
+\textbf{Notation.}
+We introduce some notation used in this paper. For any fixed vector $v$ and matrix $M$, we let $\Vert v \Vert_2$ and $\Vert M \Vert_F$ denote the Euclidean norm and the Frobenius norm, respectively. $\Vert \cdot \Vert_2$ is understood as the spectral norm when it is used with a matrix. Let $\Pn$ denote the empirical measure over $(Z_1,...,Z_n)$. In addition, we use $\Vert f \Vert_{2,\Pb}$ to denote the $L_2(\Pb)$ norm of $f$ defined by $\Vert f \Vert_{2,\Pb} = \left[\int f(z)^2 d\Pb(z)\right]^{1/2}$. Lastly, we let $\sol(\mathsf{P})$ denote the set of optimal solutions of an optimization program $\mathsf{P}$, and define $\dist(x, \mathcal{S}) = \inf\left\{ \Vert x - y\Vert_2: y \in \mathcal{S} \right\}$ as the distance from a point $x$ to a set $S$.
+
+
+\subsection{Motivating Illustration} \label{subsec:motivating-illustration}
+
+\begin{figure}[t!]
+\centering
+\begin{minipage}{.33\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{FIG/q_plots.png}
+  \captionof*{figure}{(a)}
+  % \captionof{figure}{Intervention density $q(X; \delta, \pi)$ corresponding to varying values of $\delta$.}
+  % \label{fig:intervention-distribution}
+\end{minipage}%
+\hfill
+\begin{minipage}{.33\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{FIG/illustration-delta01.png}
+  \captionof*{figure}{(b)}
+  % \captionof{figure}{Factual and counterfactual regression with correctly specified models.}
+  % \label{fig:correct-example}
+\end{minipage}%
+\hfill
+\begin{minipage}{.33\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{FIG/illustration-delta001.png}
+  \captionof*{figure}{(c)}
+  % \captionof{figure}{Factual and counterfactual regression with mis-specified models}
+  % \label{fig:misspecified-example}
+\end{minipage}
+\caption{(a) Density of the intervention distribution $q(X; \delta, \pi)$ for varying values of $\delta$; (b) and (c) display the densities of the true counterfactual outcomes and the predicted outcomes from factual and proposed counterfactual regression methods for $\delta=0.1$ and $\delta=0.01$, respectively. The factual regression exhibits a notable distributional discrepancy from the true counterfactual outcomes, resulting in substantial estimation errors.}
+\label{fig:illustrating-example}
+\end{figure}
+
+Consider a simple data-generating process where the covariates $X \sim \text{Uniform}[0, 10]$ and,
+\begin{align*}
+A \sim \text{Bernoulli}(\text{expit}(2.8 - 0.3X)), \quad
+Y \sim N(1 + 0.75X + 0.5X^2 - 10A, X),
+\end{align*}
+where $\text{expit}(\cdot)$ denotes the inverse logit function.
+Under this model, approximately 75.4\% of individuals initiate treatment; however, as $X$ increases, the likelihood of treatment initiation decreases. Moreover, individuals who are less likely to receive treatment tend to exhibit greater variability in their treatment effects. 
+
+Suppose that we are concerned with the expected outcome under a hypothetical treatment policy governed by the intervention distribution $Q(a | x;\delta)$. This scenario may represent a counterfactual inquiry: for example, given the baseline predictors, what would be the risk of death if access to surgery were restricted to only a randomly selected x\% of individuals? \citep{dickerman2020counterfactual}.
+Thus, our objective is to predict $Y^{Q(\delta)}$ from $X$. When the shift is substantial (i.e., when $\delta$ deviates significantly from $1$), the factual prediction model is expected to perform poorly. A small $\delta (\delta \ll 1)$ can correspond to a scenario in which physicians suddenly go on strike \citep[e.g.,][]{park2024junior}. Here, we posit that no new data are available for model adaptation or retraining.
+
+We consider a counterfactual scenario in which the odds of receiving treatment are substantially reduced by a factor of $0.1$ and $0.01$. We suppose that the propensity score $\pi$ is unknown and is estimated using logistic regression. Training and test datasets of equal size $n = 1000$ are generated, where in the test data, $A$ is sampled from $\text{Bernoulli} \{ q(X; \delta, \pi) \}$. The factual regression corresponds to the outcome regression model $\mu_a$, estimated via ordinary least squares with higher-order polynomial terms, where the treatment variable $A$ is imputed using $\widehat{\pi}$. For counterfactual regression, we apply the proposed method with the $L_2$ loss without any constraints (Example \ref{example:l2-loss}). We assume that both the outcome and propensity score models are correctly specified in their parametric forms.
+
+This simple example illustrates an interesting, yet presumably common phenomenon. As $\delta$ decreases, the probability of receiving treatment declines sharply compared to the original propensity score $\pi$, particularly for small values of $X$ (Figure~\ref{fig:illustrating-example}a). Figures~\ref{fig:illustrating-example}b and~c show that the factual regression fails to generalize to these counterfactual scenarios, while the proposed counterfactual regression successfully adapts. The outcomes predicted by the factual regression exhibit a substantial distributional discrepancy from the true counterfactual outcomes. The discrepancy becomes even more pronounced as $\delta$ decreases from $0.1$ to $0.01$, whereas the proposed estimator consistently generalizes well across varying values of $\delta$. A similar phenomenon is observed even when more complex nonparametric models are used for the outcome regression, or when the parametric models are misspecified.
+
+
+
+\subsection{Estimand} \label{subsec:estimand}
+
+Learning tasks are generally characterized through risk functions, and across domains, a wide variety of nontraditional criteria are often employed to design and evaluate machine learning algorithms \citep{wang2020comprehensive}. 
+Given a loss function $L$, we define the risk of a regression model $f:\mathcal{X} \rightarrow \R$ as $\mathcal{R}\left( f(X), Y^{Q(\delta)} \right)=\E\left\{L\left(f(X), Y^{Q(\delta)} \right)\right\}$. For instance, when the $L_2$ loss (or squared error loss) is used without any model constraints, the function $f$ that minimizes $\mathcal{R}(f(X), Y^{Q(\delta)})$ is given by the conditional mean $\mathbb{E} \{ Y^{Q(\delta)} \mid X \}$, which corresponds to the conditional incremental effects studied in \citet{mcclean2024nonparametric}. We consider some specified finite-dimensional parametric model $\{f(x;\beta) : \beta \in \R^k\}$ as the regression model for $Y^{Q(\delta)}$. Our target parameter can be formulated as the optimal solution to the following stochastic program:
+\begin{align} \label{eqn:target-program}
+\underset{\beta \in \R^k}{\text{minimize }} \,\,  \mathcal{R}\left( f(X;\beta), Y^{Q(\delta)} \right) + \lambda \rho(\beta) \quad \text{subject to} \quad \beta \in \mathcal{C},  
+\end{align}
+where the constraint set is given by $\mathcal{C} = \{\beta : g_j(\beta) \leq 0, j=1,\ldots,r\}$ for deterministic functions $g_j:\R^k \rightarrow \R$. Here, $\rho(\cdot)$ is a pre-specified penalty function, and $\lambda \geq 0$ is the associated tuning parameter.
+The solution to the above program corresponds to the coefficients of the best-fitting regression function for $Y^{Q(\delta)}$ within the class $\{f(x;\beta) : \beta \in \R^k\}$, subject to
+a set of constraints $\mathcal{C}$. Since we make no assumptions about the true functional relationship between $Y^{Q(\delta)}$ and $X$, all our results are formally nonparametric. The above projection approach, where a model is not assumed to be correct but is instead used solely to define approximations, has been widely employed in statistics and causal inference \citep[see, for example,][Section 3.1.1]{kennedy2021semiparametric}.
+
+\begin{remark}
+    Another advantage of our framework is that it accommodates a general setting where only a subset of covariates $V \subseteq X$ is available at the time of prediction. This flexibility allows for scenarios like \emph{runtime confounding}, where certain factors used by decision-makers are recorded in the training data (for constructing nuisance estimates) but are unavailable during prediction. For further details, see, for example, \citet{coston2020RuntimeConfounding, kim2022counterfactual}.    
+\end{remark}
+
+\textbf{Models.}
+We present a few illustrative examples of model classes for $f(x; \beta)$.
+An archetypal example is a class of generalized linear models, where the counterfactual outcome has a distribution that is in the exponential family. More generally, one may consider a functional aggregation or linear ensemble in the following form:
+\begin{align} \label{eqn:function-aggregation}
+    f(X;\beta) = \sum_{j=1}^k \beta_j b_j(X),
+\end{align}
+with a set of known basis functions $\{b_j\}$. Examples of such basis functions include orthogonal polynomials, wavelets, and splines. Aggregated predictors of this form have been extensively studied and broadly applied across a wide range of disciplines \citep[e.g.,][]{tsybakov2003optimal, nemirovski2009robust, polley2010super}. 
+
+\textbf{Constraints.}
+We often seek to incorporate various constraints into our regression models. A few examples that may be included in the constraint set $\mathcal{C}$ are presented below.
+
+\begin{example1}[Constrained regression] \label{example:constrained-regression}
+There is a growing demand for the use of constrained regression in various scientific contexts. For instance, a set of linear inequality constraints $C\beta \leq d$, where $C \in \R^{r\times k}$, $d \in \R^r$, can be employed to enforce shape constraints \citep{james2013penalized, gaines2018algorithms}, ensure structural consistency \citep{liew1976inequality}, or maintain physical fidelity in calibration models \citep{schwendinger2024holistic}. The same type of linear inequality constraints can be utilized to target specific sub-populations in website advertising \citep{james2019penalized}, design marketing mix models \citep{chen2021hierarchical}, and account for the compositional nature of microbiome data \citep{lu2019generalized}. More general constraints, where coefficients may depend on $X$, are also employed in interpretable machine learning \citep[e.g.,][]{zeng2017interpretable}.
+\end{example1}
+
+The functions $\{g_j\}$ in the constraint set $\mathcal{C}$ do not need to be known or fixed a priori. If $\{g_j\}$ depend on $\Pb$ or $Y^{Q(\delta)}$, they must also be estimated from the data. Some examples are given below.
+
+\begin{example1}[Algorithmic fairness]  \label{example:fairness}
+Data-driven policy making can inadvertently result in discriminatory treatment of sensitive groups (e.g., gender, race). To mitigate such biases, fairness metrics impose constraints on the joint distribution of outcomes and sensitive features \citep[e.g.,][]{hardt2016equality, corbett2017algorithmic, barocas2023fairness}. To evaluate unfairness within each subgroup, we utilize the \emph{fairness function} $\text{uf}: \mathcal{Y}\times\mathcal{X}\times\{0,1\}^2 \rightarrow \R$, which accommodates a broad range of (counterfactual) fairness measures \citep[e.g.,][]{mishler2021fade, kim2023fair}. Let $F \in \mathcal{X}$ be a binary sensitive feature. Using the fairness function, our fairness criterion can be expressed at the population level as:
+\begin{align} \label{eqn:fairness-function}
+    \left\vert \E\left\{\text{uf}(Z) f(X;\beta) \right\} \right\vert \leq \epsilon, 
+\end{align}
+where $\epsilon\geq0$ represents the acceptable fairness threshold. For instance, the criteria of \emph{statistical parity} and \emph{conditional statistical parity}, which are among the most widely recognized fairness measures, can be implemented by defining the fairness functions as:
+\begin{align}
+    \text{uf}(Z) & = \frac{1-F}{\E(1-F)} - \frac{F}{\E(F)}, \label{eqn:independence}\\
+    \text{uf}(Z) &= \frac{(1-F)\mathbbm{1}\left\{L = l\right\}}{\E\left[(1-F)\mathbbm{1}\left\{L = l\right\}\right]} - \frac{F\mathbbm{1}\left\{L = l\right\}}{\E\left[F\mathbbm{1}\left\{L = l\right\}\right]}, \label{eqn:cond-independence}
+\end{align}
+where $L$ is some function of $X$ and represents a legitimate factor used to specify conditional parity, leading to 
+\begin{align*}
+& \left\vert \E\left\{f(X;\beta) \mid F=0 \right\} - \E\left\{f(X;\beta)\mid F=1 \right\} \right\vert \leq \epsilon, \\
+&\left\vert \E\left\{f(X;\beta) \mid F=0, L = l \right\} - \E\left\{f(X;\beta) \mid F=1, L = l \right\} \right\vert \leq \epsilon,
+\end{align*}
+respectively. 
+These conditions require the regression model to be marginally (or conditionally) independent of the given sensitive feature.
+\end{example1}
+
+\begin{example1}[Balance for the positive class] \label{example:balanced-class}
+In many practical settings, such as criminal justice and healthcare policy, it is important to ensure that a model’s decisions remain independent of individuals who exhibit a certain characteristic (e.g., a risk score exceeding a threshold), even if the model can only identify them imperfectly \citep[e.g.,][]{kleinberg2016inherent}. In this case, with $Y^{Q(\delta)}$ viewed as a risk score, one may wish to incorporate the following balancing condition into the modeling framework:
+\begin{align} \label{eqn:g-positive-balance}
+    \text{uf}(Z)
+    = \frac{(1-S)\mathbbm{1}\left\{Y^{Q(\delta)} > 0\right\} }{\E\left[(1-S)\mathbbm{1}\left\{Y^{Q(\delta)} > 0\right\}\right]}
+    - \frac{S\mathbbm{1}\left\{Y^{Q(\delta)} > 0\right\}}{\E\left[S \mathbbm{1}\left\{Y^{Q(\delta)} > 0\right\} \right]}, 
+\end{align}
+which leads to the fairness criterion
+\begin{align*}
+\big\vert \E\left\{f(X;\beta) \mid F=0, Y^{Q(\delta)} > 0 \right\} - \E\left\{f(X;\beta) \mid F=1, Y^{Q(\delta)} > 0 \right\} \big\vert \leq \epsilon.
+\end{align*}
+\end{example1}
+
+\textbf{Challenges.}
+A key challenge stems from the counterfactual nature of the functionals involved in the optimization problem \eqref{eqn:target-program}. The two most widely used approaches in stochastic programming are {stochastic approximation} (SA) and {sample average approximation} (SAA) \citep[e.g.,][]{nemirovski2009robust, shapiro2014lectures}. Such standard methods typically assume that each unknown component is of the form $\E[H(\beta,\xi)]$, where $H$ is a fixed, known, real-valued function, and $\xi$ is a random vector whose distribution is $\Pb$. Additionally, the following assumptions are commonly made: i) an iid sample of realizations,  $\xi_1, \xi_2, \ldots, \xi_n$ from the random vector $\xi$ can be generated; ii) for each pair $(\beta, \xi)$, the value $H(\beta, \xi)$ or its stochastic subgradients are accessible. In such settings, sample mean constructions or subgradient descent methods are readily applicable. However, these standard methods are not directly applicable to our framework, as the optimization problem involves functionals of unobserved counterfactuals, whose identification relies on unknown nuisance functions. Moreover, they cannot leverage efficient estimators for counterfactual components, such as semiparametric estimators with cross-fitting \citep[][]{Chernozhukov17, newey2018cross}. Therefore, more general approaches are required beyond the standard SA and SAA frameworks.
+
+
+
+\section{Estimation}
+
+In this section, we develop an estimation strategy for the target parameter defined as the solution to the optimization problem \eqref{eqn:target-program}. Our estimation procedure can be summarized as the following three-step sequencing:
+\begin{itemize}
+    \item [\textbf{Step 1.}] Derive the efficient influence function for each coefficient that requires estimation in the target stochastic program \eqref{eqn:target-program}.
+    \item [\textbf{Step 2.}] Construct the efficient semiparametric estimators for the coefficients in \eqref{eqn:target-program} based on the efficient influence functions derived in Step 1, and utilize these estimators to formulate the corresponding approximating program for \eqref{eqn:target-program}.
+    \item [\textbf{Step 3.}] Solve an optimization problem equivalent to the approximating program defined in Step 2.
+\end{itemize}
+
+  % based on the semiparametric efficiency theory
+We provide a more detailed discussion about each step in the proposed strategy. Our goal in Step 1 is to find the efficient influence function (EIF) for each unknown component in our target program \eqref{eqn:target-program}. 
+The EIF enables construction of the efficient semiparametric estimator by de-biasing generic plug-in estimators, where we may achieve local minimax lower bounds \citep{bickel1993efficient, van2002semiparametric,tsiatis2006semiparametric,kennedy2016semiparametric}. This also yields desirable properties for our main estimator in Step 3, such as double robustness or general second-order bias, which allows us to relax nonparametric conditions on nuisance function estimation. 
+
+The EIF for $\E\{Y^{Q(\delta)}\}$ can be useful in specifying the EIF for various functionals involving $Y^{Q(\delta)}$. For convenience, we let $\mu_a(X) = \E[Y \mid X,A=a]$, $\pi_a(X) = \Pb(A=a \mid X)$, $a \in \{0,1\}$, and $\eta_Q=(\mu_a,\pi_a)$. By \citet[][Theorem 2]{kennedy2019nonparametric}, the uncentered EIF for $\E\{Y^{Q(\delta)}\}$ is given as
+\begin{align} \label{eqn:EIF-incremental-effect}
+\varphi_Q(Z;\eta_Q,\delta) = \frac{\delta \pi_1(X) \phi_1(Z) +  \pi_0(X)\phi_0(Z)}{\delta \pi_1(X) + \pi_0(X)}
++ \frac{\delta \Delta(X) \{ A - \pi_1(X) \}}{\{ \delta \pi_1(X) + \pi_0(X) \}^2},
+\end{align}
+where $\Delta(X) = \mu_1(X) - \mu_0(X)$, and
+$
+\phi_a(Z) = \frac{\mathbbm{1}(A = a)}{\pi_a(X)} \{ Y - \mu_a(X) \} + \mu_a(X).
+$
+For instance, it can be deduced that for an arbitrary fixed real-valued function $\tau:\mathcal{X} \rightarrow \R$, the uncentered EIF for the parameter $\E\left\{Y^{Q(\delta)}\tau(X)\right\}$ is simply given by $\varphi_Q(Z;\eta_Q,\delta)\tau(X)$ \citep[][Lemma A.1]{kim2022doubly}. More practical and relevant examples will be provided shortly.
+
+Once the EIF is specified, in Step 2, we construct an efficient semiparametric estimator for each coefficient in \eqref{eqn:target-program}, essentially as a sample average of the EIF with the estimated nuisance components, i.e., \emph{one-step estimator}. To our knowledge, there are two main approaches for constructing such efficient estimators; one is based on empirical process conditions, and the other is to use sample splitting. One may assume that the function class for the EIF and corresponding estimators are not too complex (e.g., Donsker or low-entropy type conditions), but this would limit the flexibility of the nuisance estimators. To avoid this, alternatively, we can use sample splitting (or cross-fitting) to allow for arbitrarily complex nuisance estimators. Both approaches can be viewed as ways to avoid using the same data twice, one for constructing
+relevant nuisance components, and the other for de-biasing, which can introduce a threat of overfitting \citep{Chernozhukov18}. Here, we are agnostic about which approach will be used. We refer the interested readers to \citet{kennedy2016semiparametric,kennedy2022semiparametric} and references therein.
+
+Subsequently, we formulate an approximating (sample-based) program of \eqref{eqn:target-program} by substituting all the unknown coefficients with their estimators. Let $\varphi_{\mathcal{R}}(Z;\eta_{\mathcal{R}},\delta,\beta)$ be the uncentered EIF for $\mathcal{R}\left( f(X;\beta), Y^{Q(\delta)} \right)$ with the corresponding nuisance functions $\eta_{\mathcal{R}}$, so that $\mathcal{R}\left( f(X;\beta), Y^{Q(\delta)} \right) = \E\{\varphi_{\mathcal{R}}(Z;\eta_{\mathcal{R}},\delta,\beta)\}$. Then, the semiparametric estimator for our risk function is given by $\Pn\left\{ \varphi_{\mathcal{R}}(Z;\widehat{\eta}_{\mathcal{R}},\delta,\beta)\right\}$, provided that $\widehat{\eta}_{\mathcal{R}}$ converges to $\eta_{\mathcal{R}}$ at sufficiently fast rates. As discussed above, $\widehat{\eta}_{\mathcal{R}}$ can be constructed on the same sample if we are willing to rely on appropriate empirical process conditions, or, alternatively, on a separate, independent sample using sample splitting. The approximating program can be generically formulated as follows:
+\begin{align} \label{eqn:approx-program}
+\underset{\beta \in \R^k}{\text{minimize }} \,\,  \Pn\left\{ \varphi_{\mathcal{R}}(Z;\widehat{\eta}_{\mathcal{R}},\delta,\beta)\right\} + \lambda \rho(\beta) \quad \text{subject to} \quad \beta \in \widehat{\mathcal{C}},  
+\end{align}
+where $\eta_{\mathcal{R}}$ is a set of the relevant nuisance functions, and $\widehat{\mathcal{C}}$ represents the estimated feasible set $\{\beta : \widehat{g}_j(\beta) \leq 0, j=1,\ldots,r\}$. Here, each $\widehat{g}_j$ is the EIF-based semiparametric estimator, constructed as discussed above.
+
+It can be shown, using standard arguments from the semiparametric literature, that each stochastic component of the approximating program \eqref{eqn:approx-program} serves as a $\sqrt{n}$-consistent, asymptotically normal, and efficient estimator for its counterpart in \eqref{eqn:target-program} \citep[][Section 4]{kennedy2022semiparametric}. For example, when $\mathcal{R}$ is smooth, we have that $\forall \beta, \delta$,
+\begin{align} \label{eqn:objective-root-n-CAN}
+        \Pn\left\{ \varphi_{\mathcal{R}}(Z;\widehat{\eta}_{\mathcal{R}},\delta,\beta)\right\} - \mathcal{R}\left( f(X;\beta), Y^{Q(\delta)} \right) \xrightarrow[]{d} N\left(0, \var(\varphi_{\mathcal{R}}(Z;\eta_{\mathcal{R}},\delta,\beta))\right),
+\end{align}
+if the second-order von Mises remainder term $\Pn\left\{ \varphi_{\mathcal{R}}(Z;\widehat{\eta}_{\mathcal{R}},\delta,\beta)\right\} - \E\{\varphi_{\mathcal{R}}(Z;\eta_{\mathcal{R}},\delta,\beta)\} + \int \varphi_{\mathcal{R}}(z;\widehat{\eta}_{\mathcal{R}},\delta,\beta) d\Pb(z)$ vanishes at a rate faster than $\sqrt{n}$, along with appropriate empirical process conditions. % (e.g., Donsker).
+
+Finally, in Step 3, the approximating program derived in Step 2 (or its equivalent reformulation) can be solved using various off-the-shelf optimization solvers. An important benefit of the proposed approach is that, depending on the problem, one can leverage rapid development of modern optimization algorithms \citep[e.g.,][]{boyd2011distributed,bertsekas2015convex, jain2017non}. Finally, our proposed estimator for counterfactual regression is $f(X;\widehat{\beta})$, where $\widehat{\beta}$ is the optimal solution to the approximating program from Step 3.
+
+In what follows, we illustrate the proposed estimation procedure through examples.
+
+\begin{example2}[Cross-entropy loss]
+The proposed framework is also applicable to a classification task. For simplicity, assume $\mathcal{Y} = \{0,1\}$. Then we may consider the cross-entropy loss $L(y,\widehat{y})=- y\log \widehat{y} - (1-y) \log (1-\widehat{y})$. For a generalized linear model $f(X;\beta)$, the corresponding risk is defined by $-\E\left\{ Y^{Q(\delta)}\log f(X;\beta) + (1-Y^{Q(\delta)})\log(1-f(X;\beta)) \right\}$, yielding the EIF
+\begin{align*}
+        -\E\left\{ \varphi_Q(Z;\eta_Q,\delta) \log f(X;\beta) + (1-\varphi_Q(Z;\eta_Q,\delta))\log(1-f(X;\beta)) \right\}.
+\end{align*}
+This leads to the following approximating program:
+\begin{align*}
+    & \underset{\beta \in \R^k}{\text{minimize}} \quad -\Pn\left\{ \varphi_Q(Z;\widehat{\eta}_Q,\delta) \log f(X;\beta) + (1-\varphi_Q(Z;\widehat{\eta}_Q,\delta))\log(1-f(X;\beta)) \right\}.
+\end{align*}
+\citet{kim2022doubly} studied counterfactual classification within the framework developed in this work, specifically focusing on the case of a deterministic intervention ($\delta = 0$) and deterministic constraints, where $\mathcal{C}$ is known and fixed. 
+\end{example2}
+
+% It is scale independent, and penalizes underestimates more than overestimates. 
+\begin{example2}[Mean squared logarithmic loss] \label{example:mean-squared-logarithmic-loss}
+Consider a generalized linear model $f(X;\beta)$, and the mean squared logarithmic loss defined by $L(y,\widehat{y})=\left\{\log(1+y) - \log(1+\widehat{y})\right\}^2$ with the $L_2$ penalty function. This loss function is known to be particularly useful when the data exhibit a wide range of values \citep{hodson2021mean}. In this case, the EIF for the risk $\E[\{\log(Y^{Q(\delta)}+1) - \log(f(X;\beta) + 1)\}^2]$ is given by
+\begin{align*}
+        \log^2\left( f(X;\beta)+1 \right) - 2\left\{\log\left( f(X;\beta)+1 \right)\varphi'_Q(Z;\eta'_Q,\delta)\right\} + \varphi''_Q(Z;\eta''_Q,\delta),
+\end{align*}
+where $\varphi'_Q(Z;\eta'_Q,\delta)$ ($\varphi''_Q(Z;\eta''_Q,\delta)$) is the same as $\varphi_Q$ in \eqref{eqn:EIF-incremental-effect} except that $\mu_a(X)$ and $\phi_a(Z)$ are replaced by $\mu'_a(X) = \E[\log(Y+1) \mid X,A=a]$ ($\mu''_a(X) = \E[\log^2(Y+1) \mid X,A=a]$) and
+$
+\phi'_a(Z) = \frac{\mathbbm{1}(A = a)}{\pi_a(X)} \{ \log(Y+1) - \mu'_a(X) \} + \mu'_a(X)
+$ ($\phi''_a(Z) = \frac{\mathbbm{1}(A = a)}{\pi_a(X)} \{ \log^2(Y+1) - \mu''_a(X) \} + \mu''_a(X)$), respectively, with $\eta'_Q=(\mu'_a,\pi_a)$ ($\eta''_Q=(\mu''_a,\pi_a)$).
+Then our approximating problem is equivalent to:
+\begin{align*}
+    & \underset{\beta \in \R^k}{\text{minimize}} \quad \frac{1}{2} \Pn\left\{\log^2\left( f(X;\beta)+1 \right) \right\} - \Pn\left\{\log\left( f(X;\beta)+1 \right)\varphi'_Q(Z;\widehat{\eta}'_Q,\delta)\right\} + \lambda\Vert \beta \Vert_2^2.
+\end{align*}
+\end{example2}
+
+\begin{example2}[$L_2$ loss with fairness criterion] \label{example:l2-loss}
+One of the most commonly used loss functions is the squared error loss, or $L_2$ loss: $L=(y-\widehat{y})^2$.
+Consider the linear aggregation form \eqref{eqn:function-aggregation}, with $L_2$ loss and $L_2$ penalty. Then, the risk and the EIF are given by $\E\{Y^{Q(\delta)} - b(X)^\top\beta \}^2$ and
+\begin{align*}
+    \varphi'_Q(Z;\eta'_Q,\delta) - 2\beta^\top \varphi_Q(Z;\eta_Q,\delta)b(X) + \beta^\top \left\{b(X)b(X)^\top \right\}\beta,
+\end{align*}
+respectively, where $\varphi'_Q(Z;\eta'_Q,\delta)$ is defined analogously to $\varphi_Q$ except that $\mu_a(X)$ and $\phi_a(Z)$ are replaced by $\mu'_a(X) = \E[Y^2 \mid X,A=a]$ and
+$
+\phi'_a(Z) = \frac{\mathbbm{1}(A = a)}{\pi_a(X)} \{Y^2 - \mu'_a(X) \} + \mu'_a(X),
+$
+with $\eta'_Q=(\mu'_a,\pi_a)$. Also, suppose that the fairness criterion of statistical parity \eqref{eqn:independence} is required on the regression function with respect to a sensitive variable $F \in \mathcal{X}$. Then our approximating program is equivalent to the following quadratic optimization problem:
+\begin{align*}
+    & \underset{\beta \in \R^k}{\text{minimize}} \quad \frac{1}{2}\beta^\top \Pn\left\{b(X)b(X)^\top \right\}\beta - \beta^\top \Pn\{\varphi_Q(Z;\widehat{\eta}_Q,\delta)b(X)\} + \lambda\Vert \beta \Vert_2^2 \\
+     & \text{subject to } \quad \left\vert  \Pn\left[\left\{\frac{(1-F)}{\Pn(1-F)} - \frac{F}{\Pn(F)}\right\} b(X)^\top\right] \beta \right\vert \leq \epsilon.
+\end{align*}
+One can add other fairness criteria on top of the statistical parity. When $g_j$ depends on the counterfactual outcome $Y^{Q(\delta)}$ as a non-smooth function (e.g., Example \ref{example:balanced-class}), additional structural conditions, such as the margin condition \citep[e.g.,][]{kim2023fair}, or techniques like undersmoothing \citep[e.g.,][]{kennedy2017non}, may be required to ensure $\sqrt{n}$-consistency and asymptotic normality.
+\end{example2}
+
+
+
+\section{Asymptotic Analysis} \label{sec:analysis}
+
+Here, we study the rates of convergence and the limiting distribution of our proposed estimator. This analysis reduces to studying the behavior of the optimal solution estimators for the target program defined in \eqref{eqn:target-program}. We may express a generic form of \eqref{eqn:target-program} as
+\begin{equation} \label{eqn:shapiro-true}
+\begin{aligned} 
+    \underset{\beta \in \R^k}{\text{minimize}} \,\,  \uppsi(\beta)  
+    \quad \text{subject to} \quad g_j(\beta) \leq 0, \, j=1,\ldots,r, 
+\end{aligned} \tag{$\mathsf{P}_{g}$}
+\end{equation}
+for some deterministic real-valued functions $\uppsi, g_j$. The corresponding approximating program takes the form:
+\begin{equation} \label{eqn:shapiro-approx}
+\begin{aligned} 
+    \underset{\beta \in \R^k}{\text{minimize}} \,\,  \widehat{\uppsi}(\beta)  
+    \quad \text{subject to} \quad \widehat{g}_j(\beta) \leq 0, \, j=1,\ldots,r,
+\end{aligned} \tag{$\widehat{\mathsf{P}}_{g}$}
+\end{equation}
+where we let the random functions $\widehat{\uppsi}$, $\widehat{g}_j$ denote estimators for $\uppsi$, $g_j$, respectively. In our setting, we have $\uppsi(\beta)=\E\left\{ \varphi_{\mathcal{R}}(Z;\eta_{\mathcal{R}},\delta,\beta)\right\} + \lambda \rho(\beta)$ and $\widehat{\uppsi}(\beta)=\Pn\left\{ \varphi_{\mathcal{R}}(Z;\widehat{\eta}_{\mathcal{R}},\delta,\beta)\right\} + \lambda \rho(\beta)$. % We will assume that $\widehat{\uppsi}, \widehat{g}_j$ converge to $\uppsi, g_j$, at sufficiently fast rates.
+
+As discussed in Section \ref{subsec:estimand}, the specific structure of our counterfactual coefficients introduces challenges that hinder the direct application of standard methods from the stochastic optimization literature. To address these challenges, we first introduce the classical results of \citet{shapiro1993asymptotic}, which apply to a broad class of stochastic programs, including the one considered in this study. 
+
+Let $\beta^*$ and $\widehat{\beta}$ denote the optimal solutions of the true program \eqref{eqn:shapiro-true} and the approximating program \eqref{eqn:shapiro-approx}, respectively, i.e., $\beta^* \in \sol(\text{\ref{eqn:shapiro-true}})$ and $\widehat{\beta} \in \sol(\text{\ref{eqn:shapiro-approx}})$. Assuming that the functions $\uppsi, g_j$ are continuously differentiable, the set \( \{\beta: g_j(\beta) \leq 0, \, j=1,\ldots,r\} \) is convex, and that a constraint qualification is satisfied, \citet{shapiro1993asymptotic} analyzed the asymptotic behavior of $\widehat{\beta}$ around $\beta^*$, using the generalized equations approach. While this approach imposes less restrictive differentiability assumptions compared to the SAA and SA methods, it requires the consistency of our solution estimators to be ensured a priori, as stated below.
+
+\begin{assumption} \label{assumption:a-priori-consistency}
+    Let $\gamma^*$ and $\widehat{\gamma}$ denote the Lagrange multiplier vectors associated with the optimal solutions $\beta^*$ and $\widehat{\beta}$, respectively. We require $\widehat{\beta} \xrightarrow{p} \beta^*$ and $\widehat{\gamma} \xrightarrow{p} \gamma^*$.
+\end{assumption}
+
+Although numerous results establish regularity conditions under which Assumption \ref{assumption:a-priori-consistency} holds by construction for conventional SAA and SA methods \citep[e.g.,][]{dupacova1988asymptotic,shapiro2000statistical}, verifying this condition in our context is not straightforward. Moreover, obtaining a closed-form expression for the limiting distribution of the optimal solution estimators necessitates computing the directional derivatives of the solution to the associated generalized equation.
+
+In our work, we narrow our focus to specialized yet sufficiently general forms of our target problem where the above issues can be successfully addressed without introducing additional regularity conditions. Specifically, we first examine the smooth optimization problem with a fixed feasible set. We then consider a scenario in which the objective function exhibits separable stochastic components, and all constraints are linear.
+
+
+\subsection{Smooth functions with fixed feasible set.}
+
+% Let $\gamma$ and $\widehat{\gamma}$ denote the Lagrange multiplier vectors associated with \ref{eqn:shapiro-true} and \ref{eqn:shapiro-approx}.
+% The remaining assumptions are counterparts of Assumptions \ref{assumption:quadratic-growth}-\ref{assumption:kkt-convergence}. A detailed discussion of each assumption is deferred to the following section. 
+% $\zeta=(\beta,\gamma) \in \R^k \times \R^r$
+% Let $G=[\nabla_{\beta}\{\uppsi(\beta) + \gamma^\top \uppsi'(\beta) \}, -\uppsi'(\beta)]^\top$, $\widehat{G}=[\nabla_{\beta}\{\widehat{\uppsi}(\beta) + \gamma^\top \widehat{\uppsi}'(\beta) \}, -\widehat{\uppsi}'(\beta)]^\top$, and $\zeta = \widehat{G} - G \in \R^{k+r}$.
+% In addition, stochastic approximations must achieve $\sqrt{n}$ rates of convergence: i.e., $\widehat{\uppsi}(\beta^*) -  \uppsi(\beta^*) = O_{\Pb}\left( n^{-1/2} \right)$, $\widehat{g}_j(\beta^*) -  g_j(\beta^*) = O_{\Pb}\left( n^{-1/2} \right)$. However, it is often more desirable to work within a framework where the convergence rates of the coefficient estimates can be directly translated into the rates of convergence for the optimal solution estimates.
+
+We consider the case where both \ref{eqn:shapiro-true} and \ref{eqn:shapiro-approx} share a common set of deterministic
+constraints $\mathcal{C} = \{\beta : g_j(\beta) \leq 0, j=1,\ldots,r\}$:
+
+% \begin{equation} \label{eqn:smooth-fixed-true}
+% \begin{aligned} 
+%     \underset{\beta \in \R^k}{\text{minimize}} \,\,  \uppsi(\beta)  
+%     \quad \text{subject to} \quad g_j(\beta) \leq 0, \, j=1,\ldots,r, 
+% \end{aligned} \tag{$\mathsf{P}_{f}$}
+% \end{equation}
+% \begin{equation} \label{eqn:smooth-fixed-approx}
+% \begin{aligned} 
+%     \underset{\beta \in \R^k}{\text{minimize}} \,\,  \widehat{\uppsi}(\beta)  
+%     \quad \text{subject to} \quad g_j(\beta) \leq 0, \, j=1,\ldots,r.
+% \end{aligned} \tag{$\widehat{\mathsf{P}}_{f}$}
+% \end{equation}
+\begin{align} 
+    & \underset{\beta \in \R^k}{\text{minimize}} \,\,  \uppsi(\beta)  
+    \quad \text{subject to} \quad g_j(\beta) \leq 0, \, j=1,\ldots,r, \tag{$\mathsf{P}_{f}$} \label{eqn:smooth-fixed-true} \\
+    &\underset{\beta \in \R^k}{\text{minimize}} \,\,  \widehat{\uppsi}(\beta)  
+    \quad \text{subject to} \quad g_j(\beta) \leq 0, \, j=1,\ldots,r. \tag{$\widehat{\mathsf{P}}_{f}$} \label{eqn:smooth-fixed-approx}
+\end{align} 
+This type of problem has been studied by \citet{kim2022counterfactual} in the context of classification tasks. Assume that $\uppsi$, $g_j$ are twice differentiable with respect to $\beta$, and that the Hessian matrix of $\uppsi$ is positive definite at $\beta^* \in \sol(\text{\ref{eqn:smooth-fixed-true}})$. If \eqref{eqn:objective-root-n-CAN} holds, it follows that
+\begin{align} \label{eqn:objective-derivatie-root-CAN}
+    \nabla_{\beta} \widehat{\uppsi}(\beta^*) - \nabla_{\beta} \uppsi(\beta^*) \xrightarrow{d} N\left( 0, \nabla^2_{\beta} \uppsi(\beta^*) \var\left(\varphi_{\mathcal{R}}(Z;\eta_{\mathcal{R}},\delta,\beta^*)\right) \nabla^2_{\beta} \uppsi(\beta^*)^\top \right).
+\end{align}
+
+Next, for any feasible point $\bar{\beta} \in \mathcal{C}$ in \ref{eqn:smooth-fixed-true}, we let
+\begin{align*}
+L(\bar{\beta},\bar{\gamma}) = \uppsi(\bar{\beta}) + \underset{j \in J_0(\bar{\beta})}{\sum}\bar{\gamma}_j  g_j(\bar{\beta})
+\end{align*}
+denote the Lagrangian function with multipliers $\bar{\gamma}_j \geq 0$, and define the \emph{active index set} by
+\[
+J_0(\bar{\beta}) = \{1\leq j \leq r : g_j(\bar{\beta}) = 0 \}.
+\]
+We now introduce some standard regularity conditions for our analysis. 
+\begin{definition}[LICQ]
+{Linear independence constraint qualification} (LICQ) is satisfied at $\bar{\beta} \in \mathcal{C}$, if the vectors $\nabla_\beta g_j(\bar{\beta})$, $j \in J_0(\bar{\beta})$ are linearly independent. 
+\end{definition}
+\begin{definition}[SC]
+{Strict Complementarity} (SC) is satisfied at $\bar{\beta}$, if the Karush-Kuhn-Tucker (KKT) condition 
+\begin{align*}
+    \nabla_\beta L(\bar{\beta},\bar{\gamma}) = 0,
+\end{align*}
+is satisfied such that
+$
+    \bar{\gamma}_j > 0, \forall j \in J_0(\bar{\beta}).
+$    
+\end{definition}
+LICQ is arguably one of the most widely used constraint qualifications that ensure the necessity of the first-order KKT conditions at optimal solution points.
+SC requires that if the $j$-th inequality constraint is active, then the corresponding dual variable is strictly positive. Consequently, exactly one of $\bar{\gamma}_j$ and $g_j(\bar{\beta})$ is zero for each $1 \leq j \leq r$. SC is commonly employed in nonlinear programming, especially in the context of parametric optimization \citep[e.g.,][]{still2018lectures}. We require that LICQ and SC hold at each optimal solution of \ref{eqn:smooth-fixed-true}.
+\begin{assumption}\label{assumption:LICQ-SC}
+    LICQ and SC hold at $\beta^* \in \sol(\text{\ref{eqn:smooth-fixed-true}})$ with the associated multipliers $\gamma^*$.
+\end{assumption}
+If we assume that the optimal solution $\beta^*$ is unique and LICQ holds at $\beta^*$, then the corresponding multipliers $\gamma^*$ are determined uniquely \citep{wachsmuth2013licq}. We also require the second-order growth condition as follows.
+\begin{assumption} \label{assumption:quadratic-growth}
+    There exists a neighborhood $W$ of $\beta^* \in \sol(\text{\ref{eqn:smooth-fixed-true}})$, and a constant $\kappa>0$ such that for all $\beta \in W \cap \mathcal{C}$,
+    \begin{align*}
+        \uppsi(\beta) \geq \uppsi(\beta^*) + \kappa\Vert \beta - \beta^* \Vert_2^2.
+    \end{align*}
+\end{assumption}
+Assumption \ref{assumption:quadratic-growth} guarantees that each optimal solution is locally isolated, and is a standard condition in nonlinear programming \citep[e.g.,][]{shapiro2014lectures, still2018lectures}. Assumption \ref{assumption:quadratic-growth} can be ensured by various forms of second-order sufficient conditions. In our case,  it holds, for example, if $\varsigma^\top\nabla_\beta^2g_j(\beta^*)\varsigma \geq 0$, for any $\varsigma \in \{\varsigma : \nabla_\beta g_j(\beta^*) = 0, j \in J_0(\beta^*) \}$.
+   
+Now, given \eqref{eqn:objective-derivatie-root-CAN}, the closed-form expression for the limiting distribution of $\widehat{\beta}$ is derived using the result of \citet[][Lemma B.2]{kim2022counterfactual}, as formally stated below.
+
+\begin{theorem} \label{thm:asymptotics-fixed}
+Assume that \ref{eqn:smooth-fixed-true} has a unique optimal solution $\beta^*$ (i.e., $\sol(\text{\ref{eqn:smooth-fixed-true}})$ is a singleton), that \eqref{eqn:objective-root-n-CAN} holds, and that Assumptions \ref{assumption:LICQ-SC}, \ref{assumption:quadratic-growth} are satisfied. Then,
+\begin{align*}
+    n^{1/2}\left(\widehat{\beta} - \beta^* \right) \xrightarrow{d}  \begin{bmatrix}
+        \nabla_{\beta}^2\uppsi(\beta^*) + \sum_j\gamma_j^*\nabla_{\beta}^2g_j(\beta^*) & \mathsf{B}(\beta^*) \\
+        \mathsf{B}^\top(\beta^*) & 0
+        \end{bmatrix}^{-1} \begin{bmatrix}
+        \bm{1} \\
+        \bm{0}
+        \end{bmatrix}N\left( 0, \Sigma_{\beta^*} \right),
+\end{align*}
+where $\mathsf{B} = \left[\nabla_\beta g_j(\beta^*)^\top, \, j \in J_0(\beta^*) \right]$ and $\Sigma_{\beta^*}=\nabla^2_{\beta} \uppsi(\beta^*) \var\left(\varphi_{\mathcal{R}}(Z;\eta_{\mathcal{R}},\delta,\beta^*)\right) \nabla^2_{\beta} \uppsi(\beta^*)^\top$.
+\end{theorem}
+
+Theorem \ref{thm:asymptotics-fixed} gives conditions under which $\widehat{\beta}$ is $\sqrt{n}$-consistent and asymptotically normal, without requiring the a-priori consistency in Assumption \ref{assumption:a-priori-consistency}. However, restricting the analysis to fixed feasible sets limits the applicability to a broader range of regression problems (e.g., fairness).
+
+
+\subsection{Objective function with separable stochastic components and linear constraints.}
+Here, we analyze another specialization of \ref{eqn:shapiro-true}, wherein a closed-form expression for the asymptotic distribution can be obtained without resorting to deterministic constraints or requiring the a-priori consistency condition.
+For a finite-dimensional set $\mathbb{T}$ in Euclidean space, consider a statistical functional $T: \Pb \rightarrow \mathbb{T}$ and a twice continuously differentiable real-valued function $h:\R^k \times \mathbb{T} \rightarrow \R$. Additionally, let $C \in \mathbb{R}^{r \times k}$ and $d \in \mathbb{R}^{k}$, where the elements of $C$ and $d$ may depend on $\Pb$. Therefore, $T(\Pb), C,$ and $d$ are unknown and must be estimated. On the other hand, we assume that the function $h$ is deterministic and known, and that all stochastic components are separable from $h$, meaning that any dependence on $\Pb$ is confined to (a transformation of) $T(\Pb)$, rather than being embedded within the functional form of $h$. $T(\Pb)$ can be viewed as a set of (identified) counterfactual components of interest. Our objective is to estimate the optimal solution of the following stochastic program:
+\begin{equation}
+\label{eqn:general-separable-case-true}
+\begin{aligned}    
+    \underset{\beta \in \R^k}{\text{minimize}} \,\,  h(\beta, T)  
+    \quad \text{subject to} \quad C\beta \leq d,
+\end{aligned}       \tag{$\mathsf{P}_{sl}$}
+\end{equation}
+where we write $T(\Pb) \equiv T$. Since the true program \eqref{eqn:general-separable-case-true} is not directly solvable, we compute an optimal solution of the following approximating program:
+\begin{equation}
+\label{eqn:general-separable-case-approx}
+\begin{aligned}    
+    \underset{\beta \in \R^k}{\text{minimize}} \,\,  h(\beta, \widehat{T})  
+    \quad \text{subject to} \quad \widehat{C}\beta \leq \widehat{d}.
+\end{aligned}       \tag{$\widehat{\mathsf{P}}_{sl}$}  
+\end{equation}
+Thus, we allow for varying feasible sets, i.e., the feasible sets of programs \ref{eqn:general-separable-case-true} and \ref{eqn:general-separable-case-approx} are not required to coincide as a fixed deterministic set, with each set defined by linear constraints. Note that all the cases in Examples \ref{example:constrained-regression} - \ref{example:balanced-class} can be formulated as linear constraints. A representative example for $h$ is the case where $L_2$ loss is used with the aggregated predictor defined in \eqref{eqn:function-aggregation}, as in Example \ref{example:l2-loss}.
+
+We will employ the exact counterparts of the regularity assumptions utilized in the previous subsection. A sufficient second-order condition for Assumption \ref{assumption:quadratic-growth} can be specified as
+\begin{align*}
+    \varsigma^\top\nabla_{\beta}^2h(\beta^*,T)\varsigma > 0, \quad \forall \varsigma \in \{\varsigma \in \R^k \mid \nabla_{\beta} h(\beta^*,T)^\top\varsigma \leq 0, C_j^\top\varsigma \leq 0, j \in J_0(\beta^*) \} \setminus \{0\},
+\end{align*}
+for $\beta^* \in \sol(\text{\ref{eqn:general-separable-case-true}})$ and $J_0(\beta^*)=\{1\leq j \leq r : C_j^\top \beta^* - d_j = 0 \}$,
+which, in particular, holds if $\nabla_{\beta}^2 h(\beta^*,T)$ is positive definite. We also require the following mild consistency condition, with no requirement on rates of convergence.
+\begin{assumption} \label{assumption:consistency}
+    $\max\left\{ \Vert \widehat{T} - T \Vert_2, \Vert \widehat{C} - C \Vert_F, \Vert \widehat{d} - d \Vert_2 \right\} = o_{\Pb}(1)$.
+\end{assumption}
+
+The consistency properties of $\widehat{\beta} \in \sol(\text{\ref{eqn:general-separable-case-approx}})$ can be established under relatively weak assumptions, as formalized in the following theorem.
+\begin{theorem} \label{thm:rates} 
+Under Assumptions \ref{assumption:quadratic-growth} and \ref{assumption:consistency}, it follows that for $\widehat{\beta} \in \sol(\text{\ref{eqn:general-separable-case-approx}})$,
+\begin{align*} 
+     \dist(\widehat{\beta}, \sol(\text{\ref{eqn:general-separable-case-true}}))
+     &= O_{\Pb}\left( \max\left\{ \Vert \widehat{T} - T \Vert_2, \Vert \widehat{C} - C \Vert_F, \Vert \widehat{d} - d \Vert_2 \right\}\right).    
+\end{align*}
+\end{theorem}
+The proof of Theorem \ref{thm:rates} is presented in Appendix \ref{proof:rates}.
+Theorem \ref{thm:rates} suggests that the convergence rates for estimating the optimal solutions of \ref{eqn:general-separable-case-true} are essentially determined by the rates at which each stochastic component is estimated. 
+The result in Theorem \ref{thm:rates} follows from the local Lipschitz stability property of optimal solutions in general nonlinear parametric optimization. % A proof of Theorem \ref{thm:rates}, along with proofs of all other results, is provided in the supplementary materials.
+
+Characterizing the asymptotic distribution of $\widehat{\beta}$ requires stronger assumptions than those needed for establishing consistency. First, we impose the following rate condition, which is stronger than Assumption \ref{assumption:consistency}.
+\begin{assumption}\label{assumption:root-n-rates}
+    $\max\left\{ \Vert \widehat{T} - T \Vert_2, \Vert \widehat{C} - C \Vert_F, \Vert \widehat{d} - d \Vert_2 \right\} = O_{\Pb}(n^{-1/2})$.
+\end{assumption}
+Next, as before, we require Assumption \ref{assumption:LICQ-SC} to hold for our target program \ref{eqn:general-separable-case-true}. For $\beta^* \in \sol({\text{\ref{eqn:general-separable-case-true}}})$, LICQ holds if the vectors $\{C_j^\top: j \in J_0(\beta^*)\}$ are linearly independent, and SC holds if the KKT conditions
+\begin{align*}
+    \nabla_{\beta} h(\beta^*, T) + \underset{j \in J_0(\beta^*)}{\sum}{\gamma}^*_j  C_j^\top\beta^* = 0, \quad \diag({\gamma}^*)(C\beta^* - d) = 0
+\end{align*}
+are satisfied such that
+$
+    {\gamma}^*_j > 0, \forall j \in J_0(\beta^*).
+$    
+
+For our analysis, we utilize a generalized delta method for directionally differentiable mappings \citep[e.g.,][]{shapiro1993asymptotic, shapiro2000statistical}. To this end, we require the following technical condition.
+\begin{assumption}\label{assumption:kkt-convergence}
+    For $ \vert J_0(\beta^*) \vert \times k$ matrix $\mathsf{C}_{ac} = \left[C_j, \, j \in J_0(\beta^*) \right]$ and some random vector $\Upsilon_{\beta^*} \in \R^{k + \vert J_0(\beta^*) \vert}$, 
+	  \begin{align*}
+            n^{1/2}\begin{bmatrix}
+            \nabla_{\beta}h(\beta^*, \widehat{T}) - \nabla_{\beta}h(\beta^*,T) + \sum_j\gamma_{j \in J_0(\beta^*)}^*\left\{ \widehat{C}_j - C_j \right\} \\
+            -(\widehat{\mathsf{C}}_{ac} - \mathsf{C}_{ac})\beta^*
+            \end{bmatrix} \xrightarrow{d} \Upsilon_{\beta^*}.
+        \end{align*}
+\end{assumption}
+Assumption \ref{assumption:kkt-convergence} states that, on the active set, the KKT multipliers of the approximating program \ref{eqn:general-separable-case-approx} jointly converge in distribution to those of the true program \ref{eqn:general-separable-case-true} at $\sqrt{n}$ rates. Similar conditions are used in the analysis of parametric programs \citep[e.g.,][]{ shapiro1990differential}. Since inference on optimal solution estimators is typically conducted using bootstrap methods, the case where $\Upsilon_{\beta^*}$ follows a multivariate normal distribution is particularly important. The absence of this property undermines the consistency of the bootstrap for solution estimators \citep{fang2019inference}.
+It is straightforward to see that if \eqref{eqn:objective-root-n-CAN} holds, then Assumptions \ref{assumption:root-n-rates} and \ref{assumption:kkt-convergence} are satisfied, with $\Upsilon_{\beta^*}$ following a multivariate normal. In the next theorem, we provide a closed-form expression for the asymptotic distribution of our proposed estimator, characterized as the optimal solution to \ref{eqn:general-separable-case-approx}.
+
+\begin{theorem} \label{thm:asymptotics}
+Assume that \ref{eqn:general-separable-case-true} has a unique optimal solution $\beta^*$, and that Assumptions \ref{assumption:LICQ-SC}, \ref{assumption:quadratic-growth}, \ref{assumption:root-n-rates}, \ref{assumption:kkt-convergence} are satisfied.
+Then, for $\widehat{\beta} \in \sol(\text{\ref{eqn:general-separable-case-approx}})$, we have that
+\begin{align} \label{eqn:closed-form-asymptotics}
+    n^{\frac{1}{2}} \left(\widehat{\beta} - \beta^* \right) = \begin{bmatrix}
+        \nabla^2_{\beta} h(\beta^*,T) & \mathsf{C}_{ac}^\top \\
+        \mathsf{C}_{ac} & 0
+        \end{bmatrix}^{-1} \begin{bmatrix}
+        \bm{1} \\
+        \diag(\gamma^*_{ac})\bm{1} 
+        \end{bmatrix}^\top
+        \Upsilon_{\beta^*} + o_{\Pb}(1),
+\end{align}
+where $\mathsf{C}_{ac}, \Upsilon_{\beta^*}$ are defined according to Assumption \ref{assumption:kkt-convergence}, and $\gamma^*_{ac} = [\gamma^*_j, j \in J_0(\beta^*)]$.
+\end{theorem} 
+We provide the proof of Theorem \ref{thm:asymptotics} in Appendix \ref{proof:asymptotics}.
+To derive \eqref{eqn:closed-form-asymptotics}, we calculate the directional derivative of the optimal solutions in the relevant parametric program using an appropriate version of the implicit function theorem \citep{dontchev2009implicit}. We apply Theorem \ref{thm:asymptotics} to Examples \ref{example:mean-squared-logarithmic-loss} and \ref{example:l2-loss}, which leads to the following corollaries.
+
+\begin{corollary} \label{cor:1}
+    Consider the mean squared logarithmic loss with the $L_2$ penalty term as in Example \ref{example:mean-squared-logarithmic-loss}. Assume that $f$ is twice continuously differentiable with respect to $\beta$, $\Vert 1/\widehat{\pi}_a \Vert_\infty < \infty$,  $\Vert \widehat{\mu}'_{a}- \mu'_{a} \Vert_{2,\Pb} +\Vert \widehat{\mu}''_{a}- \mu''_{a} \Vert_{2,\Pb} + \Vert \widehat{\pi}_{a}- \pi_{a} \Vert_{2,\Pb} = o_{\Pb}(1)$, and $\Vert \widehat{\pi}_{a} - {\pi}_{a} \Vert_{2,\Pb} ( \Vert \widehat{\mu}'_{a} - \mu'_{a} \Vert_{2,\Pb} + \Vert \widehat{\mu}''_{a}- \mu''_{a} \Vert_{2,\Pb}) = o_{\Pb}(n^{-\frac{1}{2}})$. Then, $\widehat{\beta}$ is $\sqrt{n}$-consistent and asymptotically normal for $\beta^*$.     
+\end{corollary}
+
+\begin{corollary} \label{cor:2}
+    Consider the $L_2$ loss with the $L_2$ penalty term, the aggregated predictors \eqref{eqn:function-aggregation}, and the statistical parity as in Example \ref{example:l2-loss}. Assume that $\Vert 1/\widehat{\pi}_a \Vert_\infty < \infty$,  $\Vert \widehat{\mu}_{a}- \mu_{a} \Vert_{2,\Pb} + \Vert \widehat{\pi}_{a}- \pi_{a} \Vert_{2,\Pb} = o_{\Pb}(1)$, and $\Vert \widehat{\pi}_{a} - {\pi}_{a} \Vert_{2,\Pb} \Vert \widehat{\mu}_{a} - \mu_{a} \Vert_{2,\Pb} = o_{\Pb}(n^{-\frac{1}{2}})$. Then, $\widehat{\beta}$ is $\sqrt{n}$-consistent and asymptotically normal for $\beta^*$.     
+\end{corollary}
+Corollary \ref{cor:2} can be extended to general fairness criteria \eqref{eqn:fairness-function}, provided that the corresponding coefficients are $\sqrt{n}$-estimable.
+
+
+\section{Experiments} \label{sec:experiments}
+We conduct a simulation study to assess the performance of the proposed estimators, emphasizing the validation of the theoretical results established in Section~\ref{sec:analysis}. We focus on the canonical setting described in Example~\ref{example:l2-loss}, using $L_2$ loss and statistical parity as the fairness criterion, with a threshold of $\epsilon=0.1$. The data-generating process is specified as follows: $F \sim \text{Bernoulli}(0.5)$, $X_1 \sim \text{Uniform}[0, 10]$, $X_2 \sim N(4F-2,2)$, $\pi(X) = \text{expit}(2.5-0.3X_1-FX_2)$, and $\mu_A(X)=0.5\sqrt{X_1}+2X_2-5A$ where $X=(X_1,X_2)$. We construct the nuisance estimators as $\widehat{\pi}(X)=\text{expit}\left\{\text{logit}(\pi(X))+\epsilon_\pi \right\}$ and $\widehat{\mu}_a(X) = \mu_a(X)+\epsilon_\mu$, where $\epsilon_\pi, \epsilon_\mu \sim N(n^{-r}, n^{-2r})$. These choices guarantee that $\Vert \widehat{\pi}_a - \pi_a \Vert_{2,\Pb}=O(n^{-r})$ and $\Vert \widehat{\mu}_a - \mu_a \Vert_{2,\Pb}=O(n^{-r})$, where we vary $r \in (0,0.5)$ for different scenarios. This simulation setup allows us to study how the proposed semiparametric estimators perform under different convergence rates of the nuisance components. 
+
+For each pair of $(n,\delta)$, where $n\in\{500, 1000, 5000\}$, $\delta \in \{0.1, 0.01\}$, we generate data and compute nuisance estimates as described above, with $r \in \{0.05 + 0.025k: k=0,\ldots,18\}$. We then compute the coefficients of the proposed estimator $\widehat{\beta}$ by solving the corresponding constrained quadratic program. Each scenario was replicated $500$ times, and the root-mean-square error (RMSE) is computed with respect to the true $\beta^*$. The results are shown in Figure \ref{fig:simulation-study}. The proposed estimators achieve convergence rates faster than those of the nuisance components and rapidly approach the parametric rate of $O(n^{-1/2})$ particularly for larger sample sizes, thereby supporting the theoretical results in the previous section.
+
+\begin{figure}[t!]
+\centering
+\begin{minipage}{.475\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{FIG/delta01.png}
+  \captionof*{figure}{(a)}  
+\end{minipage}%
+\hfill
+\begin{minipage}{.475\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{FIG/delta001.png}
+  \captionof*{figure}{(b)}  
+\end{minipage}%
+\caption{RMSE versus nuisance convergence rates for (a) $\delta=0.1$ and (b) $\delta=0.01$. The proposed estimators consistently attain convergence rates faster than those of the nuisance components.}
+\label{fig:simulation-study}
+\end{figure}
+
+\section{Discussion}
+We have developed a general framework for counterfactual regression under incremental interventions. We believe this work offers new insights with potential relevance beyond causal inference, particularly in related areas of the data science community such as domain adaptation, out-of-distribution generalization, and transfer learning. There are several promising directions for future research. One natural extension is to accommodate continuous or time-varying treatments, which frequently arise in practice. Another involves generalizing the framework to allow for more complex non-linear objective functions and constraints, though such extensions may require additional regularity conditions. Finally, applying the proposed methods in the context of optimal treatment regimes or conditional effect estimation is also of interest, as it may provide new guidance on how treatment policies can be more effectively tailored under varying circumstances.
+
+
+% \section*{Supplementary Material}
+% The Supplementary Material includes proofs of theoretical results.
+

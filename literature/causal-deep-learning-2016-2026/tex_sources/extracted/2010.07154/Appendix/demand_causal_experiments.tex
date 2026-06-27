@@ -1,0 +1,48 @@
+In this section, we report the result of causal effect estimation based on demand design experiments. Specifically, we consider two effects: one is \textit{average treatment effect (ATE)} and another is \textit{conditional average treatment effect (CATE)}.
+
+\paragraph{ATE Estimation} ATE is a central target quantity in causal inference defined as 
+\begin{align*}
+\mathrm{ATE} = \expect{Y|\mathrm{do}(X=1)} - \expect{Y|\mathrm{do}(X=0)}
+\end{align*}
+for binary treatment $X\in\{0,1\}$. ATE thus requires estimating the counterfactual mean outcomes $\expect{Y|\mathrm{do}(X=1)},~\expect{Y|\mathrm{do}(X=0)}$. Here, we generalize this to continuous treatment and consider estimating $\expect{Y|\mathrm{do}(X=x)}$. This is also known as \textit{continuous treatment effect} or \textit{dose-response curve}.
+\begin{figure}[t]
+    \begin{minipage}{0.53\hsize}
+    \centering
+    \includegraphics[width=1.0\textwidth]{Appendix/ate.pdf}
+    \caption{Estimation of ATE.}
+    \label{fig:demand-ate}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.43\hsize}
+        \centering
+        \includegraphics[width=0.9\textwidth]{Appendix/cate.pdf}
+        \caption{Estimation of CATE conditioned on $T$ given $P=25$.}
+        \label{fig:demand-cate}
+        \end{minipage}
+\end{figure}
+
+In the demand design problem, the ground truth is given by
+\begin{align*}
+    \expect{Y|\mathrm{do}(P=p)} &= \expect[T,S]{f_\mathrm{struct}(p,T,S)}\\
+    &= (G-2)p + 100 +10G,
+ \end{align*}
+where $G = \expect[S]{S}\expect[T]{h(T)}$. The important point here is that this quantity must be monotonically decreasing with respect to price $P$, since we should observe drop of demand as we increase the ticket price.
+
+We estimate ATE by averaging the estimated structural function $\hat{f}_\mathrm{struct}$ over $S$ and $T$. The estimated ATE given by DeepGMM, {KIV}, {DeepIV}, {DFIV} are shown in Figure~\ref{fig:demand-ate}. From Figure~\ref{fig:demand-ate}, we can see that {KIV} and DeepGMM fail to recover the monotonic structure in ATE. {DeepIV} and {DFIV} are able to capture this structure, but {DFIV} estimation is consistently better than {DeepIV}.
+
+\paragraph{CATE Estimation} Although ATE captures the treatment effect for the entire population, treatment effects may be heterogeneous for different sub-populations, which we might be interested in. In such a case, we can consider CATE defined as
+\begin{align*}
+\mathrm{CATE}(\tilde o) = \expect{Y~\middle|~\mathrm{do}(X=1), \tilde O= \tilde o} - \expect{Y~\middle|~\mathrm{do}(X=0),\tilde O=\tilde o}
+\end{align*}
+for binary treatment $X\in\{0,1\}$. Here, $\tilde O$ is a sub-vector of observable confounder $O$. Again, we generalize this idea and consider $\expect{Y~\middle|~\mathrm{do}(X=x), \tilde O= \tilde o}$, which allows treatment $X$ to be continuous. This quantity is also known as  the \emph{heterogeneous treatment effect}.
+
+In demand design experiment, we can consider the CATE conditioned on the time of the year $T$. The true CATE is defined as
+\begin{align*}
+    \expect{Y~\middle|~\mathrm{do}(P=p), T = t} &= \expect[S]{f_{\mathrm{struct}}(p, t, S)}\\
+    &= 100 + (10+p) \expect{S} h(t) - 2p,
+\end{align*}
+which can be obtained by averaging the estimated structural function $\hat{f}_\mathrm{struct}$ over $S$. Figure~\ref{fig:demand-cate} shows the prediction of CATE with respect to $T$ where treatment $P$ is fixed to $P=25$. Again, we can observe that {KIV} and DeepGMM fail to capture the shape of the ground truth curve. DeepIV performs significantly better but is less accurate than DFIV.
+
+
+
+

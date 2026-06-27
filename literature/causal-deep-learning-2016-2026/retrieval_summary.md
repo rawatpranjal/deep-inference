@@ -5,6 +5,13 @@
 - PDF bytes on disk: 131921294
 - Manifest status `downloaded`: 79
 - Manifest status `missing`: 7
+- Docling Markdown files: 79
+- Docling status `ok`: 79
+- arXiv source rows attempted: 78
+- arXiv source status `extracted`: 75
+- arXiv source status `pdf-returned`: 3
+- TeX-like files retained: 476
+- Text-like source files retained: 830
 
 ## Runs
 
@@ -12,6 +19,12 @@
 - `websource_missing_retry_20260627.txt`: title-only retry for unresolved records with OpenAlex/Semantic Scholar excluded from search sources. It found the public arXiv copy of Counterfactual Propagation, then was interrupted when DOI expansion again entered OpenAlex backoff.
 
 Sci-Hub was not used. Both runs passed `--mirrors-file ./no-scihub-mirrors.txt`.
+
+## Searchable Text Runs
+
+- `docling_extract_20260627.txt`: serial `extract --backend docling` run over the 79 local PDFs. The Docling report in `markdown_docling/extract-report.json` records 79 ok results.
+- `fetch_arxiv_sources_20260627.txt`: public arXiv `e-print` retrieval for the 78 arXiv-backed records. Text-like files were extracted to `tex_sources/extracted/`; raw archives and binary figures were discarded.
+- `searchable_catalog.csv` / `searchable_catalog.json`: joins each manifest record to its Docling Markdown path and arXiv source directory when available.
 
 ## Missing Public PDFs
 

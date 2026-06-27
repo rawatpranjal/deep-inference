@@ -1,0 +1,795 @@
+\pdfoutput=1
+\documentclass{article}
+% commet this out for camera ready version
+%\usepackage[final]{neurips_2019}
+
+% alptex + small aesthetic tweaks + some extra math defs
+\input{preamble.tex}
+\input{preamble/preamble_math}
+\input{preamble/definitions_basic}
+% bibtex import + some code to strip away useless bib info (volume number, isbn, and the ilk), and to standardize capitalization
+% warning: the arxiv uses an outdated bibtex, which causes cryptic and frustrating upload errors 
+% easiest solution: install texlive 2016 from ftp://tug.org/historic/systems/texlive/ (download the ISO) and compile using the texlive 2016 pdflatex and bibtex
+% alternatively, look upon https://github.com/plk/biblatex/wiki/biblatex-and-the-arXiv and despair. 
+\input{preamble/minimalist_biblatex}
+
+\addbibresource{bibs/causality}
+
+%\crefformat{equation}{(#2#1#3)}
+\crefformat{equation}{equation #2#1#3}
+\crefformat{figure}{Figure~#2#1#3}
+\crefname{example}{Example}{Examples}
+\crefname{lemma}{Lemma}{Lemmas}
+\crefname{cor}{Corollary}{Corollaries}
+\crefname{theorem}{Theorem}{Theorems}
+\crefname{assumption}{Assumption}{Assumptions}
+
+%********************************************************************
+% Extra definitions
+%********************************************************************
+\usepackage{enumitem} % tight enumerates
+\usepackage[separate-uncertainty=true,multi-part-units=single]{siunitx} % better table control
+
+\usepackage[flushleft]{threeparttable}
+
+\newcommand{\maxf}[1]{{\cellcolor[gray]{0.8}}#1}
+
+%********************************************************************
+% Dan Roy's commenting code
+%********************************************************************
+\usepackage{xcolor}
+\input{preamble/commenting.tex}
+%For submission, uncomment these lines to make all annotations render as blank.
+% \renewcommand{\LATER}[1]{}
+% \renewcommand{\fLATER}[1]{}
+% \renewcommand{\TBD}[1]{}
+% \renewcommand{\fTBD}[1]{}
+% \renewcommand{\PROBLEM}[1]{}
+% \renewcommand{\fPROBLEM}[1]{}
+% \renewcommand{\NA}[1]{#1}  %% Note, NA's pass through!
+
+\title{Adapting Neural Networks for the Estimation of Treatment Effects}
+%\address{Department of Statistics and Department of Computer Science, Columbia University}
+
+% frontmatter
+\usepackage[affil-it]{authblk}
+\date{}
+ \author[1]{Claudia Shi}
+ \author[1,2]{David M. Blei}
+ \author[2]{Victor Veitch}
+\affil[1]{Department of Computer Science, Columbia University}
+ \affil[2]{Department of Statistics, Columbia University}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This paper addresses the use of neural networks for the estimation of treatment effects from observational data.
+Generally, estimation proceeds in two stages.
+First, we fit models for the expected outcome and the probability of treatment (propensity score) for each unit.
+Second, we plug these fitted models into a downstream estimator of the effect.
+Neural networks are a natural choice for the models in the first step.
+The question we address is: how can we adapt the design and training of the neural networks used in the first step in order to
+improve the quality of the final estimate of the treatment effect?
+We propose two adaptations based on insights from the statistical literature on the estimation of treatment effects.
+The first is a new architecture, the Dragonnet, that exploits the sufficiency of the propensity score for estimation adjustment.
+The second is a regularization procedure, targeted regularization, that induces a bias towards models 
+that have non-parametrically optimal asymptotic properties `out-of-the-box'.
+Studies on benchmark datasets for causal inference show these adaptations outperform existing methods. Code is available at \href{https://github.com/claudiashi57/dragonnet}{github.com/claudiashi57/dragonnet}.
+\end{abstract}
+
+\section{Introduction}
+We consider the estimation of causal effects from observational data.
+Observational data is often readily available in situations where randomized control trials
+are expensive or impossible.
+However, causal inference from observational data must address (possible) confounding factors that
+affect both treatment and outcome.
+Failure to adjust for confounders can lead to incorrect conclusions.
+To address this, a practitioner collects covariate information in addition to treatment and outcome status.
+The causal effect can be identified if the covariates contain all confounding variables.
+We will work in this `no hidden confounding' setting throughout the paper.
+The task we consider is the estimation of the effect of a treatment $T$ (e.g., a patient receives a drug)
+on an outcome $Y$ (whether they recover) adjusting for covariates $X$ (e.g., illness severity or socioeconomic status).
+
+We consider how to use neural networks to estimate the treatment effect.
+The estimation of treatment effects proceeds in two stages.
+First, we fit models for the \emph{conditional outcome} $Q(t,x) = \EE[Y\given t, x]$ and the \emph{propensity score} $g(x)= P(T=1|x)$.
+Then, we plug these fitted models into a downstream estimator.
+The strong predictive performance of neural networks motivates their use for effect estimation \citep[e.g.][]{shalit2016estimating,Johanssonlearning2016,louizos2017causal,AlaaCMPG2017,Alaadeep2017,Schwabperfect2018,Yoon2018GANITEEO,Farrell:Liang:Misra:2018}.
+We will use neural networks as models for the conditional outcome and propensity score.
+
+
+
+In principle, using neural networks for the conditional outcome and propensity score models is straightforward.
+We can use a standard net to predict the outcome $Y$ from the treatment and covariates,
+and another to predict the treatment from the covariates.
+With a suitable choice of training objective, the trained models will yield
+consistent estimates of the conditional outcomes and propensity scores.
+However, neural network research has focused on \emph{predictive} performance. What is important for causal inference is the quality of the downstream \emph{estimation}.
+This leads to our main question: how can we modify the design and training of neural networks
+in order to improve the quality of treatment effect estimation?
+
+We address this question by adapting results from the statistical literature on the estimation of treatment effects.
+The contributions of this paper are:
+\begin{enumerate}[nosep]
+      \item A neural network architecture---the Dragonnet---based on the sufficiency of the propensity score for causal estimation.
+      \item A regularization procedure---targeted regularization---based on non-parametric estimation theory. 
+      \item An empirical study of these methods on established benchmark datasets.
+        We find the methods substantially improve estimation quality in comparison to existing neural-network based approaches.
+        This holds even when the methods degrade predictive performance. 
+      \end{enumerate}
+\parhead{Setup.}
+For concreteness, we consider the estimation of the average effect
+of a binary treatment, though the methods apply broadly.
+The data are generated independently and identically $(Y_{i},T_{i},X_{i}) \distiid P$.
+The average treatment affect (ATE) $\psi$ is
+\[
+\psi=\EE[Y\given \cdo(T=1)]-\EE[Y\given \cdo(T=0)].
+\]
+The use of Pearl's $\cdo$ notation indicates that the effect of interest
+is causal. It corresponds to what happens if we intervene by assigning a new patient the drug.
+If the observed covariates $X$ include all common causes of the treatment and outcome---i.e.,
+block all backdoor paths---then the causal effect is equal to
+a parameter of the \emph{observational} distribution $P$,
+\begin{equation}
+\psi=\EE[\EE[Y\given X,T=1]-\EE[Y\given X,T=0]].\label{eq:psi_def}
+\end{equation}
+
+We want to estimate $\psi$ using a finite sample from $P$.
+Following \cref{eq:psi_def}, a natural estimator is
+\begin{equation}
+\hat{\psi}^{Q}=\frac{1}{n}\sum_{i}\left[\hat{Q}(1,x_{i})-\hat{Q}(0,x_{i})\right],\label{eq:backdoor_est}
+\end{equation}
+where $\hat{Q}$ is an estimate of the \defnphrase{conditional outcome} $Q(t,x)=\EE[Y \given t,x]$.
+There are also more sophisticated estimators that additionally rely on estimates $\hat{g}$ of the
+\defnphrase{propensity score} $g(x) = \Pr(T=1 \given x)$; see \cref{sec:tarreg}.
+
+We now state our question of interest plainly.
+We want to use neural networks to model $Q$ and $g$.
+How should we adapt the design and training of these networks so that $\hat{\psi}$ is
+a good estimate of $\psi$?
+
+\section{Dragonnet}
+\label{sec:Dragonnet}
+Our starting point is a classic result, \cite[][Thm.~3]{Rosenbaum:Rubin:1983},
+\begin{theorem}[Sufficiency of Propensity Score]  \label{Dragonnettheorem}
+  If the average treatment effect $\psi$ is identifiable from observational data
+  by adjusting for $X$, i.e., $\psi = \EE[\EE[Y\given X,T=1]-\EE[Y\given X,T=0]]$,
+  then adjusting for the propensity score also suffices:
+  \[
+    \psi = \EE[\EE[Y \given g(X),T=1]-\EE[Y \given g(X),T=0]]
+  \]
+\end{theorem}
+
+In words: it suffices to adjust for only the information in $X$ that is relevant for predicting the treatment.
+Consider the parts of $X$ that are relevant for predicting the outcome but not the treatment.
+Those parts are irrelevant for the estimation of the causal effect, and are effectively noise for the adjustment.
+As such, we expect conditioning on these parts to hurt finite-sample performance ---instead, we should discard this information.\footnote{A caveat: this intuition applies to the complexity of learning the outcome model. In the case of high-variance outcome and small sample size
+%  (e.g., many RCTs)
+  modeling all covariates may help as a variance reduction technique.}
+For example, when computing the expected-outcome-based estimator $\hat{\psi}^{Q}$, (\cref{eq:backdoor_est}), we should
+train $\hat{Q}$ to predict $Y$ from only the part of $X$ relevant for $T$, even though this may degrade the \emph{predictive} performance of $\hat{Q}$.
+   
+Here is one way to use neural networks to find the relevant parts of $X$.
+First, train a deep net to predict $T$.
+Then remove the final (predictive) layer.
+Finally, use the activation of the remaining net as features for predicting the outcome.
+In other contexts (e.g., images) this is a standard procedure \citep[e.g.,][]{Girshick2014RichFH}.
+The hope is that the first net will distill the covariates into
+the features relevant for treatment prediction, i.e., relevant to the propensity score $\hat{g}$.
+Then, conditioning on the features is equivalent to conditioning on the propensity score itself.
+However, this process is cumbersome.
+With finite data, estimation errors in the propensity score model $\hat{g}$ may propagate to the conditional outcome model.
+Ideally, the model itself should choose a tradeoff between predictive accuracy and
+the propensity-score representation.
+
+\begin{wrapfigure}{R}{0.4\textwidth}
+  \begin{center}
+    \includegraphics[scale=0.25]{figs/dragonnet.png}
+       \caption{Dragonnet architecture. \label{fig:dragonnet}}
+  \end{center}
+    \vspace{-5pt}
+ \end{wrapfigure} 
+
+ This method inspires Dragonnet,\footnote{``Dragonnet'' because the dragon has three heads.} a three-headed architecture that provides
+  an end-to-end procedure for predicting propensity score and conditional outcome from covariates and treatment information.
+See \cref{fig:dragonnet}.
+We use a deep net to produce a representation layer $Z(X) \in \Reals^p$, and
+then predict both the treatment and outcome from this shared representation.
+We use 2-hidden layer neural networks for each of the outcome models $\hat{Q}(0,\cdot):\Reals^p\to \Reals$ and
+$\hat{Q}(1,\cdot):\Reals^p\to \Reals$.
+In contrast, we use a simple linear map (followed by a sigmoid) for the propensity score model $\hat{g}$.
+The simple map forces the representation layer to tightly couple to the estimated propensity scores.
+
+Dragonnet has parameters $\theta$ and output heads $Q^{\mathrm{nn}}(t_{i},x_{i};\theta)$ and $g^{\mathrm{nn}}(x_{i};\theta)$.
+We train the model by minimizing an objective function,
+\begin{align}
+ \hat{\theta} & =\argmin_{\theta}\hat{R}(\theta;\boldsymbol{X}),\quad \text{where}\\
+\hat{R}(\theta;\boldsymbol{X}) & =\frac{1}{n}\sum_{i} \big[(Q^{\mathrm{nn}}(t_{i},x_{i};\theta)-y_{i})^{2}+ \alpha \text{CrossEntropy}(g^{\mathrm{nn}}(x_{i};\theta),t_{i}) \big],\label{eq:emp-risk}
+\end{align}
+where $\alpha \in \NNReals$ is a hyperparameter weighting the loss components. The fitted model is $\hat{Q} =Q^{\mathrm{nn}}(\cdot,\cdot;\hat{\theta})$ and $\hat{g}=g^{\mathrm{nn}}(\cdot;\hat{\theta})$.
+With the fitted outcome model $\hat{Q}$ in hand,
+we can estimate the treatment effect with the estimator $\hat{\psi}^{Q}$ (\cref{eq:backdoor_est}).
+
+In principle, the end-to-end training and high capacity of Dragonnet might allow it to avoid throwing away
+any information. 
+In \cref{sec:experiments}, we study the Dragonnet's behaviour empirically and find evidence that it does indeed
+trade off prediction quality to achieve a good representation of the propensity score. 
+Further, this trade-off improves ATE estimation even when we use a downstream estimator, such as $\hat{\psi}^{Q}$,
+that does not use the estimated propensity scores.
+
+If the propensity-score head is removed from Dragonnet, the resulting architecture is
+(essentially) the TARNET architecture from \citet{shalit2016estimating}.
+We compare with TARNET in \cref{sec:experiments}.
+We also compare to the multiple-stage method described above.
+
+
+\section{Targeted Regularization}
+\label{sec:tarreg}
+We now turn to targeted regularization, a modification to the objective function used for neural network training.
+This modified objective is based on non-parametric estimation theory.
+It yields a fitted model that, with a suitable downstream estimator, guarantees desirable asymptotic properties.
+
+We review some necessary results from semi-parametric estimation theory, and then explain targeted regularization.
+The summary of this section is:
+\begin{enumerate}[nosep]
+    \item $\hat{\psi}$ has good asymptotic properties if it satisfies a certain equation (\cref{eq:npee}) with $\hat{Q}$ and $\hat{g}$.
+    \item Targeted regularization (\cref{tarregobjective}) is a modification to the training objective.% function \cref{eq:emp-risk}.
+    \item Minimizing this objective forces $(\hat{Q}^{\mathrm{treg}},\hat{g},\hat{\psi}^{\mathrm{treg}})$ to satisfy the required equation,
+      where $\hat{Q}^{\mathrm{treg}}$ and $\hat{\psi}^{\mathrm{treg}}$ are particular choices for $\hat{Q}$ and $\hat{\psi}$.
+\end{enumerate}
+
+\parhead{Setup.} 
+Recall that the general recipe for estimating a treatment effect has two steps: (i) fit models for the conditional outcome $Q$ and the propensity score $g$; (ii) plug the fitted models $\hat{Q}$ and $\hat{g}$ into a downstream estimator $\hat{\psi}$.
+The estimator $\hat{\psi}^{Q}$ in \cref{eq:backdoor_est} is the simplest example.
+There are a wealth of alternatives that, in theory, offer better performance.
+
+Such estimators are studied in the semi-parametric estimation literature;
+see \citet{Kennedy:2016} for a readable introduction.
+We restrict ourselves to the (simpler) fully non-parametric case; i.e.,
+we make no assumptions on the form of the true data generating distribution.
+For our purposes, the key results from non-parametric theory are of the form:
+If the tuple $(\hat{Q},\hat{g},\hat{\psi})$ satisfies a certain equation, (\cref{eq:npee} below),
+then, asymptotically, the estimator $\hat{\psi}$ will have various good properties.
+For instance, 
+% \item double-robustness---$\hat{\psi}$ is consistent even if one of $\hat{Q}$ or $\hat{g}$ is misspecified;
+%\fTBD{I just took out the double-robustness bullet point. Need further explanation?}
+\begin{enumerate}[nosep]
+\item robustness in the double machine-learning sense \cite{Chernozhukov:Chetverikov:Demirer:Duflo:Hansen:Newey:Robins:2017, Chernozhukov:Chetverikov:Demirer:Duflo:Hansen:Newey:2017}---$\hat{\psi}$ converges to $\psi$
+at a fast rate (in the sample complexity sense) even if $\hat{Q}$ and $\hat{g}$ converge slowly; and
+\item efficiency---asymptotically, $\hat{\psi}$ has the lowest variance of any consistent estimator of $\psi$.
+  That is, the estimator $\hat{\psi}$ is asymptotically the most data efficient estimator possible.
+\end{enumerate}
+
+These asymptotic guarantees hold if
+(i) $\hat{Q}$ and $\hat{g}$ are consistent estimators for the conditional outcome and propensity scores,
+and (ii) the tuple satisfies the \emph{non-parametric estimating equation},
+\begin{equation}
+0=\frac{1}{n}\sum_{i}\varphi(y_i, t_i, x_i;\hat{Q},\hat{g},\hat{\psi}),\label{eq:npee}
+\end{equation}
+where $\varphi$ is the \defnphrase{efficient influence curve} of $\psi$,
+\[
+\varphi(y,t,x; Q,g,\psi)=Q(1,x)-Q(0,x)+ \left(\frac{t}{g(x)} -\frac{1-t}{1-g(x)} \right)\left\{y-Q(t,x)\right\} -\psi.
+\]
+See, e.g., \citet{Chernozhukov:Chetverikov:Demirer:Duflo:Hansen:Newey:2017,vanderLaan:Rose:2011} for details.
+
+A natural way to construct a tuple satisfying the non-parametric estimating equation is
+to estimate $\hat{Q}$ and $\hat{g}$ in a manner agnostic to the downstream
+estimation task, and then choose $\hat{\psi}$ so that \cref{eq:npee} is satisfied.
+This yields the A-IPTW estimator \cite{Robins:Rotnitzky:vanderLaan:2000,Robins:2000}.
+Unfortunately, the presence of $\hat{g}$ in the denominator of some terms
+can cause the A-IPTW be unstable in finite samples, despite its asymptotic optimality. 
+(In our experiments, the A-IPTW estimator consistently under-performs the naive estimator $\hat{\psi}^Q$.)
+
+Targeted minimum loss estimation (TMLE) \cite{vanderLaan:Rose:2011}
+is an alternative strategy that mitigates the finite-sample instability.
+The TMLE relies on (task-agnostic) fitted models $\hat{Q}$ and $\hat{g}$.
+The idea is to perturb the estimate $\hat{Q}$---with perturbation depending on $\hat{g}$---such that
+the simple estimator $\hat{\psi}^Q$ satisfies the non-parametric estimating equation (\cref{eq:npee}).
+Because the simple estimator is free of $\hat{g}$ in denominators, it is stable with finite data.
+Thus, the TMLE yields an estimate that has both
+good asymptotic properties and good finite-sample performance.
+The ideas that underpin TMLE are the main inspiration for targeted regularization. 
+
+\parhead{Targeted regularization.} We now describe targeted regularization.
+We require $Q$ and $g$ to be modeled by a neural network (such as Dragonnet)
+with output heads $Q^{\mathrm{nn}}(t_{i},x_{i};\theta)$ and $g^{\mathrm{nn}}(x_{i};\theta)$.
+By default, the neural network is trained by minimizing a differentiable objective function $\hat{R}(\theta;\boldsymbol{X})$, e.g., \cref{eq:emp-risk}.
+
+Targeted regularization is a modification to the objective function.
+We introduce an extra model parameter $\epsilon$ and a regularization term $\gamma(y,t,x;\theta,\epsilon)$
+defined by
+\begin{align*}
+  \tilde{Q}(t_{i},x_{i};\theta,\epsilon) &
+        = Q^{\mathrm{nn}}(t_i,x_i;\theta)+\epsilon \Big[\frac{t_i}{g^{\mathrm{nn}}(x_i;\theta)}-\frac{1-t_i}{1-g^{\mathrm{nn}}(x_i;\theta)} \Big]\\
+\gamma(y_i,t_i,x_i;\theta,\epsilon) & =(y_i-\tilde{Q}(t_{i},x_{i};\theta,\epsilon))^{2}.
+\end{align*}
+We then train the model by minimizing the modified objective,
+\begin{equation}
+  \label{tarregobjective}
+  \hat{\theta},\hat{\epsilon}=\argmin_{\theta,\epsilon} \big[\hat{R}(\theta;\boldsymbol{X})+
+  \beta\frac{1}{n}\sum_{i}\gamma(y_{i},t_{i},x_{i};\theta,\epsilon) \big].
+\end{equation}
+The variable $\beta\in\NNReals$ is a hyperparameter.
+Next, we define an estimator $\hat{\psi}^{\mathrm{treg}}$ as:
+\begin{align}
+  \hat{\psi}^{\mathrm{treg}} &=\frac{1}{n}\sum_{i}\hat{Q}^{\mathrm{treg}}(1,x_{i})-\hat{Q}^{\mathrm{treg}}(0,x_{i}), \quad \text{where}\\   \label{eq:psitreg}
+  \hat{Q}^{\mathrm{treg}} &=\tilde{Q}(\cdot,\cdot;\hat{\theta},\hat{\epsilon}).
+\end{align}
+The key observation is 
+\begin{equation}
+0=\partial_{\epsilon} \big (\hat{R}(\theta;\boldsymbol{X})+ \beta \frac{1}{n}\sum_{i}\gamma(y_{i},t_{i},x_{i};\theta,\epsilon) \big)\big\lvert_{\hat{\epsilon}}=\beta  \frac{1}{n}\sum\varphi(y_{i},t_{i},x_{i};\hat{Q}^{\mathrm{treg}},\hat{g},\hat{\psi}^{\mathrm{treg}}).\label{eq:tmletrick}
+\end{equation}
+That is, minimizing the targeted regularization term forces 
+$\hat{Q}^{\mathrm{treg}},\hat{g},\hat{\psi}^{\mathrm{treg}}$
+to satisfy the non-parametric estimating equation \cref{eq:npee}.
+
+Accordingly, the estimator $\hat{\psi}^{\mathrm{treg}}$ will have the good non-parametric asymptotic properties
+so long as $\hat{Q}^{\mathrm{treg}}$ and $\hat{g}$ are consistent.
+Consistency is plausible---even with the addition of the targeted regularization term---because
+the model can choose to set $\epsilon$ to 0, which (essentially) recovers the
+original training objective.
+For instance, if $\hat{Q}$ and $\hat{g}$ are consistent in the original model than the targeted regularization
+estimates will also be consistent.
+In detail, the targeted regularization model preserves finite VC dimension (we add only 1 parameter), so the limiting model is an argmin of the true (population) risk.
+The true risk for the targeted regularization loss has a minimum at $\hat{Q}=\EE[Y | x,t]$, $\hat{g}=P(T=1 | x)$, and $\hat{\epsilon}=0$. This is because the original risk is minimized at these values (by consistency), and the targeted regularization term (a squared error) is minimized at $\hat{Q}+\hat{\epsilon}H(\hat{g}) = \EE[Y | x,t]$, which is achieved at $\hat{\epsilon}=0$.
+
+
+The key idea, \cref{eq:tmletrick}, is inspired by TMLE.
+Like targeted regularization, TMLE introduces an extra model parameter $\epsilon$.
+It then chooses $\hat{\epsilon}$ so that a $\hat{\epsilon}$-perturbation of $\hat{Q}$
+satisfies the non-parametric estimating equation with $\hat{\psi}^Q$.
+However, TMLE uses only the parameter $\epsilon$ to ensure that the non-parametric
+estimating equation are satisfied, while targeted regularization adapts the entire model.
+Both TMLE and targeted regularization are designed to
+yield an estimate with stable finite-sample behavior and
+strong asymptotic guarantees. We compare these methods in \cref{sec:experiments}.
+
+Finally, we note that estimators satisfying the non-parametric estimating equation are also `doubly robust' in the sense
+that the effect estimate is consistent if either $\hat{Q}$ or $\hat{g}$ is consistent.
+This property also holds for the targeted regularization estimator, if either the modified outcome model or propensity score is consistent.
+
+\section{Related Work}
+\label{sec:related_work}
+The methods connect to different areas in causal inference and estimation theory.   
+
+\parhead{Representations for causal inference.}
+Dragonnet is related to papers using representation learning ideas for treatment effect estimation.
+The Dragonnet architecture resembles TARNET, a two-headed outcome-only model used as the baseline
+in \citet{shalit2016estimating}. TARNET is Dragonnet without the propensity head.
+One approach in the literature emphasizes learning a covariate representation that has a balanced distribution
+across treatment and outcome;
+e.g., BNNs \citep{Johanssonlearning2016} and CFRNET \citep{shalit2016estimating}.
+Other work combines deep generative models with standard causal identification results.
+CEVEA \citep{louizos2017causal}, GANITE \citep{Yoon2018GANITEEO}, and CMPGP \citep{AlaaCMPG2017} use VAEs, GANs, and multi-task gaussian processes, respectively, to estimate treatment effects.
+Another approach combines (pre-trained) propensity scores with neural networks;
+e.g., Propensity Dropout \citep{Alaadeep2017} and Perfect Matching \citep{Schwabperfect2018}.
+Dragonnet complements these approaches. Exploiting the sufficiency of the propensity score
+is a distinct approach, and it may be possible to combine it with other strategies.
+
+\parhead{Non-parametric estimation and machine learning.}
+Targeted regularization relates to a body of work combining machine learning
+methods with semi-parametric estimation theory.
+As mentioned above, the main inspiration for the method 
+is targeted minimum loss estimation \cite{vanderLaan:Rose:2011}.
+\citet{Chernozhukov:Chetverikov:Demirer:Duflo:Hansen:Newey:Robins:2017, Chernozhukov:Chetverikov:Demirer:Duflo:Hansen:Newey:2017}
+develop theory for `double machine learning',
+showing that if certain estimating equations are satisfied then
+treatment estimates will converge at a parametric ($O(1/\sqrt{n})$) rate
+even if the conditional outcome and propensity models converge much more slowly.
+\citet{Farrell:Liang:Misra:2018} prove that neural networks converge at a fast enough
+rate to invoke the double machine learning results.
+This gives theoretical justification for the use of neural networks to model
+propensity scores and conditional expected outcomes.
+Targeted regularization is complementary:
+we rely on the asymptotic results for motivation, and
+address the finite-sample approach.
+
+\section{Experiments}
+\label{sec:experiments}
+Do Dragonnet and targeted regularization improve treatment effect estimation in practice?
+Dragonnet is a high-capacity model trained end-to-end:
+does it actually throw away information irrelevant to the propensity score?
+TMLE already offers an approach for balancing asymptotic guarantees with
+finite sample performance: does targeted regularization improve over this?
+
+We study the methods empirically using two semi-synthetic benchmarking tools.\footnote{Code and data at \href{https://github.com/claudiashi57/dragonnet}{github.com/claudiashi57/dragonnet}} We find that Dragonnet and targeted regularization substantially improve estimation quality.
+Moreover, we find that Dragonnet exploits propensity score sufficiency,
+and that targeted regularization improves on TMLE.\looseness=-1
+ 
+  \begin{table}[htb]
+    \centering
+  \caption{Dragonnet with targeted regularization is state-of-the-art among neural network methods on the IHDP benchmark data.
+    Entries are mean absolute error (and standard error) across simulations.
+    Estimators are computed with the training and validation data ($\Delta_{in})$, heldout data ($\Delta_{out}$), and all data ($\Delta_{all}$).
+    Note that using all the data for both training and estimation improves estimation relative to data splitting.
+    Values from previous work are as reported in the cited papers.
+}
+  \label{tb:ihdp_results}
+  \centering
+  \vspace{1em}
+  \begin{tabular}{llll}
+    \toprule
+    Method     & $\Delta_{in}$     &$\Delta_{out}$      &$\Delta_{all}$\\
+    \midrule
+    BNN \cite{Johanssonlearning2016} & $0.37 \pm.03$ & $0.42 \pm.03$ & \textemdash\\
+    TARNET \cite{shalit2016estimating}&  $0.26 \pm.01$   & $0.28 \pm.01$ &  \textemdash  \\
+    CFR Wass\cite{shalit2016estimating}    & $0.25 \pm.01$ & $0.27 \pm.01$   &  \textemdash \\
+    CEVAEs \cite{louizos2017causal} & $0.34 \pm.01$ & $0.46 \pm.02$  &  \textemdash\\
+    GANITE \cite{Yoon2018GANITEEO} & $0.43 \pm.05$ & $0.49 \pm.05$ &  \textemdash \\
+    \midrule
+   baseline (TARNET) &$0.16 \pm .01$& $0.21 \pm .01$ & $0.13 \pm .00$ \\
+    baseline + t-reg & $0.15 \pm .01$& \cellcolor[gray]{0.8}$0.20 \pm .01$ & $0.12 \pm .00$ \\
+   Dragonnet & \cellcolor[gray]{0.8}$0.14\pm .01$ & $0.21 \pm .01$  & $0.12\pm .00$ \\
+   Dragonnet + t-reg & \cellcolor[gray]{0.8}$0.14\pm.01$ & \cellcolor[gray]{0.8}$0.20\pm .01$  & \cellcolor[gray]{0.8}$0.11\pm .00$ \\
+    \bottomrule
+  \end{tabular}
+  \end{table}
+
+
+\subsection{Setup}
+Ground truth causal effects are rarely available for real-world data.
+Accordingly, empirical evaluation of causal estimation procedures rely on semi-synthetic data.
+For the conclusions to be useful, the semi-synthetic data must have good fidelity to the real world.
+We use two pre-established causal benchmarking tools.
+
+\parhead{IHDP.}
+\citet{hill2011bayesian} introduced a semi-synthetic dataset constructed from the Infant Health and Development Program (IHDP).
+This dataset is based on a randomized experiment investigating the effect of home visits by specialists on future cognitive scores.
+% The treatment $T$ is whether there is a home visit, the outcome $Y$ is the future cognitive score,
+% and the covariates $X$ are socioeconomic and demographic information about the children and their mothers.
+Following \cite{shalit2016estimating}, we use 1000 realizations from the NPCI package \cite{dorie2016npci}.\footnote{There is a typo in \citet{shalit2016estimating}. They use setting A of the NPCI package, which corresponds to setting B in
+\citet{hill2011bayesian}} The data has 747 observations.
+
+
+\parhead{ACIC 2018.}
+We also use the IBM causal inference benchmarking framework, which was developed for the 2018 Atlantic Causal Inference Conference competition data (ACIC 2018) \cite{Shimoni:Yanover:Karavani:Goldschmnidt:2018}.
+This is a collection of semi-synthetic datasets derived from the linked birth and infant death data (LBIDD) \cite{LBIDD}.
+Importantly, the simulation is comprehensive---including 63 distinct data generating process settings---and
+the data are relatively large.
+Each competition dataset is a sample from a distinct distribution, which is itself drawn randomly according to the data generating process setting.
+For each data generating process setting, we randomly pick 3 datasets of size either 5k or 10k.
+
+Some of the datasets have overlap violations.
+That is, $\Pr(T=1|x)$ can be very close to $0$ or $1$ for many values of $x$.
+Although overlap violations are an important area of study,
+this is not our focus and the methods of this paper are not expected to be appropriate in this setting.
+As a simple heuristic, we exclude all datasets where the heldout treatment accuracy for Dragonnet is higher than $90\%$; high classification accuracy indicates a strong separation between the treated and control populations.
+Subject to this criteria, 101 datasets remain.
+
+\parhead{Model and Baseline Settings.}
+Our main baseline is an implementation of the 2-headed TARNET architecture from \citet{shalit2016estimating}.
+This model predicts only the outcome, and is equivalent to the Dragonnet architecture with the propensity head removed.
+\begin{table}[htb] 
+\begin{minipage}{.4\textwidth}
+\centering
+ \captionsetup{width=1.2\linewidth}
+  \caption{Dragonnet and targeted regularization improve estimation on average on ACIC 2018. Table entries are mean absolute error over all datasets. }
+     \vspace{1em}
+      \label{tb:acic2018_meanerror}
+  \vspace{1em}
+ \begin{tabular}{ll}
+    \toprule
+    Method    & $\Delta_{all}$   \\
+\midrule
+   baseline (TARNET) &$1.45 $\\
+  baseline + t-reg & $1.40$ \\
+   Dragonnet & $0.55$  \\
+   Dragonnet + t-reg & 
+  \cellcolor[gray]{0.8}$0.35$ \\
+    \bottomrule
+\end{tabular}
+\end{minipage}
+\qquad
+\hspace{1.5em}
+\begin{minipage}{.4\textwidth}
+%\centering
+ \captionsetup{width=1.2\linewidth}
+  \caption{Dragonnet and targeted regularization improve over the baseline about half the time,
+    but improvement is substantial when it does happen.
+  Error values are mean absolute error on ACIC 2018.}
+  \label{tb:acic2018_typicalcase}
+  \vspace{1em}
+ \begin{tabular}{llll}
+    \toprule
+    $\psi^{Q}$     & $\%_{improve}$     & $\uparrow_{avg}$ &  $\downarrow_{avg}$\\
+    \midrule
+    baseline:  & $0\% $ & $0$ &$0$\\
+        \midrule
+    + t-reg & $42\%$ & $0.30$  &$0.11$ \\
+   + dragon &$63\%$ & $1.42$ & $0.01$ \\
+  + dragon \& t-reg  & \cellcolor[gray]{0.8}$46\%$ & \cellcolor[gray]{0.8}2.37 & \cellcolor[gray]{0.8}0.01 \\
+    \bottomrule
+  \end{tabular}
+\end{minipage}
+\end{table}
+
+For Dragonnet and targeted regularization, we set the hyperparameters $\alpha$ in \cref{eq:emp-risk} and $\beta$ in \cref{tarregobjective} to $1$.
+For the targeted regularization baseline,
+we use TARNET as the outcome model and logistic regression as the propensity score model.
+We train TARNET and logistic regression jointly using the targeted regularization objective.
+
+For all models, the hidden layer size is 200 for the shared representation layers and 100 for the conditional outcome layers.
+We train using stochastic gradient descent with momentum.
+Empirically, the choice of optimizer has a significant impact on estimation performance
+for the baseline and for Dragonnet and targeted regularization.
+Among the optimizers we tried, stochastic gradient descent with momentum resulted in the best performance for the baseline.\looseness=-1
+
+For IHDP experiments, we follow established practice \citep[e.g.][]{shalit2016estimating}. We randomly split the data into test/validation/train with proportion $63/27/10$ and report the in sample and out of sample estimation errors.
+However, this procedure is not clearly motivated for parameter estimation, so we also report the estimation errors for using all the data for both training and estimation. 
+
+For the ACIC 2018 experiments, we re-run each estimation procedure 25 times, use all the data for training and estimation, and report the average estimate errors.
+
+
+\parhead{Estimators and metrics.}
+For the ACIC experiments, 
+we report mean absolute error of the average treatment effect estimate,
+$\Delta = \abs{\hat{\psi} - \psi}$. For IHDP, following established procedure,
+we report mean absolute difference between the estimate and the sample ATE,
+$\Delta = \abs{\hat{\psi} - \nicefrac{1}{n} \sum_i Q(1,x_i) - Q(0,x_i)}$.
+By default, we use $\hat{\psi}^Q$ as our estimator,
+except for models with targeted regularization, where we report $\hat{\psi}^{\mathrm{treg}}$ (\cref{eq:psitreg}).
+For estimation, we exclude any data point with estimated propensity score outside $[0.01, 0.99]$.
+
+\subsection{Effect on Treatment Estimation}
+ 
+ 
+The IHDP simulation is the de-facto standard benchmark for neural network treatment effect estimation methods.
+In \cref{tb:ihdp_results} we report the estimation error of a number of approaches.
+Dragonnet with targeted regularization is state-of-the-art among these methods.
+% so is our implementation of TARNET (the baseline).
+However, the small sample size and limited simulation settings of IHDP make it difficult to draw
+conclusions about the methods.
+The main takeaways of \cref{tb:ihdp_results} are: i) Our baseline method is a strong comparator and ii) reusing the same data for fitting the model and computing the estimate
+works better than data splitting.
+
+The remaining experiments use the Atlantic Causal Inference Conference 2018 competition (ACIC 2018) dataset.
+In \cref{tb:acic2018_meanerror}
+we report the mean absolute error over the included datasets.
+The main observation is that Dragonnet improves estimation relative to the baseline (TARNET),
+and adding targeted regularization to Dragonnet improves estimation further.
+Additionally, we observe that despite its asymptotically optimal properties, TMLE hurts more than it helps on average.
+Double robust estimators such as the TMLE are known to be sensitive to violations of assumptions in other contexts \citep{Kang:Schafer:2007}.
+We note that targeted regularization can improve performance even where TMLE does not.
+
+
+
+
+In \cref{tb:acic2018_meanerror}, we report average estimation error across simulations.
+We see that Dragonnet and targeted regularization improve the baseline estimation.
+Is this because of small improvement on most datasets or major improvement on a subset of datasets?
+In \cref{tb:acic2018_typicalcase} we present an alternative comparison.
+We divide the datasets according to whether each method improves estimation relative to the baseline.
+We report the average improvement in positive cases, and the average degradation in negative cases.
+We observe that Dragonnet and targeted regularization help about half the time.
+When the methods do help, the improvement is substantial.
+When the methods don't help, the degradation is mild.
+% Of particular note, targeted regularization essentially never hurts.
+% A possible reason is that in cases where the targeted regularization loss term is large,
+% the model can respond by setting the parameter $\epsilon$ to $0$ and recovering the baseline model. 
+
+\subsection{Why does Dragonnet work? }
+\begin{figure}[!tbp]
+ \begin{minipage}[b]{0.35\textwidth}
+ \centering
+    \includegraphics[height=4cm]{figs/loss_bakeoff.png}
+    \captionsetup{width=1.2\linewidth}
+    \caption{Dragonnet has worse prediction loss on the held out data than baseline, but better estimation quality. The estimation error and loss are from a separate run of the ACIC dataset where we held out $30\%$ of data to compute the loss.}
+    \label{fig:Dragonnet_worse_predictor}
+    \end{minipage}
+\qquad
+\hspace{3em}
+\begin{minipage}[b]{0.35\textwidth}
+\centering
+\includegraphics[height=4cm]{figs/y_noise_camera.png}
+\captionsetup{width=1.5\linewidth}
+\caption{Dragonnet improves over the baseline if many covariates are irrelevant for treatment. The result is obtained using the ACIC datasets. We stratified the datasets by the number of irrelevant covariates and compared the median MAE across strata.  }
+\label{fig:performance_with_irrelevant_y}
+\end{minipage}
+\end{figure}
+
+Dragonnet was motivated as an end-to-end version of a multi-stage approach.
+Does the end-to-end network work better?
+We now compare to the multi-stage procedure, which we call NEDnet.\footnote{``NEDnet'' because the network is beheaded after the first stage.}
+NEDnet has essentially the same architecture as Dragonnet. 
+NEDnet is first trained using a pure treatment prediction objective.
+The final layer (treatment prediction head) is then removed, and replaced with an outcome-prediction neural network matching the one used by Dragonnet.
+The representation layers are then frozen, and the outcome-prediction network is trained on the pure outcome prediction task. 
+NEDnet and Dragonnet are compared in \cref{tb:ned_comparison}. The end-to-end Dragonnet produces more accurate estimates.
+\begin{table}[htb] 
+ \captionsetup{width=0.9\linewidth}
+\caption{Dragonnet produces more accurate estimates than NEDnet, a multi-stage alternative. Table entries are mean absolute error over all datasets. \label{tb:ned_comparison} }
+\begin{minipage}{.45\textwidth}
+\centering
+
+  \vspace{1em}
+ \begin{tabular}{lll}
+
+    IHDP    &  $\hat{\psi}^{\mathrm{Q}}$  & $\hat{\psi}^{\mathrm{TMLE}}$  \\
+\midrule
+   Dragonnet &  \maxf{$0.12\pm0.00$} & \maxf{$0.12\pm0.00$}\\
+   NEDnet &  $0.15\pm0.01$ & \maxf{$0.12\pm0.00$} \\
+    \bottomrule
+\end{tabular}
+\end{minipage}
+\qquad
+\hspace{1.5em}
+\begin{minipage}{.45\textwidth}
+%\centering
+
+  \vspace{1em}
+\begin{tabular}{lll}
+
+    ACIC    &  $\hat{\psi}^{\mathrm{Q}}$  & $\hat{\psi}^{\mathrm{TMLE}}$  \\
+\midrule
+   Dragonnet &  $\maxf{0.55}$ & $\maxf{1.97}$\\
+   NEDnet & $1.49$& $2.80$ \\
+    \bottomrule
+\end{tabular}
+\end{minipage}
+\end{table}
+
+We motivated the Dragonnet architecture by the sufficiency of the propensity score for causal adjustment.
+This architecture improves estimation performance.
+Is this because it is exploiting the sufficiency?
+Three observations suggest this is the case.
+
+First, compared to TARNET, Dragonnet has worse performance as a predictor for the outcome, but better performance as an estimator. See \cref{fig:Dragonnet_worse_predictor}. This is the case even when we use the simple estimator $\hat{\psi}^{Q}$, which does not use
+the output of the propensity-score head of Dragonnet.
+This suggests that, as intended, the shared representation adapts to
+the treatment prediction task, at the price of worse predictive performance for the outcome prediction task.
+
+Second, Dragonnet is supposed to predict the outcome from only information relevant to $T$.
+If this holds, we expect Dragonnet to improve significantly over the baseline when there is a
+large number of covariates that influence only $Y$ (i.e., not $T$).
+These covariates are "noise" for the causal estimation since they are irrelevant for confounding.
+As illustrated in \cref{fig:performance_with_irrelevant_y},
+when most of the effect on $Y$ is from confounding variables, the differences between Dragonnet and the baseline are not significant.
+As the number of covariates that only influence $Y$ increases, Dragonnet becomes a better estimator. 
+
+Third, with infinite data, Dragonnet and TARNET should perform equally well. With finite data, we expect Dragonnet to be more data efficient as it discards covariates that are irrelevant for confounding. We verify this intuition by comparing model performance with different amount of data. We find Dragonnet’s improvement is more significant with smaller-sized data. See Appendix A for details. 
+
+
+
+\subsection{When does targeted regularization work?}\label{subsec:why-treg}
+The guarantees from non-parametric theory are asymptotic,
+and apply in regimes where the estimated models closely approximate the true values.
+We divide the
+datasets according to the error of the simple ($Q$-only) baseline estimator.
+In cases where the initial estimator is good, TMLE and targeted regularization behave similarly.
+This is as expected.
+In cases where the initial estimator is poor, TMLE significantly degrades estimation quality,
+but targeted regularization does not.
+It appears that adapting the entire learning process to satisfy the non-parametric estimating equation
+avoids some bad finite sample effects.
+We do not have a satisfactory theoretical explanation for this.
+Understanding this phenomena is an important direction for future work.
+
+
+\begin{table}[htb]
+    \centering
+    \captionsetup{width=0.8\linewidth}\label{tb:semiparam_goodinit}
+    \caption{We divide the datasets according to the mean absolute ATE estimation error for the baseline simple estimator. We observe that the initial TMLE and targeted regularization are
+comparable if the initial estimate is good ($\Delta_{ATE} <1$ ). However, the TMLE makes the estimate worse if the initial estimate is bad $\Delta_{ATE} <1$, whereas dragonnet with targeted regularization still improve it.}
+
+
+  \vspace{1em}
+  \begin{tabular}{l S[separate-uncertainty,table-figures-uncertainty=1] S[separate-uncertainty,table-figures-uncertainty=1]
+} 
+    & \multicolumn{1}{c}{\texttt{ $\Delta_{ATE} <1 $ }} & \multicolumn{1}{c}{\texttt{ $\Delta_{ATE} >1 $ }} \\ 
+
+    \midrule
+    \texttt{Baseline} & 0.03  & 28.52   \\
+    \midrule
+    + t-reg & 0.04   & 27.36 \\
+    + tmle & 0.03   & 176.14 \\
+    \midrule
+    Dragonnet & 0.02   & 10.64 \\
+    \midrule
+    + t-reg & 0.03   & 6.50 \\
+    + tmle & 0.02   & 39.34 \\
+    \bottomrule
+  \end{tabular}
+
+  \end{table}
+  \section{Discussion}
+  The results above raise a number of interesting questions and directions for future work.
+  Foremost, although TMLE and targeted regularization are conceptually similar, the methods have
+  very different performance in our experiments. Understanding the root causes of this behavior
+  may open new lines of attack for the practical use of non-parametric estimation methods.
+  Relatedly, another promising avenue of development is to adapt the well-developed literature on
+  TMLE \citep[e.g.,][]{vanderLaan:Rose:2011,vanderLaan:Gruber:2016} to more advanced targeted regularization methods.
+  For instance, there are a number of TMLE approaches to estimating the average treatment effect on the treated (ATT),
+  and it's not clear a priori which of these, if any, will yield a good targeted-regularization type procedure.
+  Generally, extending the methods here to other causal estimands and mediation analysis is an important problem.
+
+  There are also important questions about Dragonnet-type architectures.
+  We motivated Dragonnet with the intuition that we should use only the information in the confounders that is relevant to both
+  the treatment assignment and outcome. Our empirical results support this intuition. However, in other contexts, this intuition breaks down.
+  For example, in randomized control trials---where covariates only affect the outcome---adjustment can increase power \cite{Saquib:Saquib:Ioannidis:2013}. This is because adjustment may reduce the effective variance of the outcome, and double robust methods can be used to ensure consistency (the treatment assignment model is known trivially). Our motivating intuition is well supported in the
+  large-data, unknown propensity-score model case we consider. It would be valuable to have a clear articulation of the trade-offs involved
+  and practical guidelines for choosing which covariates to adjust for in observational studies.
+  As a sharp example of the need, recent papers have used Dragonnet-type models for causal adjustment with black-box embedding methods \cite{Veitch:Wang:Blei:2019,Veitch:Sridhar:Blei:2019}. They achieve good estimation accuracy, but it remains unclear exactly what trade-offs may being made.
+  
+  In a different direction, our experiments do not support the routine use of data-splitting in effect estimation.
+  Established benchmarks have commonly split the data into train and test sets and used predictions on the test set to compute the
+  downstream estimator. This technique has some theoretical justification \citep{Chernozhukov:Chetverikov:Demirer:Duflo:Hansen:Newey:2017} (in a $K$-fold variant), but significantly degrades performance in our experiments.
+  We note that this is also true in our preliminary (unreported) experiments with $K$-fold data splitting.
+  A clearer understanding of why and when data splitting is not appropriate would be of substantial practical value.
+  We note that \citet{Farrell:Liang:Misra:2018} prove that data reuse does not invalidate estimation when using neural networks.
+  
+
+\subsection*{Acknowledgements}
+We are thankful to Yixin Wang, Dhanya Sridhar, 
+Jackson Loper, Roy Adams, and Shira Mitchell for helpful comments and discussions.
+This work was supported by ONR N00014-15-1-2209, ONR 133691-5102004 , NIH 5100481-5500001084, NSF CCF-1740833, FA 8750-14-2-0009, the Alfred P. Sloan Foundation, the John Simon Guggenheim Foundation, Facebook, Amazon, IBM, and the government of Canada through NSERC. The GPUs used for this research were donated by the NVIDIA Corporation.
+
+\clearpage
+
+\printbibliography
+
+
+
+\newpage
+  
+
+\appendix
+\subsection*{Appendix A}\label{sec:appendA}
+We motivated Dragonnet as a tool for better finite-sample performance.
+To examine this intuition, we randomly picked two large (50k) datasets from ACIC 2018.\footnote{261502077fbb40c9b57c9a5ccf6cd220 and d7a70d3bfd664374ae20484fe94e7fb7} For each, we subsample the data at a number of rates and examine how estimation error changes with sample size. As shown in \cref{fig:large-error}, the difference between Dragonnet and TARNET's estimation error become smaller as the amount of data increase. In \cref{fig:small-error}, since the initial estimate for both TARNET and Dragonnet are close to perfect, the improvement is less significant.
+\begin{figure}[h]
+ \begin{minipage}[b]{0.35\textwidth}
+ \centering
+\includegraphics[height=4cm]{figs/finite_data.png}
+\captionsetup{width=1.2\linewidth} 
+\caption{The difference between Dragonnet and TARNET's estimation error become smaller as we use an increasing amount of data.}
+\label{fig:large-error}
+\end{minipage}
+\qquad
+\hspace{3em}
+\begin{minipage}[b]{0.35\textwidth}
+\centering
+\includegraphics[height=4cm]{figs/finite_data1.png}
+\captionsetup{width=1.2\linewidth}
+\caption{The estimation error of TARNET and Dragonnet converge as the amount of data used increase. Note: the initial estimates are close to perfect.}
+\label{fig:small-error}
+\end{minipage}
+\end{figure}
+
+\subsection*{Appendix B}\label{sec: appendB}
+As part of computing the estimates, we trimming the dataset by throwing away entries with extreme propensity scores. \citep[e.g.,][]{ potter1993effect, scharfstein1999adjusting, Cole:Hernan:2008,bottou2012counterfactual}.  In our experiments, we find the choice of the trimming parameter makes a difference in effect estimation even for the simple estimator \cref{eq:backdoor_est} as well as for the doubly robust TMLE estimator. \cref{tb:truncation-sensitivity} shows the sensitivity of estimation procedures to the choice of truncation parameter.
+ 
+ \begin{table}[h] 
+
+\centering
+ \captionsetup{width=0.75\linewidth}
+  \caption{The truncation level used to select data for estimator computation has different effects on different methods and different estimators. i) TARNET produce better result with a steeper truncation (less data), whereas Dragonnet methods perform better when using more data. ii) TMLE estimator's performance improves with steeper truncation. Table entries are ATE estimation errors ($\Delta_{\mathrm{all}}$ averaged across the included ACIC 2018 datasets, using all the data for both training and estimation.\label{tb:truncation-sensitivity} }
+      \label{tb:trunctaion0.01}
+  \vspace{1em}
+ \begin{tabular}{llll}
+    truncation level   & $[0.01, 0.99]$   & $[0.03, 0.97]$ & $[0.1, 0.9]$   \\
+          \midrule
+   $\psi^{Q}$\\
+
+\midrule
+   baseline (TARNET) &$1.45 $ & $0.66 $ & $0.44$\\
+  baseline + t-reg & $1.40$ &  $0.53$ & $0.40$\\
+   Dragonnet & $0.55$ & $0.74$ & $0.73$  \\
+   Dragonnet + t-reg & 
+    $0.35$ & $0.37$ & $0.54$ \\
+    \midrule
+     $\psi^{TMLE}$\\
+     \midrule
+      baseline (TARNET) &$8.75$ & $2.12 $ & $1.27$\\
+   Dragonnet & $1.97$ & $2.11$ &$0.72$ \\
+   \bottomrule
+\end{tabular}
+\end{table}
+
+
+\newpage
+ 
+
+\end{document}

@@ -1,0 +1,149 @@
+
+\section{Balancing Using Integral Probability Metrics}
+\label{appendix:cfrnet}
+\subsection{Wasserstein Distance}
+Following \citep{stockblog, dazablog}, suppose we have two discrete distributions (treated and control) with marginal densities $p(x)$ and $q(x)$ captured as vectors $t$ and $c$, with dimensions $n$ and $m$ respectively. To compute the Wasserstein distance, we must define a "mapping matrix" $P$ that defines the mapping of ``earth" in $p(x)$ to corresponding piles in $q(x)$. Let $\textbf{U}(t,c)$ be the set of positive, $n \times m$   mapping matrices where the sum of the rows is $t$ and the sum of the columns is $c$.  
+\begin{equation}
+\textbf{U}(t,c)= P\subset \mathbb{R}^{nxm}_{>0}| P \cdot 1_m=\textbf{t} , P^T \cdot 1_n=\textbf{c}
+\end{equation} 
+In words, this matrix maps the probability mass from points in the support of $p(x)$ (i.e, the elements of $t$) to points in the support of $q(x)$ (the elements of $c$) (note that the mapping need not be one-to-one). We also have a ``cost" matrix $C$ that describes the cost of applying $P$ (i.e. the cost of shoveling dirt according to the map described in $P$). The cost matrix can be computed using a norm $\ell$ (most commonly $\ell^2$) between the points in $t$ being mapped to $c$ in the mapping matrix $P$. Finally, the $\ell$-norm Wasserstein distance $dW_\ell$ can be defined as 
+\begin{equation}
+dW_\ell = min_{P\subset(t,c)}\sum_{i,j}P_{ij}C_{ij}
+\end{equation}
+In other words, the Wasserstein distance is the smallest Frobenius inner product of a mapping matrix $P$ that fits the above constraints, and its associated cost matrix $C$. Although this problem can be solved via linear programming, the Wasserstein distance is often implemented in a different form that works with continuous distributions and can be optimized by gradient descent \citep{arjovsky2017wasserstein,gulrajani2017improved}. There is also a variant of the Wasserstein distance that imposes an entropy-based regularization on the coupling matrix to make it smoother or sparser called the Sinkhorn distance \citep{cuturi2013sinkhorn}.
+
+\subsection{Extending Representation Balancing with IPMs}
+\textbf{Deep Dive: CFRNet (\citet{Shalit2017,Johansson2018,johannson2020})}
+
+Beyond receiving outcome modeling gradients for both potential outcomes, the authors have subsequently extended TARNet with additional losses that  explicitly encourage balancing by minimizing a statistical distance between the two covariate distributions in representation space. These distances are called integral probability metrics \citep{muller1997integral}.\footnote{\citet{zhang2020learning} criticize the usage of IPMs because they make no restrictions on the moments of the transformed distributions. Thus while the covariate distributions may have a high percentage of overlap in representation space, this overlap may be substantially biased in unknown ways.} \citet{Johansson2016,Shalit2017,Johansson2018} propose two possible IPMs, the Wasserstein distance and the maximum mean discrepancy distance (MMD) for use in these architectures. 
+
+The Wasserstein or ``Earth Mover's" distance fits an interpretable ``map" (i.e. a matrix) showing how to efficiently convert from one probability mass distribution to another.  The Wasserstein distance is most easily understood as an optimal transport problem (i.e., a scenario where we want to transport one distribution to another at minimum cost). The nickname ``Earth mover's distance" comes from the metaphor of shoveling dirt to terraform one landscape into another. In the idealized case in which one distribution can be perfectly transformed into another, the Wasserstein map corresponds exactly to a perfect one-to-one matching on covariates strategy \citep{kallus2016generalized}.
+
+The MMD is the normed distance between the means of two distributions, after a kernel function $\phi$ has transformed them into a high-dimensional space called a reproducing kernel Hibbert Space (RKHS) \citep{gretton2012kernel}. The MMD with an $L^2$ norm in RKHS $\mathcal{H}$ can be specified as:
+
+\begin{equation}
+MMD(P,Q) = ||\Ex_{X \sim P}\phi(X) - \Ex_{X \sim Q}\phi(X)||^2_{\mathcal{H}}
+\end{equation}
+
+The metric is built on the idea that there is no function that would have differing Expected Values for $P$ and $Q$ in this high-dimensional space if $P$ and $Q$ are the same distribution \citep{huszarblog}. The MMD is inexpensive to calculate using the ``kernel trick" where the inner product between two points can be calculated in the RKHS without first transforming each point into the RKHS.\footnote{This kernel trick is  also what makes support vector machines computationally tractable.} 
+
+When an IPM loss is applied to the representation layers in TARNet, the authors call the resulting network ``CounterFactual Regression Network" (CFRNet) (Fig. \ref{fig:cfrnet}A) \citep{Shalit2017}. The loss function for this network is
+
+\begin{equation}
+\min_{h,\Phi,IPM}\frac{1}{N}\sum_{i=1}^N \underbrace{MSE(Y_i,h(\Phi(X_i),T_i))}_{\text{Outcome Loss}} +\lambda\underbrace{IPM(\Phi(X|T=1),\Phi(X|T=0))}_{\text{Dist. b/w T \& C covar. distributions}} +  \alpha\underbrace{\mathcal{R}(h)}_{L_2} 
+\end{equation}
+where $\mathcal{R}(h)$ is a model complexity term and $\lambda$ and $\alpha$ are hyperparameters.
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{content/AdvancedArchitectures.png}
+    \caption{\textbf{A. CFRNet} architecture originally introduced in \citet{Shalit2017}. CFRNet adds an additional integral probability metric (IPM) loss to  TARNet to explicitly force representations of the treated and control covariates closer in representation space.
+    \\\textbf{B. Weighted CFRNet} adds a propensity score head to CFRNet to predict IPW-weighted outcomes. During training, the propensity score is used to reweight both the predicted outcomes $\hat{Y}(0)$ and $\hat{Y}(1)$, as well as the represented covariate distributions in calculation of the IPM loss. This allows the authors to provide consistency guarantees and relax the overlap assumption. Figures adapted from \citet{johannson2020}.}
+    \label{fig:cfrnet}
+\end{figure}
+
+These two papers also make important theoretical contributions by providing bounds on the generalization error for the PEHE \citep{Hill2011}. In \citet{Shalit2017}, they show that the PEHE is bounded by the sum of the factual loss, counterfactual loss, and the variance of the conditional outcome.
+
+In \citet{johannson2020}, the authors introduce estimated IPW weights $\pi(\Phi(X),T)$ to CFRNet that are used within the IPM calculation to provide consistency guarantees (Fig. \ref{fig:cfrnet}B). Theoretically, they also use these weights to relax the overlap assumption as long as the weights themselves obey the positivity assumption. From a practical standpoint, adding weights that are optimized smoothly across the whole dataset each epoch reduces noise created by calculating the IPM score in small batches. Weighted CFRNet minimizes the following loss function:
+
+\begin{equation}
+\begin{split}
+\argmin_{h,\Phi,IPM,\pi,\lambda_h,\lambda_w}\frac{1}{N}\sum_{i=1}^N \underbrace{\frac{\hat{P}(T_i)}{\pi(\Phi(X_i),T_i)}}_{IPW}\cdot \underbrace{MSE(Y_i,h(\Phi(X_i),T_i))}_{\text{Outcome Loss}} + \lambda_h \underbrace{\mathcal{R}(h)}_{\text{$L_2$ Outcome}}+\\
+\alpha\cdot \underbrace{IPM(\underbrace{\frac{\hat{P}(1)}{\pi(\Phi(X,1))}}_{IPW}\cdot\Phi(X|T=1),\underbrace{\frac{\hat{P}(0)}{\pi(\Phi(X,0))}}_{IPW}\cdot\Phi(X|T=0))}_{\text{Distance between $IPW$ weighted T \& C covar. distributions}}+\lambda_\pi\underbrace{\frac{||\pi||_2}{N}}_{L_2   Var(\pi)}
+\end{split}
+\end{equation}
+where $\mathcal{R}(h)$ is a model complexity term and $\lambda_h$, $\lambda_\pi$ and $\alpha$ are hyperparameters. The final term is a regularization term on the variance of the weight parameters.
+
+\subsubsection{Extending Representation Balancing with Matching}
+Beyond IPMs, other approaches have directly embraced matching as a balancing strategy. \citet{Yao2018} train their TARNet on six point mini-batches of propensity score-matched units with additional reconstruction losses designed to preserve the relative distances between these points when projecting them into representation space. \citet{Schwab2018} takes an even simpler approach by feeding random batches of propensity-matched units to the TarNet outcome structure.
+
+\section{Model Selection Using the PEHE}
+\label{appendix:peheselection}
+In order to select hyperparameters in real data, \citet{johannson2020} propose to use a matching variant of $PEHE$ with the nearest Euclidean neighbor of each unit $i$ from the other treatment assignment group $y_i^{nn}$ as a counterfactual. If we identify the nearest neighbor $j$ of each unit $i$ in representation space such that $t_j\neq t_i$ as
+
+  $$y_i^{nn}(1-t_i) = \min_{j\in (1-T)}||\Phi(x_i|t_i)-\Phi(x_j|1-t_i)||_2$$
+ then,
+$$PEHE_{nn}=\frac{1}{N}\sum_{i=1}^N{(\underbrace{(1-2t_i)(y_i(t_i)-y_i^{nn}(1-t_i)}_{CATE_{nn}}-\underbrace{(h(\Phi(x),1)-h(\Phi(x),0)))}_{\hat{CATE}}}^2$$
+If we take the square root of the $PEHE_{nn}$ then we get an approximation of the unit-level error.
+
+The intuition behind $\sqrt{PEHE_{nn}}$ is solid. If our representation function $\Phi$ is truly learning to balance the treated and control distributions, $CATE_{nn}$ should coarsely measure it.
+
+\section{Recurrent Neural Networks (RNN)}
+\label{appendix:rnn}
+
+Recurrent neural networks are a specialized architecture created for learning outcomes from sequential data (e.g. time series, biological sequences, text) (Fig. \ref{fig:rnn}). In a classic RNN, each ``unit" $u$ in the network takes as input its own covariates $X$ (or possibly a representation) and a representation produced by the previous unit, encoding cumulative information about earlier states in the sequence. These units are not just simple hidden layers: there is a set of weights within each unit for its raw inputs, the representation from the previous time step, and its outputs. Different RNN variants have different operations for integrating past representations with present inputs. Recurrent neural networks may be directed acyclic graphs or feedback on themselves. Commonly used variants include Gated Recurrent Unit networks (GRU) and Long-term Short-term memory networks (LSTM) \citep{cho2014gru,lstm1997}.
+
+\begin{figure}
+\centering
+\includegraphics[width=.5\textwidth]{content/RNN.png}
+\caption{Recurrent neural network.}
+\label{fig:rnn}
+\end{figure}
+
+\section{Generative Modeling through Adversarial Training}
+\label{appendix:generative}
+Adversarial training approaches include a wide variety of architectures where two networks or loss functions compete against each other. Adversarial approaches are inspired by Generative Adversarial Networks (GANs) (Box \ref{box:gan}) \citep{goodfellow2014generative}. In the machine learning literature on causal inference, adversarial training has been applied both to trade off outcome modeling and treatment modeling tasks during representation learning, as well as to trade off estimation and regularization of IPW weights. GANs have also been used directly as generative models for counterfactual and treatment effect distributions. 
+
+\begin{TCBBox}[label=box:gan]{Generative Adversarial Networks (GAN)}In GANs, two networks, a discriminator network $D$ and a generator network $G$, play a zero-sum game like cops and robbers. The generator network's job is to learn a distribution from which the training data $X$ could have credibly been generated. In each training batch, the generator produces a new outcome (originally images, but could be IPW weights, counterfactuals or treatment effects) by drawing a random noise sample from a known distribution $Z$ (e.g. Gaussian) and transforming it into outcomes with the function $G(Z)=\hat{X}$. The discriminator's job is to learn a function $D(X)=P(X\ is\ real)$ that can distinguish whether the outcome is from the training data $X$, or whether it is a ``fake" $\hat{X}$ created by the generator. The generator then receives a negative version of the discriminator's loss, a penalty that is proportional to how well it was able to ``deceive" the discriminator.  The discriminator's loss can be the log loss,  Jensen-Shannon divergence \citep{goodfellow2014generative}, the Wasserstein distance \citep{arjovsky2017wasserstein, gulrajani2017improved}, or any number of divergences and IPMs. Formally, the generator attempts to minimize the following loss function,
+\begin{equation*}
+\argmin_{G}=\underbrace{\Ex_{X}}_{\text{ real dist.}}[\underbrace{\mathcal{L}(D(X)}_{P(X\ is\ real)}] + \underbrace{\Ex_{Z}}_{\text{fake dist.}}[1-\underbrace{\mathcal{L}(D(G(Z))}_{P(\hat{X}\text{is real})}]
+\end{equation*}
+where the first quantity is the discriminator's estimated probability data from $X$ is indeed real, and the second quantity is the discriminator's estimate that a generated quantity from the distribution $Z$ is real. 
+
+Because the discriminator is trying to catch the generator, its objective is to maximize the same function,
+\begin{equation*}
+\argmax_{D}=\underbrace{\Ex_{X}}_{\text{ real dist.}}[\underbrace{\mathcal{L}(D(X)}_{P(X \text{is real})}] + \underbrace{\Ex_{Z}}_{\text{fake dist.}}[1-\underbrace{\mathcal{L}(D(G(Z))}_{P(\hat{X}\text{is real})}]
+\end{equation*}
+In practice, the discriminator and the generator are trained either alternatingly or simultaneously, with the discriminator increasing its ability to discern between real and fake outcomes over time, and the generator increasing its ability to deceive the discriminator. The idea is that the adaptive loss function created by the discriminator can coax the generator out of local minima to generate superior outcomes. Results by these models have been impressive, and many of the fake portraits and ``deepfake" videos circulating online in recent years are generated by this architectures. The advantage of GANs is that they can impressively learn very complex generative distributions with limited modeling assumptions. The disadvantage of GANs is that they are difficult and unreliable to train, often plateauing in local optima.
+\end{TCBBox}
+\label{Box:GANs}
+
+\subsection{GANs as Generative Models of Treatment Effect Distributions (GANITE)}
+\textbf{Deep Dive: GANITE (\citet{Yoon2018})}
+Although a generative model of the treatment effect distribution is generally unknown, a natural application of GANs is to try to machine learn this distribution from data. GANITE uses two GANs: $GAN_1$, consisting of generator $G_1$ and discriminator $D_1$, to model the counterfactual distribution and $GAN_2$, consisting of generator $G_2$ and discriminator $D_2$, to model the $CATE$ distribution \citep{Yoon2018} (Fig. \ref{fig:ganite}).
+The training procedure for $GAN_1$ is as follows:
+\begin{enumerate}
+\singlespacing
+    \item Taking $X$,$T$, and generative noise $Z$ as input, generator $G_1$ generates both potential outcomes $\{\tilde{Y}(T),\tilde{Y}(1-T)\}$. A factual loss $MSE(Y(T),\tilde{Y}(T))$ is applied.
+    \item Create a new vector $\textbf{C}=\{Y(T),\tilde{Y}(1-T)\}$ by combining the observed potential outcome and the counterfactual predicted by $G_1$.
+    \item Taking $X$ and $\textbf{C}$ as inputs, the discriminator $D_1$ rates each value in $\textbf{C}$ for the probability that it is the observed outcome using the categorical cross entropy loss:
+    \begin{equation}
+    \mathcal{L}(D_1)=CCE(\{\underbrace{P(\textbf{C}_0=Y(T))}_{\text{Prob first idx is real}},\underbrace{P(\textbf{C}_1=Y(T))}_{\text{Prob sec idx is real}}\},\{\underbrace{\textbf{C}_0==Y(T)}_{\text{1 if idx 0 is real}},\underbrace{\textbf{C}_1==Y(T)}_{\text{1 if idx 1 is real}}\})
+\end{equation}
+    \item This loss is then fed back to $G_1$ such that the total loss for the generator is now  
+    \begin{equation}
+        \argmin_{G_1}=MSE(Y(T),\tilde{Y}(T)) - \lambda \mathcal{L}(D_1)
+    \end{equation}
+\end{enumerate}
+
+After generator $G_1$ is trained to completion, the authors use $\textbf{C}$ as a ``complete dataset" containing both a factual outcome and a counterfactual outcome to train $GAN_2$, which generates treatment effects: 
+\begin{enumerate}
+\singlespacing
+    \item Taking only $X$ and generative noise $Z$ as input, $G_2$ generates a new potential outcome vector $\textbf{R}=\{\hat{Y}(T),\hat{Y}(1-T)\}$. $G_2$ receives an MSE loss to minimize the difference between its predictions and the ``complete dataset" $\textbf{C}$: $MSE(\textbf{C},\textbf{R})$.
+    \item Discriminator $D_2$ takes $X$, $\textbf{C}$, and $\textbf{R}$ as inputs and estimates a probability that $\textbf{C}$ is the ``complete" dataset, and that $\textbf{R}$ is the ``complete dataset":
+    \begin{equation}
+    \mathcal{L}(D_2)=CCE(\{\underbrace{P(\textbf{C}=\textbf{C})}_{\text{ Prob $\textbf{C}$ is ``CD" }},\underbrace{P(\textbf{R}=\textbf{C})}_{\text{Prob $\textbf{R}$ is ``CD"}}\},\{\underbrace{\textbf{C}==\textbf{C}}_{\text{1 if idx 0 is $\textbf{C}$}},\underbrace{\textbf{C}_1==Y(T)}_{\text{1 if idx 1 is $\textbf{C}$}}\})
+\end{equation}
+    \item This loss is then fed back to the generator $G_2$ such that the total loss for the generator is now  
+    \begin{equation}
+        \argmin_{G_2}=MSE(\textbf{C},\textbf{R}) - \lambda \mathcal{L}(D_2)
+    \end{equation}
+\end{enumerate}
+At the end of training, $G_2$ should be able to predict treatment effects with only covariates $X$ and noise $Z$ as inputs. An evolution of GANITE, SCIGAN, extends this framework to settings with more than one treatment and continuous dosages \citep{bica_sicgan}. 
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{content/GANITE.png}
+    \caption{\textbf{GANITE} has two GANs. The first generator $G_1$ generates counterfactuals $\tilde{Y}(T)$. The discriminator $D_1$ attempts to discriminate between these predictions and real data ($Y(T)$). The second generator proposes pairs of potential outcomes $\hat{Y}(0)$ and $\hat{Y}(1)$ (i.e., treatment effects), a vector we call $R$. Discriminator $D_2$ attempts to discern between $R$ and a ``complete dataset" $C$ created by pairing each observed/factual outcome $Y(T)$ with a synthetic outcome $\tilde{Y}(1-T)$ proposed by $G_1$. Although we do not show gradients in other figures, we make an exception for GANs (solid red line).}
+    \label{fig:ganite}
+\end{figure}
+\newpage
+\iffalse
+SCIGAN extends GANITE to settings with more than one treatment and continuous dosages \citep{bica_sicgan}. In this setting treatment is parameterized as a binary factor vector denoting which treatment $w \in W$ of possible treatments is used, and a substituent vector of randomly sampled dosages $\mathbb{D}_w$ for treatment $w$, such that $t=(w,\mathbb{D}_w)$. The generator $G$ is identical to $G_1$ in GANITE except that $G$ produces a separate potential outcome for each treatment-dosage combination $\hat{Y}(W,\mathbb{D}_W)=\{\hat{y}(w_1,\mathbb{D}_{w1}),\hat{y}(w_2,\mathbb{D}_{w2}),\dots,\hat{y}(w_n,\mathbb{D}_{wn})\}$. $G$ has two discriminators, $D_w$ and $D_\mathbb{D}$. $D_w$ selects which of the generated treatments $\hat{W}$ is the real one. $D_\mathbb{D}$ subsequently guesses which is the correct dosage for the treatment $\hat{w}$ selected by $D_w$. For out-of-sample prediction, SCIGAN replaces $G_2$ from GANITE with an MLP for out-of-sample prediction using the complete dataset produced by $G$.
+\fi
+\subsection{Adversarial Representation Balancing}
+
+The use of the IPM loss in CFRNet \citep{Shalit2017} may also be viewed as an adversarial approach in that the representation layers are forced to maximize performance on two competing tasks: predicting outcomes and minimizing an IPM. Rather than using an IPM loss, other authors have trained propensity score estimators that send positive (rather than negative) gradients back to the representation layers \citep{Atan2018,Du2019}.
+
+\citet{bica2020estimating} extend this approach to settings with treatment over time using a recurrent neural network. In their medical setting, decorrelating treatment from patient covariates and history allows them to estimate treatment effects at each individual snapshot.

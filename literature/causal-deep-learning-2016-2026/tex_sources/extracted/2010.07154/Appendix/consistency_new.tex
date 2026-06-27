@@ -1,0 +1,244 @@
+In this appendix, we prove consistency of the DFIV approach.
+Our contribution is to establish consistency of the end-to-end procedure incorporating Stages 1 and 2, which we achieve by first showing a Stage 1 consistency result (Lemma~\ref{lem:1}), and then establishing the consistency of Stage 2 when the empirical Stage 1 solution is used as input (Lemma~\ref{lem:2}).  The desired result then follows in Theorem \ref{thm:totalConsistency}.
+
+Consistency results will be expressed in terms of the complexity of the function classes used in Stages 1 and 2, as encoded in the Rademacher complexity of functionals of these functions (see Proposition \ref{prop:bound} below).  Consistency for particular function classes can then be shown by establishing that the respective Rademacher complexities vanish. We leave for future work the task of demonstrating this property for function classes of interest.
+%, however we note that the requirement is satisfied in a wide range of hypothesis spaces, such as linear models \citep{FoundationOfML} or neural networks. 
+
+
+%for each of Stages 1 and 2
+
+
+%First, we revisit the DFIV approch using the terminology of functional operators, which is suitable for theoretical analysis. Then, we establish lemmas that bound the generalization errors of stage 1 and stage 2 regression. Finally, we derive the convergence rates for DFIV.
+
+
+%However, we note that it is unclear how one can control $\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1)$ and $\hat{\mathfrak{R}}_{S_2}(\mathcal{H}_2)$ in our context.
+%The assumption of the vanishing Rademacher complexity is satisfied in a wide range of hypothesis spaces, such as linear models \citep{FoundationOfML} or neural networks. 
+
+
+
+\subsection{Operator view of DFIV}
+
+The goal of DFIV is to learn structural function $f_\mathrm{struct}$, which satisfies
+\begin{align}
+    \expect[Y|Z]{Y} = \expect[X|Z]{f_\mathrm{struct}(X)}. \label{eq:functional}
+\end{align}
+We model $f_\mathrm{struct}$ as $f_\mathrm{struct}(X) = \vec{u}^\top \vec{\psi}_{\theta_X}(X)$ and denote the hypothesis spaces for $\vec{\psi}_{\theta_X}$ and $f_\mathrm{struct}$ as follows:
+\begin{align*}
+    &\mathcal{H}_{\vec{\psi}} = \{\vec{\psi}_{\theta_X}: \mathcal{X} \to \mathbb{R}^{d_1}~|~ \theta_X \in \Theta_X\},\\
+    &\mathcal{F} = \{\vec{u}^\top \vec{\psi}_{\theta_X}: \mathcal{X} \to \mathcal{Y}~|~\vec{\psi}_{\theta_X} \in \mathcal{H}_{\vec{\psi}}, \vec{u} \in \mathbb{R}^{d_1}\}.
+\end{align*} 
+To learn the parameters, we minimize the following stage 2 loss:
+\begin{align*}
+    \hat{\vec{u}}^{(n)}, \hat{\theta}_X = \argmin_{\vec{u} \in \mathbb{R}^{d_1}, \theta_X}\mathcal{L}^{(n)}_2(\vec{u},\theta_X), \quad \mathcal{L}^{(n)}_2 = \frac1n \sum_{i=1}^n (\tilde y_i - \vec{u}^\top \hatexpect[X|Z]{\vec{\psi}_{\theta_X}(X)}(\tilde z_i))^2.
+\end{align*}
+We denote the resulting estimated structural function as $\hat{f}_{\mathrm{struct}}(X) = (\hat{\vec{u}}^{(n)})^\top \vec{\psi}_{\hat{\theta}_X}(X)$. For simplicity, we set all regularization terms  to zero. Here, $\hatexpect[X|Z]{\vec{\psi}_{\theta_X}(X)}$ is the empirical conditional expectation operator, which maps an element of $\mathcal{H}_{\vec{\psi}}$ to some function $\vec{g}: \mathcal{Z} \mapsto \mathbb{R}^{d_1} \in \mathcal{G}$ that
+\begin{align*}
+    \hatexpect[X|Z]{\vec{\psi}_{\theta_X}(X)} = \argmin_{\vec{g} \in \mathcal{G}} \mathcal{L}_1^{(m)}(\vec{V}, \theta_Z),~ \mathcal{L}_1^{(m)} = \frac1m \sum_{i=1}^m \|\vec{\psi}_{\theta_X}(x_i) - \vec{g}(z_i)\|^2. 
+\end{align*}
+In DFIV, we define $\mathcal{G}$  as
+\begin{align*}
+    \mathcal{G} = \{\vec{V} \vec{\phi}_{\theta_Z}:\mathcal{Z}\to\mathbb{R}^{d_1}~|~ \vec{V} \in \mathbb{R}^{d_2 \times d_1}, \theta_Z \in \Theta_Z\}.
+\end{align*}
+This formulation is equivalent to the one introduced in Section~\ref{sec:algorithm}. With a slight abuse of notation, for $f(X) = \vec{u}^\top \vec{\psi}_{\theta_X}(X) \in \mathcal{F}$, we define $\hatexpect[X|Z]{f(X)}$ to be
+\begin{align*}
+    \hatexpect[X|Z]{f(X)} = \vec{u}^\top \hatexpect[X|Z]{\vec{\psi}_{\theta_X}(X)}
+\end{align*}
+since this is the empirical estimate of $\expect[X|Z]{f(X)}$.
+
+\subsection{Generalization errors for regression}
+Here, we bound the generalization errors of both stages using Rademacher complexity bounds \citep{FoundationOfML}.
+
+\begin{prop}{\citep[Theorem 3.3][with slight modification]{FoundationOfML}} \label{prop:bound}
+    Let $\mathcal{S}$ be a measurable space and $\mathcal{H}$ be a family of functions mapping from $\mathcal{S}$ to $[0, M]$. Given fixed dataset $S = (s_1, s_2, \dots, s_n) \in \mathcal{S}^n$, empirical Rademacher complexity is given by
+    \begin{align*}
+        \hat{\mathfrak{R}}_S(\mathcal{H}) = \expect[\vec{\sigma}]{\sup_{h\in \mathcal{H}} \sum_{i=1}^n \sigma_i h(s_i)},
+    \end{align*}
+    where $\vec{\sigma}=(\sigma_1,\dots,\sigma_n)$, 
+    with $\sigma_i$ is independent uniform random variables taking values in $\{-1,+1\}$. Then, for any $\delta > 0$, with probability at least $1-\delta$ over the draw of an i.i.d sample $S$ of size $n$,  each of following holds for all $h \in \mathcal{H}$:
+    \begin{align*}
+        &\expect{h(s)} \leq \frac1n \sum_{i=1}^n h(s_i) + 2 \hat{\mathfrak{R}}_S + 3M \sqrt{\frac{\log 2/\delta}{2n}},\\
+        & \frac1n \sum_{i=1}^n h(s_i) \leq \expect{h(s)} + 2 \hat{\mathfrak{R}}_S + 3M \sqrt{\frac{\log 2/\delta}{2n}}.
+    \end{align*}
+\end{prop}
+
+We list the assumptions below.
+\begin{assum} \label{assume-consist}
+   The following hold:
+    \begin{enumerate}
+    \item Bounded outcome variable $|Y| \leq M$.
+    \item  Bounded stage 1 hypothesis space: $ \forall z \in \mathcal{Z}, \|\vec{g}(z)\| \leq 1$.
+    \item Bounded stage 2 feature map $\forall x \in \mathcal{X}, \|\vec{\psi}_{\theta_X}(x) \| \leq 1 $.
+    \item  Bounded stage 2 weight: $\|\vec{u}\| \leq M$.
+    \item Identifiable stage 1 hypothesis space: $ \forall \vec{\psi}_{\theta_X} \in \mathcal{H}_{\vec{\psi}}, \exists g\in \mathcal{G}, \expect[X|Z]{\vec{\psi}_{\theta_X}} = g$.
+    \item Identifiable stage 2 hypothesis space: $f_{\mathrm{struct}} \in \mathcal{F}$. 
+    \end{enumerate}
+\end{assum}
+
+Note that we leave aside questions of optimization. Thus, we assume that the optimization procedure over $(\theta_Z,\vec{V})$ is sufficient to recover $\hat{\mathbb{E}}_{X|Z},$ and that the optimization procedure over $(\vec{u},\theta_X)$ is sufficient to recover $\hat f_{\mathrm{struct}}$ (which requires, in turn, the correct $\hat{\mathbb{E}}_{X|Z},$ for this $\vec{\psi}_{\theta_X}$). We emphasize that Algorithm \ref{algo} does not guarantee these properties. 
+
+Based on these assumptions, we derive the generalization error in terms of $L_2$-norm $\|\cdot\|_{P(Z)}$ defined as
+\begin{align*}
+    \|h\|_{P(Z)} = \left(\int \|h(Z)\|^2 \intd P(Z)\right)^{\frac12}.
+\end{align*}
+
+The following lemma proves the generalization error for stage 1 regression.
+\begin{lem}\label{lem:1}
+    Under Assumption~\ref{assume-consist}, and given stage 1 data $S_1 = \{(x_i, z_i)\}_{i=1}^m$, for any $\delta>0$, with at least probability $1-2\delta$, we have
+    \begin{align*}
+        \left\|\hatexpect[X|Z]{f(X)} - \expect[X|Z]{f(X)}\right\|_{P(Z)} \leq M\sqrt{4\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 24\sqrt{\frac{\log 2/\delta}{2m}}}
+    \end{align*}
+    for any $f = \vec{u}^\top \vec{\psi}_{\theta_X} \in \mathcal{F}$, where hypothesis space $\mathcal{H}_1$ is defined as
+    \begin{align}
+        \mathcal{H}_1 = \{(x,z) \in \mathcal{X}\times \mathcal{Z} \mapsto \|\vec{\psi}_{\theta_X}(x) - \vec{g}(z) \|^2 \in \mathbb{R} ~|~ \vec{g} \in \mathcal{G},\vec{\psi}_{\theta_X} \in \mathcal{H}_{\vec{\psi}}\}. \label{eq:def-h1}
+    \end{align}
+\end{lem}
+
+
+\begin{proof}
+     From Cauchy–Schwarz inequality, we have
+\begin{align*}
+    \left\| \expect{f(X)\middle|Z} - \hatexpect[X|Z]{f(X)} \right\|_{P(Z)} 
+    &= \left\| (\vec{u}^\top \left(\expect[X|Z]{\vec{\psi}_{\theta_X}(X)} - \hatexpect[X|Z]{\vec{\psi}_{\theta_X}(X)} \right)\right\|_{P(Z)}\\
+    &\leq M\left\|\expect[X|Z]{\vec{\psi}_{\theta_X}(X)} - \hatexpect[X|Z]{\vec{\psi}_{{\theta}_X}(X)} \right\|_{P(Z)}
+\end{align*}
+By applying Proposition~\ref{prop:bound} to hypothesis space $\mathcal{H}_1$, we have
+\begin{align*}
+    &\expect[XZ]{\left\|\vec{\psi}_{\theta_X}(X) - \hatexpect[X|Z]{\vec{\psi}_{\theta_X}(X)}\right\|^2} \nonumber\\
+    &\quad\quad \leq  \frac1m \sum_{i=1}^m {\left\|\vec{\psi}_{\theta_X}(x_i)- \hatexpect[X|Z]{\vec{\psi}_{\theta_X}(X) }(z_i)\right\|^2} +  2\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 12\sqrt{\frac{\log 2/\delta}{2m}}
+\end{align*}
+with probability $1-\delta$. Indeed all functions $h \in \mathcal{H}_1$ satisfy $\|h\| \leq 4$ since $\|\vec{\psi}_{\theta_X}(X)\| \leq 1, \|\vec{g}(Z)\| \leq 1$ from Assumption~\ref{assume-consist}.
+
+Also, since $ \forall \vec{\psi}_{\theta_X} \in \mathcal{H}_{\vec{\psi}}, \exists g\in \mathcal{G}, \expect[X|Z]{\vec{\psi}_{\theta_X}} = g$, again from Proposition~\ref{prop:bound}, we have
+\begin{align*}
+    &\frac1m \sum_{i=1}^m {\left\|\vec{\psi}_{{\theta}_X}(x_i)- \expect[X|Z]{\vec{\psi}_{{\theta}_X}(X)}(z_i)\right\|^2} \nonumber\\
+    &\quad\quad \leq   \expect[XZ]{\left\|\vec{\psi}_{{\theta}_X}(X) - \expect[X|Z]{\vec{\psi}_{{\theta}_X}(X)}\right\|^2} +  2\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 12\sqrt{\frac{\log 2/\delta}{2m}}
+\end{align*}
+with probability $1-\delta$. From the optimality of $\hatexpect[X|Z]{\vec{\psi}_{\theta_X}(X)}$, we have
+\begin{align*}
+    \frac1m \sum_{i=1}^m {\left\|\vec{\psi}_{{\theta}_X}(x_i)- \hatexpect[X|Z]{\vec{\psi}_{{\theta}_X}}(z_i)\right\|^2} \leq  \frac1m \sum_{i=1}^m {\left\|\vec{\psi}_{{\theta}_X}(x_i)- \expect[X|Z]{\vec{\psi}_{{\theta}_X}(X)}(z_i)\right\|^2}.
+\end{align*}
+Hence, we have
+\begin{align*}
+    &\expect[XZ]{\left\|\vec{\psi}_{{\theta}_X}(X) - \hatexpect[X|Z]{\vec{\psi}_{{\theta}_X}(X)}\right\|^2} \nonumber\\
+    &\quad \leq  \expect[XZ]{\left\|\vec{\psi}_{{\theta}_X}(X) - \expect[X|Z]{\vec{\psi}_{{\theta}_X}(X)}\right\|^2} +  4\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 24\sqrt{\frac{\log 2/\delta}{2m}}
+\end{align*}
+with probability $1-2\delta$.
+Now we have 
+\begin{align*}
+    &\expect[XZ]{\left\|\vec{\psi}_{{\theta}_X}(X) - \hatexpect[X|Z]{\vec{\psi}_{{\theta}_X}(X)}\right\|^2} \\
+    &\quad =\expect[XZ]{\left\|\vec{\psi}_{{\theta}_X}(X) - \expect[X|Z]{\vec{\psi}_{{\theta}_X}(X)}\right\|^2} + \expect[Z]{\left\|\expect[X|Z]{\vec{\psi}_{{\theta}_X}(X)} - \hatexpect[X|Z]{\vec{\psi}_{{\theta}_X}(X)}\right\|^2},
+\end{align*}
+and thus
+\begin{align*}
+    \expect[Z]{\left\|\expect[X|Z]{\vec{\psi}_{{\theta}_X}(X)} - \hatexpect[X|Z]{\vec{\psi}_{{\theta}_X}(X)}\right\|^2} \leq 4\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 24\sqrt{\frac{\log 2/\delta}{2m}}.
+\end{align*}
+Therefore, by taking the square root of both sides, we can see
+\begin{align*}
+    \left\|\hatexpect[X|Z]{{f}(X)} - \expect[X|Z]{{f}(X)}\right\|_{P(Z)} \leq M\sqrt{4\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 24\sqrt{\frac{\log 2/\delta}{2m}}}.
+\end{align*}
+\end{proof}
+
+The generalization error for stage 2 is given in the following lemma.
+
+\begin{lem}\label{lem:2}
+    Under Assumption~\ref{assume-consist}, and given stage 1 data $S_1 = \{(x_i, z_i)\}_{i=1}^m,$  stage 2 data $S_2 = \{(\tilde y_i, \tilde z_i)\}_{i=1}^n,$ and the estimated structural function $\hat{f}_{\mathrm{struct}} (x)=(\hat{\vec{u}}^{(n)})^\top \vec{\psi_{\hat{\theta}_X}}(x)$, then for any $\delta>0$, with at least probability $1-4\delta$, we have
+    \begin{align*}
+        &\left\|\expect[Y|Z]{Y} - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)}\right\|_{P(Z)} \\
+        &\quad \leq \sqrt{4\hat{\mathfrak{R}}_{S_2}(\mathcal{H}_2) + 24M^2\sqrt{\frac{\log 2/\delta}{2n}}} + M\sqrt{4\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 24 \sqrt{\frac{\log 2/\delta}{2m}}},
+    \end{align*}
+    where $\mathcal{H}_1$ is defined in \eqref{eq:def-h1} and $\mathcal{H}_2$ is defined as
+    \begin{align}
+        \mathcal{H}_2 = \{(y, z) \in \mathcal{Y} \times \mathcal{Z} \mapsto (y -  \vec{u}^\top \vec{g}(z))^2 \in \mathbb{R} ~|~  \vec{g} \in \mathcal{G}, \vec{u} \in \mathbb{R}^{d_1}, \|\vec{u}\| \leq M\}. \label{eq:def-h2}
+    \end{align}
+\end{lem}
+
+\begin{proof}
+Since $\hatexpect[X|Z]{\vec{\psi}_{\hat{\theta}_X}} \in \mathcal{G}$, by applying Proposition~\ref{prop:bound} to hypothesis space $\mathcal{H}_2$, we have
+\begin{align*}
+    &\expect[YZ]{(Y - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)})^2} \\
+    &\quad \leq  \frac1n \sum_{i=1}^n {\left(\tilde{y}_i - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)}(\tilde z_i)\right)^2} +  2\hat{\mathfrak{R}}_{S_2}(H_2) + 12M^2\sqrt{\frac{\log 2/\delta}{2n}}
+\end{align*}
+with probability of $1-\delta$. Note that all functions $h \in \mathcal{H}_2$ are bounded in $\|h\| \leq 4M^2$ since $|Y|\leq M, \|\vec{\psi}_{\theta_X}(X)\| \leq 1, \|\vec{u}\| \leq M$ from Assumption~\ref{assume-consist}.
+Similarly, since $f_{\mathrm{struct}}\in \mathcal{F}$ from Assumption~\ref{assume-consist}, we have
+\begin{align*}
+    &\frac1n \sum_{i=1}^n \left(\tilde{y}_i - \hatexpect[X|Z]{f_{\mathrm{struct}}(X)}(\tilde z_i)\right)^2 \\
+    &\quad \leq  \expect[YZ]{(Y - \hatexpect[X|Z]{f_{\mathrm{struct}}(X)})^2} +  2\hat{\mathfrak{R}}_{S_2}(\mathcal{H}_2) + 12M^2\sqrt{\frac{\log 2/\delta}{2n}}
+\end{align*}
+with probability $1-\delta$. From the minimality of $\hat{f}_{\mathrm{struct}}$, we have 
+\begin{align*}
+    \frac1n \sum_{i=1}^n {\left(\tilde y_i - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)}(\tilde z_i)\right)^2} \leq  \frac1n \sum_{i=1}^n (\tilde{y}_i - \hatexpect[X|Z]{f_{\mathrm{struct}}(X)}(\tilde z_i))^2
+\end{align*}
+Hence, we have
+\begin{align*}
+    &\expect[YZ]{\left(Y - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)}\right)^2} \\
+    &\quad\quad \leq \expect[YZ]{(Y - \hatexpect[X|Z]{f_{\mathrm{struct}}(X)})^2} +  4\hat{\mathfrak{R}}_{S_2}(\mathcal{H}_2) + 24M^2\sqrt{\frac{\log 2/\delta}{2n}},
+\end{align*}
+with probability $1-2\delta$.
+Now we also have 
+\begin{align*}
+    &\expect[YZ]{\left(Y - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}}\right)^2} = \expect[YZ]{(Y - \expect[Y|Z]{Y})^2} + \expect[Z]{(\hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}} - \expect[Y|Z]{Y})^2},\\
+    &\expect[YZ]{(Y - \hatexpect[X|Z]{f_{\mathrm{struct}}})^2} = \expect[YZ]{(Y - \expect[Y|Z]{Y})^2} + \expect[Z]{(\hatexpect[X|Z]{{f}_{\mathrm{struct}}} - \expect[Y|Z]{Y})^2}.
+\end{align*}
+Therefore, with probability $1-2\delta$,
+\begin{align*}
+    &\expect[Z]{(\expect[Y|Z]{Y} - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)})^2} \\
+    &\quad \leq 4\hat{\mathfrak{R}}_{S_2}(\mathcal{H}_2) + 24M^2\sqrt{\frac{\log 2/\delta}{2n}}+ \expect[Z]{(\hatexpect[X|Z]{{f}_{\mathrm{struct}}(X)} - \expect[Y|Z]{Y})^2}.
+\end{align*}
+From Lemma~\ref{lem:1} and \eqref{eq:functional}, with probability at least $1-2\delta$,
+\begin{align*}
+    \expect[Z]{(\hatexpect[X|Z]{{f}_{\mathrm{struct}}(X)} - \expect[Y|Z]{Y})^2} \leq 4M^2\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 24M^2 \sqrt{\frac{\log 2/\delta}{2m}}.
+\end{align*}
+By combining them, we can see that with probability $1-4\delta$,
+\begin{align*}
+    &\left\|\expect[Y|Z]{Y} - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)}\right\|_{P(Z)} \\
+    &\quad \leq \sqrt{4\hat{\mathfrak{R}}_{S_2}(\mathcal{H}_2) + 24M^2\sqrt{\frac{\log 2/\delta}{2n}} + 4M^2\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 24M^2 \sqrt{\frac{\log 2/\delta}{2m}}}\\
+    &\quad \leq \sqrt{4\hat{\mathfrak{R}}_{S_2}(\mathcal{H}_2) + 24M^2\sqrt{\frac{\log 2/\delta}{2n}}} + M\sqrt{4\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 24 \sqrt{\frac{\log 2/\delta}{2m}}}.
+\end{align*}
+\end{proof}
+
+ \subsection{Consistency Proof of DFIV}
+ The goal is to bound the deviation between $\hat{f}_{\mathrm{struct}}$ and $f_{\mathrm{struct}}$. This discrepancy is measured by $L_2$-norm with respect to $P(X)$, defined as
+ \begin{align*}
+     \|h(X)\|_{P(X)} =  \left(\int \|h(X)\|^2 \intd P(X)\right)^{\frac12}.
+ \end{align*}
+ However, we used the norm $\|\cdot\|_{P(Z)}$ in Lemmas~\ref{lem:1}~and~\ref{lem:2}. To bridge this gap, we state  the necessary condition for identification introduced in \citep{Newey2003}.
+
+ \begin{prop}{\citep[Proposition~2.1][]{Newey2003}}\label{prop:identification}
+   For all $\delta(x)$ with finite expectation, $\expect{\delta(X)|Z} = 0$ a.e. on $Z$  %AG: added an a.e. condition
+   implies $\delta(x) = 0$.
+ \end{prop}
+ 
+ Proposition~\ref{prop:identification} is the minimum requirement for identification and Assumption~\ref{assum:iv} is a sufficient condition for it. Given Proposition~\ref{prop:identification}, we can consider a constant $\tau < \infty$ defined as
+     \begin{align}
+         \tau = \sup_{f \in \mathcal{F}, f\neq f_\mathrm{struct}} \frac{\|f_\mathrm{struct}(X) - f(X)\|_{P(X)}}{\left\| \expect{f_\mathrm{struct}(X) - f(X) \middle | Z} \right\|_{P(Z)}}. \label{eq:def-tau}
+     \end{align}
+ Note that $\tau \geq 1$ from definition and $\tau = 1$ if and only if $X$ is measurable with respect to $Z$. This measures the ill-posedness of IV problem. A similar quantity is introduced in \citep{blundell2007semi-nonparametric}. Given this quantity, we derive the convergence rate of DFIV as follows.
+
+ \begin{thm}\label{thm:totalConsistency}
+    Let Assumption~\ref{assume-consist} hold. Given stage 1 data $S_1 = \{(x_i, z_i)\}_{i=1}^m$, stage 2 data $S_2 = \{(\tilde y_i, \tilde z_i)\}_{i=1}^m$ and $\tau$ defined in \eqref{eq:def-tau}, for any $\delta>0$, with at least probabilty of $1-6\delta$, we have
+    \begin{align*}
+        &\|f_\mathrm{struct}(X) - \hat{f}_\mathrm{struct}(X)\|_{P(X)} \\
+        &\quad \leq 2\tau M\sqrt{4\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) + 24\sqrt{\frac{\log 2/\delta}{2m}}} + \tau \sqrt{4\hat{\mathfrak{R}}_{S_2}(\mathcal{H}_2) + 24M^2\sqrt{\frac{\log 2/\delta}{2n}}},
+    \end{align*}
+    where $\mathcal{H}_1$ and $\mathcal{H}_2$ are defined in \eqref{eq:def-h1} and \eqref{eq:def-h2}, respectively.
+\end{thm}
+
+\begin{proof}
+    Using $\tau$ in \eqref{eq:def-tau}, we have
+\begin{align*}
+    \|f_\mathrm{struct}(X) - \hat{f}_\mathrm{struct}(X)\|_{P(X)} &\leq \tau \left\| \expect{f_\mathrm{struct}(X) - \hat{f}_\mathrm{struct}(X) \middle | Z} \right\|_{P(Z)}\\
+    &\leq \tau \left\| \expect{\hat{f}_\mathrm{struct}(X)|Z} - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)} \right\|_{P(Z)}\\
+    &\quad \quad +\tau \left\| \expect{f_\mathrm{struct}(X)|Z} - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)} \right\|_{P(Z)}\\
+    &= \tau \left\| \expect{\hat{f}_\mathrm{struct}(X)|Z} - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)} \right\|_{P(Z)}\\
+    &\quad \quad +\tau \left\| \expect{Y|Z} - \hatexpect[X|Z]{\hat{f}_{\mathrm{struct}}(X)} \right\|_{P(Z)},
+\end{align*}
+where the last inequality holds from \eqref{eq:functional}. Using Lemmas~\ref{lem:1}~and~\ref{lem:2}, the result thus follows.
+\end{proof}
+
+From this result, we obtain directly the following corollary.
+
+\begin{corollary}
+Let Assumption~\ref{assume-consist} hold. If $\hat{\mathfrak{R}}_{S_1}(\mathcal{H}_1) \to 0$ and $\hat{\mathfrak{R}}_{S_2}(\mathcal{H}_2) \to 0$ in probability as datasize increases, $\hat{f}_{\mathrm{struct}}$ converges to ${f}_{\mathrm{struct}}$ in probability.
+\end{corollary}
+
+The proof of vanishing Rademacher complexities for particular Stage 1 and Stage 2 function classes is a topic for future work.

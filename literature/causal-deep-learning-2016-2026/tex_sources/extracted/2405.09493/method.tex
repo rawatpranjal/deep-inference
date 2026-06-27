@@ -1,0 +1,66 @@
+\section{Constrained Learning Framework}
+\label{sec:methods}
+
+The aforementioned 
+approaches to first-order 
+correction take the fitted nuisance estimate as given,
+and make adjustments to either the estimator 
+(one-step estimation~\eqref{eqn:debiased}) or the nuisance estimate 
+(targeting~\eqref{eqn:targeting}). 
+In this section, we propose 
+the \emph{constrained learning framework} to first-order 
+correction where we train the nuisance parameter to 
+be the best nuisance estimator subject to the \emph{constraint} that 
+the first-order error term~\eqref{eqn:taylor} is  zero. 
+
+Our method, which we call the C-Learner, is a general 
+method for adapting machine learning 
+models to explicitly consider the semiparametric nature of the 
+downstream task during training. 
+For one-step estimation and targeting, in the sections before, 
+we would use a fitted outcome model $\what\mu$ that minimizes the squared prediction loss (or equivalently maximizes likelihood, assuming outcomes are Gaussian), 
+with 
+\vspace{-0.3em}
+\begin{align}
+\label{eq:regular_outcome}
+\what{\mu} \in \argmin_{\wt{\mu} \in \mc{F}} P_{\rm train}[ A (Y - \wt{\mu}(X))^2],
+\end{align}
+where the loss minimization is performed over an auxiliary training data split $P_{\rm train}$ which may be separate from the main sample $(X_i, A_i, Y_i)_{i=1}^n$ on which estimators are calculated. Instead, the C-Learner solves the constrained optimization problem
+\vspace{-0.3em}
+\begin{align}
+\label{eq:c-learner}
+\what{\mu}^C
+&\in \argmin_{\wt\mu\in\mathcal F} \left\{
+P_{\rm train}[ A (Y - \wt{\mu}(X))^2] : 
+\frac{1}{n} \sum_{i=1}^n 
+\frac{A_i}{\what{\pi}(X_i)}
+(Y_i-\wt\mu(X_i))=0
+\right\}, 
+\\
+\what{\psi}^{\textrm {C-Learner}} 
+&:= 
+\frac{1}{n} \sum_{i=1}^n \what{\mu}^C(X_i)
+\label{eq:c-learner-est}
+\end{align}
+so that the constraint in Equation~\eqref{eq:c-learner} is applied to the same data used in the plug-in~\eqref{eq:c-learner-est}. 
+Observe that the first-order error term being 0 is a sort of balancing constraint: it forces the inverse propensity weighted plug-in $\frac{1}{n}\sum_{i=1}^n A_i\what \mu^C(X_i)/\what\pi(X_i)$ to equal the inverse propensity weighted estimator $\frac{1}{n}\sum_{i=1}^n A_iY_i/\what\pi(X_i)$ \citep{ding2023course}. 
+This constrained optimization is done over model class $\mathcal F$, which can be chosen to be suitable for the problem setting. 
+
+The constraint~\eqref{eq:c-learner}
+ ensures that the corresponding plug-in estimator \eqref{eq:c-learner-est} has a finite-sample estimate of the first-order error term~\eqref{eqn:taylor} of zero. 
+\looseness=-1 The training objective for $\what\mu^C$ thus optimizes for the best outcome model fit using the training data, subject to the constraint that the plug-in estimator is asymptotically optimal. In practice, there 
+are several computational approaches to (approximately) solve the  stochastic optimization problem~\eqref{eq:c-learner}
+depending on the function class $\mathcal F$. 
+In \cref{sec:methodology}, we describe how to instantiate C-Learner using linear models, gradient boosted regression trees, and neural networks. We empirically demonstrate these in \cref{sec:experiments}.
+
+Like other first-order correction methods, the C-Learner can be implemented with cross-fitting~\cite{ChernozhukovChDeDuHaNeRo18}, in which models (nuisance parameters) are evaluated on data splits that are separate from the data splits on which models are trained; we discuss data splitting further in \Cref{sec:data_splitting}. By virtue of being debiased, the C-Learner enjoys
+the same asymptotic properties as the AIPW and TMLE. See \Cref{sec:theory_text} for a formal treatment. 
+\begin{theorem}[Informal]
+The cross-fitted version of
+$\what{\psi}^{\textrm {C-Learner}}$ is semiparametrically efficient and doubly robust. 
+\end{theorem}
+\noindent Although we illustrate the C-Learner in the ATE setting for simplicity, %
+our approach generalizes to other estimands that are 
+continuous linear functionals of outcome $\mu$ (\cref{sec:extension}).
+
+

@@ -1,0 +1,432 @@
+\section{Proofs of Asymptotic Properties for C-Learner from \Cref{sec:theory_text}}
+\label{sec:theory_appendix}
+Here, we prove results in \cref{sec:theory_text}. 
+We show that C-Learner is semiparametrically efficient (\cref{sec:asymptotics}) and doubly robust (\cref{sec:double_robustness}), under assumptions in \cref{sec:theory_text}. 
+We also show that versions of one-step estimation methods (self-normalized AIPW) and targeting methods (TMLE with unbounded continuous outcomes) can satisfy these assumptions (\cref{sec:show_constant_shift}, \cref{sec:show_tmle}), so that semiparametric efficiency and double robustness hold for them immediately as well. 
+
+\subsection{Proof of Theorem~\ref{thm:asymp}}
+\label{sec:asymptotics}
+
+
+
+
+
+
+
+
+
+Our proof follows a standard argument. We first use the distributional Taylor expansion~\eqref{eq:taylor} to rewrite the estimation error $\what\psi_n^C-\psi$ as the sum of three terms. Then, we address these terms one by one, and we will show how only one of these terms contributes to asymptotic variance. 
+
+Let $Z=(X,A,Y)$ as defined in \cref{sec:ate}. Let $P$ denote the true population distribution of $Z$. 
+Let $\psi(P)=P[P[Y\mid X]]$ as in \Cref{sec:ate}.
+Functionals $\psi$ may admit a distributional Taylor expansion, also known as a von Mises expansion \citep{fernholz2012mises}, where for any distributions $P,\wb P$ on $Z$, we can write
+\begin{align}
+\label{eq:taylor}
+    \psi(\wb P)-\psi(P)=-\int \varphi(z;\wb P)dP(z)+R_2(\wb P, P)
+\end{align}
+where 
+$\varphi(z;P)$ which can be thought of as a ``gradient'' satisfying the directional derivative formula 
+$\frac{\partial}{\partial t}\psi(P+t(\wb P-P))\mid_{t=0}=\int \varphi(z;P)d(\wb P-P)(z)$. (W.l.o.g. we assume $\varphi(z;P)$ is centered so that
+$\int \varphi(z;P)dP(z)=0$.)
+Here, $-\int \varphi(z;\wb P)dP(z)$ is the first-order term, and $R_2(\wb P, P)$
+is the second-order remainder term, which only depends on products or squares of differences between $P,\wb P$.
+
+When $\psi$ is the ATE as in our setting, $\psi$ admits such an expansion (e.g. using Theorem 20.8 in \citet{VanDerVaart98}; $\psi(P)$ is Hadamard differentiable as it is linear in $P$. Also see \citep{Kennedy22} for a primer.).
+In such an expansion, $\varphi$ is as calculated in \citep{Hahn98} (also see \citep{Kennedy22}) as
+\begin{align}
+\label{eq:full_if}
+\varphi(Z;\wb P):=\frac{A}{\wb \pi(X)}(Y-\wb \mu(X))+\wb \mu(X)-\psi(\wb P),
+\end{align}
+where $\wb\pi(x):=\wb P[A=1\mid X]$
+and $\wb \mu(x):=\wb P[Y\mid A=1,X]$. In particular, we get the following explicit formula for the second-order term
+\begin{align}
+R_2(\wb P,P) := \int \pi(x) \left( \frac{1}{\wb\pi(x)} - \frac{1}{\pi(x)} \right) \left( \wb \mu (x) - \mu(x) \right) dP(x).
+\end{align}
+We will apply this to our C-Learner estimator as defined in \cref{sec:theory_text}. Recall that
+$\what \pi_{-k,n}$ is trained to predict treatment $A$ given $X$ using $P_{-k,n}$, and $\what \mu_{-k,n}^C$ is trained to predict outcome given $X$ and $A=1$ on $P_{-k,n}$, under the constraint that $P_{k,n}\left[\frac{A}{\what \pi_{-k,n}(X)}(Y-\what \mu_{-k,n}^C(X)\right]=0$.
+Our C-Learner estimator is the mean of plug-in estimators across folds: for each fold, write $\what\psi^C_{k,n}=\psi(\what P_{k,n}^C)$ so the C-Learner estimate is the average $\what\psi^C_n=\frac{1}{K}\sum_{k=1}^K \what\psi^C_{k,n}$. 
+
+
+Noting that any distribution decomposes $\wb{P}=\wb{P}_X\times \wb{P}_{A\mid X}\times \wb{P}_{Y\mid A,X}$ and $\psi(\wb{P})=\wb{P}_X[\mu(X)]$, the following definitions
+\begin{align*}
+\what P^C_{X;k,n}&:=P_{X;k,n} \\
+\what P^C_{A\mid X ;k,n}[A=1\mid X=x]&:=\what \pi_{-k,n}(x) \\ 
+\what P^C_{Y\mid A,X ;k,n}[Y\mid A=1, X=x]&:=\what \mu_{-k,n}^C(x)
+\end{align*}
+provide a well-defined joint distribution  $\what P^C_{k,n}$.
+
+For each data fold $k$, we use the distributional Taylor expansion above, where we replace $\wb P$ with the joint distribution $\what P^C_{k,n}$
+\begin{align}
+\label{eq:taylor_c_learner}
+\psi(\what P^C_{k,n}) - \psi(P) &= - P \varphi(Z;\what P^C_{k,n}) + R_2(\what P^C_{k,n},P) \nonumber\\ 
+&= (P_{k,n}-P)\varphi(Z;P)\nonumber
+-P_{k,n} \varphi(Z;\what P^C_{k,n})
+\\&\quad  +(P_{k,n}-P)
+(\varphi(Z;\what P^C_{k,n})-\varphi(Z;P))
++R_2(\what P^C_{k,n},P). 
+\end{align}
+Observe that by using Equation~\eqref{eq:full_if} and the definition of the C-Learner,
+\begin{align*}
+    P_{k,n}\varphi(Z;\what P^C_{k,n})
+&=P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\what \mu^C_{-k,n}(X))+\what\mu^C_{-k,n}(X)-\psi(\what P^C_{k,n})\right]
+\\&=\underbrace{P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\what \mu^C_{-k,n}(X))\right]}_{=0 \text{ by C-Learner constraint}}
++\underbrace{P_{k,n}[\what\mu^C_{-k,n}]-P_{k,n}[\what\mu^C_{-k,n}]}_{=0}=0.
+\end{align*}
+Taking the average of Equation~\eqref{eq:taylor_c_learner} over $k=1,\ldots,K$,
+we can write the error $\what\psi^C_n-\psi$ as the sum of three terms.
+    \begin{align}   
+     \what \psi^C_{n} - \psi  
+    & = \frac{1}{K}\sum_{k=1}^K\underbrace{(P_{k,n}-P)\varphi(Z;P)}_{S^*_k} \nonumber \\
+    &  \qquad + \frac{1}{K}\sum_{k=1}^K\underbrace{(P_{k,n}-P) \left(\varphi(Z;\what P^C_{k,n})-\varphi(Z;P)\right)}_{T_{1k}} + \frac{1}{K}\sum_{k=1}^K\underbrace{R_2(\what P^C_{k,n},P)}_{T_{2k}}. \label{eq:S+T1+T2}
+\end{align}
+Using the decomposition~\eqref{eq:S+T1+T2}, we write 
+\begin{align}
+S^*=\frac{1}{K}\sum_{k=1}^K S^*_k,  \hspace{1em}
+T_1=\frac{1}{K}\sum_{k=1}^K T_{1k},  \hspace{1em}
+T_2=\frac{1}{K}\sum_{k=1}^K T_{2k},
+\end{align}
+so that
+$\what \psi^C_{n} - \psi = S^* + T_1 + T_2$.
+We address the terms $S^*,T_1$ and $T_2$ separately. The first term can be rewritten as
+$$
+S^* = \frac{1}{K}\sum_{i=1}^K (P_{k,n}-P)\varphi(Z;P) = (P_n-P)\varphi(Z;P)
+$$
+so that by the central limit theorem, 
+$$
+\sqrt{n}S^* \cd {N}\left(0, \var_P(\varphi(Z;P))\right).
+$$ 
+Observe that this quantity depends only on $\psi$ and $P$, so that it cannot be made smaller by choice of estimator. 
+If the variance of an estimator for $\psi$ is $\var_P(\varphi(Z;P))$, then it is semiparametrically efficient in the local asymptotic minimax sense (Theorem 25.21 of \cite{van2000asymptotic}). 
+Thus,  it suffices to show that the rest of the terms, $T_1$ and $T_2$, are $o_P(n^{-1/2})$, so that
+$$
+\sqrt{n}(\what \psi^C_n - \psi)=\sqrt{n} S^*+o_P(1)\cd {N}\left(0, \var_P (\varphi(Z;P))\right)
+.$$
+For a fixed $k$,
+$|T_{1k}|=o_P(n^{-1/2})$ 
+by Assumption~\ref{ass:empirical_proc_mean}
+so that $|T_1|=o_P(n^{-1/2})$ as desired. 
+The second-order remainder term in the distributional Taylor expansion \eqref{eq:taylor} where
+we replace $\wb P$ with $\what{P}^C_{k,n}$
+is
+$$
+T_{2k} = \int \pi(x) \left( \frac{1}{\what\pi_{-k,n}(x)} - \frac{1}{\pi(x)} \right) \left( \what\mu^C_{-k,n}(x) - \mu(x) \right) \, dP(x)
+.$$
+Under the overlap assumption (Assumption~\ref{ass:overlap}) and  Cauchy-Schwarz, 
+\begin{align}
+    |T_{2k}| &\leq \frac{1}{\eta} \int \left| \what\pi_{-k,n}(x) - \pi(x) \right| \left| \what\mu^C_{-k,n}(x) - \mu(x) \right| \, dP(x) \nonumber \\
+    &\leq \frac{1}{\eta} \left\|\what \pi_{-k,n} -\pi\right\|_{L_2(P)} \left\|\what \mu^C_{-k,n} - \mu\right\|_{L_2(P)}. \label{eq:T2_cauchy_schwarz}
+\end{align}
+By Assumption~\ref{ass:consistency},
+$|T_{2k}|=o_P(n^{-1/2})$
+so that 
+$|T_{2}|=o_P(n^{-1/2})$ as desired. 
+
+
+
+
+
+\subsection{Proof of Theorem~\ref{thm:dr}}
+\label{sec:double_robustness}
+We briefly sketch the proof as it is a minor modification of our previous proof in \cref{sec:asymptotics}.  To show the C-Learner estimator 
+$\what\psi^C_n$ 
+is consistent (rather than that our estimator has the desired asymptotics) under Assumption~\ref{ass:risk_decay} (rather than Assumption~\ref{ass:consistency}), we  again rewrite the error $\what\psi_n^C-\psi$ as a sum of three terms and show  each converges to 0 in probability: 
+\begin{itemize}
+    \item $S^*$: This term converges to 0 in probability. 
+    \item $T_{2k}$: This also converges to 0 in probability by the same logic as before. Note we only need this to be $o_P(1)$ and not $o_P(n^{-1/2})$ as we would have required for efficiency. 
+    \item $T_{1k}$: This converges to 0 in probability by Assumption~\ref{ass:empirical_proc_mean}. 
+\end{itemize}
+
+\subsection{Showing Self-Normalized AIPW and TMLE Satisfy C-Learner Conditions for Theorems~\ref{thm:asymp} and \ref{thm:dr}}
+\label{sec:show_for_aipw_tmle}
+
+As self-normalized AIPW and TMLE involve simple adjustments to the unconstrained outcome models, 
+in this section, we state assumptions on the \emph{unconstrained} outcome model
+$\what{\mu}_{-k, n}$, fitted in the usual manner on the auxiliary fold $P_{-k, n}$
+\begin{equation*}
+  \what{\mu}_{-k, n} \in \argmin_{\wt{\mu} \in \mc{F}} 
+  P_{-k, n}[ A (Y - \wt{\mu}(X))^2],
+\end{equation*}
+and also assumptions on the gap between the constrained and unconstrained outcome models. Also in this section, we show how these aforementioned assumptions satisfy the C-Learner assumptions required for Theorems~\ref{thm:asymp} and \ref{thm:dr}. 
+
+Then in the following sections, we show how
+self-normalized AIPW and TMLE satisfy the assumptions stated in this section on the gap between the constrained and unconstrained outcome models. 
+ 
+\paragraph{Unconstrained Outcome Models}
+The following assumption on unconstrained outcome models is analogous to Assumption~\ref{ass:consistency}. This assumption is standard. 
+\begin{assumption}[Convergence rates of propensity and \emph{unconstrained} outcome models]
+\label{ass:consistency_unconstrained}
+For all~$k=1,\ldots,K$,
+    $$
+    \|\what\pi_{-k,n} - \pi\|_{L_2(P)}=o_P(n^{-\frac{1}{4}}), \quad  \|\what\mu_{-k,n}^C - \mu\|_{L_2(P)}=o_P(n^{-\frac{1}{4}}).
+    $$
+\end{assumption}
+
+\paragraph{Distance Between Constrained and Unconstrained Outcome Models}
+These assumptions essentially ensure that the first-order constraint~\eqref{eq:constraint} does not change the outcome model too much asymptotically, i.e., $\what{\mu}^C_{-k,n}$ and $\what{\mu}_{-k,n}$ are similar asymptotically. 
+This first constraint is used to show
+Assumption~\ref{ass:consistency}:
+\begin{assumption}[The constraint is negligible asymptotically] For all $k$ = 1, \ldots, K,
+\label{ass:muC_vs_mu}
+$$\|\what\mu^C_{-k,n}-\what\mu_{-k,n}\|_{L_2(P)}=o_P(n^{-1/4}).$$
+\end{assumption}
+Notably, the distance between the constrained solution $\what\mu^C_{-k,n}$ and its unconstrained counterpart $\what\mu_{-k,n}$ can be as large as that between $\what\mu_{-k,n}$ and the true parameter $\mu$, asymptotically.
+
+This next assumption is used to show Assumption~\ref{ass:empirical_proc_mean}:
+\begin{assumption}[Empirical process assumption on $\what\mu^C_{-k,n}$ vs $\what\mu_{-k,n}$]
+\label{ass:empirical_proc_mean_diff}\
+$$(P_{k,n}-P)(  \what\mu_{-k,n}^C(X)- \what\mu_{-k,n}(X)) =o_P(n^{-1/2}).$$
+\end{assumption}
+Given these assumptions, we show the C-Learner assumptions hold. 
+\begin{proposition}[C-Learner conditions hold, given assumptions on unconstrained outcome models and the gap between constrained and unconstrained models]\
+\label{prop:translate}
+
+Assume Assumptions~\ref{ass:overlap}, 
+\ref{ass:bounded_outcomes},
+\ref{ass:consistency_unconstrained},
+and \ref{ass:empirical_proc_mean_diff}.
+Then Assumptions~\ref{ass:overlap}, 
+\ref{ass:bounded_outcomes},
+\ref{ass:consistency}, \ref{ass:empirical_proc_mean}
+are satisfied. 
+\end{proposition}
+To show this proposition, it suffices to show Assumptions~\ref{ass:consistency} and \ref{ass:empirical_proc_mean}. We will show these assumptions in the rest of this section.
+\paragraph{Showing  Assumption~\ref{ass:consistency}}
+By the triangle inequality, 
+\begin{align}
+    \|\what \mu^C_{-k,n}-\mu\|_{L_2(P)} &\leq \|\what \mu_{-k,n}-\mu\|_{L_2(P)} + \|\what \mu^C_{-k,n}-\what\mu_{-k,n} \|_{L_2(P)}
+.\end{align}
+
+\paragraph{Showing  Assumption~\ref{ass:empirical_proc_mean}}
+Applying the triangle inequality again yields
+\begin{align}
+|T_{1k}|&:=\left|(P_{k,n}-P)\left(\varphi(Z;\what P_{k,n}^C) -\varphi(Z; P)\right)\right| \nonumber
+\\&\leq \left| (P_{k,n}-P)\left( \varphi(Z;\what P_{k,n}^C) -\varphi(Z; \what P_{-k,n}) \right) \right| + 
+ \left| (P_{k,n}-P)\left( \varphi(Z; \what P_{-k,n}) -\varphi(Z; P) \right) \right|
+ \label{eq:T1k_bound}
+\end{align}
+where $\what P_{k,n}$ is defined as
+\begin{align*}
+\what P_{X ; k,n}&:=P_{X;k,n}\\ 
+\what P_{A\mid X ; k,n}[A=1\mid X=x]&:=\what \pi_{-k,n}(x) \\ 
+\what P_{Y\mid A,X ; k,n}[Y\mid A=1, X=x]&:=\what \mu_{-k,n}(x)
+\end{align*}
+with $\what \pi_{-k,n},\what \mu_{-k,n}$ 
+as defined in \cref{sec:theory_text},
+and $\what P_{k,n}^C$ is defined as in \cref{sec:theory_text}. 
+The second term in~\eqref{eq:T1k_bound} is addressed 
+using a standard argument for cross-fitting, as $P_{k,n}$ and $\what P_{-k,n}$ (and therefore $\varphi(Z;\what P_{-k,n})$) use disjoint data. In contrast, the first term is not handled by standard cross-fitting arguments: $\what P_{-k,n}$ only uses data from all but the $k$-th fold, while $\what P^C_{k,n}$ uses the $k$-th fold, except that $\what \mu^C_{-k,n}$ is made to satisfy a constraint that \emph{does} use the $k$-th fold, as described in \cref{sec:theory_text}. We begin by addressing the second term, which is more standard. %
+
+\begin{lemma}[Cross-fitting lemma]
+\label{lem:cross_fitting}
+Let $\what{f}(z)$ be a function estimated from an iid sample $Z^N=$ $\left(Z_{n+1}, \ldots, Z_N\right)$, and let ${P}_n$ denote the empirical measure over $\left(Z_1, \ldots, Z_n\right)$, which is independent of $Z^N$. Let $f$ be the function estimated from the full distribution $P$. Then (omitting arguments for brevity)
+$
+\left({P}_n-{P}\right)(\what{f}-f)$
+has zero $P$-expectation, and $P$-variance upper bounded by
+$\frac{1}{n}\|\what{f}-f\|_{L_2(P)}^2.$
+\end{lemma}
+\begin{proof}
+First note that the conditional mean is 0, i.e. $P\left[(P_n-P)(\what f-f )\mid Z^N\right]=0$ since
+$$
+P\left[{P}_n(\what{f}-f) \mid Z^N\right]=P\left(\what{f}-f \mid Z^N\right)={P}(\what{f}-f) .
+$$
+The conditional variance is
+\begin{align*}
+    \var_P\left\{\left({P}_n-{P}\right)(\what{f}-f) \mid Z^N\right\} &=\var_P\left\{{P}_n(\what{f}-f) \mid Z^N\right\}\\
+    &=\frac{1}{n} \var_P\left(\what{f}-f \mid Z^N\right) \\
+    &\leq \frac{1}{n}\|\what{f}-f\|_{L_2(P)}^2.
+\end{align*}
+Then for (unconditional) mean and variance, $P\left[(P_n-P)(\what f-f)\right]=0$ and
+\begin{align*}
+&\var_P\left\{(P_n-P)(\what f-f)\right\} \\
+&= 
+\var_P \left\{P\left[(P_n-P)(\what f-f)\mid Z^N\right]  \right\}  
++P\left[\var_P\left\{(P_n-P)(\what f-f)\mid Z^N\right\}\right]
+\\
+&\leq 0+\frac{1}{n}\|\what{f}-f\|_{L_2(P)}^2.
+\end{align*}
+\end{proof}
+Now we show the second term in the RHS in Equation~\eqref{eq:T1k_bound} is $o_P(n^{-1/2})$. To do this, write
+\begin{align}
+\varphi(Z;P)&=\frac{A}{\pi(X)}(Y-\mu(X))+\mu(X)-\psi(P)\\
+\varphi(Z;\what{P}_{-k,n})&=\frac{A}{\what\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))+\what\mu_{-k,n}(X)-\psi(\what{P}_{-k,n})    
+.\end{align}
+Observe that $(P_{k,n}-P)\psi(P)=(P_{k,n}-P)\psi(\what {P}_{-k,n})=0$ as $\psi(P),\psi(\what P_{-k,n})$ are constants.
+Thus, 
+it remains to show that for a fixed $k$,
+$(P_{k,n}-P)( \what f_{k,n} - f)=o_P(n^{-1/2})$, 
+where we omit arguments for brevity and let 
+\begin{align}
+\label{eq:def_f_in_emp_proc}
+    \what f_{k,n} &= \frac{A}{\what \pi_{-k,n}}(Y-\what \mu_{-k,n})+\mu_{-k,n}, \\
+    f &= \frac{A}{\pi}(Y-\mu) +\mu.
+\end{align}
+We do this by using Lemma~\ref{lem:cross_fitting}. 
+Observe that
+\begin{align}
+\label{eq:second_term_t1}
+    \what f_{k,n} - f =\left(1+\frac{A}{\pi}\right)(\mu-\what\mu_{-k,n})
+    +\frac{A}{\what\pi_{-k,n}\cdot  \pi} (Y-\what\mu_{-k,n})(\pi-\what\pi_{-k,n}).
+\end{align}
+Then using Assumption~\ref{ass:overlap},
+\begin{align}
+\label{eq:T1_f_both}
+    \|\what f_{k,n} - f\|_{L_2(P)}
+    &\leq 
+    \left(1+\frac{1}{\eta}\right) \|\what\mu_{-k,n}- \mu\|_{L_2(P)}
+    +\frac{1}{\eta^2} \| A(Y-\what\mu_{-k,n})\|_{L_2(P)} \|\pi-\what\pi_{-k,n}\|_{L_2(P)}.
+\end{align}
+The leftmost term on the RHS converges to 0,  
+using Assumption~\ref{ass:consistency_unconstrained}. 
+Note that we can bound the rightmost term using the triangle inequality
+\begin{align}
+\label{eq:T1_f_second}
+    \left(1+\frac{1}{\eta^2}\right) \left(\| A(Y-\mu)\|_{L_2(P)} +  \| \mu - \what\mu_{-k,n}\|_{L_2(P)} \right) \|\pi-\what\pi_{-k,n}\|_{L_2(P)},
+\end{align}
+which also converges to 0 by %
+Assumption~\ref{ass:consistency_unconstrained}
+and Assumption~\ref{ass:bounded_outcomes}. 
+Thus combining with Lemma~\ref{lem:cross_fitting} we obtain that the second term on the RHS of Equation~\eqref{eq:T1k_bound} is $o_P(n^{-1/2})$,
+as $n^{1/2}(P_{k,n}-P)( \what f_{k,n} - f)$ has mean 0 and variance $\leq \|\what f_{k,n} - f\|_{L_2(P)}$ which converges to 0 as $n\to\infty$.
+
+Now we address the remaining term: we show the first term on the RHS of Equation~\eqref{eq:T1k_bound} is $o_P(n^{-1/2})$. We use a similar argument to before: 
+let $\what f_{k,n}$ be as before, and $\what f^C_{k,n}$ as below:
+\begin{align}
+    \what f_{k,n} &:= \frac{A}{\what \pi_{-k,n}}(Y-\what \mu_{-k,n})+\what \mu_{-k,n}\\
+    \what f^C_{k,n} &:= \frac{A}{\what \pi_{-k,n}}(Y-\what \mu_{-k,n}^C)+\what \mu_{-k,n}^C
+\end{align}
+where we again omit the $\psi(\what P^C_{-k,n}),\psi(\what P_{-k,n})$ terms in 
+$\varphi(\what P_{k,n}^C),\varphi(\what P_{k,n})$
+from $\what f^C_{k,n},\what f_{k,n}$ 
+above as they are constants. 
+We can't use Lemma~\ref{lem:cross_fitting}
+since $\what f^C_{k,n}$ also uses $P_{k,n}$ to fit, so instead, by 
+using Assumptions \ref{ass:overlap} and then \ref{ass:empirical_proc_mean_diff},
+\begin{align}
+    (P_{k,n}-P)
+\left(\varphi(Z;\what P^C_{k,n})-\varphi(Z;\what P_{k,n})\right)
+&=
+(P_{k,n}-P)\left(\what f^C_{k,n}-\what f_{k,n}\right)
+\\&\leq \left(1+\frac{1}{\eta}\right)(P_{k,n}-P)(\what\mu^C_{-k,n}(X)-\what\mu_{-k,n}(X))\\&=o_P(n^{-1/2}).
+\end{align}
+
+
+\subsection{Self-Normalized AIPW Satisfies Assumptions~\ref{ass:muC_vs_mu} and \ref{ass:empirical_proc_mean_diff}}
+\label{sec:show_constant_shift}
+Recall that we showed how self-normalized AIPW also satisfies the C-Learner formulation in \cref{sec:other_methods}. 
+Here we show that Assumptions~\ref{ass:muC_vs_mu} and \ref{ass:empirical_proc_mean_diff} hold for self-normalized 
+AIPW, so that Theorems~\ref{thm:asymp} and \ref{thm:dr} follow through Proposition~\ref{prop:translate}. 
+
+
+
+As in the discussion in \cref{sec:other_methods}, self-normalized AIPW is equivalent to the specific C-Learner $\what\mu^C_{-k,n}$ that is defined by adjusting $\what\mu_{-k,n}$ by an additive constant:
+$$\what\mu^C_{-k,n}(x)=\what\mu_{-k,n}(x)+c_{k,n}\;\text{ where }\;c_{k,n}:=\frac{P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))\right]}{P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}\right]}.$$
+
+\paragraph{Showing Assumption~\ref{ass:muC_vs_mu}:}
+Since $\what\mu_{-k,n}^C$
+is just a constant offset from $\what\mu_{-k,n}$, it suffices to show 
+that $c_{k,n}=o_P(n^{-1/4})$, for a fixed $k$. 
+
+First, we address the denominator of $c_{k,n}$. Let
+$c_{k,n}^{\rm den}:=P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}\right]$ 
+and we will show $1/c_{k,n}^{\rm den}=O_P(1)$. 
+First note $c_{k,n}^{\rm den}=P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}\right] \geq P_{k,n}[A]$. %
+Then observe that $P_{k,n}[A]\overset{p}{\to} P[A]$, and that $1/P_{k,n}[A]<\infty$ a.s. for large enough $n$ by Borel-Cantelli lemma (as the probability of the event that $P_{k,n}[A]=0$ is finitely-summable, as $P(A=0)<1$ by the overlap assumption (Assumption~\ref{ass:overlap}). %
+Then $1/P_{k,n}[A]\overset{p}{\to} 1/P[A]$ for large enough $n$, 
+so that $1/P_{k,n}[A]=O_P(1)$. %
+
+Now we address the numerator of $c_{k,n}$. 
+For brevity, call this $c_{k,n}^{\text{num}}$.
+\begin{align}
+c_{k,n}^{\text{num}} &=    P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))\right] 
+\\&= P\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))\right] 
++(P_{k,n}-P)\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))\right]
+\\&= \underbrace{P\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\mu(X))\right]}_{=0}
++P\left[\frac{A}{\what\pi_{-k,n}(X)}(\mu(X)-\what\mu_{-k,n}(X))\right]\\&\quad 
++(P_{k,n}-P)\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))\right]\nonumber
+\\&=P\left[\frac{A}{\what\pi_{-k,n}(X)}(\mu(X)-\what\mu_{-k,n}(X))\right]
++(P_{k,n}-P)\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))\right]
+\end{align}
+so that
+\begin{align}
+    |c_{k,n}^{\rm num}| & \leq %
+    \frac{1}{\eta} P\left|\mu(X)-\what\mu_{-k,n}(X)\right|
+    +\frac{1}{\eta} (P_{k,n}-P)\left|Y-\what\mu_{-k,n}(X)\right|
+\end{align}
+where the inequality is by the overlap assumption (Assumption~\ref{ass:overlap}) as $A/\what\pi_{-k,n}(X)\leq 1/\eta$. 
+We show the terms in the last line are all $o_P(n^{-1/4})$. 
+The first term is upper bounded by $\frac{1}{\eta} \|\what\mu_{-k,n}(X)-\mu(X)\|_{L_2(P)}=o_P(n^{-1/4})$ by Assumption~\ref{ass:consistency_unconstrained}. 
+For the second term, 
+we use Lemma~\ref{lem:cross_fitting} to show
+$n^{1/4}(P_{k,n}-P)|Y-\what\mu_{-k,n}(X)|\overset{p}{\to}0$:
+it has mean of 0 and variance
+$\leq \frac{n^{1/2}}{n}\|Y-\what\mu_{-k,n}\|_{L_2(P)}$. 
+This upper bound on variance goes to 0, %
+which follows from Assumptions~\ref{ass:consistency_unconstrained} and \ref{ass:bounded_outcomes}:
+\begin{align*}
+    \|Y-\what\mu_{-k,n}\|_{L_2(P)} &\leq \|Y-\mu\|_{L_2(P)} + \|A(\mu-\what\mu_{-k,n})\|_{L_2(P)} \\
+    &\leq B + \|\mu-\what\mu_{-k,n}\|_{L_2(P)} \\
+    &= B + o_P(n^{-1/4}).
+\end{align*}
+We arrive at the desired result $c_{k,n}=o_P(n^{-1/4})$ as 
+$c_{k,n}=c_{k,n}^{\rm num}/c_{k,n}^{\rm den}$, and we just showed that 
+$1/c_{k,n}^{\rm den}=O_P(1)$ and 
+$c_{k,n}^{\rm num}=o_P(n^{-1/4})$. 
+Note that we have shown Assumption~\ref{ass:muC_vs_mu} for any sequence of $\what\pi_{-k,n}$'s, as they are bounded by a constant. 
+
+
+\paragraph{Showing Assumption~\ref{ass:empirical_proc_mean_diff}:}
+To show $(P_{k,n}-P)(  \what\mu_{-k,n}^C(X)- \what\mu_{-k,n}(X)) =o_P(n^{-1/2})$, 
+in the case of the constant shift $\what\mu^C(X)=\what\mu(X)+c_{k,n}$, 
+note that  $\what \mu^C_{-k,n}(X)-\what \mu_{-k,n}(X) = c_{k,n}$ for every $X$. Therefore, $$
+(P_{k,n}-P)(  \what\mu_{-k,n}^C(X)- \what\mu_{-k,n}(X)) = (P_{k,n}-P)c_{k,n} = 0,
+$$
+with $c_{k,n} < \infty$ a.s. for large enough $n$ (which exists by Borel-Cantelli lemma, as in when we showed Assumption~\ref{ass:muC_vs_mu}). 
+
+
+
+\subsection{TMLE Satisfies Assumptions~\ref{ass:muC_vs_mu} and \ref{ass:empirical_proc_mean_diff}}
+\label{sec:show_tmle}
+Recall that we showed how a version of the TMLE for estimating the ATE with continuous unbounded outcomes also satisfies the C-Learner formulation in \cref{sec:other_methods}. 
+Here we show that a cross-fitted version of the TMLE for estimating the ATE with continuous unbounded outcomes additionally satisfies Assumptions~\ref{ass:muC_vs_mu} and \ref{ass:empirical_proc_mean_diff}, so that Theorems~\ref{thm:asymp} and \ref{thm:dr} follow through Proposition~\ref{prop:translate}. 
+Note that the formulation below fits a separate $\epsilon^\star_{k,n}$ per cross-fitting split for consistency with C-Learner, rather than one $\epsilon^\star$ overall as described in the cross-validated version of TMLE in \citep{VanDerLaanRo11}. 
+$$
+\what \mu^{C}_{-k,n}(X) = \what \mu_{-k,n}(X) + \epsilon^\star_{k,n}\frac{A}{\what \pi_{-k,n}(X)}, \; \text{ where } \epsilon^\star_{k,n} = \frac{P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))\right]}{P_{k,n}\left[\frac{A}{\what\pi_{-k,n}^2(X)}\right]}.
+$$
+\paragraph{Showing Assumption~\ref{ass:muC_vs_mu}:}
+Observe that by Assumption~\ref{ass:overlap}
+$$
+\left\|\epsilon_{k,n}^\star\frac{A}{\what\pi_{-k,n}(X)}\right\|_{L_2(P)} \leq \frac{1}{\eta}\|\epsilon_{k,n}^\star\|_{L_2(P)}
+$$
+so it suffices to show that $\epsilon_{k,n}^\star=o_P(n^{-1/4})$.
+Note that since $\what\pi_{-k,n}(x) \leq 1$ for all $x$,
+\begin{align}
+\label{eq:eps}    
+|\epsilon_{k,n}^\star| \leq %
+\frac{P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}(Y-\what\mu_{-k,n}(X))\right]}{P_{k,n}\left[\frac{A}{\what\pi_{-k,n}(X)}\right]}
+\leq |c_{k,n}|
+\end{align}
+where $c_{k,n}$ is the constant adjustment in \cref{sec:show_constant_shift}, 
+so that $\epsilon^\star_{k,n}=o_P(n^{-1/4})$. 
+
+
+\paragraph{Showing Assumption~\ref{ass:empirical_proc_mean_diff}:}
+We want to show
+$$
+(P_{k,n}-P)(  \what\mu_{-k,n}^\star(X)- \what\mu_{-k,n}(X)) = 
+(P_{k,n}-P) \left(\epsilon^\star_{k,n}\frac{A}{\what \pi_{-k,n}(X)}\right) = o_P(n^{-1/2}).
+$$
+Note that
+$$(P_{k,n}-P) \left(\epsilon^\star_{k,n}\frac{A}{\what \pi_{-k,n}(X)}\right)
+=\epsilon^\star_{k,n}(P_{k,n}-P)
+\left(\frac{A}{\what \pi_{-k,n}(X)}\right)
+$$
+and that $(P_{k,n}-P)
+\left(\frac{A}{\what \pi_{-k,n}(X)}\right)=O_P(n^{-1/2})$ by Lemma~\ref{lem:cross_fitting},
+since $|A/\what\pi_{-k,n}(X)|\leq 1/\eta$ a.s. by Assumption~\ref{ass:overlap}. 
+Additionally, $\epsilon^\star_{k,n}=o_P(n^{-1/4})$, by the argument above where we showed  Assumption~\ref{ass:muC_vs_mu}. 
+The desired result follows by taking the product of the rates for $\epsilon^\star_{k,n}$ and $(P_{k,n}-P)
+\left(\frac{A}{\what \pi_{-k,n}(X)}\right)$. %
+
+
+
+

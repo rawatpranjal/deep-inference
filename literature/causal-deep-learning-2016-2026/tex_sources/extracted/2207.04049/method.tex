@@ -1,0 +1,148 @@
+
+\section{The Proposed Framework}
+\begin{figure*}[t]
+\centering
+     \includegraphics[width=.98\textwidth,height=1.3in]{figs/framework_cropped.pdf}
+     \vspace{-0.15in}
+      \caption{An illustration of the proposed framework \mymodel, which includes three key components:  confounder representation learning, interference modeling, and outcome prediction. %Here we mainly focus on a node $i$ as an example for illustration. %The upper part describes the three main components in \mymodel, including confounder representation learning, interference modeling, and outcome prediction. The lower part depicts more details of the hypergraph module in interference modeling component.
+      }
+      \vspace{-0.1in}
+       \label{fig:model}
+\end{figure*}
+
+
+\begin{figure}[t]
+\centering
+     \includegraphics[width=.48\textwidth,height=1.3in]{figs/framework_hyper.pdf}
+     \vspace{-0.2in}
+      \caption{A detailed illustration of the hypergraph module in the interference modeling component of \mymodel. Here we use the node $v_1$ (highlighted in yellow) as an example.
+      }
+     \vspace{-0.05in}
+       \label{fig:model_hyper}
+\end{figure}
+
+Inspired by the previous theoretical analysis, we propose a novel framework \mymodel~to address the studied problem. This framework contains three components: confounder representation learning, interference modeling, and outcome prediction.
+Holistically, we aim to learn an expressive transformation to summarize high-order interferences (Assumption~\ref{assumption:summary}), then take the interference representation, the confounder representation as well as the treatment assignment to estimate the expected potential outcome (Assumption~\ref{assumption:unconfoundeness}).
+The illustration of \mymodel~ is shown in Fig.~\ref{fig:model}.
+
+\subsection{Confounder Representation Learning}
+We first encode the node features $\textbf{x}_i$ into a latent space via a multilayer perceptron (MLP) module, i.e., $\mathbf{z}_i=\text{MLP}(\mathbf{x}_i)$. This results in a set of representations $\mathbf{Z}=\{\mathbf{z}_i\}_{i=1}^n$, which is expected to capture all potential confounders, so the model can mitigate the confounding biases by controlling for the learned representation $\mathbf{z}_i$.
+%with a transformation function $g(\textbf{x})$. We implement the function $g(\textbf{x})$ with a multilayer perceptron (MLP) module. For each node with input feature $\textbf{x}_i$, we learn its confounder representation as $\mathbf{z}_i=g(\mathbf{x}_i)$. $\mathbf{z}_i$ is expected to capture all the confounders, so the model can mitigate the confounding biases by controlling for the learned representation $\mathbf{z}_i$ for any node $i$. We denote $\mathbf{Z}=\{\mathbf{z}_i\}_{i=1}^n$.  
+
+\paragraph{Representation Balancing.} Note a discrepancy may exist between the distributions of confounder representation $\mathbf{Z}$ in the treatment group and the control group, incurring biases in causal effect estimation, as shown in \cite{CFR,yao2018representation}. To minimize this discrepancy, we leverage the representation balancing technique by adding a discrepancy penalty to the loss function, where this discrepancy penalty can be calculated with any distribution distance metrics. In our implementation, we use the Wasserstein-1 distance \cite{CFR} between the representation distributions of treatment group and control group. 
+%The distributions of learned representations of confounders in treatment group and control group may have discrepancy. Such discrepancy may incur biases to causal effect estimation results. Existing works \cite{CFR} have theoretically proved that minimizing the distance between the confounder representation distributions of treatment group and control group can help mitigate the biases in causal effect estimation. In this work, we use a representation balancing technique by adding the Wasserstein-1 distance \cite{CFR} between the representation distributions of treatment group and control group into the loss function. 
+
+%we employ representation balancing techniques \cite{CFR} at each time period by adding a distribution balancing constraint $\mathscr{L}_b$, which is the Wasserstein-1 distance \cite{CFR} of the representation distributions between the treatment group and control group. Minimizing the constraint can encourage the representation distributions of these two groups to be closer, and has been proved to benefit the causal effect estimation~\cite{CFR}.
+
+\vspace{-2mm}
+\subsection{Interference Modeling}
+In this interference modeling component, we take the 
+% To model the high-order interference among nodes in the hypergraph and achieve better ITE estimation performance, we develop an interference modeling module.   
+% In the interference modeling module, we take the 
+confounder representation ($\textbf{Z}$), the treatment assignment ($\mathbf{T}$), and the relational information on the hypergraph ($\textbf{H}=\{h_{i,e}\}$) as input, to capture the high-order interference for each individual. 
+More specifically, we learn a transformation function $\Psi(\cdot)$ through a hypergraph module to generate the interference representations ($\mathbf{p}_i$) for each node $i$, i.e.,
+$\mathbf{p}_i=\Psi(\mathbf{Z}, \mathbf{H}, \mathbf{T}_{-i}, t_i)$. As shown in Fig.~\ref{fig:model_hyper}, this module is implemented with a hypergraph convolutional network \cite{yadati2018hypergcn,bai2021hypergraph} and a hypergraph attention mechanism \cite{bai2021hypergraph,zhang2019hyper,ding2020more}, where the convolutional operator forms the skeleton of interference from hyperedges, and the attention operator enhances this mechanism by allowing flexible node contributions to each hyperedge. %$\mathbf{p}_i^{1}=\Psi(\mathbf{Z}, \mathcal{H}, \mathbf{T}_{-i}, T_i=1)_i$ and $\mathbf{p}_i^{0}=\Psi(\mathbf{Z}, \mathcal{H}, \mathbf{T}_{-i}, T_i=0)_i$ corresponding to $T_i=1$ and $T_i=0$, respectively. 
+%\footnote{In this paper, we use non-bold, italicized, and capitalized letters to denote random variables.} 
+%We implement the function $\Psi(\cdot)$ with a hypergraph module, where this module learns  representations for each node. 
+
+\vspace{-2mm}
+% \subsubsection{Modeling High-order Interference in Hyperedges}
+\paragraph{Learning interference representations.}
+%\paragraph{Convolutions across hyperedges.}
+%In the hypergraph module, %we %use the confounder representation $\mathbf{z}_i$ for each node $i$ with two treatment assignment: $T_i\mathbf{z}_i$, where $T_i=1$ and $T_i=0$, respectively, 
+%take the input features of each node based on the learned confounder representations. 
+%We implement this hypergraph module with different hypergraph neural networks, including hypergraph convolutional network \cite{yadati2018hypergcn,bai2021hypergraph} and hypergraph attention network \cite{bai2021hypergraph,zhang2019hyper,ding2020more}.
+To learn the representations which encode the interference in the hypergraph for each node, we propagate the treatment assignment and confounder representations with a hypergraph convoluntional layer. 
+We first introduce a vanilla Laplacian matrix for the hypergraph $\mathcal{H}$:
+\begin{equation}
+\label{eq:laplacian}
+    \mathbf{L} = \mathbf{D}^{-1/2}\mathbf{HB}^{-1}\mathbf{H}^\top\mathbf{D}^{-1/2}.
+\end{equation}
+Here $\mathbf{D}\in \mathbb{R}^{n\times n}$ is a diagonal matrix where each element represents the node degree (i.e., $\sum_{e=1}^m h_{i,e}$). $\mathbf{B}\in \mathbb{R}^{m\times m}$ is another diagonal matrix, where each element is the size of each hyperedge ($\sum_{i=1}^n h_{i,e}$).
+Then we can define the hypergraph convolution operator as:
+\begin{equation}
+\label{eq: hgcn}
+    \mathbf{P}^{(l+1)} = \text{LeakyReLU}\left(\mathbf{L}\mathbf{P}^{(l)}\mathbf{W}^{(l+1)}\right),
+\end{equation}
+where $\mathbf{P}^{(l)}$ represents the representations from the $l$-th layer in the hypergraph module. %\footnote{Here we leave out the superscripts of treatment assignment for notation simplicity.} 
+%We denote the representation in the last layer as $\mathbf{P}=\{p_i\}_{i=1}^n$. %$\mathbf{P}^1=\{p_i^1\}_{i=1}^n$ and $\mathbf{P}^0=\{p_i^0\}_{i=1}^n$ corresponding to $T_i=1$ and $T_i=0$, respectively. 
+We feed the first layer with the previous confounder representation masked by the treatment assignment, i.e., $\mathbf{p}_i^{(0)}={t_i}*\mathbf{z}_i$,
+%as node features in this module%corresponding to $T_i=1$ and $T_i=0$, respectively, 
+where $*$ denotes element-wise multiplication.  
+%$\sigma(\cdot)$ is a non-linear activation function, such as LeakyReLU \cite{maas2013rectifier}. 
+$\mathbf{W}^{(l+1)}\in \mathbb{R}^{d^{(l)}\times d^{(l+1)}}$ is the parameter matrix in the ($l$+1)-th layer, where $d^{(l)}$ and $d^{(l+1)}$ refer to the dimensionality of the interference representations in the $l$-th and ($l$+1)-th layers, respectively.
+
+%\subsubsection{Modeling Different Significance of  High-order Interference regarding Different Nodes}
+\paragraph{Modeling interference with different significance.}
+%\paragraph{Attentions across nodes.}
+%However, when model the interference, different nodes on a hyperedge may have different importances. 
+Although the above convolution layer can pass interferences through hyperedges, it does not provide much flexibility to account for the significance of interference for different nodes through different hyperedges. 
+In the aforementioned COVID-19 example, intuitively, those individuals who are active in certain group gathering events are more likely to influence or be influenced by others in these groups. To better capture this intrinsic relationship between nodes and hyperedges on a hypergraph, 
+%more flexibly capture the high-order interference, 
+we leverage a hypergraph attention mechanism \cite{bai2021hypergraph,zhang2019hyper,ding2020more} to learn attention weights for each node and the corresponding hyperedges that contain this node. 
+%This attention mechanism can reflect the intrinsic relationship among nodes in the hypergraph. %dynamic incidence matrix, which can better reveal the intrinsic relationship among nodes in the hypergraph. 
+
+More specifically, we compute a representation for each hyperedge ($e$) by aggregating across its associated nodes ($\mathcal{N}_e$): $\mathbf{z}_{e}=\textsc{Agg}(\{\mathbf{z}_i~|~i\in \mathcal{N}_e\})$. Here, $\textsc{Agg}(\cdot)$ can be any aggregation functions (e.g., the mean aggregation). For each node $i$ and its associated hyperedge $e$, 
+the attention score between a node $i$ and a hyperedge $e$ can be calculated as:
+%$\alpha_{i,e}$ between them models the importance of node $i$ in hyperedge $e$, and $\alpha_{i,e}$ can be calculated with different attention score functions such as the widely used bilinear \cite{luong2015effective} function or the scaled dot product \cite{vaswani2017attention} function. For example:
+\begin{equation}
+    \alpha_{i,e} = \frac{\text{exp}(\sigma(\text{sim}(\mathbf{z}_i \mathbf{W}_a,\mathbf{z}_e \mathbf{W}_a)))}{\sum_{k \in \mathcal{E}_i} \text{exp}(\sigma(\text{sim}(\mathbf{z}_i \mathbf{W}_a,\mathbf{z}_k \mathbf{W}_a)))},
+\end{equation}
+where $\sigma(\cdot)$ is a non-linear activation function, $\mathcal{E}_i$ denotes the set of hyperedges associated with the node $i$. Here we use $\mathbf{W}_a$ to denote a parameter matrix to compute the node-hyperedge attention. %$\mathcal{N}_i^\mathcal{E}$ is the neighborhood set.
+$\text{sim}(\cdot)$ is a similarity function, which can be implemented as:
+\begin{equation}
+    \text{sim}(\mathbf{x}_i, \mathbf{x}_j) = \mathbf{a}^\top[\mathbf{x}_i\|\mathbf{x}_j],
+\end{equation}
+where $\mathbf{a}$ is a weight vector, $[\cdot\|\cdot]$ is a concatenation operation. 
+
+Then we use the attention scores to model the interference with different significance. Specifically, we replace the original incidence matrix $\mathbf{H}$ in Eq.~\ref{eq:laplacian} with an enhanced matrix $\tilde{\mathbf{H}}=\{\tilde{h}_{i,e}\}$, where $\tilde{h}_{i,e}=\alpha_{i,e}h_{i,e}$.
+%We incorporate the attention technique into the incidence matrix $\mathbf{H}$ by replacing $\mathbf{H}$ with $\mathbf{H}'_{i,e}=\alpha_{i,e}\mathbf{H}_{i,e}$, then we learn the node representations through hypergraph convoluntional layers in a similar way as described in Eq.~\ref{eq: hgcn}. 
+In this way, the interference from different nodes on the same hyperedge can be assigned with different importance weights, indicating different levels of contribution for interference modeling. We denote the final representations from the last convolution layer as $\mathbf{P}=\{\mathbf{p}_i\}_{i=1}^n$ and expect it to capture the high-order interference for each node.
+
+\paragraph{Representation Balancing}
+Similar to the coufounder representation learning module, we %apply the representation balancing technique on the final interference representations to
+calculate a discrepancy penalty to reflect the difference between the distributions of interference representations in treatment and control groups. We sum up these two discrepancy penalties together to compute a representation balancing loss, denoted by $\mathcal{L}_b$.
+
+
+% Here $g(.)$ can be parameterized with an HyperGAT \cite{ding2020more} based module. 
+% % expressions
+% For example, the input feature can be first transformed to lower dimensional space via an MLP with single hidden layer, and the representation of the $e$-th hyperedge $\textbf{e}_e$ can then be learned via an attention-based weighted sum of the transformed input features of all involved nodes, i.e., $\textbf{e}_e = \sum_{i \in \mathcal{N}_e} \alpha_{i,e}\text{MLP}(\mathbf{x}_i)$. $\mathcal{N}_e$ denotes the set of nodes involved in the $e$-th hyperedge. Here the attention can be computed based on the input features (node-hyperedge attention):
+% \begin{equation}
+% \label{attension-1}
+%     \alpha_{ie} = \frac{\text{exp}(\text{ReLU}(\boldsymbol{a}^T\mathbf{x}_i))}{\sum_{k \in \mathcal{N}_e } \text{exp}(\text{ReLU}(\boldsymbol{a}^T\mathbf{x}_i))},
+% \end{equation}
+% where $\boldsymbol{a}$ is the weight vector to be learned. Then the confounder representations for the $i$-th node $\textbf{h}_{i}$ can be attained via aggregating the representations of hyperedges as:
+% \begin{equation}
+%     \mathbf{h}_i = \text{AGGREGATE}(\{\mathbf{e}_e: e \in \mathcal{E}_i\}) %\sum_{e \in \mathcal{E}_i} \alpha_{e,i} \mathbf{e}_e.
+% \end{equation}
+% Here the aggregation function AGGREGATE(.) can be formulated in different ways, e.g., $\sum_{e \in \mathcal{E}_i} \beta_{e,i} \mathbf{e}_e$  based on the hyperedge-node attention, where $\beta_{e,i}$ can be computed via a similar way as Eq. (\ref{attension-1}).
+% In this way, with the help of the two attention mechanisms (i.e., node-hyperedge and hyperedge-node), we can achieve the confounder representation learning based on the high-order relations.
+
+% Next, to achieve the final node representations for potential outcome prediction, our proposed approach also needs to model the spillover effect along the hyperedges. The embedding representing the spillover effect along an hyperedge from all involved individuals can be modeled based on a set transformer \cite{lee2019set} with all corresponding involved treatments as input to handle different numbers of neighbors and provide permutation-invariant output.
+
+\subsection{Outcome Prediction}
+With the confounder representation $\mathbf{z}_i$ and the interference representation $\mathbf{p}_i$, we model the potential outcomes as:
+%Considering both the learned confounder representations and the modeled interference, we obtain the final representation  of each node $i$ for potential outcome prediction as:
+% \begin{align}
+% \hat{y}^1_i = f_1([\mathbf{z}_i \| \mathbf{p}_i^{1}]),\,\hat{y}^0_i = f_0([\mathbf{z}_i \| \mathbf{p}_i^{0}]),
+% \end{align}
+\begin{align}
+\hat{y}^1_i = f_1([\mathbf{z}_i \| \mathbf{p}_i]),\,\hat{y}^0_i = f_0([\mathbf{z}_i \| \mathbf{p}_i]),
+\end{align}
+where $f_1(\cdot)$ and $f_0(\cdot)$ are learnable functions to predict the potential outcome w.r.t. $t=1$ and $t=0$. We implement $f_1(\cdot)$ and $f_0(\cdot)$ with two MLP modules. Then the prediction for the observed outcome is obtained by $\hat{y}_i=\hat{y}^{t_i}_i$.
+%when the treatment assignment is $1$ or $0$, respectively. %We take the prediction for the observed outcome as $\hat{y}_i=f_{t_i}([\mathbf{z}_i \| \mathbf{p}_i])$. 
+%We use means square loss (MSE) for the outcome prediction. The final loss function can be formulated as:
+We optimize the model to minimize the following loss function: 
+\begin{equation}
+    \mathcal{L}=\sum_{i=1}^n (y_i-\hat{y}_i)^2 + \alpha\mathcal{L}_b + \lambda\|\mathbf{\Theta}\|^2,
+\end{equation}
+where the first term is the standard mean squared error, $\mathcal{L}_b$ is the representation balancing loss, $\mathbf{\Theta}$ represents the parameters in this neural network model. $\alpha$ and $\lambda$ are two hyperparameters which control the weights for the representation balancing loss and the parameter regularization term. The ITE for each instance $i$ can be estimated as: $\hat{\tau}_i=\hat{y}^1_i-\hat{y}^0_i$.
+% the concatenation operation; $\mathcal{N}_e$ denotes the set of nodes involved in the $e$-th hyperedge; $\omega_{ie}$ is computed based on the hyperedge representation $\textbf{e}_e$ and confounder representation for each node $\textbf{h}_i$; $\mathcal{E}_i$ denotes the hyperedge set which involves the $i$-th node.
+%It should be noted that $\gamma_{ei}$ (also computed based on $\textbf{e}_e$ and $\textbf{h}_i$ as Eq. (\ref{attension-1})) measures how much the treatments of other nodes in the $e$-th hyperedge affect the outcome of the $i$-th node, which is a key part in modeling the spillover from hyperedge to every single individual.
+%Finally, we use the output representation $\textbf{z}_i$ for potential outcome prediction. Here we also use a module $f_{y}(\mathbf{z}_i)$ to predict the potential outcomes.
+
+\subsection{Discussion} 
+Here we revisit some implicit assumptions in the proposed framework. 
+First, we assume that the interference for each node $i$ comes from its neighbors through the hypergraph structure. Here, the interference from neighbors that are multiple hops away can also be captured by stacking more hypergraph convoluntional layers.  
+Second, for simplicity, we assume that the interference for each node only comes from other nodes with non-zero treatment assignment. 
+Third, we assume that the representations of nodes in the same hyperedge are similar in the latent space. Besides, following \cite{bai2021hypergraph}, we assume that the representations of hyperedges are homogeneous with node representations. Nevertheless, we should still mention that this proposed framework is general and extendable, where the above assumptions can be further relaxed by enriching the hypergraph processing module.

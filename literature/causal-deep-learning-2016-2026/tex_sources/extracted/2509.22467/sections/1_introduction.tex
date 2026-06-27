@@ -1,0 +1,43 @@
+\section{Introduction}
+\label{sec:introduction}
+
+\begin{wrapfigure}{r}{0.4\linewidth}
+\centering
+    \includegraphics
+    [width=\linewidth, trim={0 0cm 0cm 0cm}, clip]
+    {figs/swap.drawio.png}
+    
+    \caption{KAN-ification.}
+    \label{fig:kanify}
+\end{wrapfigure}
+
+
+Estimating individual treatment effects from observational \add{1}{tabular} data underpins high-stakes decisions in personalized medicine \citep{KentBMJ2018, sanchez2022causal}, public policy \citep{Imai_Strauss_2011}, and economics \citep{Manski2004STRHP}, where interventions must be tailored beyond population averages \citep{Wager18estimation}. As personalized decision-making becomes the norm, accurately recovering conditional average treatment effects (CATEs) is indispensable for policy targeting and individualized care \citep{Curth2024Individualize}. However, accuracy alone is insufficient: regulatory frameworks (GDPR Art.~22; EU AI Act transparency for high-risk AI) and clinical practice increasingly discourage opaque models in consequential settings \citep{GDPR2016,EUAIACT2024, goodman2017european}. Indeed, limited interpretability remains a barrier to the clinical adoption of machine learning (ML) systems \citep{TonekaboniMLHC2019,AmannBMC2020}. Yet contemporary state-of-the-art CATE estimators often rely on deep neural networks \citep{shalit2017estimating,shi2019adapting}, which we call causalNN, achieving strong performance but hindering auditing and trustable deployment.
+
+We address this gap proposing \emph{\ours}: a practical framework that transforms, or \emph{KAN-ifies} (see \cref{fig:kanify}), neural \add{1}{tabular} CATE estimators into \emph{closed-form}, auditable models by replacing their subnetworks with Kolmogorov–Arnold Networks (KANs) \citep{liu2024kan, liu2024kan2}. KANs parameterize one-dimensional edge functions (splines) and compose them via sums (and, in variants, products), enabling post-training simplification without departing from the trained predictor. Our interpretability notion is operational: after training, we apply edge-activity regularization, validation-guided pruning, and auto-symbolic substitution of learned splines with simple atoms to produce executable expressions for the potential outcomes and their difference (the CATE).
+
+
+Concretely, our \textbf{contributions} are \replace{1}{twofold}{threefold}. \textbf{First}, we introduce a \textbf{model-agnostic framework} for constructing KAN-based potential-outcome models from established causal neural architectures (e.g., metalearners \citep{kunzel2019metalearners}, TARNet \citep{shalit2017estimating}, DragonNet \citep{shi2019adapting}) while reusing their training objectives (see \cref{fig:kanify} for a sketch). \textbf{Second}, \add{1}{we propose a complete pipeline to achieve interpretability that includes pruning, symbolic substitution, and representation tools. }\add{1}{\textbf{Third}}, we present \replace{1}{an}{a comprehensive} \textbf{empirical study} \add{1}{that \itemi compares performance of \ours} on  \replace{1}{two}{several} well known benchmark datasets (IHDP  \citep{hill11bayesian}\replace{1}{ and}{,} ACIC \citep{Dorie2017}, \add{1}{NSLM \citep{carvalho2019assessing}, NEWS \citep{johansson16learning} and TCGA \citep{schwab2020learning}}), \replace{1}{demonstrating that at least one \our variant matches or surpasses neural baselines in causal metrics while delivering closed-form CATEs, as can be seen in \cref{fig:pehe_boxplot}, where, although there are difference between \ours and their respective MLP-counterparts, one \our is among the best models. Code and scripts are released for full reproducibility % in \codeurl.
+}{and \itemii assess the identification of causal equations with known synthetic datasets. The objective of benchmarking is to demonstrate that the use of KANs do not decrease the performance in causal metrics, namely, \ours are competitive with respect to \our, \textit{not necessarily better}. For example, in \cref{fig:pehe_boxplot} we can observe that we have not found statistical difference between T-KAN and DragonNet, which are the best models for IHDP A. In addition, the aim of \itemii is to give practical reasons to think that if the true causal equations lie in the space that \ours can model, then the causal equation can be recovered up to an algebraic equivalence.}
+Code and scripts are released for full reproducibility in \codeurl.
+
+
+Our study positions \ours as domain-agnostic, accuracy-preserving, and inspection-ready CATE estimators: they retain the flexibility of deep architectures yet yield executable formulas that make effect modifiers and interactions explicit, aligning with emerging requirements for trustworthy, human-auditable decision support. 
+
+
+\begin{wrapfigure}{r}{0.55\linewidth}
+\vspace{-0.5cm}
+\centering
+    \includegraphics[]{figs/boxplot_PEHE_IHDP_A.pdf}
+    
+    \caption{Overall, \ours achieves similar PEHE (lower is better) than causalNNs in IHDP A. * means statistical difference $p<0.05$ in a Wilcoxon paired test. \textcolor{SBred}{Red} brace compares the best \our with the best causalNN, without indicating statistical difference.}
+    \vspace{-1cm}
+    \label{fig:pehe_boxplot}
+\end{wrapfigure}
+Empirically, \ours provide a favorable accuracy–interpretability frontier: simple heads (often additive or one hidden KAN layer) achieve \textit{competitive} metrics across benchmarks, while additional depth rarely improves accuracy and consistently reduces formula compactness.
+
+
+We present the preliminaries in \cref{sec:background}, the \ours pipeline and instantiations in \cref{sec:causalkans}, and reports ablations, comparisons, and interpretability results in \cref{sec:experiments}.
+
+
+

@@ -1,0 +1,23 @@
+\subsection{Deep Outcome Modeling}
+\label{section:outcomemodeling}
+
+\emph{S-Learners and T-Learners (\textit{Tutorial 1 \href{https://colab.research.google.com/drive/1hjnyfJjFm0wWM3BcZMi0cpW0uBRd5c5f?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png} }})}
+
+Because at most one potential outcome is  unobserved, it is not possible to apply supervised models to directly learn treatment effects. Across econometrics, biostatistics, and machine learning, a common approach to this challenge has been to instead use machine learning to model each potential outcome separately and use plug-in estimators for treatment effects \citep{chernozhukov2016double,van2011targeted,wager2018}. As with linear models, a single neural model can be trained to learn both potential outcomes (``S[ingle]-learner") (Fig. \ref{fig:perceptron}B), or two independent models can be trained to learn each potential outcome (a ``T-learner") \citep{johannson2020} (Fig. \ref{fig:tlearner}A). In both cases, the neural network estimators would be feed-forward networks tasked with minimizing the MSE in the prediction of observed outcomes. In a slight abuse of notation, the joint loss function for a T-learner can be written as:
+\begin{equation}
+\mathcal{L}(Y,h(X,T))=MSE(T_i(Y_i,h_1(X_i,1))+(1-T_i)(Y_i,h_0(X_i,0))
+\end{equation}
+where $h_1$ and $h_0$ represent separate networks for each potential outcome. 
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{content/SimpleArchitecturesv3.png}
+    \caption{A. \textbf{T-learner.} In a T-learner, separate feed-forward networks are used to model each outcome (textured boxes). We denote the function encoded by these outcome modelers $h$. B. \textbf{TARNet.} TARNet extends the T-learner with shared representation layers (orange). The motivation behind TARNet (and further elaborations of this model) is that the multi-task objective of accurately predicting both the treated and control potential outcomes forces the representation layers to learn a balancing function $\Phi$ such that the $\Phi(X|T=0)$ and $\Phi(X|T=1)$ are overlapping distributions in representation space. For a code implementation, see Box \ref{box:tarnetcode}. \textbf{C. Dragonnet} Dragonnet also adds a propensity score head to TARNet (black textured box) and a free ``nudge" parameter $\epsilon$. In an adaptation of Targeted Maximum Likelihood Estimation, $\hat{\pi}$ and $\epsilon$ are used to re-weight the outcomes to provide lower biased estimates of the $ATE$.}
+    \label{fig:tlearner}
+\end{figure}
+
+After training, inputting the same unit into both networks of a T-learner will produce predictions for both potential outcomes: $\hat{Y}(T)$ and $\hat{Y}(1-T)$. We can plug-in these predictions to estimate the $CATE$ for each unit, 
+$$\hat{\tau_i}=(1-2T_i)(\hat{Y_i}(1-T_i)-\hat{Y_i}(T_i))$$
+where the first term is a switch to make sure the treated potential outcome comes first. The average treatment effect as,
+$$\widehat{ATE}=\frac{1}{N}\sum_{i=1}^N\hat{\tau_i}$$
+
+Nearly all of the models described below combine this plug-in outcome modeling approach with other forms of treatment adjustment.

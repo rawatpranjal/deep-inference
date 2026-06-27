@@ -1,0 +1,563 @@
+
+\section{Experiments}
+It is typically very hard to obtain the ground-truth counterfactual data as only one of the two potential outcomes can be obtained in the observational data. Hence, in this section, we follow a standard practice to evaluate the proposed framework and the alternative approaches on three semi-synthetic datasets. We aim to leverage as much real-world information as possible in the simulated environment. Our datasets are all based on real-world hypergraph data and we retain the treatment allocations as well as node features (covariates) if they are available. We simulate the outcome generation process to assess the true individual treatment effect (ITE), which eventually allows us to evaluate the performance of the ITE estimation from different causal inference approaches. 
+% By conducting experiments on these semi-synthemtic datasets, we hope to answer the following questions:
+% \begin{itemize}
+%     \item \textbf{Q1}: What is the overall ITE estimation performance of \mymodel~ compared with state-of-the-art causal inference methods?
+%     \item \textbf{Q2}: How much ITE estimation improvement can be brought from modeling high-order interference on hypergraphs?
+%     \item \textbf{Q3}: How does the high-order interference act on different types of individuals?
+%     \item \textbf{Q4}: How do different components in the proposed framework contribute to the ITE estimation performance?
+%     \item \textbf{Q5}: How sensitive is \mymodel~ towards different settings of model hyper-parameters?
+% \end{itemize}
+%We compare the ITE performance of the proposed framework with various state-of-the-art baselines under different settings, including different specifications of ITE and interference in the hypergraph. We also conduct ablation studies to validate the contributions of different components in the proposed framework, and then we use parameter studies to evaluate the robustness of our framework.
+
+% \begin{table}[t]
+% %\small
+%   \caption{Detailed statistics of the datasets.} \label{tab:stats}
+%  \vspace{-2mm}
+%   \label{tab:dataset}
+%   \begin{tabular}{llll}
+%     \toprule
+%     Dataset &Contact & GoodReads &  Microsoft \\
+%     \midrule
+%     \# of nodes &$327$ &$57,031$ &$91,391$  \\ 
+%     \# of hyperedges& $7,818$  & $12,709$ & $237,078$\\ 
+%     \# of hyperedges (size>2) &$2,320$ & $8,067$ &$183,684$  \\
+%     \# of features & $50$  & $500$ & $200$ \\ 
+%     Ave hyperedge size & $2.33$& $5.76$& $7.66$  \\
+%     Ave node degree & $55.63$& $1.36$& $20.19$  \\
+%      Ratio ($\%$) of treated & $50.2\%$& $40.0\%$ & $42.9\%$ \\ 
+%      %Avg ATE $\pm$ STD & &  & \\ 
+%   \bottomrule
+% \end{tabular}
+% %\vspace{-3mm}
+% \end{table}
+
+
+
+\subsection{Dataset and Simulation}
+We obtain the semi-synthetic data based on two publicly available hypergraph datasets (\textbf{Contact} \cite{mastrandrea2015contact,benson2018simplicial}, \textbf{Goodreads} \cite{wan2018item,wan2019fine}) and one large-scale proprietary web application dataset (\textbf{Microsoft Teams}).
+%As it is notoriously hard to obtain the ground-truth counterfactual data, we use three semi-synthetic datasets based on real-world data sources, including high school contact network, GoodReads review, and Microsoft social media. 
+We do not account for the temporal information of each hyperedge in our experiments and leave this as a future research direction instead.
+In all three datasets, we discard extremely large hyperedges and keep those with no more than $50$ nodes only.\footnote{Note hyperedges with large size of nodes are usually less meaningful \cite{benson2018simplicial}.} 
+%Although the hyperedges have timestamps, we treat them equally in simulation. % On the contact dataset, we simulate both the treatment and outcome; while on the Amazon and Microsoft datasets, we use real-world treatment, and generate the potential outcomes. 
+%Detailed statistics of the processed datasets are included in Table~\ref{tab:stats}.
+%Source code and the two public datasets will be made available at publication time.
+
+\subsubsection{Outcome Simulation.} Given the treatment allocations $\mathbf{T}$, node features $\mathbf{X}$, and the hypergraph structure $\mathbf{H}$, the potential outcome of an individual $i$ can be simulated via
+% \noindent\textbf{General simulation process.} Generally, in this process, we use the real-world covariates, treatments, and hypergraph structure, then we generate the potential outcomes by simulating the individual treatment effects and interference.
+
+% Specifically, to simulate the potential outcomes, we use the following different scenarios:
+% % \begin{equation}
+% %     y_i(\mathbf{T}, \mathbf{x}_i) = f_y(\mathbf{h}_i) + f_t(t_i) + f_s([t_{\mathcal{N}_i}]) + \epsilon_y,
+% % \end{equation}
+\begin{equation}
+    y_i = f_{y,0}(\mathbf{x}_i) + \overbrace{\gamma f_t(t_i, \mathbf{x}_i)}^{\mathclap{\text{individual treatment effect (ITE)}}} + \underbrace{\beta f_s(\mathbf{T}, \mathbf{X}, \mathbf{H})}_{\mathclap{\text{hypergraph spillover effect}}} +~\epsilon_{y_i},
+\end{equation}
+where $f_{y,0}(\mathbf{x}_i)$ describes the outcome of instance $i$ when $t_i=0$ and without network interference, $f_t(\cdot)$ calculates the ITE of each instance,  $f_s(\cdot)$ calculates the spillover effect, and $\epsilon_{y_i}$ denotes the random noise from a Gaussian distribution $\mathcal{N}(0,1)$. 
+%To comprehensively evaluate the performance of the proposed model, we consider different settings of above potential outcome generation function. We use linear/quadratic transformations to implement $f_{y,0(\cdot)}$, $f_t(\cdot)$, and $f_s(\cdot)$, where $f_s$ is a transformation on the summary of neighbors.
+We specify $f_{y,0}(\mathbf{x}_i)$ as a linear transformation of $\mathbf{x}_i$:
+\begin{equation}
+    f_{y,0}=\mathbf{w}_0\mathbf{x}_i,
+\end{equation}
+where $\mathbf{w}_0\sim \mathcal{N}(0,\mathbf{I}), \mathbf{w}_0\in \mathbb{R}^d$. Then we control the individual treatment effect ($f_t(t_i, \mathbf{x}_i)$) and the hypergraph spillover effect ($f_s(\mathbf{T}, \mathbf{X}, \mathbf{H})$) under two different settings:
+%
+% \noindent\textbf{Microsoft.}~ In Microsoft dataset, we aim to estimate the causal effect of social media usage (treatment) on the collaboration frequency (outcome) for each employee (instance). We collected a hypergraph which describes the Teams membership of $230,171$ employees, where each edge is a Teams group in a snapshot on March 1st. In each group, one employee's behavior on social media may lead to aggregated effect (e.g., group discussion), and elicit complicated causal effect to other group members' collaboration frequencies. We filtered the group size within $50$. We collect the covariates of employees, and divide the covariates into four categories: user identification, location, job, and work experience. We preprocess the treatment assignment into binary values by taking the treatment assignment of an employee as 1 if this employee has composed at least one message during March 1st-7th, otherwise the treatment assignment is 0. We generate the potential outcomes by specifying the different components as follows:
+%
+% where $\|$ denotes the concatenation operator, and $K$ represents the number of covariates' categories. In each category $k$, we use a different transformation function $\Phi_k(\mathbf{x}_i)=\mathbf{w}_k\mathbf{x}_i+\epsilon_1$, where $\mathbf{w}_k$ is a $d$-dimensional vector, and each element is generated from Gaussian distribution $\mathcal{N}(0,1)$. $\epsilon_1$ is a noise term generated from $\mathcal{N}(0,0.001)$. The second part aggregate the neighbors' information, where $\alpha_{ei}$ and $\beta_{je}$ denotes the importance of hyperedge $e$ to node $i$, and the importance of node $j$ to hyperedge $e$, respectively. $\Psi_k(\mathbf{x}_i)=\mathbf{v}_k\mathbf{x}_i+\epsilon_2$, where $\mathbf{v}_k\sim \mathcal{N}(0,1)$ and $\epsilon_2\sim \mathcal{N}(0,0.001)$. $\lambda_1$ and $\lambda_2$ control the impact of self and neighbors, respectively. 
+% We use each employee's number of composed messages on Teams as treatment, and we simulate the number of collaboration social ties as outcome.
+% \begin{equation}
+%     f_{y,0}=\mathbf{w}_0\mathbf{x}_i,
+% \end{equation}
+% where $\mathbf{w}_0\sim \mathcal{N}(0,\mathbf{I}), \mathbf{w}_0\in \mathbb{R}^d$. 
+% For $f_t$, we have the following different choices:
+\begin{enumerate}
+    \item \textbf{Linear.}
+      \begin{equation}
+        f_t(t_i, \mathbf{x}_i) = \left\{
+        \begin{aligned}
+        & \mathbf{w}_1\mathbf{x}_i + \epsilon & \text{if } t_i=1\\
+        & 0 & \text{if } t_i=0
+        \end{aligned}\right.
+    \end{equation}
+Here $\mathbf{w}_1 \in \mathbb{R}^d$, and each element in $\mathbf{w}_1$ follows a Gaussian distribution. 
+We generate $f_s$ as:
+% \begin{equation}
+%     f_s(\mathbf{T},\mathbf{x}_i,\mathcal{H}) = \frac{1}{|\mathcal{N}_i|} \sum_{j\in \mathcal{N}_i} f_t(t_j, \mathbf{x}_j).
+% \end{equation}
+\begin{equation}
+    f_s(\mathbf{T},\mathbf{X},\mathbf{H}) = \frac{1}{|\mathcal{E}_i|} \sum_{e\in\mathcal{E}_i} \sigma'(\frac{1}{|\mathcal{N}_e|}\sum_{j\in \mathcal{N}_e} t_j \times f_t(t_j, \mathbf{x}_j)).
+\end{equation}
+Here, $\sigma'(\cdot)$ is a function on the aggregation over each hyperedge. We implement it with an identity function by default.
+    \item \textbf{Quadratic.}
+     \begin{equation}
+        f_t(t_i, \mathbf{x}_i) = \left\{
+        \begin{aligned}
+        & \mathbf{x}_i^\top\mathbf{W}_t\mathbf{x}_i + \epsilon & \text{if } t_i=1\\
+        & 0 & \text{if } t_i=0
+        \end{aligned}\right.
+    \end{equation}
+Here $\mathbf{W}_t \in \mathbb{R}^{d\times d}$, and each element in $\mathbf{W}_t$ follows a Gaussian distribution. 
+We generate $f_s$ as:
+% \begin{equation}
+%     f_s(\mathbf{T},\mathbf{x}_i,\mathcal{H}) = \frac{1}{|\mathcal{N}_i|} \sum_{j\in \mathcal{N}_i} f_t(t_j, \mathbf{x}_j).
+% \end{equation}
+\begin{equation}
+    f_s(\mathbf{T},\mathbf{X},\mathbf{H}) = \frac{1}{|\mathcal{E}_i|} \sum_{e\in\mathcal{E}_i} \sigma'(\frac{1}{|\mathcal{N}_e|^2}(\mathbf{T}_e*\mathbf{X}_e)\mathbf{W}_t(\mathbf{T}_e*\mathbf{X}_e)^\top).
+  \end{equation}    
+  Here $\mathbf{X}_e$ and $\mathbf{T}_e$ are the feature matrix and treatment assignment of nodes contained in hyperedge $e$,  respectively. Here $*$ denotes element-wise multiplication.
+\end{enumerate}
+
+\subsubsection{Dataset Details.} We follow the above process to generate potential outcomes on all three datasets. Additional details about each dataset are provided as the follows.
+
+\xhdr{Contact.} This dataset collects interactions recorded by wearable sensors among students at a high school \cite{mastrandrea2015contact,benson2018simplicial}, and includes 327 nodes and 7,818 hyperedges. 
+%The average node degree in this dataset is 55.6 and the average hypergraph size is 2.3. 
+Each node represents a person, and each hyperedge stands for a group of individuals are in close physical proximity to each other. This contact hypergraph data allows us to simulate a hypothetical question: ``how does one's face covering practice (treatment) causally affect their infection risk of an infectious disease (outcome)?''.
+%The treatment is whether a person practices face covering at each contact, and the outcome is if this person is infected. 
+In each group contact, one may bring the virus to the surrounding environment, and thus affect other people's infection risk. Due to the lack of detailed information about each individual, apart from the potential outcome, we also generate the treatment ($t_i$) and the covariates ($\mathbf{x}_i$) as the follows:
+%This dataset includes $327$ nodes and $7,818$ hyperedges. In this dataset, we generate the covariates, treatment and potential outcomes. More specifically, we generate them as follows:
+\begin{equation}
+    \mathbf{x}_i \sim \mathcal{N}(0,\mathbf{I}), {t}_{i} \sim Ber(\text{sigmoid}(\mathbf{x}_i\mathbf{v}_t)),
+\end{equation}
+where $\mathbf{I}$ is an $d\times d$ identity matrix, here we set $d=50$. $\mathbf{v}_t$ is a $d$-dimensional vector where each element inside follows a  Gaussian distribution. Eventually about $50\%\sim 60\%$ of the nodes are treated (${t}_{i}=1$) in our experiments.
+
+
+\xhdr{GoodReads.} This dataset collects book information from the book review website GoodReads\footnote{https://www.goodreads.com/}, including the book title, authors, descriptions, reviews, and ratings \cite{wan2018item,wan2019fine}. We take each book in the \textit{Children} category as an instance. The bag-of-words of the book descriptions are used as the covariates of each book. %We train a LDA model with 50 topics with the entire training corpus. 
+Each hyperedge corresponds to each author and all books sharing the same author are in the same hyperedge.
+%We construct the hypergraph by taking each hyperedge corresponding to an author, and all the books which share the same author are in the same hyperedge. 
+The real-world book ratings are considered as treatment assignments: for each node $i$, we define $t_i=1$ if the rating score is larger than 3 and $t_i=0$ otherwise. We aim to study the causal effect of the rating score on the sales of each book. The ratings of each author's books can establish this author's overall reputation, and thus influence the sales of other books from the same author. The final processed dataset includes 57,031 nodes (where $40\%$ are treated) and 12,709 hyperedges. Note each book may have more than one author, and each author may have published multiple books.
+%(the average node degree is 1.36)(the average hyperedge size is 5.76).
+%We simulate the potential outcomes in the same way as Microsoft dataset. 
+
+\xhdr{Microsoft Teams.} We sampled 91,391 anonymized employees of a multinational technology company and collected their aggregated telemetry data on Microsoft Teams\footnote{\href{https://www.microsoft.com/en-us/microsoft-teams}{https://www.microsoft.com/en-us/microsoft-teams}}. Microsoft Teams is a workplace communication platform where users are allowed to create a group space (i.e., ``team'' or ``channel'') to enable public communication within each group. We are interested in how a user's usage of these group spaces causally affects their productivity. We process the treatment assignment into binary values by taking it as 1 if the employee has sent out at least one message in any of these group spaces during the first week of March, 2021; otherwise the treatment is assigned as 0. Each group space can be regarded as a hyperedge, where information can be shared via group discussions thus one's activeness on this platform may affect other individuals' outcomes in the same group. Employee demographics (e.g., office location, job description, work experience) were leveraged as the covariates. 
+
+\begin{table}[]
+\small
+\centering
+\setlength{\tabcolsep}{2.5pt}
+ \caption{ITE estimation performance (mean $\pm$ standard error). ``CT", ``GR" and ``MS" stand for Contact, GoodReads and Microsoft Teams datasets, respectively.}
+ %\vspace{-2mm}
+ \label{tab:baseline_linear}
+\begin{tabular}{l|l|cc|cc}
+\hline
+              \multicolumn{1}{c|}{}                          &                           & \multicolumn{2}{c|}{Linear}                                                                     & \multicolumn{2}{c}{Quadratic}         \\\cline{3-6}
+\multicolumn{1}{c|}{\multirow{-2}{*}{Data}} & \multirow{-2}{*}{Method} & $\sqrt{\epsilon_{PEHE}}$                                &  $\epsilon_{ATE}$                                                           &  $\sqrt{\epsilon_{PEHE}}$                 & $\epsilon_{ATE}$       \\
+\hline
+CT &  LR & $25.41$~\scriptsize{$\pm0.04$}         & $9.11$~\scriptsize{$\pm0.09$}   & $38.22$~\scriptsize{$\pm0.77$} & $20.28$~\scriptsize{$\pm0.38$}                     \\
+ & CEVAE                     & $22.88$~\scriptsize{$\pm1.07$}         & $8.29$~\scriptsize{$\pm0.69$ } & $35.28$~\scriptsize{$\pm 0.75$} & $18.22$~\scriptsize{$\pm 0.76$}                  \\
+ & CFR                       & $24.04$~\scriptsize{$\pm0.75$}         & $7.17$~\scriptsize{$\pm0.43$}  & $32.24$~\scriptsize{$\pm 1.01$} & $17.28$~\scriptsize{$\pm 0.75$}                \\
+ & Netdeconf            & $10.22$~\scriptsize{$\pm0.47$}         & $4.29$~\scriptsize{$\pm0.13$} & $21.23$~\scriptsize{$\pm 0.72$} & $11.39$~\scriptsize{$\pm 0.74$ }      \\
+ & GNN-HSIC               &   $7.42$~\scriptsize{$\pm0.39$}          & $2.06$~\scriptsize{$\pm 0.03$} & $16.28$~\scriptsize{$\pm 0.24$} & $7.28$~\scriptsize{$\pm 0.39$}   \\
+ & GCN-HSIC               & $7.28$~\scriptsize{$\pm 0.44$}          & $2.08$~\scriptsize{$\pm 0.04$}  & $14.23$~\scriptsize{$\pm 0.20$} & $6.27$~\scriptsize{$\pm 0.15$} \\
+ & \mymodel          & {\bm{$3.45$}~\scriptsize{\bm{$\pm 0.27$}}  }                  & {\bm{$1.39$}~\scriptsize{\bm{$\pm0.03$}}     }                                   & \bm{$9.20$}~\scriptsize{\bm{$\pm 0.09$}}  & \bm{$2.24$}~\scriptsize{\bm{$\pm 0.07$}}       \\
+\hline
+GR &  LR  & $23.01$~\scriptsize{$\pm 0.04$}         & $13.42$~\scriptsize{$\pm 0.12$}  & $48.56$~\scriptsize{$\pm 1.02$} & $31.19$~\scriptsize{$\pm 0.47$}                    \\
+ & CEVAE                     & $22.69 $~\scriptsize{$\pm 0.03$}        & $12.49$~\scriptsize{$\pm 0.06$ }                 & $45.21$~\scriptsize{$\pm 3.10$} & $29.22$~\scriptsize{$\pm 0.44$}        \\
+ & CFR                       & $20.30$~\scriptsize{$\pm 0.03$}         & $13.21$~\scriptsize{$\pm 0.09$ }                 & $41.72$~\scriptsize{$\pm 0.72$} & $26.28$~\scriptsize{$\pm 0.43$}        \\
+ & Netdeconf                 & $18.39$~\scriptsize{$\pm 0.19$}         & $12.20$~\scriptsize{$\pm 0.03$}  & $35.18$~\scriptsize{$\pm 0.78$} & $21.20$~\scriptsize{$\pm 0.76$}            \\
+ & GNN-HSIC                 & $17.20$~\scriptsize{$\pm 0.23$}         & $12.18$~\scriptsize{$\pm 0.13$}  & $27.22$~\scriptsize{$\pm 0.78$} & $16.87$~\scriptsize{$\pm 0.47$}             \\
+ & GCN-HSIC                 & $16.01$~\scriptsize{$\pm0.20$}          & $12.06$~\scriptsize{$\pm 0.15$} & $25.42$~\scriptsize{$\pm 0.76$} & $16.28$~\scriptsize{$\pm 0.76$}     \\
+ & \mymodel                      & \bm{$15.68$}~\scriptsize\bm{{$\pm0.21$}} & \bm{$11.81$}~\scriptsize\bm{{$\pm0.15$} }           & \bm{$19.23$}~\scriptsize\bm{{$\pm 0.44$}} & \bm{$13.33$}~\scriptsize{\bm{$\pm 0.27$}   }           \\
+\hline
+MS & LR    & $22.80$~\scriptsize{$\pm 0.64$}                   & $21.41 \pm$~\scriptsize{$0.74$}                                          & $414.17$~\scriptsize{$\pm 3.94$  }                    & $192.80$~\scriptsize{$\pm 2.97$}      \\
+ &CEVAE           & $19.36$~\scriptsize{$\pm 0.80$}                    & $8.63$~\scriptsize{$\pm 0.78$}        & $315.01$~\scriptsize{$\pm2.53$} & $188.47$~\scriptsize{$\pm4.27$}            \\
+ &CFR             & $25.23$~\scriptsize{$\pm  0.01$}                   & $18.28$~\scriptsize{$\pm  0.02$}          & $392.56$~\scriptsize{$\pm 4.33$} & $189.75$~\scriptsize{$\pm4.80$}  \\
+ &Netdeconf       & $11.11$~\scriptsize{$\pm 0.01$}                  & $9.22$~\scriptsize{$\pm 0.03$ }      & $241.02$~\scriptsize{$\pm 2.32$ }                    & $147.29$~\scriptsize{$\pm1.04$}                                                 \\
+ &GNN-HSIC    &$9.38$~\scriptsize{$\pm 0.44$}          & $6.91$~\scriptsize{$\pm  0.38$}             & $114.28$~\scriptsize{$\pm 3.62$}                     & $81.21$~\scriptsize{$\pm 2.53$}                               \\               
+ &GCN-HSIC  &    $8.27$~\scriptsize{$\pm 0.41$} & $6.60$~\scriptsize{$\pm 0.48$} &   $109.57$~\scriptsize{$\pm3.85$}  & $77.75 $~\scriptsize{$\pm3.93$}  \\
+ &\mymodel          & {\bm{$5.13$}~\scriptsize{\bm{$\pm 0.56$}}}               & {\bm{$4.46$}~\scriptsize{\bm{$\pm0.61$}} }    & \bm{$81.08$}~\scriptsize\bm{{$\pm 0.37$}  }            & \bm{$74.41$}~\scriptsize{\bm{$\pm0.42$}  }                                   \\
+\hline
+\end{tabular}
+\end{table}
+
+% \begin{table}[]
+% \small
+% \centering
+% \setlength{\tabcolsep}{2.5pt}
+%  \caption{Comparison of the performance of ITE estimation under linear setting. ``CT", ``GR" and ``MS" stand for Contact, GoodReads and Microsoft Teams datasets, respectively.}
+%  \vspace{-2mm}
+%  \label{tab:baseline_linear}
+% \begin{tabular}{l|l|cc|cc}
+% \hline
+%               \multicolumn{1}{c|}{}                          &                           & \multicolumn{2}{c|}{Linear}                                                                     & \multicolumn{2}{c}{Quadratic}         \\\cline{3-6}
+% \multicolumn{1}{c|}{\multirow{-2}{*}{Data}} & \multirow{-2}{*}{Method} & $\sqrt{\epsilon_{PEHE}}$                                &  $\epsilon_{ATE}$                                                           &  $\sqrt{\epsilon_{PEHE}}$                 & $\epsilon_{ATE}$       \\
+% \hline
+% CT &  LR & $25.41$~\scriptsize{$\pm0.12$}         & $9.11$~\scriptsize{$\pm0.28$}   & $38.22$~\scriptsize{$\pm2.46$} & $20.28$~\scriptsize{$\pm1.21$}                     \\
+%  & CEVAE                     & $22.88$~\scriptsize{$\pm3.40$}         & $8.29$~\scriptsize{$\pm2.18$ } & $35.28$~\scriptsize{$\pm 2.38$} & $18.22$~\scriptsize{$\pm 2.39$}                  \\
+%  & CFR                       & $24.04$~\scriptsize{$\pm2.40$}         & $7.17$~\scriptsize{$\pm1.37$}  & $32.24$~\scriptsize{$\pm 3.21$} & $17.28$~\scriptsize{$\pm 2.37$}                \\
+%  & Netdeconf            & $10.22$~\scriptsize{$\pm1.48$}         & $4.29$~\scriptsize{$\pm0.42$} & $21.23$~\scriptsize{$\pm 2.28$} & $11.39$~\scriptsize{$\pm 2.33$ }      \\
+%  & GNN-HSIC               &   $7.42$~\scriptsize{$\pm1.24$}          & $2.06$~\scriptsize{$\pm 0.11$} & $16.28$~\scriptsize{$\pm 0.76$} & $7.28$~\scriptsize{$\pm 1.22$}   \\
+%  & GCN-HSIC               & $7.28$~\scriptsize{$\pm 1.40$}          & $2.08$~\scriptsize{$\pm 0.14$}  & $14.23$~\scriptsize{$\pm 0.64$} & $6.27$~\scriptsize{$\pm 0.47$} \\
+%  & \mymodel          & {\bm{$3.45$}~\scriptsize{\bm{$\pm 0.87$}}  }                  & {\bm{$1.39$}~\scriptsize{\bm{$\pm0.08$}}     }                                   & \bm{$9.20$}~\scriptsize{\bm{$\pm 0.28$}}  & \bm{$2.24$}~\scriptsize{\bm{$\pm 0.22$}}       \\
+% \hline
+% GR &  LR  & $23.01$~\scriptsize{$\pm 0.13$}         & $13.42$~\scriptsize{$\pm 0.40$}  & $48.56$~\scriptsize{$\pm 3.21$} & $31.19$~\scriptsize{$\pm 1.49$}                    \\
+%  & CEVAE                     & $22.69 $~\scriptsize{$\pm 0.08$}        & $12.49$~\scriptsize{$\pm 0.19$ }                 & $45.21$~\scriptsize{$\pm 3.10$} & $29.22$~\scriptsize{$\pm 1.39$}        \\
+%  & CFR                       & $20.30$~\scriptsize{$\pm 0.11$}         & $13.21$~\scriptsize{$\pm 0.29$ }                 & $41.72$~\scriptsize{$\pm 2.28$} & $26.28$~\scriptsize{$\pm 1.38$}        \\
+%  & Netdeconf                 & $18.39$~\scriptsize{$\pm 0.59$}         & $12.20$~\scriptsize{$\pm 0.10$}  & $35.18$~\scriptsize{$\pm 2.48$} & $21.20$~\scriptsize{$\pm 2.41$}            \\
+%  & GNN-HSIC                 & $17.20$~\scriptsize{$\pm 0.72$}         & $12.18$~\scriptsize{$\pm 0.42$}  & $27.22$~\scriptsize{$\pm 2.48$} & $16.87$~\scriptsize{$\pm 1.48$}             \\
+%  & GCN-HSIC                 & $16.01$~\scriptsize{$\pm0.62$}          & $12.06$~\scriptsize{$\pm 0.46$} & $25.42$~\scriptsize{$\pm 2.39$} & $16.28$~\scriptsize{$\pm 1.39$}     \\
+%  & \mymodel                      & \bm{$15.68$}~\scriptsize\bm{{$\pm0.67$}} & \bm{$11.81$}~\scriptsize\bm{{$\pm0.48$} }           & \bm{$19.23$}~\scriptsize\bm{{$\pm 1.39$}} & \bm{$13.33$}~\scriptsize{\bm{$\pm 0.84$}   }           \\
+% \hline
+% MS & LR    & $22.80$~\scriptsize{$\pm 2.01$}                   & $21.41 \pm$~\scriptsize{$2.34$}                                          & $414.17$~\scriptsize{$\pm 39.43$  }                    & $192.80$~\scriptsize{$\pm 29.75$}      \\
+%  &CEVAE           & $19.36$~\scriptsize{$\pm 2.52$}                    & $8.63$~\scriptsize{$\pm 2.47$}        & $315.01$~\scriptsize{$\pm25.31$} & $188.47$~\scriptsize{$\pm42.79$}            \\
+%  &CFR             & $25.23$~\scriptsize{$\pm  0.02$}                   & $18.28$~\scriptsize{$\pm  0.05$}          & $392.56$~\scriptsize{$\pm 43.39$} & $189.75$~\scriptsize{$\pm48.11$}  \\
+%  &Netdeconf       & $11.11$~\scriptsize{$\pm 0.02$}                  & $9.22$~\scriptsize{$\pm 0.10$ }      & $241.02$~\scriptsize{$\pm 23.25$ }                    & $147.29$~\scriptsize{$\pm10.39$}                                                 \\
+%  &GNN-HSIC    &$9.38$~\scriptsize{$\pm 1.41$}          & $6.91$~\scriptsize{$\pm  1.19$}             & $114.28$~\scriptsize{$\pm 36.29$}                     & $81.21$~\scriptsize{$\pm 25.39$}                               \\               
+%  &GCN-HSIC  &    $8.27$~\scriptsize{$\pm 1.29$} & $6.60$~\scriptsize{$\pm 1.53$} &   $109.57$~\scriptsize{$\pm38.58$}  & $77.75 $~\scriptsize{$\pm39.39$}  \\
+%  &\mymodel          & {\bm{$5.13$}~\scriptsize{\bm{$\pm 1.78$}}}               & {\bm{$4.46$}~\scriptsize{\bm{$\pm1.92$}} }    & \bm{$81.08$}~\scriptsize\bm{{$\pm 3.74$}  }            & \bm{$74.41$}~\scriptsize{\bm{$\pm4.24$}  }                                   \\
+% \hline
+% \end{tabular}
+% \end{table}
+
+
+
+% \begin{figure*}[t]
+% \centering
+%   \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_Microsoft_pehe_linear.pdf}
+%         \caption{Linear, $\sqrt{\epsilon_{PEHE}}$, Microsoft}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_Microsoft_ate_linear.pdf}
+%         \caption{Linear, $\epsilon_{ATE}$, Microsoft}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_Microsoft_pehe_quadratic.pdf}
+%         \caption{Quadratic, $\sqrt{\epsilon_{PEHE}}$, Microsoft}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_Microsoft_ate_quadratic.pdf}
+%         \caption{Quadratic, $\epsilon_{ATE}$, Microsoft}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_GoodReads_pehe_linear.pdf}
+%         \caption{Linear, $\sqrt{\epsilon_{PEHE}}$, GoodReads}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_GoodReads_ate_linear.pdf}
+%         \caption{Linear, $\epsilon_{ATE}$, GoodReads}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_GoodReads_pehe_quadratic.pdf}
+%         \caption{Quadratic,$\sqrt{\epsilon_{PEHE}}$,GoodReads}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_GoodReads_ate_quadratic.pdf}
+%         \caption{Quadratic, $\epsilon_{ATE}$, GoodReads}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_contact_pehe_linear.pdf}
+%         \caption{Linear, $\sqrt{\epsilon_{PEHE}}$, Contact}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_contact_ate_linear.pdf}
+%         \caption{Linear, $\epsilon_{ATE}$, Contact}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_contact_pehe_quadratic.pdf}
+%         \caption{Quadratic, $\sqrt{\epsilon_{PEHE}}$, Contact}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.24\textwidth}
+%         \centering
+%         \includegraphics[height=0.95in]{figs/ITE_contact_ate_quadratic.pdf}
+%         \caption{Quadratic, $\epsilon_{ATE}$, Contact}
+%     \end{subfigure}
+%         \vspace{-2mm}
+%   \caption{Comparison of the performance of ITE estimation under different settings.}
+%   \label{fig:ITE}
+% \vspace{-3mm}
+% \end{figure*}
+
+\subsection{Experiment Settings}
+\subsubsection{Metrics}
+We evaluate the performance of causal effect estimation through two standard metrics, including Rooted Precision in Estimation of Heterogeneous Effect ($\sqrt{\epsilon_{PEHE}}$) \cite{BART} and Mean Absolute Error ($\epsilon_{ATE}$) \cite{willmott2005advantages}. These metrics can be defined as follows:
+\begin{equation}
+    \sqrt{\epsilon_{PEHE}} = \sqrt{\frac{1}{n}\sum_{i\in[n]}(\tau_i-\hat{\tau}_i)^2}, \,\,\epsilon_{ATE} = |\frac{1}{n}\sum_{i\in [n]}{\tau_i}-\frac{1}{n}\sum_{i\in [n]}\hat{\tau}_i|.
+\end{equation}
+Lower $\sqrt{\epsilon_{PEHE}}$ or $\epsilon_{ATE}$ indicates better causal effect estimations.
+
+\subsubsection{Baselines}
+To investigate the effectiveness of our framework, we compare it with multiple state-of-the-art ITE estimation baselines. These baselines can be divided into the following categories:
+\begin{itemize}
+    \item \xhdr{No graph.} We compare the estimation results with traditional methods which do not consider graph data and spillover effects. These methods include outcome regression which is implemented by linear regression (\textbf{LR}), counterfactual regression (\textbf{CFR} \cite{CFR}), causal effect variational autoencoder (\textbf{CEVAE} \cite{CEVAE}). By comparing the proposed framework to these methods, we evaluate the effectiveness of modeling interference for ITE estimation.
+    \item \xhdr{No spillover effect in ordinary graphs.} Although assuming no  spillover effect exists, the network deconfounder (\textbf{Netdeconf}) \cite{guo2020learning} captures latent confounders for ITE estimation by utilizing the network structure among instances. 
+    \item \xhdr{Spillover effect in ordinary graphs.} We compare our framework with other ITE estimation baselines which can handle the pairwise spillover effect on ordinary graphs: %Linked Causal Variational Autoencoder (\textbf{LVAE}) \cite{rakesh2018linked}, 
+    a node representation learning based method \cite{ma2021causal} estimates ITE under network interference, including two variants: (a) \textbf{GNN + HSIC}, which is based on graph neural network \cite{morris2019weisfeiler} and Hilbert Schmidt independence criterion (HSIC) \cite{gretton2005measuring}, and (b) \textbf{GCN + HSIC}, which is based on GCN \cite{kipf2016semi}. 
+    
+    To utilize the baselines which handle ordinary graphs, 
+    %These methods are designed to handle interference in ordinary graphs with pairwise edges, so 
+    we project the original hypergraph $\mathcal{H}$ to an ordinary graph $\mathcal{G}=\{\mathcal{V}, \mathcal{E}^p\}$ by setting $(v_i,v_j)\in \mathcal{E}^p$ if $v_i$ and $v_j$ are contained in at least one common hyperedge in $\mathcal{H}$. By comparing \mymodel~to the above baselines, we are able to evaluate the benefits of modeling high-order interferences on the original hypergraph.
+\end{itemize}
+
+\subsubsection{Setup} We randomly partition all datasets into 60\%-20\%-20\% training/validation/test splits. All the results are averaged over ten repeated executions. Unless otherwise specified, we set the hyperparameters as $\alpha=0.001$, $\beta=1.0$, $\gamma=1.0$, $\lambda=0.01$, the dimension for confounder representation and interference representation both as $64$. We use ReLU as the  activation function, and use an Adam optimizer. By default, the interference modeling component contains one hypergraph convolutional layer.
+
+%\subsection{Q1: ITE Estimation Performance}
+\subsection{ITE Estimation Performance}
+We include the results for the ITE estimation task in Table~\ref{tab:baseline_linear}. From this table we 
+%To evaluate the performance of ITE estimation of the proposed framework under the existence of spillover effect in hypergraph, we compare our framework with other baselines in different settings of interference simulation. Fig~\ref{fig:ITE} shows the ITE estimation performance of different methods with different values of $\beta$ in linear and quadratic settings. We 
+observe that the proposed framework outperforms all the baselines under both linear and quadratic outcome simulation settings. We attribute these results to the fact that \mymodel~ utilizes the  relational information in hypergraph to model the high-order interference, and thus mitigates the influence of the spillover effect on ITE estimation performance. 
+%the information loss in high-order interference. 
+Compared with other baselines, the methods which incorporate the pairwise network interference (\textbf{GCN-HSIC} and \textbf{GNN-HSIC}), as well as \textbf{Netdeconf} which utilizes the network structure for ITE estimation, perform better than those baselines which do not take advantage of the relational information (\textbf{LR}, \textbf{CEVAE}, \textbf{CFR}). 
+
+We also vary the hyperparameter ($\beta$) which controls the significance of hypergraph spillover effect in the outcome simulation and report the ITE estimation results in Fig.~\ref{fig:ITE}.
+As $\beta$ increases, i.e., the outcome is more heavily influenced by interference, larger performance gains can be observed from the proposed framework (\mymodel) against baselines. 
+This observation further validates the effectiveness of our framework in modeling the interference for enhancing the performance of ITE estimation.
+
+
+
+\begin{figure}[t]
+\centering
+    \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_GoodReads_pehe_linear.pdf}
+        \caption{$\sqrt{\epsilon_{PEHE}}$}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.95in]{figs/ITE_GoodReads_ate_linear.pdf}
+        \caption{$\epsilon_{ATE}$}
+    \end{subfigure}
+   \vspace{-7mm}
+  \caption{Comparison of the performance of ITE estimation under different values of $\beta$ in linear setting on GoodReads.}
+  \label{fig:ITE}
+\vspace{-1mm}
+\end{figure}
+
+
+\subsection{Ablation Study}
+
+\begin{figure}
+\begin{subfigure}[b]{0.22\textwidth}
+        \centering
+        \includegraphics[height=.8in]{figs/ablation_GoodReads_pehe.pdf}
+        \caption{GoodReads, $\sqrt{\epsilon_{PEHE}}$}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering
+        \includegraphics[height=.8in]{figs/ablation_GoodReads_ATE.pdf}
+        \caption{GoodReads, $\epsilon_{ATE}$}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering
+        \includegraphics[height=.8in]{figs/ablation_contact_pehe.pdf}
+        \caption{Contact, $\sqrt{\epsilon_{PEHE}}$}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.22\textwidth}
+        \centering
+        \includegraphics[height=.8in]{figs/ablation_contact_ate.pdf}
+        \caption{Contact, $\epsilon_{ATE}$}
+    \end{subfigure}
+    \vspace{-1mm}
+  \caption{Ablation studies of different variants of our framework \mymodel. Results (mean and standard error) are reported under the linear setting but similar patterns can be found under the quadratic setting and on all datasets. }
+  \label{fig:ablation}
+\vspace{-3mm}
+\end{figure}
+
+\begin{figure}
+\begin{subfigure}[b]{0.23\textwidth}
+        \centering
+        \includegraphics[height=1.in]{figs/hypersize_GoodReads.pdf}
+        \caption{GoodReads, Linear}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.23\textwidth}
+        \centering
+        \includegraphics[height=1.in]{figs/hypersize_contact.pdf}
+        \caption{GoodReads, Quadratic}
+    \end{subfigure}
+    \vspace{-2mm}
+  \caption{ITE estimation performance of \mymodel~/ \mymodel-G on hypergraphs with hyperedge size no more than $k$.}
+  \label{fig:hyper_k}
+\vspace{-1mm}
+\end{figure}
+
+
+% \begin{figure}
+% \begin{subfigure}[b]{0.23\textwidth}
+%         \centering
+%         \includegraphics[height=1.in]{figs/ablation_GoodReads.pdf}
+%         \caption{GoodReads}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.23\textwidth}
+%         \centering
+%         \includegraphics[height=1.in]{figs/ablation_contact.pdf}
+%         \caption{Contact}
+%     \end{subfigure}
+%     \vspace{-1mm}
+%   \caption{Ablation studies of different variants of the proposed framework \mymodel. Results are reported under the linear setting but similar patterns can be found under the quadratic setting and on all datasets. }
+%   \label{fig:ablation}
+% %\vspace{-3mm}
+% \end{figure}
+
+% \begin{figure}
+% \begin{subfigure}[b]{0.11\textwidth}
+%         \centering
+%         \includegraphics[height=0.6in]{figs/parameter_GoodReads_balancing_pehe.pdf}
+%         \caption{$\alpha$,$\sqrt{\mathcal{E}_{PEHE}}$}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.11\textwidth}
+%         \centering
+%         \includegraphics[height=0.6in]{figs/parameter_GoodReads_balancing_pehe.pdf}
+%         \caption{$\alpha$,$\mathcal{E}_{ATE}$}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.11\textwidth}
+%         \centering
+%         \includegraphics[height=0.6in]{figs/parameter_GoodReads_balancing_pehe.pdf}
+%         \caption{$\alpha$,$\sqrt{\mathcal{E}_{PEHE}}$}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.11\textwidth}
+%         \centering
+%         \includegraphics[height=0.6in]{figs/parameter_GoodReads_balancing_pehe.pdf}
+%         \caption{$\alpha$,$\sqrt{\mathcal{E}_{PEHE}}$}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.11\textwidth}
+%         \centering
+%         \includegraphics[height=0.6in]{figs/parameter_GoodReads_balancing_pehe.pdf}
+%         \caption{$\alpha$,$\sqrt{\mathcal{E}_{PEHE}}$}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.11\textwidth}
+%         \centering
+%         \includegraphics[height=0.6in]{figs/parameter_GoodReads_balancing_pehe.pdf}
+%         \caption{$\alpha$,$\mathcal{E}_{ATE}$}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.11\textwidth}
+%         \centering
+%         \includegraphics[height=0.6in]{figs/parameter_GoodReads_balancing_pehe.pdf}
+%         \caption{$\alpha$,$\sqrt{\mathcal{E}_{PEHE}}$}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.11\textwidth}
+%         \centering
+%         \includegraphics[height=0.6in]{figs/parameter_GoodReads_balancing_pehe.pdf}
+%         \caption{$\alpha$,$\sqrt{\mathcal{E}_{PEHE}}$}
+%     \end{subfigure}
+%     \vspace{-1mm}
+%   \caption{Comparison of ITE estimation performance of the proposed framework \mymodel~ under different parameters or model structures on GoodReads dataset.}
+%   \label{fig:param}
+% %\vspace{-3mm}
+% \end{figure}
+
+\begin{figure}
+\begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=0.9in]{figs/parameter_GoodReads_balancing.pdf}
+        \caption{Balancing weight}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=.9in]{figs/parameter_GoodReads_dimension.pdf}
+        \caption{Representation dimension}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=.9in]{figs/parameter_GoodReads_attention.pdf}
+        \caption{\# of attention head}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.235\textwidth}
+        \centering
+        \includegraphics[height=.9in]{figs/parameter_GoodReads_regularization.pdf}
+        \caption{Regularization weight}
+    \end{subfigure}
+  %  \vspace{-3mm}
+  \caption{ITE estimation performance (mean and standard error) of the proposed framework \mymodel~ under different parameters or model structures on GoodReads dataset.}
+  \label{fig:param}
+%\vspace{-1mm}
+\end{figure}
+
+To investigate the effectiveness of different components in the proposed framework, we conduct ablation studies by considering the following variants: 1) we apply the proposed model \mymodel~ on the projected graph (in a hypergraph structure) (denoted as \textbf{\mymodel-P}); 2) we replace the hypergraph neural network module with a graph neural network module with the same number of layers, and then apply it on the projected graph (in an original graph structure) (\textbf{\mymodel-G}). { Notice that although both evaluated on the projected graph, \textbf{\mymodel-G} handles ordinary graphs with its graph neural network module, while \textbf{\mymodel-P} handles hypergraphs with its hypergraph neural network module}; 3) we remove the balancing techniques in the framework (\textbf{\mymodel-NB}). The ITE estimation results are reported in Fig.~\ref{fig:ablation}, where we notice significant performance gaps between \textbf{\mymodel-P}/\textbf{\mymodel-G} and \mymodel, which imply the effectiveness of modeling the high-order relationships on hypergraphs. We also observe the ITE estimation performance degrades after removing the representation balancing modules, which indicates the effectiveness of the representation balancing techniques on mitigating the biases of ITE estimations.
+
+% High-order interferences
+%\subsection{Q2: High-order Interference for ITE Estimation}
+\vspace{-2mm}
+\subsection{A Closer Look at High-Order Interference}
+In addition to the overall ITE estimation performance, we take a closer look at high-order interference. %through both quantitative and qualitative analysis.
+We investigate how the proposed framework responds to hyperedges with difference sizes. 
+%Intuitively, high-order interference becomes more prominent among a large group of nodes.
+%In order to investigate how the high-order interference influence the causal estimation results, we further conduct in-depth experiments with finer granularity of the high-order interference. 
+More specifically, we remove the hyperedges with size larger than $k$, denote the modified hypergraph as $\mathcal{H}^{(k)}$, and vary the value of $k$. In Fig~\ref{fig:hyper_k}, we compare the ITE estimation performance of the proposed framework \mymodel~ with its variant on the projected ordinary graph \textbf{\mymodel-G}. We observe that: { 1) When $k=2$ (hyperedge size $\le$ 2), the performance of HyperSCI-G is close to HyperSCI. Because when $k=2$, graph convolution can be regarded as a special case of hypergraph convolution with small differences in the graph Laplacian matrix (as illustrated in \cite{bai2021hypergraph}). Empirically this leads to a minor performance difference between HyperSCI-G and HyperSCI;} 2) When $k$ increases, the performance of ITE estimation from both methods are gradually improved, but such an improvement becomes less significant when $k$ is larger. Besides, we notice \mymodel~ consistently outperforms \textbf{\mymodel-G} and such a difference becomes larger as $k$ increases, indicating its efficacy on modeling high-order interference especially on large hyperedges.
+%, as large-size hyperedges (e.g., over $20$ on GoodReads) are very rare on these hypergraphs. We also show the performance of \textbf{\mymodel-G} in the same settings in Fig~\ref{fig:hyper_k}. \textbf{\mymodel-G} is a variant of \mymodel, where the hypergraph neural network layers are replaced by graph neural network layers, and it can only handle the plain graphs projected from the modified hypergraphs. Generally, the performance of \textbf{\mymodel-G} is also improving with higher $k$, but compared with \mymodel, the improvement is relatively weaker as this variant can not deal with high-order information. 
+
+\vspace{-1mm}
+\subsection{Sensitivity Analysis}
+
+To evaluate the robustness of the proposed framework, we present the ITE estimation performance of \mymodel~under different settings of model hyper-parameters in Fig.~\ref{fig:param}. More specifically, we vary the value of the balancing weight from $\{0.0001,0.001,0.01,0.1\}$, and vary the representation dimension from $\{16, 32, 64, 128\}$. We also vary the number of attention head from $\{1,2,3,4\}$, then change the parameter of regularization weight from $\{0.0001, 0.001, 0.01, 0.1\}$.
+% We implement the hypergraph neural network module with hypergraph convoluntional network (hyperGCN) \cite{bai2021hypergraph} or hypergraph attention network (hyperGAT) \cite{bai2021hypergraph}. 
+As can be observed, our framework is generally robust to different hyper-parameter settings, but proper fine-tuning of these hyper-parameters is still beneficial for the ITE estimation performance. %The hyperGAT based framework performs slightly better than hyperGCN.
+
+
+
+
+
+
+
+%To further investigate the influence of high-order interference on the ITE estimation results for different nodes, we divide the nodes into different groups with respect to their positions in hypergraph and ratios of treatment assignment among its neighbors. More specifically, for each node $i$, we quantitatively describe its position on hypergraph by summing up the size of all hyperedges containing it, i.e., $|\mathcal{N}_i|$, where  $\mathcal{N}_i=\bigcup_{e\in\mathcal{E}_i}\{j\in\mathcal{N}_e\}$, here $\bigcup$ denotes union operation. Intuitively, this value denotes the number of neighbor nodes (not including $i$ itself, and may be counted repeatedly in different hyperedges) of node $i$, and reflects the importance of the whole hypergraph to node $i$ in some degree. For each node $i$, we also calculate the ratio of the number of neighbors with same treatment assignment with $t_i$ to the number of all the neighbors. Specifically, we compute $r(i)=\frac{\sum_{j\in \mathcal{N}_i}\mathbf{1}(t_j=t_i)}{|\mathcal{N}_i|}$. By intuition, the value of $r(i)$ indicates whether the node belongs to the majority w.r.t. treatment assignment inside its neighborhood (the higher value denotes that it is closer to majority). We divide all the nodes in GoodReads dataset w.r.t. their values of $|\mathcal{N}_i|$ and $r(i)$ into $6\times 6$ grids. In each group, we make comparison between the ITE estimation results made (i) with/without the hypergraph; and (ii) with the original hypergraph and with the projected graph. Fig.~\ref{fig:heatmap} shows the difference between ITE estimation results in different grids. 
+
+%To provide more intuitive understanding, we further conduct case studies of the difference between ITE estimations with hypergraph and projected graph in Fig.~\ref{fig:case}, where several well-known books with their $r(i)$ and $|\mathcal{N}(i)|$ are shown. We can observe that the difference of ITE estimation in both of these two comparisons becomes stronger when $r(i)$ is smaller and $|\mathcal{N}_i|$ is higher. This observation implicitly indicates that the nodes with more high-order relation connection with others more tend to be interfered by its neighbors. Besides, those nodes with "minority" treatment assignment are prone to be influenced by others. For example, the book ``Peter Pan" and ``Harry Potter" with consistent treatment assignment among neighbors, and small number of neighbors, are relatively less impacted by the interference, while the book ``Oddhopper Opera" with minority treatment assignment, and many neighbors sharing the same authors, suffers much more from the interference on hypergraph. 
+%To provide more intuitive illustration of this observation, we select some books corresponding to different grids. 
+
+%To summarize, we consistently observe the benefits of modeling high-order interference on large hyperedges. Although the interference becomes pronounced as the size of one's neighborhood increases, it can also be affected by the agreement of treatment assignments between the individual node and its neighborhood.
+
+
+% %\subsection{Q4: Ablation Studies}
+% \subsection{Ablation Study and Sensitivity Analysis}
+
+% \begin{figure}
+% \begin{subfigure}[b]{0.23\textwidth}
+%         \centering
+%         \includegraphics[height=1.in]{figs/ablation_GoodReads.pdf}
+%         \caption{GoodReads}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.23\textwidth}
+%         \centering
+%         \includegraphics[height=1.in]{figs/ablation_contact.pdf}
+%         \caption{Contact}
+%     \end{subfigure}
+%     \vspace{-3mm}
+%   \caption{Ablation studies of different variants of the proposed framework \mymodel.}
+%   \label{fig:ablation}
+% %\vspace{-3mm}
+% \end{figure}
+
+% \begin{figure}
+% \begin{subfigure}[b]{0.23\textwidth}
+%         \centering
+%         \includegraphics[height=1.in]{figs/parameter_GoodReads_balancing.pdf}
+%         \caption{Balancing weight}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.23\textwidth}
+%         \centering
+%         \includegraphics[height=1.in]{figs/parameter_GoodReads_dimension.pdf}
+%         \caption{Representation dimension}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.23\textwidth}
+%         \centering
+%         \includegraphics[height=1.in]{figs/parameter_GoodReads_attention.pdf}
+%         \caption{\# of attention head}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.23\textwidth}
+%         \centering
+%         \includegraphics[height=1.in]{figs/parameter_GoodReads_regularization.pdf}
+%         \caption{Regularization weight}
+%     \end{subfigure}
+%     \vspace{-3mm}
+%   \caption{Comparison of ITE estimation performance of the proposed framework \mymodel~ under different parameters or model structures on GoodReads dataset.}
+%   \label{fig:param}
+% %\vspace{-3mm}
+% \end{figure}
+
+% To investigate the effectiveness of different components in the proposed framework, we conduct ablation studies by comparing \mymodel~ with multiple variants. Specifically, we consider the following variants: 1) we apply the proposed model \mymodel~ on the projected graph, and denote this variant as \textbf{\mymodel-P}; 2) we replace the hypergraph neural network module with a graph neural network module with same number of layers, and then apply it on the projected graph. This variant is denoted by \textbf{\mymodel-G}; 3) we remove the balancing techniques, and denote this variant as \textbf{\mymodel-NB}. Here we show the comparison of the ITE estimation performance of the proposed framework and the above variants in Fig.~\ref{fig:ablation}. Although Fig.~\ref{fig:ablation} only presents the results in the linear setting on GoodReads dataset,  similar observations can also be found in other settings and other datasets. We observe that, both \textbf{\mymodel-P} and \textbf{\mymodel-G} have worse ITE estimation performance  than \mymodel, which indicates that the high-order information does contribute to the
+% modeling of interference and enhance the performance of ITE estimation. Besides, the comparison between \textbf{\mymodel-NB} and \mymodel~ suggests that the representation balancing techniques also lead to better ITE estimation performance.
+
+% %\subsection{Q5: Sensitivity Analysis}
+% To evaluate the robustness of the proposed framework, we present the ITE estimation performance of \mymodel~under different settings of model structure and parameters in Fig.~\ref{fig:param}. More specifically, we vary the value of the balancing weight from $\{0.1, 0.01, 0.001, 0.0001\}$, and vary the representation dimension size from $\{16, 32, 64, 128\}$. We also vary the number of attention head from $\{1,2,3,4\}$, then change the parameter regularization weight from $\{0.0001, 0.001, 0.01, 0.1\}$.
+% % We implement the hypergraph neural network module with hypergraph convoluntional network (hyperGCN) \cite{bai2021hypergraph} or hypergraph attention network (hyperGAT) \cite{bai2021hypergraph}. 
+% Generally, our framework is not very sensitive to hyparameter settings, but proper fine-tuning of the hyperparameters is still beneficial for the ITE estimation performance. %The hyperGAT based framework performs slightly better than hyperGCN.

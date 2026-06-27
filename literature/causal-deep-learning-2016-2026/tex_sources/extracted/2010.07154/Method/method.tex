@@ -1,0 +1,17 @@
+
+In this section, we develop the DFIV algorithm. Similarly to \citet{Singh2019}, we assume that we do not necessarily have  access to observations from the joint distribution of $(X,Y,Z)$. Instead, we are given $m$ observations of $(X,Z)$ for stage 1 and $n$ observations of $(Y,Z)$ for stage 2. We denote the stage 1 observations as $(x_i, z_i)$ and the stage 2 observations as $(\tilde y_i, \tilde z_i)$. If observations of $(X,Y,Z)$ are given for both stages, we can evaluate the out-of-sample losses, and these losses can be used for hyper-parameter tuning of $\lambda_1,\lambda_2$ (Appendix~\ref{sec:hyper-param}).
+
+DFIV uses the following models
+\begin{align}
+f_\mathrm{struct}(x) = \vec{u}^\top \vec{\psi}_{\theta_X}(x) \hspace{.5cm} \mathrm{and} \hspace{.5cm} \expect[X|z]{\vec{\psi}_{\theta_X}(X)} = \vec{V}\vec{\phi}_{\theta_Z}(z),
+\end{align}
+where $\vec{u} \in \mathbb{R}^{d_1}$ and $\vec{V} \in \mathbb{R}^{d_1\times d_2}$ are the parameters, and $\vec{\psi}_{\theta_X}(x) \in \mathbb{R}^{d_1}$ and $\vec{\phi}_{\theta_Z}(z)\in \mathbb{R}^{d_2}$ are the neural nets parameterised by $\theta_X \in \Theta_X$ and $\theta_Z \in \Theta_Z$, respectively. As in the original 2SLS algorithm, we learn $\expect[X|z]{\vec{\psi}_{\theta_X}(X)}$ in stage 1 and $f_\mathrm{struct}(x)$ in stage 2. In addition to the weights $\vec{u}$ and $\vec{V}$, however, we also learn the parameters of the feature maps, $\theta_X$ and $\theta_Z$. Hence, we need to alternate between stages 1 and 2, since the conditional expectation $\expect[X|z]{\vec{\psi}_{\theta_X}(X)}$ changes during training.
+
+\paragraph{Stage 1 Regression}
+\input{Method/stage1.tex}
+\paragraph{Stage 2 Regression}
+\input{Method/stage2.tex}
+\paragraph{Computational Complexity and Convergence}
+\input{Method/scalability.tex}
+
+

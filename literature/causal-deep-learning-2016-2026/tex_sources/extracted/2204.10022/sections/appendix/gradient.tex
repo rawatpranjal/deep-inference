@@ -1,0 +1,40 @@
+\section{Optimization over continuous functions}
+\label{app:gradient}
+
+Second, we need a functional estimator for $w(\y, \x)$. We use a neural network, $w(\y, \x; \bm{\omega})$, parameterized by $\bm{\omega}$ with sigmoid non-linearity on the output layer to satisfy the $w : \Ycal\times \Xcal \to [0, 1]$ constraint.
+
+For each $(\Lambda, \tf)$ pair, we then need to solve the following optimization problems:
+\begin{equation*}
+    \underline{\bm{\omega}} = \argmin_{\bm{\omega}} \frac{1}{n} \sum_{i = 1}^{n} \mu(w(\y, \cdot; \bm{\omega}); \x_i, \tf, \Lambda, \params), \quad \x_i \in \D,
+\end{equation*}
+and
+\begin{equation*}
+    \overline{\bm{\omega}} = \argmin_{\bm{\omega}} \frac{1}{n} \sum_{i = 1}^{n} -\mu(w(\y, \cdot; \bm{\omega}); \x_i, \tf, \Lambda, \params), \quad \x_i \in \D,
+\end{equation*}
+where
+\begin{equation*}
+    \begin{split}
+        \mu&(w(\y, \cdot; \bm{\omega}); \x, \tf, \Lambda, \params) \\
+        &\coloneqq \mut(\x, \tf; \params) + \frac{I\left(w(\y, \x; \bm{\omega}) (\y - \mut(\x, \tf; \params))\right)}{(\Lambda^2 - 1)^{-1} + I(w(\y, \x; \bm{\omega}))}.
+    \end{split}
+\end{equation*}
+Each of these problems can then be optimized using stochastic gradient descent \cite{ruder2016overview} and error back-propogation \cite{rumelhart1986learning}.
+Since the optimization over $\bm{\omega}$ is non-convex, guarantees on this strategy finding the optimal solution have yet to be established. 
+As an alternative, the line-search algorithm presented in \cite{jesson2021quantifying} can also be used with small modifications. 
+Under the assumptions of Theorem 1 in \cite{jesson2021quantifying}, with the additional assumption that $\Tf$ is a bounded random variable, we inherit their guarantees on the bound of the conditional average potential outcome.
+
+The upper and lower bounds for the CAPO function under treatment $\Tf=\tf$ and sensitivity parameter $\Lambda$ can be estimated for any observed covariate value, $\X=\x$, as
+\begin{equation*}
+    \underline{\mu}(\x, \tf; \Lambda, \params) = \mu(w(\y, \cdot; \underline{\bm{\omega}}); \x, \tf, \Lambda, \params),
+\end{equation*}
+and
+\begin{equation*}
+    \overline{\mu}(\x, \tf; \Lambda, \params) = \mu(w(\y, \cdot; \overline{\bm{\omega}}); \x, \tf, \Lambda, \params).
+\end{equation*}
+The upper and lower bounds for the APO (dose-response) function under treatment $\Tf=\tf$ and sensitivity parameter $\Lambda$ can be estimated over any set of observed covariates $\D_\x = \{\x_i\}_{i=1}^n$, as
+\begin{equation*}
+    \underline{\mu}(\tf; \Lambda, \params) = \frac{1}{n} \sum_{i = 1}^{n} \underline{\mu}(\x_i, \tf; \Lambda, \params), \quad \x_i \in \D_\x,
+\end{equation*}
+\begin{equation*}
+    \overline{\mu}(\tf; \Lambda, \params) = \frac{1}{n} \sum_{i = 1}^{n} \overline{\mu}(\x_i, \tf; \Lambda, \params), \quad \x_i \in \D_\x.
+\end{equation*}

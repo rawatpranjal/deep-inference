@@ -1,0 +1,46 @@
+\newcommand{\N}{\mathcal{N}}
+
+\section{Appendix: Simulation Studies and Application}
+\FloatBarrier
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=.5\linewidth]{figures/MNIST_20_eval}
+    \caption{MNIST task}
+    	\label{fig:MNIST}
+\end{figure}
+
+\label{app:simulation}
+\subsection{MNIST Simulation}
+For our MNIST simulation study (Section \ref{section:MNIST}), we used the MNIST database \citep{lecun1998mnist} which contains labeled handwritten images. We follow here the notation of \cite{nie2017learning}, who introduce a very similar simulation study which is not trying to evaluate transfer learning for CATE estimation, but instead emulates a RCT with the goal to evaluate different CATE estimators. 
+
+The MNIST data set contains labeled image data $(X_i, C_i)$, where $X_i$ denotes the raw image of $i$ and $C_i \in \{0, \ldots, 9\}$ denotes its label. 
+We create $k$ Data Generating Processes (DGPs), $D_1,~\ldots, ~ D_k$, each of which specifies a distribution of $(Y_i(0),Y_i(1), W_i, X_i)$ and represents different CATE estimation problems. 
+
+In this simulation, we let $W_i = 0$ if the image $X_i$ is placed in the control, and $W_i = 1$ if the image $X_i$ is placed in the treatment. $Y_i(W_i)$ quantifies the the outcome of $X_i$ under $W_i$.
+
+To generate a DGP $D_j$ , we first sample weights in the following way, 
+\begin{align*}
+m^j(0), ~m^j(1), \ldots, ~m^j(9) &\overset{iid}{\sim} \mbox{Unif}(-3,~ 3),\\ 
+t^j(0), ~t^j(  1), \ldots, ~t^j(9) &\overset{iid}{\sim} \mbox{Unif}(-1,~ 1),\\ 
+p^j(0), ~p^j(1), \ldots, ~p^j(9) &\overset{iid}{\sim} \mbox{Unif}(0.3,~ 0.7),
+\end{align*}
+and we define the response functions and the propensity score as
+\begin{align*}
+\mu^j_0(C_i) & = m^j(C_i) + 3 C_i,\\ 
+\mu^j_1(C_i) & = \mu^j_0(C_i) + t^j(C_i),\\
+e^j(C_i) & = p^j(C_i).
+\end{align*}
+To generate $(Y_i(0),Y_i(1), W_i, X_i)$ from $D_j$, we fist sample a $(X_i, C_i)$ from the MNIST data set, and we then generate $Y_i(0),Y_i(1)$, and $W_i$ in the following way:
+\begin{align*}
+\varepsilon_i &\overset{iid}{\sim} \N(0,1)\\
+Y_i(0) &= \mu_0(C_i) + \varepsilon_i\\
+Y_i(1) &=  \mu_1(C_i) + \varepsilon_i\\
+W_i &\sim  \mbox{Bern}(e(C_i)).
+\end{align*}
+
+During training, $X_i, W_i$, and $Y_i$ are made available to the convolutional neural network, which then predicts $\hat{\tau}$ given a test image $X_i$ and a treatment $W_i$. $\tau$ is the difference in the outcome given the difference in treatment and control.
+
+Having access to multiple DGPs can be interpreted as having access to prior experiments done on a similar population of images, allowing us to explore the effects of different transfer learning methods when predicting the effect of a treatment in a new image.
+
+
+

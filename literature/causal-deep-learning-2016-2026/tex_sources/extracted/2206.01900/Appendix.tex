@@ -1,0 +1,306 @@
+\renewcommand{\thesection}{\Alph{section}}
+%\appendix
+\section*{Appendix}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{A proof of Theorem \ref{thm:identification}}
+\label{app:proof}
+\begin{proof}
+Under the aforementioned assumptions in the main text, we can prove the identification of ITE:
+\eq{\tau_t &= \mathbb{E}_y[ y_{1,t+1}-y_{0,t+1}|x_t,\mathcal{H}_t]\label{eq:proof1}\\
+&=\mathbb{E}_z[\mathbb{E}_y[y_{1,t+1}-y_{0,t+1}|x_t,z_t,\mathcal{H}_t]|x_t,\mathcal{H}_t]\label{eq:proof2}\\
+&=\mathbb{E}_z[\mathbb{E}_y[y_{1,t+1}-y_{0,t+1}|z_t]|x_t,\mathcal{H}_t]\label{eq:proof3}\\
+&=\mathbb{E}_z[\mathbb{E}_y[y_{1,t+1}|z_t,a_t=1] - \mathbb{E}_y[y_{0,t+1}|z_t,a_t=0]|x_t,\mathcal{H}_t]\label{eq:proof4}\\
+&=\mathbb{E}_z[\mathbb{E}_y[y_{F,t+1}|z_t,a_t=1] - \mathbb{E}_y[y_{F,t+1}|z_t,a_t=0]|x_t,\mathcal{H}_t],\label{eq:proof5}
+%\label{eq:proof} 
+}
+where $\tau_t = \tau(x_t,\mathcal{H}_t)$, $y_{F,t+1}$ is a factual outcome, and we drop the instance index $(i)$ for simplification. 
+Eq. (\ref{eq:proof1}) is the definition of ITE in our setting, Eq. (\ref{eq:proof2}) is a straightforward expectation over $p(z_t|x_t,\mathcal{H}_t)$ , and Eq. (\ref{eq:proof3}) be inferred from the structure of the causal graph shown in Fig. \ref{fig:causalgraph}.
+%The SUTVA assumption is implicitly used in the causal graph, 
+Eq. (\ref{eq:proof4}) is based on the assumption that $z_t$ contains all the hidden confounders, as well as the positivity assumption, and Eq. (\ref{eq:proof5}) can be inferred from the consistency assumption. 
+Thus, if our framework can correctly model $p(z_t|x_t,\mathcal{H}_t)$ and $p(y_t|z_t,a_t)$, then the ITEs can be identified under the causal graph in Fig. \ref{fig:causalgraph}.
+\end{proof}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Common training setup}
+\label{app:common}
+\subsection{Model training and computation}
+\label{app:ourtraining}
+The codes and data we used are provided at \url{https://github.com/keisuke198619/TGV-CRN}.
+% via the supplementary materials. 
+This experiment was performed on an Intel(R) Xeon(R) CPU E5-2699 v4 ($2.20$ GHz $\times$ 16) with GeForce TITAN X pascal GPU.
+For the training of the proposed and baseline models, we used the Adam optimizer \cite{Kingma15} with an initial learning rate of $0.0001$ and $20$ training epochs.
+We set the batchsize to 256.
+For the hyper-parameters in the loss function, we set $\alpha = 0.1, \lambda = 0.1$ for all datasets and  $\gamma = 0.1$ in the Boid and CARLA dataset and  $\gamma = 1$ in the NBA experiment because the latter dataset was more difficult to predict than the Boid and CARLA experiments.
+% The hidden layer is a two-layer MLPs of size ****. 
+
+%In addition, to compare the methods in terms of their amount of computation, we measured training and inference time across two datasets.
+% The results in Table \ref{tab:computation} show that the computation time of our method was...
+
+\if0
+\begin{table*}[ht!]
+\centering
+\scalebox{1}{
+\begin{tabular}{l|cc}%|
+\Xhline{3\arrayrulewidth} %\hline
+& \me{1}{Kuramoto  model } & \me{1}{Boid model}  \\ 
+& \me{1}{($p = 5, T = 200, K = 5$)}&\me{1}{($p = 5, T = 200, K = 3$)}\\
+\hline
+eSRU \cite{Khanna19} & 162 $\pm$ 5 & 143 $\pm$ 9 \\
+GVAR \cite{Marcinkevics20} & 27 $\pm$ 3 & 19 $\pm$ 1
+\\
+\hline
+ABM (full) & 116 $\pm$ 4 & 129 $\pm$ 4
+\\
+\Xhline{3\arrayrulewidth} % \hline
+\end{tabular}
+}
+\caption{\label{tab:computation} The averaged computation time [s] among 10 sequences in two datasets.}
+\end{table*}
+\fi
+
+
+\subsection{Baseline models implementation}
+\label{app:baselines}
+We compared the performances of our methods to infer ITE with those in the following baselines: a simple RNN using GRU \cite{Cho14},
+deep sequential weighting (DSW) \cite{liu2020estimating}, dynamic networked observational data deconfounder (but for clarity, we change the name into GCRN: graph counterfactual recurrent network) \cite{ma2021deconfounding}.
+
+\noindent {\bf{RNN}.} This approach is based on GRU \cite{Cho14}. This model predicts the input (covariates) at the next time stamp, the potential outcome, and the probability of receiving treatment.
+We also model the hidden confounder as the hidden state of GRU, but do not learn the representation to reduce the confounding bias.  
+
+\noindent {\bf{DSW}} \cite{liu2020estimating}. Compared with the original model, we modified it to our setting (e.g., multi-agent, time-varying outcome, and long-term prediction), and to fairly compare with our model, we removed the attention module. 
+
+\noindent {\bf{GCRN}} \cite{ma2021deconfounding}. Similarly, compared with the original model, we modified it to our setting (e.g., multi-agent and long-term prediction) based on DSW, and to fairly compare with our model, we removed the attention module. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Sensitivity analysis in hyperparameters}
+\label{app:sensitivity}
+
+We performed the sensitivity analysis in hyperparameters using the CARLA dataset. 
+The hyperparameters are presented in Eq. (\ref{eq:loss}).
+Results in Table \ref{tab:sensitivity} shows the existence of the trade-off between the prediction performances of the outcome and covariates ($\gamma$).  
+
+\begin{table}[ht!]
+\centering
+\scalebox{0.75}{
+\begin{tabular}{l|cccc}%|
+\Xhline{3\arrayrulewidth} %\hline
+% & \me{4}{carla simulation dataset}  \\ 
+& \me{1}{$L_{Outcome}$ } & \me{1}{$\sqrt{\epsilon^t_{PEHE}}$} &  \me{1}{$\epsilon^t_{ATE}$} & \me{1}{$L_{Covariates}$} \\
+\hline
+$\alpha, \gamma, \lambda = 0.1$ (default) & 0.041 $\pm$ 0.003 &  0.020 $\pm$ 0.002 & 0.008 $\pm$ 0.001 & 0.098 $\pm$ 0.0004 \\
+\hline
+$\alpha = 1.0, \gamma, \lambda = 0.1$ & 0.040 $\pm$ 0.003 &  0.020 $\pm$ 0.002 & 0.009 $\pm$ 0.001 & 0.102 $\pm$ 0.0004 
+\\$\alpha = 0.01, \gamma, \lambda = 0.1$ & 0.041 $\pm$ 0.003 &  0.019 $\pm$ 0.002 & 0.007 $\pm$ 0.001 & 0.097 $\pm$ 0.0004 
+\\$\gamma = 1.0, \alpha, \lambda = 0.1$ & 0.041 $\pm$ 0.003 &  0.019 $\pm$ 0.001 & 0.005 $\pm$ 0.001 & 0.086 $\pm$ 0.0004\\
+$\gamma = 0.01, \alpha, \lambda = 0.1$ &  0.031 $\pm$ 0.002 &  0.020 $\pm$ 0.002 & 0.009 $\pm$ 0.001 & 0.146 $\pm$ 0.0005  
+\\$\lambda = 1.0, \alpha, \gamma = 0.1$ & 0.062 $\pm$ 0.005 &  0.019 $\pm$ 0.002 & 0.007 $\pm$ 0.001 & 0.121 $\pm$ 0.0005  
+\\$\lambda = 0.01, \alpha, \gamma = 0.1$ &  0.041 $\pm$ 0.003 &  0.020 $\pm$ 0.002 & 0.008 $\pm$ 0.001 & 0.098 $\pm$ 0.0004
+\\
+\Xhline{3\arrayrulewidth} % \hline
+\end{tabular}
+}
+\caption{\label{tab:sensitivity} Sensitivity analysis on the carla dataset.}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\vspace{-10pt}
+\section{Boid dataset}
+\label{app:boid}
+%\subsection{Simulation model}
+% The rule-based models have been used to generate generic simulated flocking agents called boids \cite{reynolds1987flocks}.
+The schooling model we used in this study was a unit-vector-based (rule-based) model \cite{Couzin02}, which accounts for the relative positions and direction vectors of neighboring fish agents, such that each fish tends to align its own direction vector with those of its neighbors. 
+% In this paper, we intervene the agents' recognition to generate torus (circle) behaviors from the swarm (random) behaviors.
+In this model, $20$ agents (length: 0.5 m) are described by a two-dimensional vector with a constant velocity (1 m/s) in a boundary square (30 $\times$ 30 m) as follows: 
+${r}^k=\left({x_i}~{y_i}\right)^T$ and ${v}^k_t= \|v^k\|_2d_k$, where $x_i$ and $y_i$ are two-dimensional Cartesian coordinates, ${v}^k$ is a velocity vector, $\|\cdot\|_2$ is the Euclidean norm, and $d_k$ is an unit directional vector for agent $i$.
+
+At each timestep, a member will change direction according to the positions of all other members. The space around an individual is divided into three zones where each modifying the unit vector of the velocity (for the zones, see the main text).
+%The first region, called the repulsion zone with radius $r_r = 0.5$ m, corresponds to the ``personal'' space of the particle. Individuals within each other’s repulsion zones will try to avoid each other by swimming in opposite directions. 
+%The second region is called the orientation zone, in which members try to move in the same direction  (radius $r_o$). 
+%We set $r_o = 4$ to generate swarming behaviors before the intervention. 
+%To generate torus behaviors, we change $r_o = 5$, which is the intervention in this experiment.
+%The third is the attractive zone (radius $r_a = 7.5$ m), in which agents move towards each other and tend to cluster, while any agents beyond that radius have no influence. 
+Let $\lambda_r$, $\lambda_o$, and $\lambda_a$ be the numbers in the zones of repulsion, orientation and attraction respectively. For $\lambda_r \neq 0$, the unit vector of an individual at the next timestep is given by:
+\begin{equation} 
+\label{eq:boid1}
+d_k(t+1 , \lambda_r \neq 0 )=-\left(\frac{1}{\lambda_r-1}\sum_{j\neq k}^{\lambda_r}\frac{r^{kj}_t}{\|r^{kj}_t\|_2}\right),
+\end{equation} 
+where $r^{kj}={r}_j-{r}_i$.
+The velocity vector points away from neighbors within this zone to prevent collisions. This zone is given the highest priority; if and only if $\lambda_r = 0$, the remaining zones are considered. 
+The unit vector in this case is given by:
+\begin{equation} 
+\label{eq:boid2}
+d_k(t+1 , {\lambda}_r=0)=\frac{1}{2}\left(\frac{1}{\lambda_o}\sum_{j=1}^{\lambda_o} d_j(t)+\frac{1}{\lambda_a-1}\sum_{j\neq k}^{{\lambda}_a}\frac{r^{kj}_t}{\|r^{kj}_t\|_2}\right).
+\end{equation} 
+The first term corresponds to the orientation zone while the second term corresponds to the attraction zone. The above equation contains a factor of $1/2$ which normalizes the unit vector in the case where both zones have non-zero neighbors. If no agents are found near any zone, the individual maintains a constant velocity at each timestep.
+
+In addition to the above, we constrain the angle by which a member can change its unit vector at each timestep to a maximum of $\beta = 30$ deg. This condition was imposed to facilitate rigid body dynamics. Since we assumed point-like members, all information about the physical dimensions of the actual fish is lost, which leaves the unit vector free to rotate at any angle. In reality, however, the conservation of angular momentum will limit the ability of the fish to turn angle $\theta$ as follows:
+\begin{equation} 
+\label{eq:boid3}
+  d_k\left(t+1 \right)\cdot d_k(t) = 
+  \begin{cases}
+   \cos(\beta ) & \text{if $\theta >\beta$} \\
+   \cos\left(\theta \right) & \text{otherwise}.
+  \end{cases}
+\end{equation} 
+If the above condition is not satisfied, the angle of the desired direction at the next timestep is rescaled to $\theta = \beta$. In this way, any un-physical behavior such as having a 180$^\circ$ rotation of the velocity vector in a single timestep is prevented.
+
+In the simulation, the ground truth of $\tau_T$ was $0.091 \pm 0.026$, which indicates the intervention increased angular velocities (see also the main text). 
+
+
+% \section{Results of the boid model}
+% \label{app:res_boid}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{CARLA dataset}
+\label{app:carla}
+%\subsection{Simulation model}
+We used the CARLA simulator \cite{dosovitskiy2017carla} (ver. 0.9.8).
+The CARLA environment contains dynamic obstacles (e.g., pedestrians and cars) that interact with the ego car. For generating data, we performed simulation through various towns, starting points, and obstacle positions, which were subsampled at 2 Hz.
+The obstacles' positions and starting points of the ego car were randomly selected from the possible locations on the map for each run.
+Approximately 20-120 obstacles were placed on each map.
+Using the data collected in CARLA, the same driving conditions were reproduced in ROS (robot operating system) \cite{quigley2009ros}, and Autoware was used to make the vehicle drive the same route autonomously.
+Here we consider two types of autonomous vehicles: partial observation with Autoware \cite{kato2015open} (ver.1.12.0) and full observation types with the pre-installed CARLA simulator. 
+The partial observation model often stops when dangerous situations for safety. 
+If an obstacle enters the deceleration or stopping range, the vehicle decelerates or stops in front of the obstacle.
+% The yellow area in Fig.\ref{fig:intervention} is the deceleration range, and the green area is the stopping range. 
+% If an obstacle enters the area, the vehicle decelerates or stops in front of the obstacle.
+The deceleration range was set to be wider than usual for safety.
+The full observation model intervenes to accelerate the stopped ego car after the safety confirmation based on the speed information at the data collection.
+
+We set $T=60, T_b=40$, and $T_i=T_b+1,\ldots,T_b+10$.
+% \tau = 1$.
+% For the counterfactual data, since the dangerous situations where intervention is required are limited, in this experiment we only used with or without intervention at the same timing (not various timings). 
+We evaluated and predicted the safe driving distance of the ego car from the starting point while driving without collision with any obstacle (for details, see the main text). 
+% That is, the treatment effect of the full observation model is defined as the safe driving distance.
+In the simulation, the ground truth of $\tau_T$ was $0.013 \pm 0.001$, which indicates the intervention increased safe driving distance. 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{NBA dataset}
+\label{app:nba}
+Here, we describe the details of the computation using the NBA dataset.
+Dataset description is given in the main text.
+We describe the computation of the attack effectiveness used in this study.
+Then, we predict the effective attacks at the next time stamp using the pre-training samples and a logistic regression.  %  (i.e., $\tau=1$)
+%
+% It could be argued that the tactics and strategy of a coach and team are perhaps most influential up until the point at which there is a good scoring opportunity to make a shot, and it is then up to the skills/form of the individual player to actually convert this opportunity into points.
+%
+% A good scoring opportunity in basketball is considered to be a shot being made where there has been a high expected probability of scoring in the past.
+%
+
+%
+From the aforementioned reasons in the main text, we compute an interpretable and simple indicator from available statistics (i.e., based on the frequency) to evaluate whether a player attempts a better shot, rather than based on the shot label or learning-based score prediction.
+From available statistics, we focused on two basic factors for effective attacks at an individual player level: the shot zone on the court and the distance between a shooter and the nearest defender. 
+These two factors have been considered to be important for basketball shot prediction \cite{Fujii16,Fujii17,Fujii18}.
+In the NBA advanced stats (\url{https://www.nba.com/stats/players/shots-closest-defender/}), we can access probabilities of successful shots in each zone and distance for each player.
+The shot zones are separated into four areas: the restricted area, in-the-paint, mid-range, and the 3-point area. 
+The restricted area is defined as the area within a radius of 2.44 m from the ring (distance between the side of the rectangle and the ring) from the ring.
+In-the-paint is defined as the area within a radius of 5.46 m (distance between the ring and the farthest vertex of the rectangle) from the ring.
+The 3-point area is defined as the outside of the 3-point line. 
+Mid-range is the remaining area. 
+The shooter's distance from the nearest defender is categorized into four ranges: $0-2$ feet, $2-4$ feet, $4-6$ feet, and $6+$ feet.
+
+We define the attack effectiveness using the following criteria:
+\vspace{-0pt}
+\begin{quote}
+\begin{itemize}
+\item The shooter's position in the restricted area is effective at any distance because the defender often exists near the shooter.
+\item The shooter's position in the paint and mid-range is effective at 6 feet or further (this range is regarded as ``open'' in the NBA advanced stats).
+\item The shooter's position in the 3-point area is effective when a player with a probability of 0.35 and hits with 6 feet or more (because some players do not shoot tactically).
+\end{itemize}
+\end{quote}
+\vspace{-0pt}
+Based on the statistics before the game (e.g., for the pre-training data, we used the 2014/2015 season statistics) and the tracking data, 
+we computed the probabilities of successful shots for each zone and the distances for each player. 
+We computed the probability of the player who attempted shots less than 10 times as the probability of the same position player (i.e., guard, forward, center, guard/forward, and forward/center based on the registration information from the NBA 2014/2015 season).
+It should be noted that there are some strategies of a good shot in basketball that differ depending on the court location and context, for example, 2 pointers and 3 pointers.
+Note that, unfortunately, we can access those for only two areas (2-point and 3-point areas) with four distance categories, thus we computed the shot success probability at the restricted area, in-the-paint, and mid-range using that at the 2-point area.
+% For adjusting the 3-point shot probability far from the 3-point line, we adjusted the probability such that the probability is linearly reduced by 0.2 at 12.73m (distance between the ring and the half-court line).
+%
+Based on the above definitions, for pre-training data, there were 13,681 shot successes, 15,443 shot failures, 5,572 turnovers,
+16,976 effective attacks, and 17,720 ineffective attacks.
+For training data, there were 4,677 shot successes, 5,092 shot failures, 1,691 turnovers, 5,602 effective attacks, and 5,858 ineffective attacks.
+For test data, there were 517 shot successes, 577 shot failures, 211 turnovers, 664 effective attacks, and 641 ineffective attacks.
+The probabilities of scoring, given the attack was effective and ineffective, were 0.463/0.415/0.417 and 0.328/0.402/0.374 for pre-training, training, and test data, respectively.
+We confirmed that the effective attack had a higher probability of a successful shot than the ineffective attack. 
+
+After the computation of the attack effectiveness, we predict the effective attacks at the next time stamp using the pre-training samples and a logistic regression.  
+In the soccer domain, there has been some work to evaluate players and teams (e.g., \cite{Decroos19,Toda2021}) based on the prediction model (i.e., classifier) on the assumption that a good play is a play that will bring good outcomes (e.g., score and ball recovery) in the future. 
+These approaches can transform a discrete value (i.e., an outcome) into a continuous value (e.g., a probability).
+According to these papers, we also predict the effective attack at the next time stamp.
+To verify the prediction accuracy, we compared the accuracy of the logistic regression, LightGBM \cite{ke2017lightgbm}, which is a popular classifier using a highly efficient gradient boosting decision tree, and prediction with all effective attacks.
+For the training data, the accuracies of logistic regression, LightGBM, and the prediction with all the same labels were 0.838, 0.838, and 0.731, respectively.
+For the test data, these were 0.679, 0.676, and 0.568, respectively. 
+We confirmed that the logistic regression had competitive performance compared with LightGBM, and higher accuracy than the prediction with all the same labels, even maintaining higher interpretability. 
+
+%\section{GRL illustration}
+%\label{app:GRL}
+\section{\textcolor{black}{Convergence in the learning of our models}}
+\label{app:converge}
+\textcolor{black}{We illustrate the change in the validation losses of our models over the course of training epochs as shown in Figs. \ref{fig:carla_learning}, \ref{fig:boid_learning}, and \ref{fig:nba_learning}.
+Compared with CARLA dataset results, which show better outcome and covariate prediction results than other datasets, those in Boid and NBA datasets sometimes show unstable learning curves, but most of the models finally show convergence in all datasets. 
+To perform fair comparisons among the models, we trained all models with 20 epochs. }
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\textwidth]{fig/carla_learning.png}
+\caption[]{\textcolor{black}{The learning curve of our model training in CARLA dataset. Left and right subfigures indicate losses in outcome and covariate prediction, respectively. }
+}
+%
+\label{fig:carla_learning}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\textwidth]{fig/boid_learning.png}
+\caption[]{\textcolor{black}{The learning curve of our model training in Boid dataset.}
+}
+%
+\label{fig:boid_learning}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\textwidth]{fig/nba_learning.png}
+\caption[]{\textcolor{black}{The learning curve of our model training in NBA dataset.}
+}
+%
+\label{fig:nba_learning}
+\end{figure}
+
+\section{\textcolor{black}{Additional analysis in basketball dataset}}
+\label{app:analysis_basket}
+\textcolor{black}{As additional analysis, we indicate endpoint errors and distributions of long-term covariate prediction for basketball data.
+Results in Table \ref{tab:nba_end} that the tendency of the endpoint prediction error for all models is similar to the mean prediction error, in which our approach (TV-CRN and TGV-CRN) show the best performance. In addition, the distribution of the player velocity in Fig. \ref{fig:histogram_nba} shows that our approach without theory-based computation had a wider distribution like ground truth than other models, and those with theory-based computation had less zero-velocity bins like ground truth than other models. }
+\begin{table}[ht!]
+\centering
+\scalebox{1}{
+\begin{tabular}{l|c}%|
+\Xhline{3\arrayrulewidth} %\hline
+% & \me{4}{carla simulation dataset}  \\ 
+ & \me{1}{$L_{Covariates}$ at endpoint} \\
+\hline
+RNN & 1.637 $\pm$ 0.0096
+\\DSW \cite{liu2020estimating}& ---
+\\GCRN \cite{ma2021deconfounding} & ---
+\\GCRN$+$X & 2.266 $\pm$ 0.0138\\
+\hline
+GV-CRN & 1.937 $\pm$ 0.0116
+\\TG-CRN & \textbf{1.482} $\pm$ \textbf{0.0090}
+\\TV-CRN & 1.566 $\pm$ 0.0094
+\\ TGV-CRN (full) & \textbf{ 1.510} $\pm$ \textbf{0.0093}
+\\
+\Xhline{3\arrayrulewidth} % \hline
+\end{tabular}
+}
+\vspace{3pt}
+\caption{\label{tab:nba_end} \textcolor{black}{Endpoint prediction error on NBA dataset.}}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.5\textwidth]{fig/histogram_nba.png}
+\caption[]{\textcolor{black}{Histograms of player velocity in NBA dataset.}
+}
+%
+\label{fig:histogram_nba}
+\end{figure}

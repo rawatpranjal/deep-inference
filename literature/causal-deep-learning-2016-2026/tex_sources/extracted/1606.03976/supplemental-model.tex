@@ -1,0 +1,99 @@
+\section{Algorithmic details}\label{sec:appmodel}
+
+We give details about the algorithms used in our framework. 
+
+%First, we restate Algorithm 1.
+%
+%\begin{algorithm}[tbp]
+%\caption{CFR: Counterfactual regression with integral probability metrics}
+%\label{alg:appmodel}
+%\begin{algorithmic}[1]
+%  \STATE \textbf{Input:} Factual sample $(x_1,t_1,y_1), \ldots , (x_n,t_n,y_n)$, scaling parameter $\alpha>0$, loss function $L\left(\cdot,\cdot\right)$, representation network $\Phi_{\bf{W}}$ with initial weights $\bf{W}$, outcome network $h_{\bf{V}}$ with initial weights $\bf{V}$, function family $F$ for IPM
+%  \WHILE{not converged}
+%    \STATE Sample $m$ control $\{(x_{i_j},0,y_{i_j})\}_{j=1}^m$ and $m'$ treated units $\{(x_{i_{k}},1,y_{i_{k}})\}_{k=m+1}^{m+m'}$
+%    \STATE Calculate the gradient of the IPM term:\\
+%    $g_1 = ${\small $\nabla_{\bf{W}} \; \text{IPM}_F(\{\Phi_{\bf{W}}(x_{i_j})\}_{j=1}^m, \{\Phi_{\bf{W}}(x_{i_{k}})\}_{k=m+1}^{m+m'} )$}
+%    \STATE Calculate the gradients of the empirical loss: \\
+%    $g_2 = \nabla_{\bf{V}}\frac{1}{m+m'} \sum_j L\left(h_{\bf{V}}(\Phi_{\bf{W}}(x_{i_j}),t_{i_j}), y_{i_j}\right)$ \\
+%    $g_3 = \nabla_{\bf{W}}\frac{1}{m+m'}\sum_j L\left(h_{\bf{V}}(\Phi_{\bf{W}}(x_{i_j}),t_{i_j}), y_{i_j}\right)$
+%    \STATE Obtain step size scalar or matrix $\eta$ with standard neural net methods e.g. RMSProp~\cite{tieleman2012lecture}
+%    \STATE Update $\bf{W} \leftarrow \bf{W} - \eta(\alpha g_1 +  g_3 )$,  $\bf{V} \leftarrow \bf{V} - \eta g_2 $
+%    \STATE Check convergence criterion
+%  \ENDWHILE
+%\end{algorithmic}
+%\end{algorithm}
+
+\subsection{Minimizing the Wasserstein distance}
+In general, computing (and minimizing) the Wasserstein distance involves solving a linear program, which may be prohibitively expensive for many practical applications. \citet{cuturi2013sinkhorn} showed that an approximation based on entropic regularization can be obtained through the Sinkhorn-Knopp matrix scaling algorithm, at orders of magnitude faster speed. Dubbed Sinkhorn distances, the approximation is computed using a fixed-point iteration involving repeated multiplication with a kernel matrix $K$. We can use the algorithm of \citet{cuturi2013sinkhorn} in our framework. See Algorithm~\ref{alg:wassgrad} for an overview of how to compute the gradient $g_1$ in Algorithm~\ref{alg:model}. When computing $g_1$, disregarding the gradient $\nabla_{\bf W} T^*$ amounts to minimizing an upper bound on the Sinkhorn transport. More advanced ideas for stochastic optimization of this distance have recently proposed by \citet{aude2016stochastic}, and might be used in future work.
+
+\begin{algorithm}[tbp]
+\caption{Computing the stochastic gradient of the Wasserstein distance}
+\label{alg:wassgrad}
+\begin{algorithmic}[1]
+  \STATE \textbf{Input:} Factual  $(x_1,t_1,y_1), \ldots , (x_n,t_n,y_n)$, representation network $\Phi_{\bf{W}}$ with current weights by $\bf{W}$
+  \STATE Randomly sample a mini-batch with $m$ treated and $m'$ control units $(x_{i_1},0,y_{i_1}), \ldots , $\\
+  $(x_{i_m},0,y_{i_m}),  (x_{i_{m+1}},1,y_{i_{m+1}}), \ldots , (x_{i_{2m}},1,y_{i_{2m}}) $
+   \STATE Calculate the $m \times m$ pairwise distance matrix between all treatment and control pairs $M(\Phi_{\bf{W}})$: \\
+   $M_{kl}(\Phi) = \|\Phi_{\bf{W}}(x_{i_k}) - \Phi_{\bf{W}}(x_{i_{m+l}})\|$
+    \STATE Calculate the approximate optimal transport matrix $T^*$ using Algorithm 3 of \citet{cuturi2014fast}, with input $M(\Phi_{\bf{W}})$
+  \STATE Calculate the gradient:\\ $g_1 = \nabla_{\bf{W}} \left< T^*,M(\Phi_{\bf{W}})\right>$
+  \vspace{0.2em}
+\end{algorithmic}
+\end{algorithm}
+
+%For non-uniform populations $u := p(t=1) \neq 1/2$, our method can still be applied using the unnormalized version of the Wasserstein distance, using ideas presented by \cite{guittet2002extended,gramfort2015fast}, and explored much more deeply by \cite{chizat2015unbalanced}. The Sinkhorn transport can still be used to approximate the Wasserstein distance, but with small modifications.
+%Let $\lambda$ and $\delta$ be parameters and $\tilde{M}$ the matrix
+%$$
+%\tilde{M} = \left[ \begin{array}{cc}
+%M & \delta \\
+%\delta & 0\end{array} \right]~.
+%$$
+%Then, define an $n_t+1$-dimensional vector $a$
+%$$
+%a = [u, ..., u, 1-u]^\top
+%$$
+%and an $n_c+1$-dimensional vector $b$
+%$$
+%b = [1-u, ..., 1-u, u]^\top
+%$$
+%where $n_t$ and $n_c$ are the number of treated and controls.
+%Then, to get $T^*$, apply Algorithm 3 of \cite{cuturi2014fast} on $\tilde{M}, a$ and $b$.
+
+While our framework is agnostic to the parameterization of $\Phi$, our experiments focus on the case where $\Phi$ is a neural network. For convenience of implementation, we may represent the fixed-point iterations of the Sinkhorn algorithm as a recurrent neural network, where the states $u_t$ evolve according to
+$$
+u_{t+1} = n_t ./ (n_c K (1./(u_t^\top K)^\top))~.
+$$
+Here, $K$ is a kernel matrix corresponding to a metric such as the euclidean distance, $K_{ij} = e^{-\lambda\|\Phi(x_i) - \Phi(x_j)\|_2}$, and $n_c, n_t$ are the sizes of the control and treatment groups. In this way, we can minimize our entire objective with most of the frameworks commonly used for training neural networks, out of the box.
+
+\subsection{Minimizing the maximum mean discrepancy}
+
+The MMD of treatment populations in the representation $\Phi$, for a kernel $k(\cdot,\cdot)$ can be written as,
+\begin{align}
+\text{MMD}_k(\{\Phi_{\bf{W}}(x_{i_j})\}_{j=1}^m, \{\Phi_{\bf{W}}(x_{i_{k}})\}_{k=m+1}^{m'} ) = \\
+\frac{1}{m(m-1)}\sum_{j=1}^m \sum_{k=1,k\neq j}^{m} k(\Phi_{\bf{W}}(x_{i_j}), \Phi_{\bf{W}}(x_{i_k})) \\
++ \frac{2}{mm'}\sum_{j=1}^m \sum_{k=m}^{m+m'} k(\Phi_{\bf{W}}(x_{i_j}), \Phi_{\bf{W}}(x_{i_k})) \\
++ \frac{1}{m'(1-m')}\sum_{j=1}^m \sum_{k=m,k\neq j}^{m'} k(\Phi_{\bf{W}}(x_{i_j}), \Phi_{\bf{W}}(x_{i_k}))
+\end{align}
+
+%The unnormalized version, where the marginal probability of treatment $u \neq 1/2$, is
+%\begin{align}
+%\text{MMD}_k(\{\Phi_{\bf{W}}(x_{i_j})\}_{j=1}^m, \{\Phi_{\bf{W}}(x_{i_{k}})\}_{k=m+1}^{m'} ) = \\
+%\frac{2u^2}{m(m-1)}\sum_{j=1}^m \sum_{k=1,k\neq j}^{m} k(\Phi_{\bf{W}}(x_{i_j}), \Phi_{\bf{W}}(x_{i_k})) \\
+%+ \frac{4u(1-u)}{mm'}\sum_{j=1}^m \sum_{k=m}^{m+m'} k(\Phi_{\bf{W}}(x_{i_j}), \Phi_{\bf{W}}(x_{i_k})) \\
+%+ \frac{2(1-u)^2}{m'(1-m')}\sum_{j=1}^m \sum_{k=m,k\neq j}^{m'} k(\Phi_{\bf{W}}(x_{i_j}), \Phi_{\bf{W}}(x_{i_k}))
+%\end{align}
+
+
+The linear maximum-mean discrepancy can be written as a distance between means. In the notation of Algorithm~\ref{alg:model},
+$$
+\text{MMD} = 2\left\| \frac{1}{m}\sum_{j=1}^m \Phi_{\bf{W}}(x_{i_j}) -\frac{1}{m'}\sum_{k=m+1}^{m'} \Phi_{\bf{W}}(x_{i_k})\right\|_2
+$$
+Let
+$$
+{\bf f}({\bf W}) = \frac{1}{m}\sum_{j=1}^m \Phi_{\bf{W}}(x_{i_j}) - \frac{1}{m'}\sum_{k=m+1}^{m+m'} \Phi_{\bf{W}}(x_{i_k})
+$$
+Then the gradient of the MMD with respect to $\bf{W}$ is,
+$$
+g_1 = 2 \frac{d \bf{f}(\bf{W})}{d\bf{W}} \frac{\bf{f}(\bf{W})}{\|\bf{f}(\bf{W})\|_2} ~.
+$$
+

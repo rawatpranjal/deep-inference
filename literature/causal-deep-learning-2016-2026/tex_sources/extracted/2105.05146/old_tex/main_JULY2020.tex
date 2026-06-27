@@ -1,0 +1,646 @@
+\documentclass{article}
+\usepackage{arxiv}
+% For french
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsthm,amsmath,natbib}
+\usepackage{amsfonts,amssymb}
+\RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[toc,page]{appendix}
+
+% For tikz pictures
+\usepackage{tikz}
+\usetikzlibrary{matrix,chains,positioning,decorations.pathreplacing,arrows}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+\usepackage{algorithm}
+\usepackage[]{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{afterpage}
+\usepackage{bbm}
+\usepackage{setspace}
+\usepackage{comment}
+\usepackage[normalem]{ulem}
+%\doublespacing
+
+\newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+
+% Additional definitions
+\def\tt{\mathbf t}
+\def\z{\mathbf z}
+\def\X{\mathbf X}
+\def\inv{^{-1}}
+\def\H{\mathbf H}
+\def\x{\mathbf x}
+\def\xs{\underline {\mathbf x}}
+\def\Xs{\underline { \mathbf X} }
+\def\r{\mathbf r}
+\def\y{\mathbf y}
+\def\lmax{\lambda_\mathrm{max}}
+\def\emax{\mathbf{e}_\mathrm{max}}
+\def\emin{\mathbf{e}_\mathrm{min}}
+\def\lmin{\lambda_\mathrm{min}}
+\def\bbeta{\boldsymbol \beta}
+\def\ggamma{\boldsymbol \gamma}
+\def\intinf{\int_\infty^\infty}
+\def\sumi{\sum_{i=1}^n}
+\def\t{^\top}
+\def\eps{\boldsymbol \varepsilon}
+\def\KL{\mathbb {KL}}
+\def\E{\mathbb E}
+\def\V{\mathbb V}
+\def\N{\mathcal N}
+\def \real{\rm I\!R}
+\def \I{\mathbf I}
+\def \L {\mathcal{L}}
+
+% define alphabetical enumeration in \bgin{enumerate}
+\renewcommand{\theenumi}{\alph{enumi}}
+\renewcommand{\labelenumi}{\theenumi)}
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclareMathOperator*{\argmin}{argmin~} % for subscripts and superscripts
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{property}[theorem]{Property}
+
+
+\title{Siamese Model for Individual Treatment Effect}
+
+\author{
+  \thanks{Corresponding author: belbahrim@dms.umontreal.ca} Mouloud Belbahri, Alejandro Murua \\
+  Department of Mathematics and Statistics\\
+  University of Montreal
+  \And
+  Olivier Gandouet, Ghaith Kazma \\
+  Advanced Analytics\\
+  TD Insurance
+  \And
+  Vahid Partovi Nia \\
+  Department of Mathematics and Industrial Engineering\\
+  École Polytechnique de Montréal
+}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\textit{Uplift} is a particular case of individual treatment effect modeling. Such models deal with cause-and-effect inference for a specific factor, such as a marketing intervention. In practice, these models are built on customer data who purchased products or services to improve product marketing. In marketing, the goal of an uplift model is to predict which future customers should be targeted in order to maximize the return on investment. Uplift is defined as the difference between two conditional means and most existing approaches for predicting the uplift are adaptations of classification and regression trees. These uplift trees modify the split criteria in order to maximize the heterogeneity in treatment effects. However, in practice, these conventional approaches are prone to overfitting. The optimization problem does not take into account the estimation quality of the conditional means. Without careful regularization, splits are likely to be placed next to extreme values, making predictions unreliable. 
+%
+We propose a novel method that tries to improve upon existing methods in terms of generalization error. Taking advantage of the flexibility and prediction power of neural networks, we design an optimization problem for which regularization of the weights takes into account both conditional means estimation and uplift prediction. We present two regularization criteria: one using the transformed outcome for uplift, and a novel regularization criteria inspired by the Bayes conditional probability theorem. 
+%
+As a consequence, the optimization problem has the impact to reduce the variance of the predicted uplifts, and also ensures awareness in predicting the conditional means. We focus on fully randomized experiments, which is the case of our data. We show our proposed method improves the state-of-the-art on synthetic and real data.
+\end{abstract}
+
+\keywords{causal inference \and marketing \and neural networks \and regularization \and uplift}
+
+
+\section{Introduction}
+\label{sec:intro}
+
+\textit{Uplift} is a particular case of causal inference and follows the potential outcomes framework \citep{rubin1974estimating, holland1986statistics}. Uplift models are developed for randomized controlled trials (RCTs) settings where both the treatment and outcome are binary random variables. Uplift refers to modeling customers behavioral change that results directly from a specific treatment, such as a marketing intervention (e.g. a courtesy call). The customers can be segmented along two dimensions in function of the potential outcomes and the treatment, giving rise to the following groups \citep{kane2014mining} : a \textit{persuadable} client is an individual who purchases the product only if he receives a call; a \textit{sure thing} client is an individual who purchases the product whether he receives the call or not; a \textit{lost cause} client is an individual who will not purchase the product regardless of whether he receives the call or not; a \textit{do-no-disturb} client is an individual who will not purchase the product only if he receives a call. In general, from a business point of view, interesting customers are the \textit{persuadable} and the \textit{do-not-disturb} clients. The persuadable clients provide incremental sales whereas the do-not-disturb individuals should be avoided because the marketing campaign would have a negative effect on them. Mainly known in the marketing research literature, uplift models \citep{radcliffe1999differential, hansotia2002direct, lo2002true, radcliffe2007using} provide a solution to the problem of isolating the marketing effect. Instead of modeling the positive response probability, uplift attempts to model the difference between conditional probabilities in the treatment and control groups. %Uplift definition is equivalent to the one of individual treatment effect (ITE). However, uplift models performance metrics diverge from those used for ITE estimation \citep{radcliffe2011real}. 
+
+Most existing uplift models are adaptations of classification and regression trees \citep{breiman1984classification} where the majority are modified random forests \citep{Breiman-RandomForest-2001, radcliffe2011real, jaskowski2012uplift, guelman2012random}. Within each leaf, uplift is estimated with the difference between the two conditional means. The belief is that since the uplift is defined as a difference, if we can get good estimates of each mean, we have a good estimate of the difference. However, the existing tree-based uplift optimization problems do not take into account the estimation of each mean. Instead, the focus is on maximizing the heterogeneity in treatment effects. Without careful regularization (e.g. honest estimation \citep{athey2019generalized}), splits are likely to be placed next to extreme values because outliers of any treatment can influence the choice of a split point. In addition, successive splits tend to group together similar extreme values, introducing more variance in the prediction of uplift \citep{zhao2017practically}. Alternatively some models use the transformed outcome \citep{athey2015machine}, an unbiased estimator of the uplift. However, this estimate suffers from higher variance than the conditional mean estimator \citep{powers2018some}. In addition, for both estimators, if random noise is larger than the treatment effect, the model will more likely predict random noise instead of uplift. This is particularly problematic for uplift trees, as the split criteria is function of the two treatment effects. As a result, based on several experiments on real data, and although the literature suggests that tree-based methods are state-of-the-art for uplift \citep{soltys2015ensemble}, the published models over-fit the training data and predicting uplift still lacks satisfactory solutions.
+
+We define a unified framework with the goal of improving uplift models predictions on unseen data. Taking advantage of the flexibility and prediction power of neural networks, we design an optimization problem for which regularization of the weights takes into account both conditional means estimation and adequacy of uplift prediction. To the best of our knowledge, our method proposes a new way to tackle overfitting for uplift models. We present two regularization criteria: one using the transformed outcome, that has been shown to be a consistent estimator of the uplift with respect to the mean squared error \citep{gutierrez2017causal}, and a novel regularization criteria that comes from the Bayes conditional probability theorem. 
+%The motivation of the new regularization function comes from the fact that $\mathrm{Pr}(T=t|Y=y,\X)$ is directly linked to the uplift estimation. Therefore, enforcing a good estimate of $\mathrm{Pr}(T=t|Y=y,\X)$ from the network acts as a regularization which guides heterogeneity of treatment effects aligned with the uplift prediction. 
+Empirically, we show that our proposed optimization has the impact to reduce the variance of the predicted uplifts. Furthermore, the flexibility of our proposed method opens a door to connections with the estimation of uplift in observational data settings. Our proposed method is validated on both synthetic and a realworld data-set made available to us by a Canadian insurance company. The experimental results demonstrate its advantages over state-of-the-art tree-based uplift modeling.
+
+
+\section{Uplift Modeling}
+\label{sec:literature}
+
+To formalize the problem, let $Y$ $\in$ $\lbrace0,1\rbrace$ be a binary response variable, $\X=(X_{1},\ldots,X_{p})$ a vector of covariates, and $T\in\lbrace0,1\rbrace$ the treatment indicator variable. The binary variable $T$ indicates if a customer is exposed to treatment ($T=1$) or control ($T=0$). The observed outcome $Y$ can be described as 
+
+$$Y=TY_1 + (1-T)Y_0,$$
+
+where $Y_0$  and $Y_1$ are the potential outcomes under control and treatment respectively. Suppose $n$ independent customer observations $\{y_i, \textbf{x}_i, t_i\}_{i=1}^n$ are at our disposal. Although each customer $i$ is associated with two potential outcomes, only one of them can be realized as the observed outcome $y_i$. For RCTs settings, $T$ is independent ($\independent$) of all pre-treatment characteristics, i.e.,
+
+\begin{equation}
+    \big( Y_0, Y_1, \X \big) \independent T. 
+    \label{eq:randomization}
+\end{equation}
+
+This allows the unbiased estimation of the average treatment effect. Moreover, the \textit{propensity score} $e(\x)= \mathrm{Pr}(T=1 \mid \X=\x)$ is a constant. In our data, $e(\x) = 1/2$. An uplift model estimates the conditional average treatment effect in various sub-populations as a function of the possible values of the covariates $(\X=\x)$,
+
+\begin{align}
+    u(\x) &= \mathbb{E} ( Y_1 \mid \X=\x) - \mathbb{E} ( Y_0 \mid \X=\x) \nonumber\\
+     &= \mathbb{E} ( Y \mid T=1, \X=\x) - \mathbb{E} ( Y \mid T=0, \X=\x) \nonumber \\
+     &= \mathrm{Pr} ( Y = 1 \mid T=1, \X=\x) - \mathrm{Pr} ( Y = 1 \mid T=0, \X=\x) \nonumber \\
+      &=m_1(\x) - m_0(\x). 
+    \label{eq:uplift}
+\end{align}
+
+
+Uplift is defined as the difference between the two conditional means $m_1(\x)$ and $m_0(\x)$. Therefore, the intuitive approach to model uplift is to build two classification models \citep{hansotia2002direct}. This consists of fitting two separated conditional probability models: one for the treated individuals, and another for the untreated individuals. The uplift is estimated as the difference between these two conditional probability models. The asset of this technique is its simplicity. However, it does not perform well in practice \citep{radcliffe2011real}. Both models focus on predicting only a one-class probability and for each model, information about the other treatment is never provided to the learning algorithm. In addition, differences between the covariates distributions in the two treatment groups can lead to bias in treatment effect estimation. Using a unique classification model corrects this drawback. Some traditional uplift estimation methods use the treatment assignment as a feature, adding explicit interaction terms between each covariate and the treatment indicator, and then train classification models to estimate the uplift \citep{lo2002true}. The parameters of the interaction terms measure the additional effect of each covariate because of the treatment.
+
+The transformed outcome variable $Z$, which was proposed by \citep{athey2015machine} is defined as  
+
+\begin{equation}
+    Z =  \frac{T Y}{e(\x)} - \frac{(1 - T) Y}{1 - e(\x)}.
+    \label{eq:transformed_outcome}
+\end{equation}
+
+This transformation has the key property that, under the complete randomization or unconfoundness assumption \citep{rosenbaum1983central}, its expectation conditional on $(\X=\x)$ is equal to $u(\x)$. Therefore, the transformed outcome is an unbiased estimate of the uplift. With this transformed outcome, one can simply use any supervised learning algorithm to estimate a regression function for the expectation of $Z$ given $\X$. In our case, with $e(\x) = 1/2$, $Z$ simplifies to
+
+\[ Z = \begin{cases} 
+      2, & \mathrm{if}~T=1, Y=1 \\
+      -2, & \mathrm{if}~T=0, Y=1 \\
+      0 & \mathrm{otherwise.} 
+   \end{cases}
+\]
+
+In the uplift context, one can have an interesting interpretation of $Z=2$ and $Z=-2$. Take the first case. This happens when a client is called ($T = 1$) and then buys the insurance policy ($Y = 1$). Thus, for its counterfactual (i.e., $T = 0$), there are two possibilities. Either the client would have bought the policy ($Y = 1$) and in this case would belong to the \textit{sure things} group, or else the client would not have bought the policy ($Y = 0$) in which case would in fact be a \textit{persuadable}. Thus, in the worst case scenario, individuals with $Z = 2$ are \textit{sure things}. The same logic applies for $Z = -2$ where a client could either be a \textit{sure thing} or a \textit{do-not-disturb}. For \textit{lost cause} clients, by definition $Z = 0$. This interpretation does not cover all scenarios for $Z=0$ but gives insights about ordering customers with $Y=1$. 
+
+
+Several machine learning methods try to model the uplift directly. Some $k$-nearest neighbours \citep{cover1967nearest} based methods are also adopted for uplift estimation \citep{crump2008nonparametric, Alemi.etal-PersonalizedMedicine-2009, su2012facilitating}. The main idea is to estimate the uplift for an observation based on its neighbourhood containing at least one treated and one control observations. However, these methods quickly become computationally expensive for large datasets. Furthermore, adaptive tree-based methods such as random forests outperform the nearest neighbours approach, especially in the presence of irrelevant covariates \citep{wager2018estimation}. Therefore, most active research in uplift modeling is in the direction of classification and regression trees \citep{breiman1984classification}. State-of-the-art proposed methods view the forests as an adaptive neighborhood metric, and estimate the treatment effect at the leaf node \citep{su2009subgroup, chipman2010bart, guelman2012random}. In \cite{radcliffe1999differential, radcliffe2011real} or \cite{ hansotia2002direct, hansotia2002incremental}, modified split criteria that suited the uplift purpose were studied. The criteria used for choosing each split during the growth of the uplift trees is based on maximization of the difference in uplifts between the two child nodes. However, in practice, these approaches are prone to overfitting. The splitting criteria introduced are based solely on maximizing differences in uplifts. Therefore, splits are likely to be placed next to extreme values because outliers of any treatment can influence the choice of a split point. In addition, successive splits tend to group together similar extreme values, introducing more variance in the prediction of uplift \citep{zhao2017practically}.
+
+Recently, representation learning approaches have been proposed for estimating individual treatment effect based on observational data. An approach in the literature emphasizes learning a covariate representation that has a balanced distribution across treatment and outcome \citep{johansson2016learning}. Some similar methods try to minimize the distribution difference between treated and control groups in the embedding space \citep{shalit2017estimating, yao2018representation}. Another approach is based on propensity score matching \citep{rosenbaum1983central} with neural networks \citep{alaa2017deep, schwab2018perfect} and \citep{shi2019adapting} use regularized neural networks to estimate the average treatment effect.
+
+
+\section{Methodology}
+\label{sec:methodology}
+
+
+Classification models with binary outcomes are relatively easy to develop\footnote{Depending on the complexity of the data, any supervised learning algorithm used properly tends to give satisfactory results.}. However, uplift models are not classification models. The goal of uplift modeling is to separate all observations into heterogeneous groups that differ as much as possible with regard to the reactions to the treatment and, thus, identify subgroups with different uplifts. Then, the uplifts in the resulting groups serve as a prediction for the future behavior of the observations. Therefore, a model that learns only the binary classification task fails to properly capture the uplift because it is not designed for this task. But, since the uplift is defined as a difference between two conditional probabilities, it is important to put emphasis on the estimation of these probabilities. On the other hand, methods that aim to directly predict the uplift (such as tree-based methods which maximize heterogeneity) fail to generalize because they focus only on heterogeneity and do not take into account the estimation of the conditional probabilities.
+
+In recent years, deep neural networks have become very popular thanks to their ability to model very complex structures. They have achieved remarkable results, for example, in the fields of computer vision or natural language processing. Taking advantage of the flexibility and predictive power of neural networks, we propose a \textit{Siamese} \citep{bromley1994signature} architecture called SMITE \footnote{Siamese Model for Individual Treatment Effect} which works in tandem on two almost identical augmented input vectors $(\x,\mathbf{1})$ and $(\x,\mathbf{0})$, and outputs the prediction of the conditional mean $m_t(\x) = tm_1(\x) + (1-t)m_0(\x)$ as well as the one of the uplift $u(\x)$. Using a Sieamese architecture simplifies the fitting process. On the same forward pass, the model outputs the conditional means as well as the uplift. The idea is that the two input vectors are fed to two identical neural network sub-components (i.e., with shared weights $\boldsymbol{\theta}$). The inputs contain the covariates vector $\x$ and, for the top network sub-component, the treatment variable fixed to $1$. The treatment variable is fixed to $0$ for the bottom network sub-component as shown in Figure \ref{fig:nite}. 
+
+% Import the general framework figure
+\input{figures/framework.tex}
+
+The sub-components output the predicted conditional means for treated ($\mu_1$) and for control ($\mu_0$). The difference gives direct prediction for $u(\x)$. At the same time, the predicted conditional mean $\mu_t$ is based on the actual treatment $t \in \{0,1\}$, i.e., $\mu_t = t\mu_1 + (1-t)\mu_0$. 
+
+The conditional mean $\mu_t$ is compared to the observed outcome $y$ based on binary cross-entropy loss $\mathcal{L}$ or BCE. Then, we propose two regularization criteria. The first one compares the uplift prediction to the observed transformed outcome $z$ based on the mean squared error loss $\mathcal{J}$. The second one uses the observed treatment variable $t$ and another BCE loss $\mathcal{I}$ (see Section~\ref{sec:smite_ie}). We give the details in the following sections. Essentially, back-propagating both losses gradients through the network consists in fitting a {\it regularized} conditional means regression.
+
+\subsection{Regularized conditional means regression}
+\label{sec:smite_to}
+
+In deep learning regularization is sometimes hidden in heuristic methods during training. For instance, adding noise to the input data yields to generalization error improvement \citep{bishop1995training,rifai2011adding}. Data augmentation, and early stopping are some other heuristic regularizations widely applied in practice. A more theoretically sound regularization method is dropout \citep{srivastava2014dropout}, a widely-used method for addressing the problem of over-fitting. The idea is to drop units randomly from the neural network during training. It is known that dropout improves the test accuracy compared to conventional regularizers such as $L_1$ \citep{Tibshirani_lasso_1996} and $L_2$  \citep{srivastava2014dropout}. \citep{wager2013dropout} proved that dropout is equivalent to an $L_2$-type regularizer applied after scaling the inputs. These common regularizations encourage the weights to be estimated near zero. In our case, we want regularization on the predicted uplift (by the difference of the conditional means) and not directly applied to the weights. Therefore, we need to define a new regularization function. 
+
+Suppose $n$ independent customer observations $\{y_i, \textbf{x}_i, t_i, z_i\}_{i=1}^n$ are at our disposal. Let us denote the model's parameters by $\boldsymbol{\theta}$. Regularization can be seen as a constrained optimization problem, then using the transformed outcome $Z$, SMITE solves
+
+\begin{align} 
+     {\boldsymbol{\hat\theta}} & = \argmin_{\boldsymbol{\theta}} ~  \mathcal{L}\Big({\mu_t}(\boldsymbol{\theta}), \y\Big) \nonumber \\ 
+     & \mathrm{subject~to,} \nonumber \\
+        & \mathcal{J}\Big({\mu_0}(\boldsymbol{\theta}),{\mu_1}(\boldsymbol{\theta}), \z\Big) < \epsilon,
+     \label{eq:objective}
+\end{align}
+
+where $\epsilon > 0$. The quantities $\mu_{0}(\cdot)$ and $\mu_{1}(\cdot)$ are functions of the inputs $\x$ and could be denoted $\mu_{0}(\x)$ and $\mu_{1}(\x)$. To simplify the notation, we prefer to omit this specification throughout the rest of the paper. The rationale behind this constrained formulation is that we want a model capable of direct prediction of the uplift $u(\x)$, i.e., $\mu_1(\boldsymbol{\hat\theta}) - \mu_0(\boldsymbol{\hat\theta})$, and coherent estimation of $m_t(\x)$, i.e., $\mu_t(\boldsymbol{\hat\theta})$. 
+
+Formally, we define $\mathcal{L}(\boldsymbol{\theta}, \y)$ with respect to the network's parameters $\boldsymbol{\theta}$ as 
+
+\begin{equation*}
+    \mathcal{L}(\boldsymbol{\theta}, \y) = - \sum_{i=1}^{n} \Big( y_i\mathrm{log} \{\mu_{t_i}(\boldsymbol{\theta})\} + (1-y_i) \mathrm{log} \{1-\mu_{t_i}(\boldsymbol{\theta})\} \Big)
+\end{equation*}
+
+where $\mu_{t_i}(\boldsymbol{\theta}) = t_i \mu_{1i}(\boldsymbol{\theta}) + (1-t_i) \mu_{0i}(\boldsymbol{\theta})$ is the model's output of observation $i$ with treatment $t_i$, with $\mu_{1i}(\boldsymbol{\theta})$ and $\mu_{0i}(\boldsymbol{\theta})$  representing the outputs for observation $i$ from the top and bottom sub-components of the network (see Figure~\ref{fig:nite}).
+
+The function $\mathcal{J}(.)$ in \eqref{eq:objective} is what we refer to as the \textit{direct} uplift regularization function. It is defined as a distance between the predicted uplift and the transformed outcome, such as
+
+\begin{equation}
+    \mathcal{J}(\boldsymbol{\theta}, \z) =   \frac{1}{n} \sum_{i=1}^{n} \Big( z_i - \{{\mu_{1i}}(\boldsymbol{\theta }) - {\mu_{0i}}(\boldsymbol{\theta})\} \Big)^2.
+    \label{eq:direct_uplift_loss}
+\end{equation}
+
+It is helpful to rewrite the full constrained problem (\ref{eq:objective}) in his Lagrangian form
+
+\begin{align*}
+    {\boldsymbol{\hat\theta}}_{\lambda} =  \argmin_{\boldsymbol{\theta}} \mathcal{L}(\boldsymbol{\theta}, \y) + \lambda \mathcal{J}(\boldsymbol{\theta}, \z)
+\end{align*}
+
+where $\lambda > 0$ is the regularization constant. However, in the SMITE framework, we use the transformation $\alpha = \lambda / (1+\lambda)$. This transformation allows to interpret $\alpha \in [0,1)$ as a hyper-parameter which controls the trade-off between the two losses in the optimization problem. Hence,
+
+\begin{align}
+    {\boldsymbol{\hat\theta}}_{\alpha} = \argmin_{\boldsymbol{\theta}} (1 - \alpha)  \mathcal{L}(\boldsymbol{\theta}, \y) + \alpha \mathcal{J}(\boldsymbol{\theta}, \z).
+    \label{eq:SMITE_objective}
+\end{align}
+
+Equation (\ref{eq:SMITE_objective}) encompasses what motivates the SMITE framework to be able to penalize the conditional means regression weights in order to guide the uplift predictions. This is equivalent to jointly optimize both loss functions for a fixed value of $\alpha$. In our experiments, the {\it trade-off} constant $\alpha$ is fine-tuned using cross-validation (see Figure \ref{fig:alphaie}).
+
+
+\subsection{The optimization algorithm}
+\label{sec:smite_to_sgd}
+
+Gradient-based optimization is one of the pillars of machine learning. Given an objective function $f: \real^n \rightarrow \real$, classical gradient descent has the goal of finding
+(local) minima $\hat{\boldsymbol{\theta}} = \argmin_{\boldsymbol{\theta}} f(\boldsymbol{\theta})$ via updates of the form $ \Delta (\boldsymbol{\theta}) =  -\xi \nabla f$, where $\xi$
+is a positive step size (or the learning rate). Two main classes of optimization methods can be applied to solve such problems : (i) {\it stochastic} and (ii) {\it batch}.
+
+The prototypical stochastic optimization method is the stochastic gradient
+method \citep{robbins1951stochastic}, which, in the context of minimizing $f(\boldsymbol{\theta})$ and with $\boldsymbol{\theta}^{(0)} \in \real^p$ given, is defined by
+
+\begin{equation}
+    \boldsymbol{\theta}^{(k+1)} \leftarrow \boldsymbol{\theta}^{(k)} - \xi \nabla f_{i_k} (\boldsymbol{\theta}^{(k)}).
+\end{equation}
+
+Here, for all $k \in \mathbb{N}$, the index $i_k$ is chosen randomly from $\{1,...,n\}$. There is no particular reason to employ information from only one sample point per iteration. Instead, one can employ a {\it mini-batch} approach in which a small subset of samples $\mathcal{S}_k \subseteq \{1, ..., n\}$, is chosen randomly in each iteration, leading to
+
+\begin{equation}
+    \boldsymbol{\theta}^{(k+1)} \leftarrow \boldsymbol{\theta}^{(k)} - \frac{\xi}{|\mathcal{S}_k|} \sum_{i \in \mathcal{S}_k} \nabla f_{i} (\boldsymbol{\theta}^{(k)}).
+    \label{eq:mini-batch-sgd}
+\end{equation}
+
+Here, $|\mathcal{S}_k|$ is the batch size which we will later denote by $m$. Such a mini-batch stochastic gradient method has been widely used in practice. On the other hand, the {\it batch} approach, also referred to as the gradient, batch gradient, or full gradient method, uses all $n$ observations in each iteration. There are some fundamental practical and theoretical reasons why stochastic methods have inherent advantages for large-scale machine learning \citep{bottou2018optimization}. In practice, we train the SMITE model by solving (\ref{eq:SMITE_objective}) using the mini-batch stochastic gradient descent (SGD) updates (\ref{eq:mini-batch-sgd}). 
+
+Linear regression can be regarded as the simplest neural network, with no hidden layer, a linear activation function and the MSE loss function. For logistic regression, the sigmoid activation replaces the linear one and the BCE loss is used instead of the MSE. In order to get insight about the SMITE framework, it is important to study SGD updates in linear/logistic regression contexts. To do so, let us define a simple SMITE framework. For $\alpha \in [0,1)$, let 
+
+\begin{equation}
+    f_{\alpha}(\boldsymbol{\theta}) = \alpha \mathcal{J}(\boldsymbol{\theta}, \z)+ (1 - \alpha)  \mathcal{L}(\boldsymbol{\theta}, \y)
+    \label{eq:obj_simple}
+\end{equation}
+
+be the objective function of the SMITE model with no hidden layer. Without loss of generality, suppose that we only have one predictor at our disposal and let
+
+\[
+\mathbf{y} = 
+\begin{bmatrix}
+y_1 \\ y_2 \\ \vdots \\ y_m
+\end{bmatrix},~
+\mathbf{z} = 
+\begin{bmatrix}
+z_1 \\ z_2 \\ \vdots \\ z_m
+\end{bmatrix},~
+\X = 
+\begin{bmatrix}
+1 & x_1 & t_1 \\ 1 & x_2 & t_2 \\ \vdots & \vdots & \vdots \\ 1 & x_m & t_m
+\end{bmatrix},~
+\boldsymbol{\theta} = 
+\begin{bmatrix}
+\theta_0 \\ \theta_1 \\ \gamma
+\end{bmatrix},
+\]
+
+where $m$ is the batch size, $\mathbf{y}$ is the binary outcome, $\mathbf{z}$ is the transformed outcome and $\X$ is the design matrix. The parameters of $\boldsymbol{\theta}$ represent the intercept ($\theta_0$), the predictor's coefficient ($\theta_1$) and the treatment coefficient ($\gamma$) which we represent with a different symbol because it plays a different role than $\theta_1$. Indeed, if $\gamma = 0$, the uplift is $0$ for all observations.
+
+Define the sigmoid function as $\sigma (a) = 1 / (1 + e^{-a})$ for $a \in \real$. For $i=1,...,m$, let 
+
+\[
+\begin{cases} 
+      s_i = \sigma( \theta_0 + \theta_1 x_i + \gamma t_i),  \\
+      u_i = s_{1i} - s_{0i},
+\end{cases}\]
+where
+\[
+\begin{cases}
+      s_{1i} = \sigma( \theta_0 + \theta_1 x_i + \gamma), ~ \mathrm{and} \\
+      s_{0i} = \sigma( \theta_0 + \theta_1 x_i).
+\end{cases}
+\]
+
+The SMITE framework models simultaneously $\mathbbm{E}[Y_i \mid \x_i]$ with $s_i$ and $\mathbbm{E}[Z_i \mid \x_i]$ with $u_i$. The objective function (\ref{eq:obj_simple}) can be written as follows
+
+\begin{equation}
+    f_{\alpha}(\boldsymbol{\theta}) = \frac{\alpha }{m} \sum_{i=1}^m (z_i - u_i)^2 
+    - \frac{(1 - \alpha)}{m} \sum_{i=1}^m \Big( y_i (\theta_0 + \theta_1 x_i + \gamma t_i) - \mathrm{log}\{1 + e^{\theta_0 + \theta_1 x_i + \gamma t_i}  \} \Big).
+    \label{eq:obj_simple_details}
+\end{equation}
+
+It can be shown that each SGD iteration leads to the following parameters update
+
+\begin{equation}
+    \boldsymbol{\theta}^{(k+1)} \leftarrow \boldsymbol{\theta}^{(k)} - \xi_1 \mathbf{V}^{(k)^{\top}}(\mathbf{u}^{(k)} - \mathbf{z}) - \xi_2 \X^{\top}(\mathbf{s}^{(k)} - \mathbf{y}),
+    \label{eq:sgd_update}
+\end{equation}
+
+where $\xi_1 = 2\alpha\xi/m^2$ and $\xi_2 = (1-\alpha)\xi/m^2$, with 
+
+\[
+\mathbf{u} = 
+\begin{bmatrix}
+u_1 \\ u_2 \\ \vdots \\ u_m
+\end{bmatrix},~
+\mathbf{s} = 
+\begin{bmatrix}
+s_1 \\ s_2 \\ \vdots \\ s_m
+\end{bmatrix},~
+\mathbf{V} = \mathrm{diag}(\mathbf{v}_1) \mathbf{P} - \mathrm{diag}(\mathbf{v}_0) \mathbf{N}
+\]
+
+where
+
+\[
+\mathbf{v}_1 = 
+\begin{bmatrix}
+v_{11} \\ v_{12} \\ \vdots \\ v_{1m}
+\end{bmatrix},~
+\mathbf{v}_0 = 
+\begin{bmatrix}
+v_{01} \\ v_{02} \\ \vdots \\ v_{0m}
+\end{bmatrix},~
+\mathbf{P} = 
+\begin{bmatrix}
+1 & x_1 & 1 \\ 1 & x_2 & 1 \\ \vdots & \vdots & \vdots \\ 1 & x_m & 1
+\end{bmatrix},~
+\mathbf{N} = 
+\begin{bmatrix}
+1 & x_1 & 0 \\ 1 & x_2 & 0 \\ \vdots & \vdots & \vdots \\ 1 & x_m & 0
+\end{bmatrix},
+\]
+
+with
+
+\[
+\begin{cases} 
+      v_{1i} = s_{1i} ( 1 - s_{1i}),  \\
+      v_{0i} = s_{0i} ( 1 - s_{0i}).
+\end{cases}
+\]
+
+The quantities $v_{1i}$ and $v_{0i}$ can be interpreted as the variance of $Y_i$ for treated and control groups respectively. Therefore, when looking at the gradient that comes from the MSE loss and the elements of the matrix $\mathbf{V}$, we can see that for $\theta_0$ and $\theta_1$, the updates are weighted with the difference in variances between the treated and control groups $(v_{1i} - v_{0i})$, whereas for the treatment coefficient $\gamma$, the updates are weighted with $v_{1i}$ only.  On the other hand, the gradient that comes from the BCE loss does not depend on the uplift and behaves exactly like in the classic logistic regression problem. Thus, by looking at Equation (\ref{eq:sgd_update}), we can interpret the part of the gradients linked to the MSE as a regularization to the part linked to the BCE loss.
+
+Optimization algorithms that use only the gradient are called first-order optimization algorithms. Second-order optimization algorithms such as Newton's method use the Hessian matrix. In this work, as in many deep learning applications where the functions used are complicated, we focus on first-order methods. 
+
+
+\subsection{An alternative to the $Z$ transform} 
+\label{sec:smite_ie}
+
+The flexibility of SMITE allows us to offer alternatives to the regularization (and loss) functions defined in the general framework (see Figure~\ref{fig:nite}).
+
+SMITE allows to have for each forward pass the estimation of both conditional means. By taking the difference, we get an estimate of the uplift. Now, we want to find a way to regularize this estimate using information from randomization, i.e., the treatment variable $T$. Indeed, suppose a treatment has a significant positive (resp. negative) effect on a sub-sample of customers. This would imply that within the sample of customers that had a positive (resp. negative) response, we expect a higher proportion of treated customers. 
+
+For example, suppose the covariate $X$ is a binary variable which represents the gender of each customer and assume the distributions in Table~\ref{tab:example_ie}. Based on the $200$ customers, the average treatment effect is $0$. However, the treatment effect has positive impact on men. Indeed, the uplift for men is $0.1$. Therefore, if we only look at men with $Y=1$, we should observe that more than half ($e(\x) = 1/2$) were treated. In this example, the proportion is $2/3$. 
+
+\begin{table}[H]
+    \centering
+    \caption{Example}
+    \begin{tabular}{|l|cc|cc|cc|}
+        \hline
+         & \multicolumn{2}{c|}{Total} & \multicolumn{2}{c|}{$Y=1$} & \multicolumn{2}{c|}{$Y=0$} \\
+         \hline
+         & M & F & M & F & M & F \\
+         \hline
+        Treatment ($T=1$) & 50 & 50 & 10 & 0 & 40 & 50 \\
+        Control ($T=0$) & 50 & 50 & 5 & 5 & 45 & 45 \\ 
+        \hline
+    \end{tabular}
+    \label{tab:example_ie}
+\end{table}
+
+More concretely, suppose the data $(y_i, t_i)$, for $i=1,\dots,n$ represents i.i.d. samples from the joint distribution of a pair of binary random variables $(Y,T)$, for which conditional on $\X=\x$, $\mathrm{Pr}(T = 1 \mid \x) = 1 - \mathrm{Pr}(T = 0 \mid \x) = e(\x)$. Then, by Bayes theorem,
+
+\begin{align*}
+    \mathrm{Pr}(T=1 \mid Y=1, \x) = \frac{ \mathrm{Pr}(Y=1 \mid T=1, \x)  e(\x)}{\mathrm{Pr}(Y=1 \mid T=0, \x) \{1- e(\x)\} + \mathrm{Pr}(Y=1 \mid T=1, \x)e(\x)} .
+\end{align*}
+
+Inspired by the previous development, we denote the proportion of treated customers among those that had positive outcomes by $p(t=1\mid y=1,\x)$. When the propensity score is equal to the constant $e(\x) = 1/2$, this proportion can be written as a function of the conditional means, 
+\begin{align}
+    p(t=1\mid y=1,\x) = \frac{m_1(\x)}{m_0(\x) + m_1(\x)}.
+    \label{eq:p1}
+\end{align}
+
+Although Equation \eqref{eq:p1} is simplified based on the assumption assumption that $e(\x) = 1/2$, the development holds for any constant $e(\x)$. Moreover, one can use an under or over-sampling procedure to recover the $e(\x) = 1/2$ case. Similarly, the proportion of treated customers among those that had negative outcomes is
+\begin{align}
+    p(t=1\mid y=0,\x) = \frac{(1-m_1(\x))}{(1-m_0(\x)) +(1- m_1(\x))}.
+    \label{eq:p0}
+\end{align}
+
+From these definitions, we propose an alternative to the direct uplift regularization. The \textit{indirect} uplift regularization has the following form
+
+\begin{equation*}
+    \mathcal{I}(\boldsymbol{\theta}, 
+    \tt) =   - \sum_{i=1}^{n} \Big( t_i\mathrm{log} \{p_{y_i}(\boldsymbol{\theta})\} + (1-t_i) \mathrm{log} \{1-p_{y_i}(\boldsymbol{\theta})\} \Big),
+\end{equation*}
+
+where, $p_{y_i}(\boldsymbol{\theta}) = y_i p_{1i}(\boldsymbol{\theta}) + (1-y_i) p_{0i}(\boldsymbol{\theta})$ is the model's output of observation $i$ with response $y_i$, with $p_{1i}(\boldsymbol{\theta})$ and $p_{0i}(\boldsymbol{\theta})$  representing the estimates for observation $i$ of \eqref{eq:p1} and \eqref{eq:p0}, such as
+\begin{align*}
+    p_{1i}(\boldsymbol{\theta}) &= \frac{\mu_{1i}(\boldsymbol{\theta})}{\mu_{0i}(\boldsymbol{\theta}) +\mu_{1i}(\boldsymbol{\theta})}, \\
+    p_{0i}(\boldsymbol{\theta}) &= \frac{(1-\mu_{1i}(\boldsymbol{\theta}))}{(1-\mu_{0i}(\boldsymbol{\theta})) +(1- \mu_{1i}(\boldsymbol{\theta}))}.
+\end{align*}
+
+
+The indirect uplift regularization function is simply the binary cross-entropy between a function of the predicted conditional means $p_y(\boldsymbol{\theta})$ and the observed treatment variable $t$. 
+
+The associated learning curves are smoother than the ones of the direct regularization using $Z$ (see Figure \ref{fig:instabilty}), which improves the training of the proposed uplift models. In what follows, we will refer to the SMITE using $\mathcal{J}$ as SMITE Transformed Outcome (TO) and the SMITE using  $\mathcal{I}$ as SMITE Indirect Estimation (IE). In this case, the optimization problem becomes
+
+\begin{align*}
+    {\boldsymbol{\hat\theta}}_{\alpha} = \argmin_{\boldsymbol{\theta}} (1 - \alpha)  \mathcal{L}(\boldsymbol{\theta}, \y) + \alpha \mathcal{I}(\boldsymbol{\theta}, \tt),
+\end{align*}
+
+for $\alpha \in [0,1)$.
+
+%Learning curves
+\input{figures/losses.tex}
+
+
+
+\section{SMITE Architecture}
+\label{sec:NAS}
+
+Deep Learning has enabled remarkable progress over the last years on a variety of tasks, such as image recognition, speech recognition, and machine translation. One crucial aspect
+for this progress are novel neural architectures. Currently employed architectures have mostly been developed manually by human experts, which is a time-consuming and error-prone process. Because of this, there is growing interest in automated neural architecture search (NAS) methods. NAS methods can be categorized according to three dimensions \citep{elsken2018neural}: search space, search strategy, and performance estimation strategy.
+
+\paragraph{Search space.}
+
+The search space defines which architectures can be represented
+in principle. Incorporating prior knowledge about typical properties of architectures well-suited for a task can reduce the size of the search space and simplify the search. SMITE architecture is a Sieamese multi-layer perceptron. Therefore, the search space for the architecture is first defined by the number of hidden layers and the number of hidden units per layer. However, it should not be limited to these two parameters. The choice of loss functions, regularization and activations in deep networks has also a significant effect on the training dynamics and task performance. These functions are therefore part of the architecture and should be included in the search space. For example, instead of using the MSE (\ref{eq:direct_uplift_loss}), one can think of the $L_1$ regularization instead. Other functions have been proposed in the deep learning literature and can be included in the search space as well, such as Foothill function  \citep{belbahri2019foothill} that has interesting properties and is flexible enough to approximate the $L_1$ loss and the MSE.
+
+Neural network activations determine the output of a node and are a crucial component of deep learning. When the activation function is non-linear, then a two-layer neural network can be proven to be a universal function approximator \citep{cybenko1989approximation}. The identity activation function does not satisfy this property. When multiple layers use the identity activation function, the entire network is equivalent to a single-layer model. The Parameteric Rectified Linear Unit (PReLU) \citep{he2015delving} has been proposed as an extension of Rectified Linear Unit (ReLU) \citep{nair2010rectified} in order to improve image classification accuracy. The PReLU function is defined as
+
+\[
+f_a (x) = 
+\begin{cases}
+    x, ~\mathrm{if}~ x \geq 0\\
+    ax, ~\mathrm{otherwise}
+\end{cases}
+\]
+
+where $a \in [0;1]$ is learned in the training via backpropagation. When $a=0$, PReLU simplifies to ReLU and if $a$ is set to a fixed value, PReLU simplifies to Leaky ReLU (LReLU)  \citep{maas2013rectifier}.
+
+\paragraph{Search strategy.}
+
+The search strategy details how to explore the search space
+(which is often exponentially large or even unbounded). It encompasses the classical exploration-exploitation trade-off since, on the one hand, it is desirable to find
+well-performing architectures quickly, while on the other hand, premature convergence to a region of suboptimal architectures should be avoided. In \cite{yang2019evaluation},  based on a benchmark of 8 NAS methods on 5 datasets, they compare methods with different search spaces, using a method’s relative improvement over the randomly sampled average architecture, which effectively removes advantages arising from expertly engineered search spaces or training protocols. Surprisingly, they find that many NAS techniques struggle to significantly beat the average architecture baseline. Furthermore, it is desirable to have a search strategy because unfortunately, in many deep learning tasks, training is computationally expensive. However, for our application, training SMITE on the real data takes 10 minutes for 100 epochs (on a Dual Intel Xeon 256 Gb RAM and 1 Titan V12GB). Therefore, we believe that grid search is suitable for SMITE architecture search. Table~\ref{tab:NAS} summarizes the hyper-parameters responsible for defining the architecture of SMITE. Hyper-parameter 3 must be defined for each layer. Although hyper-parameters 6-8 do not modify the architecture, they are important in terms of training. We prefer to enumerate them in this Table in order to include them in the architecture search. Hyper-parameter 9 is important for reproducible results. Our experimental results are presented in Section~\ref{sec:experiments}.
+
+\begin{table}[htb]
+    \caption{Hyper-parameters that define the architecture of SMITE.}
+    \centering
+    \begin{tabular}{|c||l|l|l|}
+         \hline
+         \# &  Hyper-parameter & Type & Scope\\
+         \hline
+         1 & \# of hidden layers & Integer & $\{0,1,2,...,10\}$\\
+         2 & \# of hidden units per layer & Integer & $\{32,64,128,256,512,1024\}$\\
+         3 & Activation & Nominal/Continuous & $\{$ReLU, LReLU$(a)\}$\\
+         4 & Regularization function & Nominal & $\{$SMITE (TO), SMITE (IE)$\}$ \\
+         5 & Regularization function for SMITE (TO) & Nominal/Integer & $\{L_1$,$L_2$,Foothill$\}$\\
+         6 & Batch size $m$ & Integer & $\{128,256\}$ \\
+         7 & Learning rate $\xi$ & Continuous & $\{0.01,0.02,0.03,0.04,0.05\}$ \\
+         8 & Trade-off constant $\alpha$ & Continuous & $\{0,0.1,0.2,...,1\}$ \\
+         9 & Seed & Integer & $\{1,2,3,...,10\}$ \\
+         \hline
+    \end{tabular}
+    \label{tab:NAS}
+\end{table}
+
+
+\paragraph{Performance estimation strategy.}
+
+The objective of NAS is typically to find architectures that achieve high predictive performance on unseen data. Performance
+estimation refers to the process of estimating this performance: the simplest option is to perform a standard training and validation of the architecture on data.
+
+The goal of uplift modeling is to separate all observations into heterogeneous segments that differ as much as possible with regard to the reactions to the treatment and, thus, identify (sub)groups with very different uplifts. Then, the uplifts in the resulting segments serve as a prediction for the future behavior of the
+observations. However, the \textit{ground truth} is not observed in the case of individual treatment effect estimation. Therefore, in order to evaluate uplift models, we refer to known metrics in the uplift literature, the {\it Qini coefficient} and the {\it Kendall's uplift rank correlation}. The computation of both statistics requires the construction of the {\it Qini curve} \citep{radcliffe2007using}. These statistics are commonly used as goodness-of-fit measures for uplift models.
+
+For a given model, let $\hat{u}_{(1)} \geq \hat{u}_{(2)} \geq ... \geq \hat{u}_{(n)}$ be the sorted predicted uplifts. Let $\phi \in [0,1]$ be a given proportion and let $ N_{\phi} = \{i: \hat{u}_{i} \geq \hat{u}_{\ceil{\phi n}} \} \subset \lbrace 1, \ldots, n \rbrace$ be the subset of observations with the $\phi n \times 100 \%$ highest predicted uplifts $\hat{u}_i$ (here $\ceil{s}$ denotes the smallest integer larger or equal to $s\in \real$). The \textit{Qini curve} is defined as a function $f$ of the fraction of population targeted $\phi$, where 
+\begin{equation*}
+    f(\phi) = \frac{1}{n_t}\biggl(\sum\limits_{i \in  N_{\phi}} y_i t_i - \sum\limits_{i \in  N_{\phi}} y_i (1-t_i) \biggl\{ \sum\limits_{i \in  N_{\phi}} t_i / \sum\limits_{i \in  N_{\phi}} (1-t_i) \biggr\} \biggr),
+\end{equation*}
+where $n_t = \sum_{i=1}^n t_i$ is the number of treated customers, with $f(0)=0$ and $f(1)$ is the average treatment effect. In other words, $f(\phi)$ represents the incremental number of positive responses for a fraction $\phi$ or targeted customers relative to the total number of targeted customers in the sample. The Qini helps visualize the performance of an uplift model, a bit like the ROC curve of a binary classification model. Following the same logic, a straight line between the points $(0,0)$ and $(1, f(1))$ defines a benchmark to compare the performance of the model to a strategy that would randomly target individuals. This means that if a proportion $\phi$ of the population is targeted, we expect to observe an uplift of $\phi f(1)$.
+The {\it Qini coefficient} is defined as
+\begin{equation*}
+     q = \int_0^1 Q(\phi) ~\mathrm{d}\phi = \int_0^1 \{f(\phi) - \phi~f(1)\} ~\mathrm{d}\phi,
+\end{equation*}
+where $Q(\phi) = f(\phi) - \phi~f(1)$. This area can be numerically approximated using a Riemann method such as the trapezoid rule formula: the domain of $\phi \in [0,1]$ is partitioned into $K$ bins, or $K+1$ grid points $0=\phi_1 < \phi_2 < ... < \phi_{K+1} = 1$, to approximate $q$ by
+\begin{equation}
+  \hat{q} = \dfrac{1}{2} \sum_{k=1}^K (\phi_{k+1}-\phi_k)\{Q(\phi_{k+1}) + Q(\phi_{k})\}.
+  \label{eq:q:hat}
+\end{equation}
+
+It is important to note, unlike the area under the ROC curve, $\hat{q}$ could be negative. This would simply mean that a strategy following the model in question does worse than random targeting. 
+
+Measuring the goodness-of-fit of an uplift model can also be achieved by the similarity between the theoretical uplift percentiles (given by the model's predictions) and empirical percentiles (observed in the data) based on the model. This can be approximated by the {\it Kendall's uplift rank correlation} \citep{belba2019qbased} defined as
+\begin{equation}
+    \hat{\rho} = \frac{2}{K(K-1)} \sum_{i<j} \mathrm{sign}(\bar{\hat{u}}_i - \bar{\hat{u}}_j)~\mathrm{sign}(\bar{u}_i - \bar{u}_j),
+    \label{eq:corr_coeff}
+\end{equation}
+where $\bar{\hat{u}}_k$ is the average predicted uplift in bin $k$,  $k \in {1,...,K}$, and $\bar{u}_k$ is the observed uplift in the same bin. 
+
+
+
+
+\section{Experiments}
+\label{sec:experiments}
+
+We conduct a simulation study to examine the performance SMITE. We compare its performance with existing uplift methods using three types of datasets: i) a real-world dataset from a marketing campaign (see Section~\ref{sec:application} for the analysis); ii) bootstrapped versions of the real-world dataset with synthetic outcomes generated from tree-based models, and iii) synthetic datasets generated from parametric models. First, we show results for the SMITE architecture search.
+
+\subsection{Fine-tuning SMITE}
+
+\textcolor{blue}{HERE WE NEED TO SHOW RESULTS FROM THE ARCHITECTURE SEARCH AND SHOW THE FINAL ARCHITECTURE THAT WE WILL USE IN THE EXPERIMENTS.}
+
+\textcolor{red}{The backbone of the SMITE architecture is a $6$-layers feed forward MLP with the following input neurons sizes: $\{200,200,300,100,50,10\}$. The first two layers are linearly connected while the rest are connected through a leaky ReLu activation function. Both the depth and the width of this network were explored using a random grid search on data generated with the framework described in Section~\ref{sec:NAS}. Two hyper-parameters are fine-tuned for each set of experiments: the learning rate $\xi$ and the trade-off constant $\alpha$. To find an adequate candidate for $\alpha$, we follow the following protocol: the dataset $D$ is split into two subsets ($D_T$,$D_H$) containing respectively $70\%$ and $30\%$ of $D$. $D_H$ remains unseen during any of our fine-tuning or model selection process. We then repeat $k$-times a random separation of $D_T$ into two datasets denoted ($D^{i}_{\mathrm{train}}$,$D^{i}_{\mathrm{valid}}$) with sizes $60\%$ and $40\%$ of $D_T$. At a fixed learning rate of $\xi=0.03$, we fit the network on $D^{i}_{\mathrm{train}}$ for different values of $\alpha$, from $0$ to $1$ with $0.1$ increments. We measure the average Qini coefficient $\hat q$ obtained on $\{D^{i}_{valid}\}_{i \in [1,k]}$ and we estimated a $95\%$ confidence interval (CI) for $\hat q$. The selected $\alpha$ corresponds to the highest average as long as the $95\%$ CI lower bound remains higher than $0$. The resultant of this protocol is illustrated in Figure \ref{fig:alphaie}. Once $\alpha$ is fixed, we follow then the same process for the learning rate $\xi$.}
+
+%Fine-tune alpha parameter
+\input{figures/alpha.tex}
+
+
+\subsection{Data generation}
+
+We evaluate the performance of SMITE using synthetic data generated using two types of mechanisms.
+
+\paragraph{Bootstrap Data.} The underlying treatment effects are inaccessible in real-world data. To create realistic scenarios, we based one of our simulation study data generation on insurance policy data. Moreover, since we compare SMITE to random forests, we want to evaluate its performance when the data generation process comes from a tree-based model. We follow the procedure in the simulation studies of \cite{belba2019qbased}. These simulations allow us to evaluate if SMITE can recover the right representation for data generated from a tree-based model. This also makes comparisons to random forest methods fair.
+
+Several tree-based methods have been suggested in the uplift literature. Here, we use the uplift random forest \citep{guelman2012random} as the data generation process, which is readily available in the {\bf R} library {\bf uplift}. We fit the random-forest on a random sub-sample $\mathcal{D}$ of the real data. We use $100$ trees and the Kullback-Leibler split criterion. Each tree has maximum depth of $5$. Based on the fitted model, we can extract the probabilities $\mu_0(\x)$ and $\mu_1(\x)$ for any given value $\mathbf{x}$. We use these probabilities to draw synthetic outcomes for treated and control observations. We start by creating a bootstrap sample $\mathcal{S}$ of size $n_\mathcal{S}$ from $\mathcal{D}$. For each observation $\mathbf{x}_i \in \mathcal{S}$, we generate a random vector $\tilde{y}_i =(\tilde{y}_{i0}, \tilde{y}_{i1})$, where $\tilde{y}_{i0}$ is the binary outcome of a Bernoulli trial with success probability $\mu_0(\mathbf{x}_i)$, and  $\tilde{y}_{i1}$ is the binary outcome of a Bernoulli trial with success probability  $\mu_1(\mathbf{x}_i)$, $i=1,\ldots, n_\mathcal{S}$. The augmented synthetic dataset $\{ \x_i , t_i, \tilde{y}_i \}_{i=1}^{n_{\mathcal{S}}}$ is the data of interest in the simulation.
+
+We repeat this process several times. Each bootstrapped data size is $10,000$ observations with $40$ covariates. 
+
+\paragraph{Synthetic Data.} We evaluate the performance of SMITE models using synthetic data generated in a similar way to the simulation studies of \cite{tian2014simple}. For the synthetic data generation, there are four elements:
+
+\begin{enumerate}
+    \item The number $n$ of observations in the sample, and the number $p$ of predictors observed for each observation.
+    \item The distribution of the predictors. We draw predictors from a multivariate Gaussian distribution.
+    \item The mean effect function $\mu(\X)$ and the treatment effect function $\tau(\X)$. We vary the size of main effects relative to treatment effects.
+    \item The noise level $\sigma^2$. This corresponds to the conditional variance of the outcome given $\X$ and $T$. 
+\end{enumerate}
+
+Given the elements above, our data generation model is, for $i=1,...,n$ :
+
+\begin{align*}
+    &\X_i \sim \mathcal{N}_p (0, \Sigma) \\
+    &T_i \sim \mathrm{Bernoulli}(\theta)\\
+    &Y_i^* \mid \X_i, T_i \sim \mathcal{N}(\mu(\X_i) + T_i\tau(\X_i), \sigma^2).
+\end{align*}
+
+Define $Y_i$ to be the binary outcome as
+
+\begin{align*}
+    Y_i \mid \X_i, T_i = \mathbbm{1}(Y_i^* > 0 \mid \X_i, T_i).
+\end{align*}
+
+Hence, $Y_i$ follows a Bernoulli distribution with parameter $\mathrm{Pr}(Y_i^* > 0 \mid \X_i, T_i)$ and it is easy to recover the ``true'' uplift $u_i^*$ as follows
+
+\begin{align*}
+    u_i^* &= \mathrm{Pr}(Y_i^* > 0 \mid \X_i, T_i = 1) - \mathrm{Pr}(Y_i^* > 0 \mid \X_i, T_i = 0)\\
+    u_i^* &= \Phi \Bigl( \frac{\mu(\X_i) + \tau(\X_i)}{\sigma} \Bigr) - \Phi \Big( \frac{\mu(\X_i)}{\sigma} \Big) 
+\end{align*}
+where $\Phi(.)$ is the standard Gaussian cumulative distribution function. Note that $\mu(.)$ is a nuisance function and $\tau(.)$ is the function that controls the treatment effect. In fact, the sign of $\tau(.)$ and the sign of the uplift for a given observation coincide.
+
+We set $\theta$ to $0.5$, which is the case in our real data. The variance-covariance matrix elements $\Sigma_{ij}$ are defined as follows:
+
+\[\Sigma_{ij} = \begin{cases} 
+      \rho & i\neq j \\
+      1 & i=j
+   \end{cases}.
+\]
+
+Finally, the mean and treatment effects functions are defined as follows:
+
+$$\mu(\X) = \sum_{j=1}^J \beta_j X_j + \sum_{j=1}^{p-1} \omega_j X_j X_{j+1},$$ 
+
+
+$$\tau(\X) = \sum_{j=1}^K \gamma_j X_j$$
+
+where $J\leq p$ and $K \leq p$. We set $\beta_j = \beta (-1)^{j}$, $\omega_j = \omega (-1)^j$ and we draw $\gamma_j$ independently from $\mathcal{N}(0,\gamma)$. The constants $\beta$, $\omega$ and $\gamma$ are hyper-parameters.
+
+In this case, we generate datasets of sizes $n=20,000$ observations with $100$ covariates.
+
+
+
+\subsection{Benchmarks and implementation}
+
+Ensemble methods are amongst the most powerful for the uplift case \citep{soltys2015ensemble}. A method that has proven to be very effective in estimating ITE is one based on generalized random forests \citep{athey2019generalized}. This method uses honest estimation, i.e., it does not use the same information for the partition of the covariates space and for the estimation of the treatment effects. This has the effect of reducing overfitting. Another candidate that we consider in our experiments is also based on random forests that were designed for uplift \citep{guelman2012random, jaskowski2012uplift}. For this method, we consider two different split criteria, one based on Kullback-Leibler divergence and one based on Euclidean distance.
+
+For random forests (RF), we use the implementation from the \textbf{R} libraries \textbf{grf} and \textbf{uplift} which were developed by the authors of the methods respectively. Implementations of these causal forests have several useful parameters that make it easy to fine tune them. In particular, \textbf{grf} provides cross-validation procedures for hyper-parameters tuning which we use to get the best possible candidates to compare our results to. We also use the \textbf{R} library \textbf{tools4uplift} for computing the model's goodness-of-fit measures. SMITE is implemented in \textbf{Python}, so we reimplemented the Qini (\ref{eq:q:hat}) and Kendall (\ref{eq:corr_coeff}) coefficients functions. In total, we consider $4$ different random forests to compare to SMITE: causal forest, honest causal forest (H), RF with Kullback-Leibler (KL) and RF with Euclidean distance (ED) split criteria. 
+
+\subsection{Experimental results}
+
+For both simulated datasets, we do not consider any out-of-sample subset. In Monte Carlo settings, we are able to generate as much data as we want. Therefore, we first fine-tuned the methods on a single synthetic dataset of same size as the one we used in the repeated simulations presented. We generate $n=10,000$ observations with $p=40$ covariates for the bootstrapped data. For the fully synthetic datasets, we report results from experiments with $n=10,000$ observations and $p=100$ covariates. We split into training and validation and compare the results averaged over $30$ runs for the models that performed best on the validation set. Results are described in Table \ref{tab:boot_perf} for the bootstrap datasets and Table \ref{tab:synthe_perf} for the synthetic datasets. For the fully synthetic data, we see that Causal Forest (H) and SMITE (TO) had similar performance on the validation set while SMITE (IE) significantly outperformed all the other methods. For the bootstrap data for which the outcomes were generated based on random forest model, it is interesting to see that SMITE (TO) and Causal Forest (H) give similar results. Moreover, once again, the SMITE (IE) model outperforms all the other models.
+
+%bootstrap data results
+\input{tables/table_bootstrap.tex}
+
+\textcolor{blue}{HERE WE NEED TO SHOW ESTIMATED AND PREDICTED UPLIFTS DISTRIBUTIONS PER METHOD. I THINK THIS WILL SHOW THAT RF METHODS COVER A RANGE THAT IS A LOT LARGER THAN SMITE. WE CAN ALSO COMPUTE THE EMPIRICAL VARIANCES AND COMPUTE A CONFIDENCE INTERVAL FOR THE VARIANCE OF THE PREDICTED UPLIFTS TO SEE IF THERE ARE SIGNIFICANTLY LARGER THANT SMITE'S VARIANCE.}
+
+
+%synthtetic data results
+\input{tables/table_synthetic.tex}
+
+\section{Application}
+\label{sec:application}
+
+A data set with $n=50,000$ customers and $p=40$ covariates from an insurer is at our disposal to evaluate the performance of our methods. This company was interested in designing strategies to maximize its conversion rate. An experimental acquisition campaign was implemented for 6 months, for which half of the potential clients were randomly allocated into a treatment group and the other half into a control group. Potential clients under the treatment group were contacted using a different (and more costly) strategy. The goal of the analysis was to be able to select who among the clients portfolio should be contacted in that way going forward in order to maximize the benefits. The observed difference in sales rates between the treated group and the control shows some evidence of a positive impact of the treatment ($\mathrm{ATE}=0.55\%$).
+
+\textcolor{blue}{DESCRIBE THE DATA AND GIVE MORE DETAILS ON THE APPLICATION. ADD FIGURES FOR BEST FINAL MODELS (Qini Curves).}
+
+%\subsubsection{Real data}
+For all models we follow the same learning process and performance metrics computations. For the real-world dataset, a sample of $30\%$ is dedicated to out-of-sample performance measures. We do not score these customers until all models are properly fine-tuned. The remaining $70\%$ is used for fine-tuning. We repeat the experiment $30$ times. We randomly split the subset into $60\%$ for training and $40\%$ for validation. We select the model which performs best on the validation set. Using that model, we score the out-of-sample customers and compute the performance metrics. Results are presented in Table \ref{tab:realdata_perf}.
+
+%real data comparison
+\input{tables/table_real_data.tex}
+
+We observe that the random forests tend to overfit. Indeed, based on the out-of-sample results from the hold out set, the models seem to be close to random targeting. This might be due to the small (in magnitude) overall impact of the initiative. On the other hand, we observe a good adequacy of SMITE for both TO and IE. Overall, the results of SMITE (IE) appear to outperform all other methods. It is also interesting to note that the distribution of the ITE obtained by the model SMITE (IE) are in line with what was logically expected (see Figure \ref{fig:pred_uplift_evol}: giving what appears to be a better service only slightly increases the propensity of buying. 
+
+
+
+%Predicted uplift distributions
+\input{figures/uplift_evolutions.tex}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+In this paper we present a meaningful and intuitive neural networks architecture for the problem of uplift modeling. 
+
+%Our framework, which we call SMITE is flexible enough to jointly optimize both the conditional mean regression and the transformed outcome regression. As a result, the SMITE framework makes it easier to predict uplift and reduce generalization error. This flexibility also allowed us to easily introduce an alternative to the MSE loss function. This alternative indirect estimation of uplift complements our unified framework. 
+
+We apply our methods to both real-world and synthetic data and we compare with what is, to the best of our knowledge, state-of-the-art methods for uplift. Our results show that the SMITE models significantly outperform random forests designed for ITE and uplift in all of our scenarios. For future work, we want to study the theoretical properties of the SMITE optimization problem as well as including more causal inference related problems such as multiple treatments, time series, and the use of observational data.
+
+\bibliographystyle{plainnat}
+\bibliography{mybib}
+
+\end{document}

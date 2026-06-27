@@ -1,0 +1,66 @@
+% \subsection{Continuous Marginal Sensitivity Model}
+\label{sec:cmsm}
+We propose the continuous marginal sensitivity model (CMSM) as a new marginal sensitivity model (MSM \citep{tan2006msm}) for continuous treatment variables.
+The set of conditional distributions of the potential outcomes given the observed treatment assigned, 
+$\left\{ P(\Yt \mid \Tf=\tf, \X=\x) : \tf \in \Tcal \right\}$,
+are identifiable from data, $\D$. 
+But, the set of marginal distributions of the potential outcomes, $\left\{ P(\Yt \mid, \X=\x) : \tf \in \Tcal \right\}$, each given as a continuous mixture,
+\begin{equation*}
+   P(\Yt \mid \X=\x) = \int_{\Tcal} p(\tfp \mid \x) P(\Yt \mid \Tf=\tfp, \X=\x) d\tfp,
+\end{equation*}
+are not.
+This is due to the general unidentifiability of the component distributions, $P(\Yt \mid \Tf=\tfp, \X=\x)$, where $\Yt$ cannot be observed for units under treatment level $\Tf = \tfp$ for $\tfp \neq \tf$: the well-known ``fundamental problem of causal inference'' \citep{holland1986statistics}.
+Yet, under the ignorability assumption, the factual $P(\Yt \mid \Tf=\tf, \X=\x)$ and counterfactual $P(\Yt \mid \Tf=\tfp, \X=\x)$ are equal for all $\tfp \in \Tcal$.
+% Thus, $P(\Yt \mid \X=\x)$ and $P(\Yt \mid \Tf=\tf, \X=\x)$ are identical, which implies that any divergence between $P(\Yt \mid \Tf=\tfp, \X=\x)$ and $P(\Yt \mid \Tf=\tf, \X=\x)$ is indicative of hidden confounding. 
+Thus, $P(\Yt \mid \X=\x)$ and $P(\Yt \mid \Tf=\tf, \X=\x)$ are identical, and any divergence between them is indicative of hidden confounding. 
+But, such divergence is not observable in practice.
+
+The CMSM supposes a degree of divergence between the unidentifiable $P(\Yt \mid \X=\x)$ and the identifiable $P(\Yt \mid \Tf=\tf, \X=\x)$ by assuming that the rate of change of $P(\Yt \mid \X=\x)$ with respect to $P(\Yt \mid \Tf=\tf, \X=\x)$ is bounded by some value greater than or equal to $1$.
+The Radon-Nikodym derivative formulates the divergence,
+$
+% \begin{equation}
+    \lambda(\yt; \x, \tf) = \frac{dP(\Yt \mid \X=\x)}{dP(\Yt \mid \Tf=\tf, \X=\x)},
+$
+% \end{equation}
+under the assumption that $P(\Yt \mid \X=\x)$ is absolutely continuous with respect to $P(\Yt \mid \Tf=\tf, \X=\x)$, $\forall\tf \in \Tcal$.
+\begin{proposition}
+    \label{prop:density_ratio}
+    Under the additional assumption that $P(\Yt \mid \Tf=\tf, \X=\x)$ and the Lebesgue measure are mutually absolutely continuous, the Radon-Nikodym derivative above is equal to the ratio between the unidentifiable ``complete'' propensity density for treatment $p(\tf \mid \yt, \x)$ and the identifiable ``nominal'' propensity density for treatment $p(\tf \mid \x)$,
+    \begin{equation}
+        \lambda(\yt; \x, \tf) = \frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)},
+    \end{equation}
+    Proof (\Cref{proof:density_ratio}) and an analysis of this proposition are given in \Cref{app:cmsm}.
+\end{proposition}
+% Under the assumption that $\Yt$ is an absolutely continous random variable, the Radon-Nikodym derivative is equivalent to the ratio of the composite probability measures' density functions: $p(\yt \mid \x) / p(\yt \mid \tf, \x)$. 
+% By applying Bayes's rule to the denominator of the density ratio and cancelling terms, we can express $\lambda$ as the ratio between the unidentifiable ``complete'' propensity density for treatment $p(\tf \mid \yt, \x)$ and the identifiable ``nominal'' propensity density for treatment $p(\tf \mid \x)$,
+% $
+% % \begin{equation}
+%     \lambda(\yt; \x, \tf) = \frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)},
+% $
+% % \end{equation}
+% where we will additionally assume positivity of the complete propensity density $p(\tf \mid \yt, \x) > 0 : \forall \tf \in \Tcal, \forall \yt \in \Ycal, \forall \x \in \Xcal.$
+% The case where $\lambda = 1$ indicates no hidden confounding (the nominal and complete propensity densities are the same), whereas any value $\lambda > 1$ reflects a degree of non-trivial hidden confounding.
+
+The value $\lambda(\yt; \x, \tf)$ cannot be identified from the observational data alone; the merit of the CMSM is that enables a domain expert to express their belief in what is a plausible degree hidden confounding through the parameter $\Lambda \geq 1$. Where, $\Lambda^{-1} \leq p(\tf \mid \x) / p(\tf \mid \yt, \x) \leq \Lambda$,
+% \begin{equation}
+%     \Lambda^{-1} \leq \frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)} \leq \Lambda,
+%     \label{eq:cmsm}
+% \end{equation}
+reflects a hypothesis that the ``complete'', unidentifiable propensity density for subjects with covariates $\X=\x$ can be different from the identifiable ``nominal'' propensity density by at most a factor of $\Lambda$.
+% These inequalities allow us to bound inverse of the unidentifiable complete propensity density in terms of functions of the inverse of the identifiable nominal propensity density: 
+% \begin{equation}
+%     \frac{1}{\Lambda p(\tf \mid \x)} \leq \frac{1}{p(\tf \mid \yt, \x)} \leq \frac{\Lambda}{p(\tf \mid \x)}.
+% \end{equation}
+These inequalities allow for the specification of user hypothesized complete propensity density functions, $p(\tf \mid \y, \x)$, and we define the CMSM as the set of such functions that agree with the inequalities.
+\begin{definition}
+    Continuous Marginal Sensitivity Model (CMSM)
+    \begin{equation}
+        \mathcal{P}(\Lambda) \coloneqq \left\{ p(\tf \mid \y, \x): \frac{1}{\Lambda} \leq \frac{p(\tf \mid \x)}{p(\tf \mid \yt, \x)} \leq \Lambda, \forall \y \in \mathbb{R}, \forall \x \in \Xcal \right\}
+    \end{equation}
+\end{definition}
+
+\textbf{Remark.} Note that the CMSM is defined in terms of a \emph{density ratio}, $p(\tf \mid \x) / p(\tf \mid \yt, \x)$, whereas the MSM for binary-valued treatments is defined in terms of an \emph{odds ratio}, $\frac{P(\tf \mid \x)}{(1 - P(\tf \mid \x))} / \frac{P(\tf \mid \yt, \x)}{(1 - P(\tf \mid \yt, \x))}$. 
+Importantly, naively substituting densities into the MSM for binary-treatments would violate the condition that $\lambda>0$ as the densities $p(\tf \mid \x)$ or $p(\tf \mid \yt, \x)$ can each be greater than one, which would result in a negative $1 - p(\tf \mid \cdot)$.
+The odds ratio is familiar to practitioners. 
+The density ratio is less so.
+We offer a transformation of the sensitivity analysis parameter $\Lambda$ in terms of the unexplained range of the outcome later.

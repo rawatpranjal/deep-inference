@@ -1,0 +1,344 @@
+\documentclass[14pt]{extarticle} %
+\usepackage{times}
+\usepackage{url}            %
+\usepackage{booktabs}       %
+\usepackage{amsfonts}       %
+\usepackage{nicefrac}       %
+\usepackage{microtype}      %
+\usepackage{mkolar_definitions}
+\usepackage{xspace}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{color}
+\usepackage{authblk}
+\usepackage{color, colortbl}
+\usepackage{enumitem}
+\usepackage{comment}
+\usepackage{bm}
+\usepackage{subcaption}
+\usepackage[left=2cm,top=2cm,right=2cm]{geometry}
+
+
+\usepackage[scaled=.9]{helvet}
+\usepackage{thmtools}
+\newtheorem{myexp}{Example}
+
+\usepackage{url}
+\usepackage{authblk}
+\usepackage{csquotes}
+\usepackage{tikz}
+
+%\usepackage[dvipsnames]{xcolor}
+\usepackage[colorlinks=true, linkcolor=blue, citecolor=blue]{hyperref}
+
+%%%\usepackage[style=alphabetic,natbib=true]{biblatex}
+\usepackage{natbib}
+%\bibliographystyle{plainnat}
+%\bibpunct{(}{)}{;}{a}{,}{,}
+
+\newenvironment{packed_enum}{
+  \begin{enumerate}
+    \setlength{\itemsep}{1pt}
+    \setlength{\parskip}{-1pt}
+    \setlength{\parsep}{0pt}
+}{\end{enumerate}}
+
+\usepackage{centernot}
+\newcommand{\bigCI}{\mathrel{\text{\scalebox{1.07}{$\perp\mkern-10mu\perp$}}}}
+\newcommand{\nbigCI}{\centernot{\bigCI}}
+
+\newcount\Comments  %
+\Comments=1 %
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+\definecolor{darkred}{rgb}{0.7,0,0}
+\definecolor{teal}{rgb}{0.3,0.8,0.8}
+\definecolor{orange}{rgb}{1.0,0.5,0.0}
+\definecolor{purple}{rgb}{0.8,0.0,0.8}
+\newcommand{\kibitz}[2]{\ifnum\Comments=1{\textcolor{#1}{\textsf{\footnotesize #2}}}\fi}
+\usetikzlibrary{positioning}
+
+\definecolor{Gray}{gray}{0.9}
+
+\input{notation.tex}
+
+\newcommand{\defeq}{\triangleq}
+\newcommand{\Otilde}{\tilde{O}}
+\newcommand{\KL}{\mathrm{KL}}
+\newcommand{\sa}{(s,a)}
+\renewcommand{\arraystretch}{2.}
+\newtheorem{assumption}[theorem]{Assumption}
+
+
+
+\begin{document}
+
+
+
+
+
+\section{MLE-based Iterated TIKHNOV Regularized Estimator}
+ We consider a nonparametric IV problem: 
+\begin{align}\label{eq:inverse-iv}
+    \mathbb{E}[Y-f(X)|Z]=0. 
+\end{align}
+We aim to introduce a new oracle-efficient method that can incorporate any function approximation. While there are many minimax estimation methods \citep{DikkalaNishanth2020MEoC} that can incorporate any function approximation, (a) these methods are hard to use in practice due to minimax optimization when using neural networks, (b) it is unclear how to perform cross-validation to choose function classes.  
+
+Here is our procedure. 
+\begin{itemize}    
+    \item Introduce a function class: $\Gcal \subset [\mathcal{X}\times \mathcal{Z} \to \mathbb{R}]$
+    \begin{align*}
+        \hat g= \argmin_{g \in \mathcal{G}}\EE_n[-\log g(X|Z)]
+    \end{align*}
+     
+    \item Introduce a function class: $\Fcal \subset [\mathcal{X} \to \mathbb{R}]$. We iterate according to the following procedure: 
+    \begin{align}\label{eq:main-iter}
+         \hat f_m =\argmin_{f \in \Fcal} 
+       \EE_n[ - 2Y \hat \EE[f(X)|Z] +   \{\hat \EE[f(X)|Z]\}^2  ]   
+         +\alpha \EE_n[\{f-\hat f_{m-1}\}^2(X)],
+    \end{align}
+     where $\int f(x)\hat g(x|Z)\mathrm{d}x = \mathrm{\hat \EE}[f(X)|Z]$.
+\end{itemize}
+Our methods rely on just standard ERM oracles. Besides, cross-validation is easy. 
+Note in the latter optimization, we are aiming to solve 
+\begin{align*}
+        f^{\star}_{\alpha} &= \argmin_{f} \EE[\{h^{\star}(Z)  - (\Tcal f)(Z) \}^2 +\alpha f^2(X) ] 
+\end{align*}
+where $h^{\star}(Z)=\EE[Y|Z]$ and $\Tcal(f)(Z)=\EE[f(X)|Z]$. 
+
+\begin{remark}
+    Deep IV \citep{hartford2017deep} does not have any analysis. No explicit TIKHNOV regularization.  No iteration. 
+\end{remark}
+\begin{assumption}[Smooth Function Class]\label{ass:smooth-func}
+    We assume that the function space $\Fcal -f_0 $ satisfies
+a smoothness assumption that implies a relationship between the $L_\infty$ and $L_2$ norms, i.e. for some $\gamma \leq 1$ we have $$
+\|f - f_0\|_\infty \leq O(\|f - f_0\|_2^\gamma).
+$$
+\end{assumption}
+Such a relationship is known for instance to hold for Sobolev spaces and more generally
+for reproducing kernel Hilbert spaces (RKHS) with a polynomial eigendecay.
+We also introduce the $\beta$- source condition, which is commonly used in the literature on inverse problems and captures how strongly we can identify the function $f_0$ by the data we observed. 
+\begin{definition}[$\beta$- source condition]\label{def:source-cond}
+    There exists $w_0\in\bar{\Fcal}$ such that $f_0$ satisfies $$
+    f_0 = (\Tcal^*\Tcal)^{\beta/2} w_0.
+    $$
+\end{definition}
+Essentially, this assumption is claiming $
+f_0 \in \Rcal(\Tcal^*\Tcal)^{\beta/2}$. Intuitively, when the parameter $\beta$ is large, the function $ f_0$ exhibits greater smoothness, in the sense that the $L_2$ -inner product of $f_0$ with eigenfunctions that have smaller eigenvalues relative to the operator $\Tcal$ tend to decay faster.
+
+\section{Theory}
+
+Let $\delta^2_n = O(\log(N_{[]}(\Fcal, \|\cdot\|_\infty, 1/n)/\zeta)/n)$ . Hereafter, every norm is defined w.r.t. the random variable $(X,Y,Z)$. 
+
+First,  by invoking MLE guarantee (\citet[Theorem 21]{agarwal2020flambe}, \citet[Theorem 3.3]{ge2023provable}), 
+\begin{lemma}
+With probability $1-\zeta$, we have 
+\begin{align*}
+    \EE\left [\left \{\int |\hat g(x \mid Z) - g^{\star}(x\mid Z)|d(x) \right\}^2 \right] \leq \delta^2_n.  
+\end{align*}
+\end{lemma}
+Therefore, letting  $\hat \EE[f(X)|Z]=\hat \Tcal f(Z)$ and $\EE[f(X)|Z]=\Tcal f(Z)$, we have 
+\begin{lemma}\label{lem:appro}
+    $ \|(\hat \Tcal-\Tcal)f\|_1\leq   \delta_n \|f\|_{\infty}.$
+\end{lemma}
+\begin{proof}
+\begin{align*}
+    &\|(\hat \Tcal-\Tcal)f\|_1 = \int |f(x)\{\hat g(x|z)-g^{\star}(x|z)\}|g^{\star}(z) d(x,z)\\
+    &\leq \|f\|_{\infty} \int | \{\hat g(x|z)-g^{\star}(x|z)\}|g^{\star}(z) d(x,z). 
+\end{align*}
+\end{proof}
+
+\iffalse 
+Similarly, by invoking regression guarantee and letting $\EE[Y|Z]=h^{\star}(Z)$, 
+\begin{lemma}
+With probability $1-\delta$, we have 
+\begin{align*}
+        | \EE_n[Y \hat h(Z) - 0.5\hat h(Z)^2] -  \EE_n[Y h^{\star}(Z) - 0.5 h^{\star}(Z)^2] |
+        \leq \delta^2_n.  
+    \end{align*}
+\end{lemma}
+
+\fi 
+We also need the following concentration inequality lemma which is used throughout the proofs. 
+\begin{lemma}[Localized Concentration, \cite{foster2019orthogonal}]\label{lem:local-concen}
+For any $f \in \mathcal{F}:=\times_{i=1}^d \mathcal{F}_i$ be a multivalued outcome function, that is almost surely absolutely bounded by a constant. Let $\ell(Z ; f(X)) \in \mathbb{R}$ be a loss function that is $O(1)$-Lipschitz in $h(X)$, with respect to the $\ell_2$ norm. Let $\delta_n=\Omega\left(\sqrt{\frac{d \log \log (n)+\log (1 / \zeta)}{n}}\right)$ be an upper bound on the critical radius of $\operatorname{star}\left(\mathcal{F}_i\right)$ for $i \in[d]$. Then for any fixed $h_* \in \mathcal{F}$, w.p. $1-\zeta$ :
+$$
+\forall f \in \mathcal{F}:\left|\left(\mathbb{E}_n-\mathbb{E}\right)\left[\ell(Z ; f(X))-\ell\left(Z ; f_0(X)\right)\right]\right|=O\left(d \delta_n \sum_{i=1}^d\left\|f_i-f_{i, 0}\right\|_{L_2}+d \delta_n^2\right)
+$$
+If the loss is linear in $f(X)$, i.e. $\ell\left(Z ; f(X)+f^{\prime}(X)\right)=\ell(Z ; f(X))+\ell\left(Z ; f^{\prime}(X)\right)$ and $\ell(Z ; \alpha f(X))=$ $\alpha \ell(Z ; f(X))$ for any scalar $\alpha$, then it suffices that we take $\delta_n=\Omega\left(\sqrt{\frac{\log (1 / \zeta)}{n}}\right)$ that upper bounds the critical radius of $\operatorname{star}\left(\mathcal{F}_i\right)$ for $i \in[d]$.
+\end{lemma}
+\begin{proof}
+    For a detailed proof, please refer to \cite{foster2019orthogonal}.
+\end{proof}
+\subsection{Non Iterative Analysis}
+
+First, consider the case when $m=1$. According to the iteration in \eqref{eq:main-iter}, we want to analyze 
+\begin{align}\label{eq:single-iter}
+         \hat f  =\argmin_{f \in \Fcal} 
+       \EE_n[ - 2 Y \hat \EE[f(X)|Z] +  \{\hat \EE[f(X)|Z]\}^2  ]   
+         +\alpha \EE_n[f^2(X)]. 
+    \end{align}
+Given Assumption \ref{ass:smooth-func} and Definition \ref{def:source-cond}, our goal is to prove 
+\begin{align*}
+    \|\hat f-f_0 \|^2_2\leq  (\delta_n/\alpha)^{2/(2-\gamma)}+ \alpha^{\min(\beta,2)}. 
+\end{align*}
+where $f_0$ is the least norm solution in the inverse nonparametric IV problem in  \eqref{eq:inverse-iv}. 
+\iffalse 
+When $m\geq 2$, this can be extended to 
+\begin{align*}
+    \|\hat f_m-f_0 \|^2_2\leq  \delta^2_n/\alpha^2 +  \alpha^{\min(\beta,2m)} +     \|\hat f_{m-1}-f_{0} \|_2   \|\hat f_m-f_{0} \|_2
+\end{align*}
+\fi 
+
+Let 
+\begin{align}\label{eq:defs}
+    L(k) &:=  - 2 Y k(Z) +  \{k(Z)\}^2  \\
+    f^{\star}_{\alpha} &:= \argmin_{f\in\Fcal} \EE[\{h^{\star}(Z)  - (\Tcal f)(Z) \}^2 +\alpha f^2(X) ]\nonumber. 
+\end{align}
+As in \citet{LiaoLuofeng2020PENE}, it is well-known that 
+\begin{align*}
+    \|f^{*}_{\alpha}-f_0\|^2_2 \leq \alpha^{\min(\beta,2)}. 
+\end{align*}
+By the optimality of $\hat{f}$ in \eqref{eq:single-iter}, we have 
+\begin{align*}
+    & \alpha \|\hat{f} - f^{\star}_{\alpha} \|^2_2 + \|\Tcal(\hat{f}-f^{\star}_{\alpha})\|^2_2  \\
+    &\qquad\qquad\leq \EE[L(\Tcal \hat{f}) ] - \EE[L (\Tcal f^{\star}_{\alpha})] + \alpha\{\EE[\hat{f}^2(Z)] - \EE[f^{\star}_{\alpha}(Z)^2]\},
+\end{align*}
+Recall that \begin{align*}
+    &\EE[L(\Tcal \hat{f}) ] - \EE[L (\Tcal f^{\star}_{\alpha})] + \alpha\{\EE[\hat{f}^2(Z)] - \EE[f^{\star}_{\alpha}(Z)^2]\} =\\
+    &\qquad\EE[ - 2 Y  \Tcal (f-f^{\star}_{\alpha})(Z)  + (\Tcal f)^2(Z) -  (\Tcal f^{\star}_{\alpha})^2(Z) ] +  \alpha\{\EE[f^2(Z)] - \EE[f^{\star}_{\alpha}(Z)^2]\},
+\end{align*}
+
+
+we have 
+\begin{align}\label{eq:single-quadratic}
+    & \alpha \|f - f^{\star}_{\alpha} \|^2_2 + \|\Tcal(f-f^{\star}_{\alpha})\|^2_2  \nonumber\\ 
+    &\qquad= \EE[ - 2 Y  \Tcal (f-f^{\star}_{\alpha})(Z)  + (\Tcal f)^2(Z) -  (\Tcal f^{\star}_{\alpha})^2(Z) ] +  \alpha\{\EE[f^2(Z)] - \EE[f^{\star}_{\alpha}(Z)^2]\}\nonumber\\
+    &\qquad= \EE[ - 2 Y  \hat \Tcal (f-f^{\star}_{\alpha})(Z) + (\hat \Tcal f)^2(Z) - (\hat \Tcal f^{\star}_{\alpha})^2(Z) ]   +  C_1 \times \EE[|(\hat \Tcal - \Tcal) (f-f^{\star}_{\alpha})(Z)|] \nonumber\\ 
+    &\qquad\qquad+  \alpha\{\EE[f^2(Z)] - \EE[f^{\star}_{\alpha}(Z)^2]\} \nonumber\\
+    &\qquad\leq \mathrm{Emp} + \mathrm{Loss} + C_1 \times \EE[|(\hat \Tcal - \Tcal) (f-f^{\star}_{\alpha})(Z)|]  \nonumber\\ 
+    &\qquad= \mathrm{Emp} + \mathrm{Loss} + \|(\hat \Tcal-\Tcal) (  f - f^{\star}_{\alpha})\|_2
+\end{align}
+where 
+\begin{align*}
+    &\mathrm{Emp} = |(\EE_n-\EE)  [L(\hat \Tcal f)- L(\hat \Tcal f^{\star}_{\alpha})+\alpha(f^2(Z)-f^{\star}_{\alpha}(Z)^2)]|,  \\ 
+    & \mathrm{Loss} =  \EE_n[ -2Y  \hat \Tcal (f-f^{\star}_{\alpha})(Z)  + (\hat \Tcal f)^2(Z) - (\hat \Tcal f^{\star}_{\alpha})^2(Z) + \alpha\{f^2(Z)- f^{\star}_{\alpha}(Z)^2 \}]. 
+\end{align*} 
+Here, using Lemma \ref{lem:local-concen}, the term $\mathrm{Emp} $ is upper-bounded as follows: 
+\begin{align}\label{eq:single-emp}    
+  \mathrm{Emp}  &\leq \delta_n\{ \alpha \|f-f^{\star}_{\alpha}\|_2+ \|\hat \Tcal(f-f^{\star}_{\alpha})\|_2+   \delta_n   \} \nonumber\\ 
+&\leq \delta_n\{ \alpha \|f-f^{\star}_{\alpha}\|_2 +  \|\Tcal(f-f^{\star}_{\alpha})\|_2 + \|(\hat \Tcal-\Tcal)(f-f^{\star}_{\alpha})\|_2+   \delta_n   \}. 
+\end{align} 
+In the first inequality, we use the following variance bound: 
+\begin{align*}
+    &\EE[\{L(\hat \Tcal f)- L(\hat \Tcal f^{\star}_{\alpha})\}^2]\\
+    &\leq \EE\left [ \left \{ -2 Y ( \hat \Tcal f - \hat \Tcal f^{\star}_{\alpha})(Z) + \{\hat \Tcal f-\hat \Tcal f^{\star}_{\alpha} \}(Z)\{ \hat \Tcal f + \hat \Tcal f^{\star}_{\alpha}\}(Z) \right \}^2 \right ] \\ 
+    &\leq C_2 \times \|\hat \Tcal (  f - f^{\star}_{\alpha})\|^2_2. 
+\end{align*}
+
+Furthermore, recall that by our iteration in \eqref{eq:single-iter}, we have
+\begin{align*}
+     \EE_n[  - 2 Y  \Tcal (\hat f-f^{\star}_{\alpha})(Z)  + (\Tcal \hat f)^2(Z) - (\Tcal f^{\star}_{\alpha})^2(Z)+ \alpha\{\hat f^2(Z)- f^{\star}_{\alpha}(Z)^2 \} ]\leq 0. 
+\end{align*}
+Hence, we have 
+\begin{align}\label{eq:single-loss}
+    \mathrm{Loss}\leq 0. 
+\end{align}
+
+Combining everything, we have 
+\begin{align*}
+    &\alpha \|\hat f - f^{\star}_{\alpha} \|^2_2 + \|\Tcal(\hat f-f^{\star}_{\alpha})\|^2_2 \\
+    & \leq \delta_n\{ \alpha \|\hat f-f^{\star}_{\alpha}\|_2 + \|\Tcal(f-f^{\star}_{\alpha})\|_2 +  \|(\hat \Tcal-\Tcal)(\hat f-f^{\star}_{\alpha})\|_2+   \delta_n   \}+  \|(\hat \Tcal-\Tcal)(\hat f-f^{\star}_{\alpha})\|_2 \\ 
+     & \leq \delta_n\{ \alpha \|\hat f-f^{\star}_{\alpha}\|_{2} + \|\Tcal(f-f^{\star}_{\alpha})\|_2 +   \delta_n \|(\hat f-f^{\star}_{\alpha})\|_{\infty}+   \delta_n   \}+  \delta_n \|\hat f-f^{\star}_{\alpha}\|_{\infty} \tag{From \eqref{lem:appro}} \\
+     &\leq c_1 \delta^2_n  + c_2 \delta_n \|\hat f-f^{\star}_{\alpha}\|^{\gamma}_{2} 
+\end{align*}
+Here the first inequality comes from \eqref{eq:single-emp}. In the last inequality, we implicitly use $\delta_n\leq 1, \alpha \leq 1$. 
+Therefore, by Lemma \ref{lem:aux-1},
+\begin{align*}
+\|\hat f - f^{\star}_{\alpha} \|^2_2 \leq  c_3 (\delta_n/\alpha)^{2/(2-\gamma)} 
+\end{align*}
+
+\begin{lemma}\label{lem:aux-1}
+    For $$
+    \alpha x_n^2 \leq c_1\delta_n^2 + c_2\delta_n x_n^\gamma,
+    $$
+    where $c_1, c_2>0$, and $\delta_n = o(1)$, we have $x_n \lesssim (\delta_n/\alpha)^{2/(2-\gamma)}$.
+\end{lemma}
+\begin{proof}
+    We prove the lemma by considering two cases respectively. 
+    \paragraph{Case 1.}We consider the case when $x_n^\gamma \geq O(\delta_n)$, which implies $x_n \gtrsim  O(\delta_n^{1/\gamma})$. Then we have $\alpha x_n^2 \lesssim \delta_n x_n^\gamma$, which directly concludes our proof.
+    \paragraph{Case 2.} We consider the case $x_n^\gamma \leq O(\delta_n)$. Then we have $\alpha x_n^2 \lesssim \delta_n^2$, and we have $$
+    x_n^2 \lesssim \min \bigg\{\frac{\delta_n^2}{\alpha}, \delta_n^{2/\gamma} \bigg\}\leq (\delta_n/\alpha)^{2/(2-\gamma)},
+    $$
+    since $\delta_n = o(1)$ and $\gamma \leq 1$.
+\end{proof}
+\subsection{Iterative Version}
+In the following, we iteratively use the notation $$
+f_{m,*} = \argmin_{f\in\Fcal} \|\Tcal f - \Tcal f_0\|^2 + \alpha \|f - f_{m-1,*}\|^2,
+$$
+recall that our solution $\hat{f}_{m}$ satisfies $$
+\hat{f}_m = \argmin_{f\in\Fcal} L(\hat{\Tcal}f) + \alpha_m \mathbb{E}_n [\{f - \hat{f}_{m-1}\}^2].
+$$
+We define \begin{align*}
+L_m(\tau) &= \mathbb{E}[\mathbb{E}[f_0 - f_{m,*} - \tau (\hat{f}_m - f_{m,*})\mid Z]^2]+\alpha \|f_{m,*} + \tau (\hat{f}_m - f_{m,*}) - f_{m-1,*}\|^2,
+\end{align*}
+By definition, $L_m(\tau)$ is minimized by $\tau = 0$. Note that by strong convexity and property of quadratic function, we have $$
+L_m(1) - L_m(0) = L'(0) + L''(0) \geq L''(0),
+$$
+Therefore \begin{align*}
+    &\alpha \|\hat{f}_m - f_{m,*}\|^2 + \|\Tcal(\hat{f}_m - f_{m,*})\|^2\\
+    & \leq\|\Tcal(f_0 - \hat{f}_m)\|^2 - \|\Tcal(f_0 - f_{m,*})\|^2 + \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big)\\
+    & =\mathbb{E}[L(\Tcal\hat{f}_m)] - \mathbb{E}[L(\Tcal f_{m,*})]+ \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big),\\
+    % &\qquad+ \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big).
+    % &\leq\mathbb{E}[-2Y\cdot\Tcal(\hat{f}_m - f_{m,*}) + (\Tcal\hat{f}_m)^2 - (\Tcal f_{m,*})^2] + \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big)\\
+    % &\leq \mathbb{E}[-2Y\cdot\hat{\Tcal}(\hat{f}_m - f_{m,*}) + (\hat{\Tcal}\hat{f}_m)^2 - (\hat{\Tcal} f_{m,*})^2] + \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big) \\
+    % &\qquad + c\cdot\mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{f}_m - f_{m,*})|]+ \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big)\\
+    % & = \mathbb{E}[L(\hat{\Tcal}\hat{f}_m)] - \mathbb{E}[L(\hat{\Tcal} f_{m,*})] + c\cdot\mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{f}_m - f_{m,*})|]\\
+    % &\qquad+ \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big).
+\end{align*}
+and thus we have \begin{align*}
+&\alpha \|\hat{f}_m - f_{m,*}\|^2 + \|\Tcal(\hat{f}_m - f_{m,*})\|^2\\
+    & \leq \mathbb{E}[L(\hat{\Tcal}\hat{f}_m)] - \mathbb{E}[L(\hat{\Tcal} f_{m,*})] + c\cdot\mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{f}_m - f_{m,*})|]\\
+    &\qquad+ \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big)\\
+    & \leq |(\mathbb{E} - \mathbb{E}_n)(L(\hat{\Tcal}\hat{f}_m) - L(\hat{\Tcal} f_{m,*}) )| + \EE_n[L(\hat{\Tcal}\hat{f}_m) - L(\hat{\Tcal} f_{m,*})] \\
+    &\qquad+ c\cdot\mathbb{E}[|(\Tcal - \hat{\Tcal})(\hat{f}_m - f_{m,*})|] +  \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big)\\
+    &\leq c_1 (\delta_n\|\hat{\Tcal}(\hat{f}_m - f_{m,*})\| + \delta_n^2)+ \EE_n[L(\hat{\Tcal}\hat{f}_m) - L(\hat{\Tcal} f_{m,*})] + c_2\cdot\delta_n \|\hat{f}_m - f_{m,*}\|_\infty \\
+    &\qquad +  \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big),\\
+\end{align*}
+Here the second inequality comes from triangular inequality, the third inequality comes from Lemma \ref{lem:appro} and Lemma \ref{lem:local-concen}.
+Recall that by \eqref{eq:main-iter},  $$
+ \EE_n[L(\hat{\Tcal}\hat{f}_m) - L(\hat{\Tcal} f_{m,*})] \leq  \alpha(\|f_{m,*} - \hat{f}_{m-1}\|^2_n - \|\hat{f}_m - \hat{f}_{m-1}\|^2_n),
+$$
+we have \begin{align*}
+&\alpha \|\hat{f}_m - f_{m,*}\|^2 + \|\Tcal(\hat{f}_m - f_{m,*})\|^2\\
+&\leq c_1 (\delta_n\|(\hat{f}_m - f_{m,*})\| + \delta_n^2) + \alpha(\|f_{m,*} - \hat{f}_{m-1}\|^2_n - \|\hat{f}_m - \hat{f}_{m-1}\|^2_n) + c_2\cdot\delta_n \|\hat{f}_m - f_{m,*}\|_\infty \\
+&\qquad +  \alpha\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big).
+\end{align*}
+By Assumption \ref{ass:smooth-func}, we have $\|\hat{f}_m - f_{m,*}\|_\infty \leq\|\hat{f}_m - f_{m,*}\|_2^\gamma $, and by \cite{bennett2023source} we can prove that $$
+(\|f_{m,*} - f_{m-1,*}\|^2_n - \|\hat{f}_m - f_{m-1,*}\|^2_n) +\big(\|\hat{f}_m - f_{m-1,*}\|^2 - \|f_{m,*} - f_{m-1,*}\|^2\big)
+$$
+is bounded by $O(\delta_n^2 + \delta_n(\|\hat{f}_m - f_{m,*}\| + \|\hat{f}_{m-1} - f_{m-1,*}\|))$, by AM-GM inequality and the inequalities above, we have $$
+\alpha\|\hat{f}_m - f_{m,*}\|^2 \leq O\big(\delta_n^2/\alpha + \delta_n^2 + 
+\alpha\delta_n^2\big) + c_2\cdot\delta_n \|\hat{f}_m - f_{m,*}\|^\gamma + c_3\cdot \alpha\|\hat{f}_{m-1} - f_{m-1,*}\|^2,
+$$
+therefore we have 
+\section{Remaining stuff}
+
+(Should be done) 
+\begin{itemize}
+    \item With iteration (Done)
+    \item Experiments (Proximal causal inference) 
+    \item MLE analysis with critical radius when function classes are infinite  
+\end{itemize}
+
+(Might be difficult)
+\begin{itemize}
+    \item Guarantees in terms of model selection 
+    \item Lower bound 
+\end{itemize}
+
+\bibliographystyle{chicago}
+\bibliography{rl}
+
+\end{document} 

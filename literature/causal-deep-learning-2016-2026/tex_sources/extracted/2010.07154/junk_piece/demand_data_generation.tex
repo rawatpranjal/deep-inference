@@ -1,0 +1,11 @@
+\subsection{Data Generating Process} 
+
+We used the synthetic data that models the problem of predicting the demand for the airline tickets. It is assumed that there are 7 customer types $s \in \{1,...,7\}$ that each exhibit different levels of price sensitivity. Given the price $p$ and the time of year $t$, the structure function we aim to learn is 
+\begin{align*}
+    &f_{\text{str}}(p, t, s) = 100 + (10 + p) \cdot s \cdot \eta(t) + 2p.
+    %&\psi(t) = 2\left((t-5)^4/600+\exp\left(-4(t-5)^2\right)+t/10-2\right)
+\end{align*} 
+Here, $\eta(t)$ is a complex function, which reflects the high demand in the holiday season. We sample time of year $t$ from $t\sim \mathrm{Unif}(0, 10)$ and select customer type $s$ uniformly from $\{1,\dots,7\}$ to build training data. The price $p$ is determined from the fuel price $c$ and the time of the year $t$ as $p=25+(c+3)\eta(t) + \nu$, where $\nu$ is a additive noise.
+
+The observed demand $y$ is given by the $y = f_\mathrm{str}(p,t,s) + \varepsilon$ where $\varepsilon$ is an additive noise that is correlated with the noise in price $\nu$. This correlation reflects the fact that the price and demand are both cofounded by supply-side market forces. Parameter $\rho$ determines correlation between $\varepsilon$ and $\nu$, and we report the result of the various value of $\rho =\{0.9, 0.75, 0.5, 0.25,0.1\}$. As in \citet{Singh2019,Hartford2017}, the performance is evaluated by the mean squared error from $f_\mathrm{str}$, where the test points are uniformly sampled from space of $(p,t,s)$. This requires the model to successfully extrapolate the prediction, which is discussed in Appendix~\ref{sec:cov_shift}.
+

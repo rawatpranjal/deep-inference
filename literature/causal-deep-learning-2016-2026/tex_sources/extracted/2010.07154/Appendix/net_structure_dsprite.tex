@@ -1,0 +1,81 @@
+For DeepGMM, we used the structure described in Table~\ref{deepgmm-dsprite}. For DFIV, we used the structure described in Table~\ref{dfiv-dsprite}. The regularizer $\lambda_1, \lambda_2$ are both set to 0.01 as a result of the tuning procedure described in Appendix~\ref{sec:hyper-param}. For KIV, we used the Gaussian kernel where the bandwidth is determined by the median trick. We used random Fourier feature trick \citep{Rahimi2008} with 100 dimensions. 
+
+\begingroup
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[t]
+    \caption{Network structures of DeepGMM in dSprite experiment.  For the input layer, we provide the input variable. For the fully-connected layers (FC), we provide the input and output dimensions. SN denotes Spectral Normalization \citep{Miyato2018}.}
+    
+    \label{deepgmm-dsprite}
+    \centering
+    
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\bf Instrument Net} 
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($Z$) \\ \hline
+            2 & FC(3, 256), SN, ReLU\\ \hline
+            3 & FC(256, 128), SN, ReLU, BN \\ \hline
+            4 & FC(128, 128), SN, ReLU, BN \\ \hline
+            5 & FC(128, 32), SN, BN, ReLU \\ \hline
+            6 & FC(32, 1)\\ \hline
+            \end{tabular}    
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\bf Treatment Net} 
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($X$) \\ \hline
+            2 & FC(4096, 1024), SN, ReLU \\ \hline
+            3 & FC(1024, 512), SN, ReLU, BN \\ \hline
+            4 & FC(512, 128), SN,  ReLU \\ \hline
+            5 & FC(128, 32), SN, BN, Tanh\\ \hline
+            6 & FC(32,1)\\ \hline
+            \end{tabular}    
+    \end{minipage}
+    
+\end{table}
+\endgroup  
+
+
+\begingroup
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[t]
+    \caption{Network structures of DFIV in dSprite experiment. For the input layer, we provide the input variable. For the fully-connected layers (FC), we provide the input and output dimensions. SN denotes Spectral Normalization \citep{Miyato2018}.}
+    
+    \label{dfiv-dsprite}
+    
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Instrument Feature} $\vec{\phi}_{\theta_Z}$ }
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($Z$) \\ \hline
+            2 & FC(3, 256), SN, ReLU\\ \hline
+            3 & FC(256, 128), SN, ReLU, BN \\ \hline
+            4 & FC(128, 128), SN, ReLU, BN \\ \hline
+            5 & FC(128, 32), SN, BN, ReLU \\ \hline
+            \end{tabular}    
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Treatment Feature} $\vec{\psi}_{\theta_X}$} 
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($X$) \\ \hline
+            2 & FC(4096, 1024), SN, ReLU \\ \hline
+            3 & FC(1024, 512), SN, ReLU, BN \\ \hline
+            4 & FC(512, 128), SN,  ReLU \\ \hline
+            5 & FC(128, 32), SN, BN, Tanh \\ \hline
+            \end{tabular}    
+    \end{minipage}
+\end{table}
+\endgroup  
+

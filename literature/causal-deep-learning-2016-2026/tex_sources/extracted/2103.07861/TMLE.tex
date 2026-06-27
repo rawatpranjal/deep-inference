@@ -1,0 +1,282 @@
+\section{Functional Targeted Regularization}\label{sec:targeted_regularization}
+In this section we improve upon the previous method by utilizing semiparametric theory on doubly robust estimators. Doubly robust estimators are built upon $\hat\pi(t\mid\x)$ and $\hat \mu(t,\x)$, and it yields a consistent estimator for $\psi$ even if one of them is inconsistent. When both $\hat\pi(t\mid\x)$ and $\hat \mu(t,\x)$ are consistent, a doubly robust estimator leads to faster rates of convergence.
+Here our task is to estimate the whole ADRF curve, which comes with additional challenges. First, we need to find a doubly robust estimator of $\psi(t_0)$ for any $t_0\in[0,1]$.
+
+\subsection{Doubly Robust Estimator}
+Before we proceed, we define the following quantity:
+\begin{align*}
+\zeta_{t_{0}}(Y,\X,T,\pi,\mu,\psi) & =q_{t_{0}}(Y,\X,T,\mu,\pi)+\mu(t_{0},\X)-\psi(t_{0}),\\
+\text{where}\ \ q_{t_{0}}(Y,\X,T,\mu,\pi) & =\delta(T-t_{0})\frac{Y-\mu(T,\X)}{\pi(T\mid\X)}.
+\end{align*}
+
+The following theorem serves as the basis for our subsequent estimators:
+\begin{thm}\label{thm:doubly_robust}
+Under assumption \ref{assump} and assume that $\hat{\pi}(t\mid \x)\ge c>0$ for all $\x\in\mathcal{X}$ and $t\in\mathcal{T}$.
+For any $t_0\in\mathcal{T}$, $\zeta_{t_{0}}$ is the efficient influence function for $\psi(t_0)$.
+% \begin{equation*}\label{eq:psi(t)_EIF}
+%     \zeta_{t_0}(Y,\X,T,\pi,\mu,\psi(t_0))=\delta(T-t_0)\frac{Y-\mu(T,\X)}{\pi(T\C\X)}-\psi(t_0)+\mu(t_0,\X)
+% \end{equation*}
+Moreover, $\zeta_{t_0}$ is doubly robust in the sense that 
+\[
+    \P\zeta_{t_0}(Y,\X,T,\hat{\pi},\hat{\mu},\psi)=0
+\]
+if either $\hat{\pi}=\pi$ or $\hat{\mu}=\mu$. 
+Further, if $\left\Vert \hat{\pi}-\pi\right\Vert _{\infty}=\O_{p}(r_1(n))$ and $\left\Vert \hat{\mu}-\mu\right\Vert _{\infty}=\O_{p}(r_2(n))$, we have 
+\[
+\sup_{t_{0}\in\mathcal{T}}\left|\P\zeta_{t_0}(Y,\X,T,\hat{\pi},\hat{\mu},\psi)\right|=\O_p(r_1(n)r_2(n)).
+\]
+\end{thm}
+
+Theorem \ref{thm:doubly_robust} shows that for any $t_0\in\mathcal{T}$, $\P\left(q_{t_{0}}(Y,\X,T,\hat\mu,\hat\pi)+\hat{\mu}(t_0,\X)\right)$
+% \begin{equation}\label{eq:doubly_robust_est}
+%     \E\left[\delta(T-t_0)\frac{Y-\hat \mu(T,\X)}{\hat \pi(T\C\X)}+\hat \mu(t_0,\X)\right]
+% \end{equation}
+is a doubly robust estimator for $\psi(t_0)$. Under some mild assumptions, one way to obtain a doubly robust estimator of $\psi$ is to utilize the two-stage procedure from \cite{kennedy2017non} by regressing 
+\begin{equation}\label{eq:clever_response}
+    \frac{Y-\hat \mu(T,\X)}{\hat\pi(T\mid\X)}\int_{\mathcal{X}}\hat\pi(T\mid\x)d\P_n(\x)+\hat \mu(T,\X)
+\end{equation} 
+on $T$ using any nonparametric regression methods like kernel regression or spline regression.
+
+%{\color{red} Under assumption, we are able to obtain doubly robust utilize the two-stage procedure by xxxx}
+
+% However as discussed in \cite{shi2019adapting}, despite asymptotic optimality, simply plugging in estimates $\hat\pi,\,\hat \mu$ in \eqref{eq:clever_response} tends to result in unstable finite sample performance due to the presence of $\hat\pi$ in the denominator. {\color{black}To obtain a doubly robust estimator for ADRF curve with stable finite sample performance,  we utilize a new technique called targeted regularization. }
+
+%In the appendix, we give a more general theorem for estimators of $\Gamma=\int \gamma(t)\psi(t)dP_T(t)$ where $\gamma(t)$ can be any function, and it includes many quantities of interest for both binary and continuous treatments.
+
+\subsection{Targeted Regularization for Inferring a Finite Dimensional Quantity}
+However, as discussed in \cite{shi2019adapting}, when estimating the term $\P\left(q_{t_{0}}(Y,\X,T,\hat\mu,\hat\pi)\right)$, the $\hat{\pi}(T\mid\X)$ in the denominator might make the finite sample estimator unstable, especially in cases where Assumption \ref{assump}(a) is nearly violated. Targeted regularization is proposed by \cite{shi2019adapting} to solve this issue. The key intuition of targeted regularization is to learn $\hat{\mu}$ and $\hat{\pi}$ such that $\P\left(q_{t_{0}}(Y,\X,T,\hat\mu,\hat\pi)\right)\approx0$ and thus the estimation of this term is no more needed. In the binary treatment case where $\mathcal{T}=\{0,1\}$, if we want to estimate $\psi(1)$, which is a single quantity, targeted regularization simultaneously optimizes over $\mu^{\nn}$, $\pi^{\nn}$ and an extra scalar perturbation parameter $\epsilon$ using the following loss
+\begin{align}\label{eq:loss_binary_ATE}
+\mathcal{L}_{\text{TR}}[\mu^{\text{NN}},\pi^{\text{NN}},\epsilon] & =\mathcal{L}[\mu^{\text{NN}},\pi^{\text{NN}}]+\beta\mathcal{R}_{\text{TR}}[\mu^{\text{NN}},\pi^{\text{NN}},\epsilon],\\
+\nonumber
+\text{where\ \ \ensuremath{\mathcal{R}_\text{TR}}[\ensuremath{\mu^{\text{NN}}},\ensuremath{\pi^{\text{NN}}},\ensuremath{\epsilon}]} & =\frac{1}{n}\sum_{i=1}^{n}\left(y_{i}-\mu^{\text{NN}}(t_{i},\x_{i})-\epsilon\frac{ t_{i}}{\pi^{\text{NN}}(1\mid\x_{i})}\right)^{2},
+\end{align}
+% \begin{equation}\label{eq:loss_binary_ATE}
+% \begin{split}
+%      \frac{1}{n}\sum_{i=1}^n
+%     \left(y_i-\mu^{\nn}(t_i,\x_i)\right)^2 -\frac{\alpha}{n}\sum_{i=1}^n{\log(\pi^{\nn}(t_i\C \x_i))}+ \frac{\beta}{n}\sum_{i=1}^n\left(y_i-\mu^{\nn}(t_i,\x_i)-\epsilon\frac{t_i}{\pi^{\nn}(t_i\mid\x_i)}\right)^2.
+% \end{split}
+% \end{equation}
+with $\mathcal{L}[\mu^{\text{NN}},\pi^{\text{NN}}]$ defined in (\ref{eq:loss_without_tr}). Assume the complexity of the function space of $\mu^{\text{NN}}$ and $\pi^{\text{NN}}$ is finite and since the complexity of the function space of the introduced perturbation $\epsilon$ is also finite,  we have 
+\begin{align*}
+\P\left[q_{1}\left(Y,\X,T,\hat{\mu}_{\text{TR}},\hat{\pi}\right)\right]
+&=\P\left[q_{1}\left(Y,\X,T,\hat{\mu}_{\text{TR}},\hat{\pi}\right)\right] + \frac{1}{2}\frac{\partial}{\partial\epsilon}\mathcal{R}_{\text{TR}}[\hat{\mu},\hat{\pi},{\epsilon}]\mid_{\epsilon=\hat\epsilon}
+\\&
+=(\P-\P_n)\left(q_1(Y,\X,T,\hat\mu,\hat\pi)-\hat\epsilon\delta(T-t_0)/\hat\pi^2(T\mid\X)\right)
+=o_p(1),
+\end{align*}
+where $\hat{\mu}_{\text{TR}}(t,\x):=\hat{\mu}(t,\x)+\hat{\epsilon}\frac{t}{\hat{\pi}(t\mid\x)}$ and $(\hat{\mu},\hat{\pi},\hat{\epsilon})$ is the minimizer of (\ref{eq:loss_binary_ATE}). Notice that the first equality holds because at the convergence of the optimization, $\frac{\partial}{\partial\epsilon}\mathcal{R}_{\text{TR}}[\hat{\mu},\hat{\pi},{\epsilon}]\mid_{\epsilon=\hat\epsilon}=0$. And the last equality is by uniform concentration inequality. This implies that $\frac{1}{n}\sum_{i=1}^{n}\hat{\mu}_{\text{TR}}(1,\x)$ is a doubly robust estimator for $\psi(1)$ and for this estimator, no conditional density estimator presents at denominator and thus it has more stable finite sample performance.
+
+% Notice that at convergence, the gradient of $\epsilon$ equals zero, which implies that 
+% \[
+% \frac{1}{n}\sum_{i=1}^{n}\left(y_{i}-\mu^{\text{NN}}(t_{i},\x_{i})-\epsilon\frac{t_{i}}{\pi^{\text{NN}}(t_{i}\mid\x_{i})}\right)\frac{t_{i}}{\pi^{\text{NN}}(t_{i}\mid\x_{i})}=0.
+% \]
+% Then we use $\mu^{\text{NN}}(t,\x)+\epsilon\frac{t}{\pi^{\text{NN}}(t\mid\x)}$ as the estimator for $\mu$. If we assume finite model complexity and since the extra perturbation parameter $\epsilon$ also has finite complexity, in large sample asymptotics, we have 
+% \[
+% \E\left[\delta(T-t_{0})\frac{Y-\hat{\mu}(T,\X)}{\hat{\pi}(T\mid\X)}\right]=o(1)+ \left[\frac{1}{n}\sum_{i=1}^{n}\left(y_{i}-\mu^{\text{NN}}(t,\x)-\epsilon\frac{t}{\pi^{\text{NN}}(t\mid\x)}\right)\frac{t_{i}}{\pi^{\text{NN}}(t_{i}\mid\x_{i})}\right]=o(1).
+% \]
+% {\color{red} why the first equality holds? no explanation}
+%Note that targeted regularization is similar to modified one-step TMLE \citep{van2006targeted}. The difference is that modified one-step TMLE is based on a fixed initial estimator $\hat\pi,\hat Q$, and optimizes over only $\epsilon$ to update the quantity of interest, while targeted regularization simultaneously optimizes over $\hat\pi,\hat Q$ and $\epsilon$ to update. This joint optimization yields better practical performance compared with TMLE, as suggested by \cite{shi2019adapting}.
+
+\subsection{Functional Targeted Regularization for Inferring the Whole ADRF}
+Notice that in loss (\ref{eq:loss_binary_ATE}), the scalar $\epsilon$ is associated with a scalar quantity for inference. One can generalize targeted regularization to estimate a $d$ dimensional vector by using $d$ separate $\epsilon$'s (see Theorem \ref{thm:EIF_multidimensional} in the Appendix). {\color{black}Generalizing to a curve, however, is more challenging.}  
+We need to optimize over a function $\epsilon:\mathcal{T}\rightarrow \mathbb{R}$ where $\epsilon(\cdot)$ is the perturbation associated with $\psi(\cdot)$. Optimizing over the function space of all mappings from $\mathcal{T}$ to $\mathbb{R}$ is not feasible in practice, and its high complexity will lead to overfitting.
+% Targeted regularization is proposed by \cite{shi2019adapting} in order to enhance the performance of their estimator for average treatment effect (ATE), which is a scalar quantity, in both finite and large sample sizes. Here we inherit this idea, with the extra difficulty of trying to estimate the \emph{whole curve} $\psi$ instead of a single scalar. 
+
+Our solution is to utilize the smoothness of $\mu$ and $\pi$ \citep{prichard1971assessment, schneider1993dose,threlfall1999sun}, which allows us to use splines $\{\varphi_k\}_{k=1}^{K_n}$ with $K_n$ basis functions to approximate $\epsilon(\cdot)$. Here the subscript $n$ in $K_n$ denotes that the number of basis functions might change with the sample size $n$. Define $\epsilon_{n}(\cdot)=\sum_{k=1}^{K_{n}}\alpha_{k}\varphi_{k}(\cdot)$. We use the following loss with Functional Targeted Regularization (FTR). 
+\begin{align}\label{eq:targeted_reg}
+\mathcal{L}_{\text{FTR}}[\mu^{\text{NN}},\pi^{\text{NN}},\epsilon_{n}] & =\mathcal{L}[\mu^{\text{NN}},\pi^{\text{NN}}]+\beta_n\mathcal{R}_{\text{FTR}}[\mu^{\text{NN}},\pi^{\text{NN}},\epsilon_{n}]\\
+\nonumber
+\text{where}\ \ \mathcal{R}_{\text{FTR}}[\mu^{\text{NN}},\pi^{\text{NN}},\epsilon_{n}] & =\frac{1}{n}\sum_{i=1}^{n}\left(y_{i}-\mu^{\text{NN}}(t_{i},\x_{i})-\frac{\epsilon_{n}(t_i)}{\pi^{\text{NN}}(t_{i}\mid\x_{i})}\right)^{2}.
+\end{align}
+Here $\mathcal{R}_{\text{FTR}}$ denotes the FTR term and $\beta_n \to 0$ when $n\to\infty$.
+
+\begin{remark} [\textbf{On $\beta_n$}]
+The targeted regularization proposed by \citet{shi2019adapting} uses a \emph{fixed} $\beta$. However, using fixed $\beta$ might lead to the estimator constructed by targeted regularization no more consistent when $\mu^{\text{NN}}$ is mis-specified, which means the estimator is no more doubly robust. To overcome this issue, we make a slight change on $\beta$ by allowing $\beta$ to depend on $n$. Specifically, we find that once $\beta_n=o(1)$, we are able to make sure that targeted regularization gives doubly robust estimator. See discussion at Remark \ref{rmk: consistency} and Appendix \ref{apxsec: consistency} for more details.
+\end{remark}
+
+Demonstrating the asymptotic correctness of FTR is more challenging than analyzing traditional targeted regularization. One reason is that we no more have  $\frac{\partial}{\partial\epsilon}\mathcal{R}_{\text{TR}}[\hat{\mu},\hat{\pi},{\epsilon}]\mid_{\epsilon=\hat\epsilon}=0$. With some additional efforts, we will establish convergence rate for our estimator using loss (\ref{eq:targeted_reg}) in Theorem \ref{thm:Gamma_consistency_spline}.
+Before we proceed, let us pause a bit and introduce some definitions, which will be used in the main theorem. Denote $\hat{\mu}$, $\hat{\pi}$ and $\hat{\epsilon}_n$ as the minimizer of (\ref{eq:targeted_reg}). We use $\bar\pi$ and $\bar \mu$ to denote fixed functions to which $\hat\pi$ and $\hat \mu$ converge in the sense that $\left\Vert \hat{\pi}-\bar{\pi}\right\Vert _{\infty}=o_p(1)$ and $\left\Vert \hat{\mu}-\bar{\mu}\right\Vert _{\infty}=o_p(1)$. We define $g_{t}:\mathcal{X}\to\R,\x\mapsto\mu^{\text{NN}}(\x,t)$. We denote $\mathcal{G},\mathcal{Q}, \mathcal{U}$ as the function space in which $g_t$, $\mu^{\text{NN}}$, $\pi^{\nn}$ lies. We denote $\mathcal{B}_{K_n}$ as the closed linear span of basis $\bm\varphi^{K_n}=\{\varphi_k\}_{k=1}^{K_n}$. 
+
+The key intuition of the asymptotic correctness of FTR is that: once $\pi^{\text{NN}}$ and $\pi$ are uniformly upper/lower bounded
+and some other weak regularization conditions hold, we can show that $\left\Vert \hat{\epsilon}_{n}(\cdot)-\epsilon^{*}(\cdot)\right\Vert _{L^2}=o_{p}(1)$ where $\epsilon^{*}(\cdot):=\E\left[\left(Y-\bar{\mu}\right)/\bar{\pi}\mid T=\cdot\right]/\E\left[\bar{\pi}^{-2}\mid T=\cdot\right]$. And thus letting $\hat{\mu}_{\text{FTR}}:=\hat{\mu}+\hat{\epsilon}_{n}/\hat{\pi}$,
+we have
+\begin{align*}
+\P\left[q_{t_{0}}\left(Y,\X,T,\hat{\mu}_{\text{FTR}},\hat{\pi}\right)\right] & =\P\left(\left(Y-\hat{\mu}_{\text{FTR}}\right)/\hat{\pi}\mid T=t_{0}\right)\pi(t_{0})\\
+ & \approx\left[\E\left(\left(Y-\bar{\mu}-\epsilon^{*}/\bar{\pi}\right)/\bar{\pi}\mid T=t_{0}\right)\right]\pi(t_{0}) = 0.
+\end{align*}
+
+
+\begin{assump}\label{assump2} We consider the following assumptions:
+
+(i) There exists constant $c>0$ such that for any $t\in\mathcal{T}$, $\x\in\mathcal{X}$, and $\pi^{\text{NN}}\in\mathcal{U}$, we have $1/c\le\pi^{\text{NN}}(t\mid\x)\le c$, $1/c\le\pi(t\mid\x)\le c$, $\left\Vert \mathcal{Q}\right\Vert _{\infty}\le c$ and $\|\mu\|_{\infty}\leq c$.
+
+(ii) $Y=\mu(\X,T)+V$ where $\E V=0$, $V\perp\X$, $V\perp T$, and $V$ follows sub-Gaussian distribution.
+
+(iii)  $\pi$, $\mu$, $\pi^{\text{NN}}$ and $\mu^{\text{NN}}$ have bounded second derivatives for any $\pi^{\text{NN}} \in \mathcal{Q}$ and $\mu^{\text{NN}} \in \mathcal{U}$.
+
+(iv) %The estimators $(\pi,Q)$ and their limits $(\bar\pi,\bar Q)$ are contained in uniformly bounded function class with finite uniform entropy integrals, with $1/\pi$ and $1/\bar\pi$ also uniformly bounded. $\sup_T\sup_{\X}\|Q_n(\X,T)-\bar Q(\X,T)\|=\O_p(n^{-})$.
+Either $\bar\pi=\pi$ or $\bar \mu=\mu$. And $\Rad(\mathcal{G})$, $\Rad(\mathcal{Q})$, $\Rad(\mathcal{U})$ $=\O\left(n^{-1/2}\right)$.
+%(1) $\{(t_i,\x_i,y_i)\}_{i=1}^{\infty}$ are independent; 
+
+(v) $\mathcal{B}_{K_n}$ equals the closed linear span of B-spline with equally spaced knots, fixed degree, and dimension $K_n\asymp n^{1/6}$.
+\end{assump} 
+
+\begin{thm}\label{thm:Gamma_consistency_spline}
+%Suppose we use loss \eqref{eq:targeted_reg}. 
+Under Assumption \ref{assump} and \ref{assump2},
+%(2) There exists some constant $\delta\geq 1/q$ s.t. $\left|\E(Y\mid T,\X)\right|+\text{Var}(Y\mid T,\X)+\left|\hat Q(T,\X)\right|+\E\left|Y-Q(T,\X)\right|^{2+\delta}<+\infty$ for any $t\in\mathcal{T}$ and $\X\in\mathcal{X}$.
+%(6) %$\|B_n^TB_n/n-I_{K'}\|=o_p(1)$ where $B_n=(\varphi_{i,j})\in \mathbb{R}^{n\times K'}$ with $\varphi_{i,j}=\varphi_j(t_i)$.
+%There exists constant $c_2>0$ s.t.  $\lambda_{\text{min}}\left(\E\bm{\varphi}^{K'}(T)\bm{\varphi}^{K'}(T)\right)\geq \frac{1}{c_2}$ for each $K'$ and $n$.
+let $\widehat{\psi}({\cdot}):=\frac{1}{n}\sum_{i=1}^{n}\left(\hat \mu(\x_i,\cdot)+ \frac{\hat\epsilon_n(\cdot)}{\hat\pi(\cdot\mid\x_i)}\right)$, we have
+\[
+\|\widehat{\psi}-\psi\|_{L^2}=\O_{p}\left(n^{-1/3}\sqrt{\log n}+r_1(n)r_2(n)\right).
+\]
+where
+%\quad\text{where}\quad (\hat b_1,\hat b_2,\cdots,\hat b_K)= \arg\min_{b_1,b_2,\cdots,b_K}\frac{1}{n}\sum_{i=1}^n\left(\frac{y_i-Q(t_i,x_i)}{\pi(t_i\mid x_i)}-\sum_{j=1}^Kb_j\phi(t_i)\right)^2$$
+$\left\Vert \hat{\pi}-\pi\right\Vert _{\infty}=\O_{p}(r_{1}(n))$ and $\left\Vert \hat{\mu}-\mu\right\Vert _{\infty}=\O_{p}(r_{2}(n))$.
+% $$\sup_{T\in[0,1],\X}|\hat\pi(T\mid \X)-\pi(T\mid \X)|=\O_p\left(r_1(n)\right),
+% $$
+% $$
+% \sup_{T\in[0,1],\X}|\hat \mu(T,\X)-\mu(T,\X)|=\O_p\left(r_2(n)\right)$$
+\end{thm}
+
+\begin{remark}
+In Theorem \ref{thm:Gamma_consistency_spline}, assumption (i), (iii)  and the first half of (v) are weak and standard conditions for establishing convergence rate of spline estimators \citep{huang2003local, huang2004polynomial}. Assumption (ii) bounds the tail behavior of $V$. The second half of (v) restricts the growth rate of $K_n$, which is a typical assumption \citep{huang2003local, huang2004polynomial} but with different rate in order to obtain uniform bound. The first half of assumption (iv) states that at least one of $\hat \mu,\hat\pi$ should be consistent. The second half of assumption (iv) considers the complexity of model space, and is a common assumption for problems with nuisance functions \citep{kennedy2017non}. %{\color{red} assumptions id changes}
+\end{remark}
+
+% \begin{remark} [\textbf{On the convergence rate}]
+% For fixed objective, the optimal error rate $\O_p(n^{-2/5})$ is achieved when $K_n\asymp n^{1/5}$. In Theorem \ref{thm:Gamma_consistency_spline}, as a result of uniform bound, we get a slightly larger error rate $\O_p(n^{-1/3})$ at $K_n\asymp n^{1/6}$. The optimal $K_n$ grows slower in order to trade bias rate for the increased variance rate of $\sup_{\hat{\pi},\hat \mu}\|\hat\psi-\psi\|_{L^2}$.
+% \end{remark}
+
+\begin{remark} \label{rmk: consistency}
+
+We want to point out that adding targeted regularization does not affect the limit of $\hat{\mu}$ and $\hat{\pi}$ in large sample asymptotics. That is, the limit of $\hat{\mu}$ and $\hat{\pi}$ using loss (\ref{eq:targeted_reg}) will be the same as using loss (\ref{eq:loss_without_tr}). We refer the reader to Appendix \ref{apxsec: consistency} for a more detailed discussion and proof.
+\end{remark}
+
+Notice that our proof for Theorem \ref{thm:Gamma_consistency_spline} can also be adapted for analyzing modified one-step TMLE \citep{van2006targeted}. With very similar assumptions, we could obtain double robustness and the same consistency rate for TMLE estimator.
+%{\color{red}By product->TMLE, our analysis can also be used to analyze see appendix}
+
+Theorem \ref{thm:Gamma_consistency_spline} guarantees that if we appropriately control the model complexity, under some mild assumptions, the estimator $\widehat\psi$ from targeted regularization is doubly robust, and when both $\hat\pi$ and $\hat\mu$ are consistent, the rate of convergence of $\widehat\psi$ to the truth is faster than the individual convergence rate of $\hat\pi$ or $\hat\mu$. Thus, using targeted regularization theoretically helps us obtain a better estimator of $\psi$.
+
+
+\iffalse
+Consider any fixed $t_k^*$ such that assumptions (1)-(4) are satisfied. Then optimizing loss \eqref{eq:targeted_reg} yields
+
+\[
+\epsilon(t_{k}^{*})=\frac{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})\frac{y_{i}-Q(x_{i},t_{i})}{\pi(x_{i},t_{i})}}{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})}
+\]
+
+Notice that it is exactly the Nadaraya-Watson kernel estimator for $z=m(t)+\epsilon'$ with
+\[
+z_{i}=\frac{y_{i}-Q(x_{i},t_{i})}{\pi(x_{i},t_{i})}
+\]
+ and $m(t_{k}^{*})=\E\left(z_{i}\mid t_{k}^{*}\right)=\E_{x_{i}}\frac{\E_{Y}\left(Y\mid X=x_{i,}T=t_{k}^{*}\right)-Q(x_{i},t_{k}^{*})}{\pi(x_{i},t_{k}^{*})}$.
+From property of Nadaraya-Watson kernel estimator, we know from Theorem 5.65 of \cite{wasserman2006all} that 
+\[
+|\epsilon(t_k^*)-\epsilon^{*}(t_k^*)|=O_p(n^{-2/5})
+\]
+where $\epsilon^{*}(t_k^*)=\E\left[\frac{Y-Q(X,T)}{\pi(X,T)}\delta(T-t_k^*)\right]$.
+
+Theorem \ref{thm:doubly_robust} indicates that
+if $\pi(x,t_k^*)-p(t_k^*\mid x)=O(n^{-a})$ and $Q^{tr}(x,t_k^*)-\E(Y\mid X=x,T=t_k^*)=O(n^{-b})$, then
+$$
+\epsilon^*(t_k^*)+\E Q^{tr}(t_k^*,\X)-\Gamma_{t_k^*}=O_p(n^{-(a+b)})
+$$
+Notice that $|\frac{1}{n}\sum_{i=1}^{n}Q(x_{i,}t_{k}^{*})-\E Q(X,t_{k}^{*})|=O_p(n^{-1/2})$. Thus, we have 
+\[
+\frac{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})\frac{y_{i}-Q^{tr}(x_{i},t_{i})}{\pi(x_{i},t_{i})}}{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})}+\frac{1}{n}\sum_{i=1}^{n}Q^{tr}(x_{i,}t_{k}^{*})-\Gamma_{t_{k}^{*}}=\O_{p}(n^{-2/5}+n^{-1/2}+n^{-a-b}).
+\]
+We get the desired conclusion by setting
+$$
+\widehat{\Gamma_{t_{k}^{*}}}
+=
+\frac{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})\frac{y_{i}-Q^{tr}(x_{i},t_{i})}{\pi(x_{i},t_{i})}}{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})}+\frac{1}{n}\sum_{i=1}^{n}Q^{tr}(x_{i,}t_{k}^{*})
+=\frac{1}{n}\sum_{i=1}^{n}Q^{tr}(x_{i,}t_{k}^{*})
+$$
+
+
+
+
+
+First, if our aim is to estimate a single point $\Gamma=\psi(t_0)$, similar as \cite{shi2019adapting}, we can use
+\begin{equation*}
+    \text{pen}(t_0,\epsilon_{t_0})=\frac{1}{n}\sum_{i=1}^n\left[y_l-Q(t_l,\x_l)-\epsilon_{t_0}\frac{\1(t_l=t_0)}{\pi(t_l\C\x_l)}\right]^2
+\end{equation*}
+based on the observation that
+\begin{equation}\label{eq:TMLE_derivative}
+    \begin{split}
+        0=\frac{\partial \text{pen}(t_0,\epsilon_{t_0})}{\partial \epsilon_{t_0}}\C_{\hat\epsilon_{t_0}}
+        =\frac{1}{n}\sum_{l=1}^n\zeta\left(y_l,\x_l,t_l;\hat \pi,\hat Q^{\text{treg}},\hat\Gamma^{\text{treg}}\right)
+        =\E_n \zeta\left(Y,X,T;\hat\pi,\hat Q^{\text{treg}},\hat\Gamma^{\text{treg}}\right)
+    \end{split}
+\end{equation}
+if choosing $\hat\Gamma^{\text{treg}}(t_0)=\frac{1}{n}\sum_{l=1}^n\hat Q^{\text{treg}}(t_0,\x_l)$ and $\hat Q^{\text{treg}}(t_l,x_l)=\hat Q(t_l,x_l)+\hat\epsilon_{t_0}\frac{\1(t_l=t_0)}{\hat\pi(t_l\C\x_l)}$.
+
+\begin{equation*}
+\begin{split}
+    \widehat\Gamma 
+=& \E_n\left[\delta(T-t_0)\frac{Y-Q(T,\X)}{\pi(T\C\X)}+Q(t_0,\X)\right]
+\\=& \int \left[\delta(T-t_0)\frac{Y-Q(T,\X)}{\pi(T\C\X)}+Q(t_0,\X)\right]\times
+\left[\frac{1}{n}\sum_{i=1}^n\delta(\X-\X_i)\delta(T-T_i)\delta(Y-Y_i)\right]d\XdTdY
+\\=&\frac{1}{n}\sum_{i=1}^n \left[Q(t_0,\X_i)+\1(T_i=t_0)\frac{Y_i-Q(T_i,\X_i)}{\pi(T_i\C\X_i)}\right]
+\end{split}
+\end{equation*}
+
+
+Now, the objective is to estimate a whole curve $\psi(\cdot)$. So we would like
+$$
+0=\frac{\partial \text{pen}(t_0,\epsilon_{t_0})}{\partial \epsilon_{t_0}}\C_{\hat\epsilon_{t_0}}
+$$
+to hold for any $t_0\in\mathcal{T}$. One way to enforce that is to use
+\begin{equation*}
+    \begin{split}
+        \text{pen}(\bm\epsilon)=\int_{t_0\in\mathcal{T}}\text{pen}(t_0,\epsilon_{t_0})\pi(t_0)dt_0
+    \end{split}
+\end{equation*}
+
+
+\begin{thm}\label{thm:functional_TMLE_doubly_robust}
+If set $\text{pen}(t_0,\epsilon_{t_0})=\E\left[Y-Q(T,\X)-\epsilon_{t_0}\frac{\delta_{T}(t_0)}{\pi(T\C\X)}\right]^2$ and $\text{pen}(\bm\epsilon)=\int_{t_0\in\mathcal{T}}\text{pen}(t_0,\epsilon_{t_0})\pi(t_0)dt_0$, for $\widehat\psi(t)$ estimated with regularization term $\text{pen(\bm\epsilon)}$, we have
+\begin{equation*}
+    \int_{\mathcal{T}}\left(\widehat\psi(t)-\psi(t)\right)^2d\pi(t)=0
+\end{equation*}
+\end{thm}
+if either $\hat\pi=\pi$ or $\hat Q=Q$ for all $t$.
+
+
+Since we do not know the truth $\pi(t_0)$, for simplicity we can replace it by the empirical (marginal) treatment distribution estimated from the sample and get
+\begin{equation*}
+    \begin{split}
+        \text{pen}(\bm\epsilon)&=\frac{1}{n}\sum_{t_0=t_1,\cdots,t_n}\text{pen}(t_0,\epsilon_{t_0})
+        \\&
+        =\frac{1}{n^2}\sum_{l=1}^n\left[y_l-Q(t_l,\x_l)-\epsilon_{t_l}\frac{1}{\pi(t_l\C\x_l)}\right]^2
+        +\frac{n-1}{n^2}\sum_{l=1}^n\left[y_l-Q(t_l,\x_l)\right]^2
+    \end{split}
+\end{equation*}
+Recall that originally, our neural network originally tries to minimize $R(\th;\X)$ defined as 
+\begin{equation}
+    R(\th;\X) = \frac{1}{n}\sum_{l=1}^n\left[\left(Q(t_l,x_l;\th)-y_l\right)^2-\alpha'{\log(\pi(t_l\C \x_l))}\right]
+\end{equation}
+Thus, incorporating targeted regularization, the objective function we minimize during training is
+\begin{equation}\label{eq:targeted_reg}
+    \arg\min_{\th,\epsilon} \frac{1}{n}\sum_{l=1}^n
+    \left[\left(y_l-Q(t_l,\x_l)\right)^2 -\alpha{\log(\pi(t_l\C \x_l))}+ \beta\left(y_l-Q(t_l,\x_l)-\epsilon_{t_l}\frac{1}{\pi(t_l\C\x_l)}\right)^2\right]
+\end{equation}
+\fi
+
+\section{Related Work}
+
+\textbf{The Varying Coefficient Structure.}
+Varying coefficient (linear) model is first proposed as an extension of linear model \citep{hastie1993varying,fan1999statistical} and is usually used for modeling longitudinal data \citep{huang2004polynomial, zhang2015varying, li2017functional, ye2019finite}. The key motivation of varying coefficient model is a dimension reduction technique that avoids the curse of dimensionality for statistical estimation. Different from existing models, our varying coefficient structure is applied on a complex neural network model with a different motivation of enhancing the expressiveness of the treatment effect. Besides, building a hierarchical structure on the network parameter is also explored by the HyperNetwork \citep{stanley2009hypercube,ha2016hypernetworks}. Hypernetworks provide an abstraction that mimics the biology structure: the relationship between a genotype (the hypernetwork), and a phenotype (the main network). The weight of the main network is also a function of a latent embedding variable, which is learned with end-to-end training. %HyperNetwork is proposed in order to constrain the search space of a much larger main network, while our network is to enhance the expressiveness of treatment without breaking the continuity structure of ADRF.
+Hypernetwork trains a much smaller network to generate the weights of a larger main network in order to reduce search space, while our network directly trains the main network whose weights are linear combinations of spline functions of treatment. Moreover our network is proposed in order to appropriately incorporate treatment into modelling, which is not touched upon in HyperNetwork.
+
+
+\textbf{Neural Network Structure for Treatment Effect Estimation.}
+We refer readers to the introduction for the connections and comparisons with previous developments using feed forward neural network for treatment effect estimation. In addition to feed forward neural network, previous results also utilize other networks to learn treatment effects. For example, \cite{yoon2018ganite,bica2020estimating} estimated the causal effect via learning to generate the counterfactual.  \cite{louizos2017causal} learned the causal effect by learning deep variable models using variational autoencoder. Compared with our method, their approaches are mainly heuristic and do not provide theoretical guarantees for the asymptotic correctness of the estimator.
+
+\textbf{Doubly Robustness, TMLE and Targeted Regularization.}
+\citet{chernozhukov2017double, chernozhukov2018double} developed theory for `double machine learning' showing the convergence rate for doubly robust estimator. Despite its good asymptotic property, doubly robust estimators can be unstable due to the presence of conditional density estimator at denominator. Targeted Maximum Likelihood Estimation (TMLE) \citep{van2011targeted} and targeted regularization \citep{shi2019adapting} are then proposed to overcome this issue by introducing an extra perturbation parameter into the model. To the best of our knowledge, previous works on TMLE and targeted regularization focused on estimating a single quantity, such as $\psi(1)-\psi(0)$ in binary treatment \citep{shi2019adapting, van2011targeted} or averaged treatment effect $\E \psi(t)$ for continuous treatment \citep{kennedy2017non}, while we give the first generalization of targeted regularization and TMLE for inferring the whole ADRF curve.
+
+
+
+% including Generative Adversarial Networks \citep{yoon2018ganite}, which learning the causality by learning to generate the counterfactual; and auto-encoders \citep{louizos2017causal,bica2020estimating} for causal inference. Those method  %Another related work is that of \cite{kennedy2017non}, which provides a general two-step procedure which can utilize any initial estimator from machine learning approach to obtain a doubly robust estimator. 

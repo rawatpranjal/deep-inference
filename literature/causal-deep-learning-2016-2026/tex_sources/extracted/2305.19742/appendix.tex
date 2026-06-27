@@ -1,0 +1,363 @@
+\title{Appendix: \\Reliable Off-Policy Learning for Dosage Combinations}
+
+\maketitle
+
+\appendix
+
+\section{Additional Background} \label{sec:appendix_background}
+
+\textbf{Estimating the dose-response function under dosage bias:}
+Estimating the dose-response function becomes challenging with increasing dosage bias. Although the unbiasedness of counterfactual estimation can be achieved through the minimization of the prediction loss on the factual data, the inherent scarcity of data in continuous treatment settings leads to increased variance in the estimation process
+(see, e.g., \cite{Bellot.2022}), especially in regions with limited overlap. Consequently, the elevated variance hinders accurate generalization over the whole covariate-treatment space and contributes to a larger generalization error, which, in turn, impedes the reliable estimation of treatment effects. Effectively addressing this issue is crucial to improve the robustness and validity of counterfactual predictions.
+
+In Sec.~\ref{sec:related_work}, we introduced various existing methods for estimating the dose-response function, e.g.,  \cite{Bica.2020c, Hirano.2004, Imai.2004, Imbens.2000, Nie.2021b, Schwab.2020}. Besides a custom neural architecture, some methods use additional techniques to reduce the variance of counterfactual predictions for discrete or continuous treatments. Examples include reweighting \cite{rosenbaum1987model, wang2022generalization}, importance sampling \cite{hassanpour2019counterfactual}, targeted regularization \cite{Nie.2021}, or balancing representations \cite{ Bellot.2022, Johansson.2016, Schwab.2020}.  In our DCNet, we build on top of the neural architectures of \cite{Nie.2021b, Schwab.2020} and then develop a method that is capable of modeling the joint effect of dosage combinations. 
+
+In theory, we could also adapt additional techniques for variance reduction of the dose-response prediction to our setting of dosage combinations and leverage them in combination with DCNet. However, this may not be beneficial for our goal of reliable policy learning for dosage combinations under limited overlap, which is different from the goal of accurate dose-response estimation over the whole covariate-treatment space. These techniques aim to reduce the variance of the dose-response prediction in scarce regions (i.e., with limited overlap), which, as a consequence, shifts the focus away from regions with sufficient overlap. As we constrain the policy to regions with sufficient overlap anyway by using our reliable policy optimization, we aim for an adequate dose-response estimation in these regions, while regions with limited overlap can be neglected. Hence, in our method for reliable policy learning, techniques for tackling dosage bias during dose-response estimation can be considered more counterproductive than useful. We demonstrate this empirically in Appendix~\ref{appendix:insights}.
+
+
+\textbf{Normalizing flows:} 
+Normalizing flows were introduced for expressive variational approximations in variational autoencoders \cite{rezende2015variational, tabak2010density}
+and are based on the principle of transforming a simple base distribution, such as a Gaussian, through a series of invertible transformations to approximate the target data distribution. Let us denote the base distribution as $p_z({z})$, where ${z}$ is a latent variable, and the target data distribution as $p_x({x})$, where ${x}$ represents the observed data. The goal is to find a mapping $f$ such that ${x} = f({z})$. 
+
+The core idea behind normalizing flows is to model the transformation $f$ as a composition of invertible functions $f = f_K \circ f_{K-1} \circ \ldots \circ f_1$, where $K$ is the number of transformations. The last transformation $f_K$ is typically modeled as an affine transformation, and others are invertible nonlinear transformations. The inverse transformation can be easily computed since each $f_k$ is invertible. 
+
+The change of variables formula allows us to compute the probability density of ${x}$ in terms of ${z}$. If we assume the base distribution $p_z({z})$ is known and has a simple form (e.g., a Gaussian), we can compute the density of ${x}$ via
+\begin{equation}
+    p_x(x) = p_z(z) \left|\det \left(\frac{\partial f}{\partial z}\right)\right|^{-1}
+\end{equation}
+where $\left|\det \left(\frac{\partial f}{\partial {z}}\right)\right|$ is the determinant of the Jacobian matrix of the transformation $f$ with respect to ${z}$. This determinant captures the stretching and squishing of the latent space induced by the transformation, thus allowing us to adjust the density of ${z}$ to match the density of $x$.
+
+To perform inference, such as density estimation or sampling, we need to compute the log-likelihood of the observed data ${x}$. Given a dataset $\mathcal{D} = \{{x}_1, \ldots, {x}_n\}$, the log-likelihood can be computed as the sum of the log-densities of each data point
+\begin{equation}
+    \log p(\mathcal{D}) = \sum_{i=1}^n \log p_x(x_i) .
+\end{equation}
+
+\textbf{Conditional normalizing flows:} In our method, we leverage conditional normalizing flows (CNFs) \cite{trippe2018conditional,winkler2019learning} to estimate the generalized propensity score (GPS). CNFs model conditional densities $p(y \mid x)$ by transforming a simple base density $p(z)$ through an invertible transformation with parameters $\gamma(x)$ that depend on the input $x$.
+
+In our method, we use neural spline flows \cite{durkan2019neural} in combination with masked auto-regressive networks \cite{dolatabadi2020invertible}. Here, masked auto-regressive networks are used to model the conditional distribution of each variable in the data given the conditioning variable. The network takes as input the conditioning variable and generates each variable in the data sequentially, one at a time, while conditioning on the previously generated variables. This autoregressive property allows for efficient computation and generation of samples from the conditional distribution.
+For the motivation and advantages of our modeling choice, we refer to Sec.~\ref{sec:cnf}.
+
+\textbf{Offline reinforcement learning:} A related literature stream covers off-policy evaluation (OPE) in an offline reinforcement learning (ORL) setting. Some works leverage value functions and/or logging policies to achieve reliable policy learning (e.g., \cite{fujimoto2019off, kumar2020conservative, kumar2019stabilizing}). The main differences to our setting are that ORL assumes a Markov decision process and sequential decision-making. In contrast, we focus on non-sequential, off-policy learning from observational data. Also, unlike ORL or standard OPE, we leverage the causal structure of treatment assignment and the dose-response function to return causal estimands. This allows us not only to learn decisions but also causal estimates for potential outcomes. This is crucial for medical practice, where physicians would like to reason over different treatments rather than blindly following a fully automated system.
+
+
+
+\clearpage
+
+
+
+\section{Data Description} \label{sec:appendix_data}
+\textbf{MIMIC-IV:} MIMIC-IV\footnote{Available at: \url{https://mimic.mit.edu}} is the latest version of the publicly available dataset of The Medical Information Mart for Intensive Care \cite{Johnson.2023} and contains de-identified health records of patients admitted to intensive care units (ICUs). The dataset includes comprehensive clinical data, such as vital signs, laboratory measurements, medications, diagnoses, procedures, and more. In line with the approach in \cite{Schwab.2020}, our primary objective is to acquire knowledge about the optimal configurations of mechanical ventilation that can effectively maximize patient survival ($Y$). Note that some works (e.g., \cite{Bica.2020c, Schwab.2020}) used the previous version of the MIMIC dataset (MIMIC-III \cite{Johnson.2016}), whereas we use the most current one to offer realistic, comparable, and meaningful findings. 
+
+As treatments ($T$), we select the specific settings (dosages) utilized for mechanical ventilation, encompassing parameters such as respiratory rate and tidal volume. By filtering the data for the last available measurements per patient before ventilation, we are able to compile a dataset consisting of $n=5476$ patients. We carefully selected 33 patient covariates ($X$) that encompass factors of medical relevance such as age, sex, and various respiratory and cardiac measurements. For detailed identifiers of the selected covariates, we refer to our code.
+
+While \cite{Schwab.2020} adopted a framework in which treatments $T$ were modeled as a set of $p$ mutually exclusive dosages, we opted for a more realistic approach, considering that the configuration of mechanical ventilation involves dosage combinations with a joint effect. This decision aligns closely with existing medical literature, which emphasizes the interdependence of mechanical ventilation parameters and underscores the importance of simultaneous control \cite{Grasselli.2021}.
+
+\textbf{TCGA:} 
+The Cancer Genome Atlas (TCGA) dataset\footnote{Available at: \url{https://www.cancer.gov/tcga}} \cite{Weinstein.2013} represents a comprehensive and diverse collection of gene expression data derived from patients diagnosed with various types of cancer. Our research objective revolves around acquiring insights into the optimal combination of dosages for chemotherapy ($T$). In the domain of cancer treatment, the concurrent administration of different drugs has emerged as a prominent clinical approach \cite{Wu.2020b}. In this context, patient survival serves as the designated outcome variable ($Y$).
+
+We utilize the dataset as employed in previous works \cite{Bica.2020c, Schwab.2020}. Specifically, we use the version from \cite{Bica.2020c}, which includes gene expression measurements of the 4,000 genes with the highest variability, serving as the features ($X$), obtained from a cohort of $n=9659$ patients.\footnote{Available at: \url{https://github.com/ioanabica/SCIGAN}} Diverging from the approach of the aforementioned works, we once again model $T$ as a combination of different dosages that are simultaneously assigned, taking into account their joint effect. This modeling choice closely aligns with medical practice, where the optimization of drug combinations for cancer therapy necessitates a holistic consideration of each patient's unique profile \cite{Fisusi.2019, Wu.2020b}.
+
+We summarize the characteristics of the data in Table~\ref{tab:data}.
+
+\begin{table}[h!]
+    \centering
+    \footnotesize
+    \begin{tabular}{l lp{1.8in} lp{1.8in} }
+    \toprule
+          \multicolumn{3}{c}{MIMIC} & \multicolumn{2}{c}{TCGA} \\ 
+         \cmidrule(lr){2-3} \cmidrule(lr){4-5}
+        Variable & Dim. & \multicolumn{1}{c}{Meaning} & Dim. & \multicolumn{1}{c}{Meaning} \\ 
+        \midrule
+        $X$ & 33 & patient covariates (age, sex, respiratory and cardiac measurements) & 4000 & gene expression measurements \\ \midrule
+        $T$ & 2 & respiratory rate, tidal volume & 2 & chemotherapy drugs (e.g., doxorubicin, cyclophosphamide) \\ \midrule
+        $Y$ & 1 & chance of patient survival & 1 & chance of patient survival \\ \bottomrule
+    \end{tabular}
+    \caption{Data characteristics of our standard settings.}
+    \label{tab:data}
+\end{table}
+
+\textbf{Semi-synthetic data simulation:} 
+Our data simulation process is inspired by \cite{Bica.2020c}. We use the observed features $x$ from the real-world datasets. Then, for each treatment dosage $j = 1, \ldots, p$,  we randomly draw two parameter vectors $v_1^{(j)}, v_2^{(j)}$ from a normal distribution $N(0, 1)$  and normalize them via $v_1^{(j)} = v_1^{(j)}/||v_1^{(j)}||$ and $ v_2^{(j)}=v_2^{(j)}/||v_2^{(j)}||$, respectively. We define $\eta^{(j)} = \frac{{v_1^{(j)}}^{T} x}{ 2  {v_2^{(j)}}^{T} x}$
+and $\Tilde{t}^{(j)} = \left(20 + 20 \exp(-\eta^{(j)}) \right)^{-1} +0.2$. We then sample the $j$-th dosage of the assigned dosage combination $t$ via 
+\begin{equation} \label{eq:data_GPS}
+    t^{(j)} \sim \text{Beta}(\Tilde{\alpha}, q^{(j)}), \quad \text{where } \Tilde{\alpha}=\alpha+1, \quad q^{(j)} = \frac{\Tilde{\alpha}-1}{\Tilde{t}^{(j)}}-\Tilde{\alpha}+2 ,
+\end{equation} 
+with dosage bias $\alpha=2$, if not specified otherwise. Hence, $t^{(j)} \in [0, 1]$ can be interpreted as a percentage or normalized version of the modeled dosages.
+
+We define the dose-response function as
+\begin{align}
+    \mu(t, x) =  & 2 + \frac{2}{p}\sum_{j=1}^p  \left(\left(1+\exp(-\eta^{(j)})\right)^{-1}+0.5\right) \cdot \cos \left(  3 \pi(t^{(j)} - \Tilde{t}^{(j)}) \right)  
+     - 0.01 \left(t^{(j)} - \Tilde{t}^{(j)}\right)^2 \nonumber \\
+    & - 0.1 \kappa \prod_{j=1}^p  (t^{(j)} - \Tilde{t}^{(j)})^2,
+\end{align}
+where $\kappa=1$ is an interaction parameter indicating the strength of the joint effect of the different dosages. Finally, we sample the observed outcome from $y \sim N(\mu(t, x), 0.5) $. In our data simulation, we ensure that $\Tilde{t} = \left(\Tilde{t}^{(j)}\right)_{j=1}^p$ is the optimal dosage combination and that $\Tilde{t}$ additionally is the mode of the joint conditional dosage distribution of $t\mid x$ with the generalized propensity score as density given by $ f(t, x) =  \prod_{j=1}^p \text{Beta}(\Tilde{\alpha},q^{(j)})$. 
+
+Taken together, we adapt to a realistic setting in medicine where the dosage assignment is already informed to a certain degree but still can be further optimized. With increasing $\alpha$, the probability mass around the optimal dosage combinations increases, while, in areas further away from the optimum, overlap becomes more limited, and, hence, the estimation uncertainty of the dose-response function increases. We can interpolate between a random uniform distribution for $\alpha=0$ and a completely deterministic dosage assignment for $\alpha=\infty$.
+
+
+
+\clearpage
+
+\section{Additional Results} \label{sec:appendix_experiments}
+
+\textbf{Robustness checks:} We now repeat the robustness checks from Sec.~\ref{sec:experiments} also for the MLP baselines. The results are shown in Fig.~\ref{fig:appendix_dosage_bias} and Fig.~\ref{fig:appendix_dimensions}. We observe that our method (DCNet+reliable) performs constantly well with respect to low regret and low (to no) variability. This holds true across the different settings. Also, we see that the baseline MLP clearly benefits from our reliable optimization during policy learning. Hence, the constrained optimization that we formulated in Steps~2 and 3 of our method are also a source of gain for existing baselines. 
+
+\begin{figure}[h]
+ \centering
+\begin{subfigure}{0.49\textwidth}
+  \centering
+  \caption{MIMIC-IV}
+  \includegraphics[width=1\linewidth]{fig/appendix_dosagebias_mimic.png}
+\end{subfigure}%
+\begin{subfigure}{0.49\textwidth}
+  \centering
+  \caption{TCGA}
+  \includegraphics[width=1\linewidth]{fig/appendix_dosagebias_tcga.png}
+\end{subfigure}
+\caption{Robustness for dosage bias $\alpha$. \emph{Shown:} selected policy (line) and the range over 5 runs (area). The na{\"i}ve baseline has a large variability across runs while ours is highly robust as expected (i.e., we see no variability).}
+\label{fig:appendix_dosage_bias}
+\end{figure} 
+
+\begin{figure}[h]
+ \centering
+\begin{subfigure}{0.49\textwidth}
+  \centering
+  \caption{MIMIC-IV}
+  \includegraphics[width=1\linewidth]{fig/appendix_dimensions_mimic.png}
+\end{subfigure}%
+\begin{subfigure}{0.49\textwidth}
+  \centering
+  \caption{TCGA}
+  \includegraphics[width=1\linewidth]{fig/appendix_dimensions_tcga.png}
+\end{subfigure}
+\caption{Robustness for number of dosages $p$. \emph{Shown:} selected policy (line) and the range over 5 runs (area). The na{\"i}ve baseline has a large variability across runs while ours is highly robust as expected (i.e., we see no variability).}
+\label{fig:appendix_dimensions}
+\end{figure} 
+
+\textbf{High-dimensional dosage setting:}
+We perform additional experiments to examine how our method scales to treatments of much higher dimensions. To improve the scalability of our method, we apply multiple prediction heads, each taking 3 treatment dimensions as input. Thereby, we fix the maximum number of jointly interacting dimensions to 3. Our motivation is that applying our method without adjustments to high treatment dimensions would lead to a high computational complexity of our prediction head because we would need to train weights for all possible interactions in the tensor product bases. However, it is often reasonable for real-world medical settings that the effective number of dimensions with joint effects is usually lower-dimensional, which is thus captured by our tailored approach. We report the results in Fig.~\ref{fig:high_dimensions}. We observe that, unlike the other baselines, our method (DCNet+reliable) stays robust with low regret and low variation even for high dimensions.
+
+\begin{figure}
+    \centering
+        \begin{subfigure}{0.49\textwidth}
+          \centering
+          \caption{MIMIC-IV}
+          \includegraphics[width=1\linewidth]{fig/rebuttal_dimensions_mimic.png}
+        \end{subfigure} 
+        \begin{subfigure}{0.49\textwidth}
+          \centering
+          \caption{TCGA}
+          \includegraphics[width=1\linewidth]{fig/rebuttal_dimensions_tcga.png}
+        \end{subfigure}
+        \vskip -0.2cm
+        \caption{Robustness for high-dimensional number of dosages $p$. \emph{Shown:} selected policy (line) and the range over 5 runs (area). Lower regret = better.}
+        \label{fig:high_dimensions}
+\end{figure}
+
+
+\textbf{Performance across multiple re-runs:} To better assess the robustness of our method, we re-run our experiments for multiple train/val/test splits. Here, we also retrain the nuisance functions $\hat{\mu}$ and $\hat{f}$ for each split. We display the aggregated results for (i)~data generated by our standard semi-synthetic data simulation (Appendix~\ref{sec:appendix_data}) in Table~\ref{tab:reruns}, and (ii)~a more complex setting with a multimodal GPS in Table~\ref{tab:reruns_bimodal}. For (ii), we replace the dosage combination assignment from Eq.~\eqref{eq:data_GPS} with a multimodal mixture density, i.e., 
+\begin{equation} 
+    t^{(j)} \sim w^{(j)} \cdot \text{Beta}(\Tilde{\alpha}, q^{(j)}) +  (1-w^{(j)}) \cdot \text{Beta}(\Tilde{\alpha}, u^{(j)}) ,
+\end{equation}
+with 
+\begin{equation*} 
+w^{(j)} \sim \text{Bernoulli}(0.5), \quad
+\Tilde{\alpha}=\alpha+1, \quad q^{(j)} = \frac{\Tilde{\alpha}-1}{\Tilde{t}^{(j)}}-\Tilde{\alpha}+2 ,
+    \quad u^{(j)} = \frac{\Tilde{\alpha}-1}{1 - \Tilde{t}^{(j)}}-\Tilde{\alpha}+2 .
+\end{equation*} 
+
+
+\begin{table}[h]
+    \resizebox{\textwidth}{!}{
+   \begin{tabular}{ll|rrr|rrr}
+    \toprule
+    
+     \multicolumn{2}{c}{\textbf{Methods}} & \multicolumn{3}{c}{\textbf{MIMIC-IV}} & \multicolumn{3}{c}{\textbf{TCGA}} \\
+     \cmidrule(lr){1-2}\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+    
+    $\hat{\mu}$  &  $\hat{\pi}$ &  selected &  mean &  std &   selected &  mean &  std  \\
+    \midrule
+           Oracle ($\mu$) & observed &       1.089 $\pm$        0.067 &       -         &        -        &       0.952 $\pm$       0.061 &       -      &       - \\
+           \midrule
+            MLP &    naive &       1.553 $\pm$         0.990 &       1.391 $\pm$        0.663 &       0.797 $\pm$        0.430 &       0.832 $\pm$      1.067 &       1.063$\pm$      1.176 &       0.303 $\pm$       0.224 \\
+              MLP & reliable &       0.748 $\pm$         1.516 &       0.849 $\pm$         1.539 &       0.223 $\pm$      0.375 &       1.080 $\pm$      1.542 &       1.089 $\pm$      1.542 &       0.022 $\pm$      0.028 \\
+              \midrule
+              VCNet &    naive &       2.715 $\pm$        0.938 &       2.322 $\pm$        0.556 &       	0.890 $\pm$        0.337 &       3.169 $\pm$      0.588 &       2.153 $\pm$      0.406 &       	0.935 $\pm$       0.242 \\
+              VCNet & reliable &      0.033 $\pm$        0.027 &       0.110 $\pm$        0.183 &       0.171 $\pm$        0.377 &       0.044 $\pm$      0.017 &       0.114 $\pm$      0.145 &       	0.159 $\pm$       0.354 \\
+              \midrule
+           DCNET &    naive &       2.512 $\pm$      0.787 &       0.974$\pm$        0.700 &       1.134$\pm$         0.336 &        2.048 $\pm$       0.775 &       1.682 $\pm$       0.478 &       0.776 $\pm$      0.263 \\
+            DCNET & reliable (\textbf{ours}) &       0.025 $\pm$        0.021 &       0.024 $\pm$         0.020 &       0.001 $\pm$        0.001 &       0.025 $\pm$       0.010 &       0.263 $\pm$       0.540 &       0.337 $\pm$       0.750\\
+    
+    \bottomrule
+    \multicolumn{8}{l}{Reported: selected / mean / standard deviation (lower = better)}
+    \end{tabular}
+    }
+        \vskip 0.2cm
+        \caption{Regret of 5 re-runs ($mean \pm std) $ with different train/val/test splits with each $k=5$ restarts for policy learning. 
+        }
+        \label{tab:reruns}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \resizebox{\textwidth}{!}{
+    \begin{tabular}{ll|rrr|rrr}
+    \toprule
+    
+     \multicolumn{2}{c}{\textbf{Methods}} & \multicolumn{3}{c}{\textbf{MIMIC-IV}} & \multicolumn{3}{c}{\textbf{TCGA}} \\
+     \cmidrule(lr){1-2}\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+    
+    $\hat{\mu}$  &  $\hat{\pi}$ &  selected &  mean &  std &   selected &  mean &  std  \\
+    \midrule
+Oracle ($\mu$) & observed &       1.294 $\pm$         0.156 &      - &       - &       1.624 $\pm$         0.071 &       -  &     - \\
+\midrule
+MLP &    naive &       2.139 $\pm$         1.539 &       0.860 $\pm$         0.566 &       0.993 $\pm$         0.447 &       1.745 $\pm$         1.270 &       1.444 $\pm$         1.432 &       0.640 $\pm$         0.166 \\
+MLP & reliable &       1.069 $\pm$         1.518 &       0.544 $\pm$         0.509 &       0.786 $\pm$         0.656 &       0.465 $\pm$         0.902 &       0.720 $\pm$         1.488 &       0.157 $\pm$         0.328 \\
+\midrule
+VCNet &    naive &       1.885 $\pm$        0.258 &       1.627 $\pm$        0.149 &       	0.443 $\pm$        0.152  &       1.728 $\pm$      0.306 &       1.659 $\pm$      0.176 &       	0.368 $\pm$       0.130 \\
+VCNet & reliable &      0.126 $\pm$        0.065 &       0.192 $\pm$        0.140 &      0.147$\pm$        0.193 &       0.029 $\pm$      0.027 &       0.119 $\pm$      0.117 &       	0.201 $\pm$       0.279 \\
+ \midrule
+ DCNET &    naive &       0.713 $\pm$         0.801 &       0.389 $\pm$         0.256 &       0.515 $\pm$         0.347 &          0.260 $\pm$         0.409 &        0.141 $\pm$         0.125 &       0.209 $\pm$         0.194\\
+ DCNET & reliable (\textbf{ours})&       0.077 $\pm$         0.059 &       0.065 $\pm$         0.038 &       0.061 $\pm$         0.058  &       0.014 $\pm$         0.010 &       0.028 $\pm$         0.026 &       0.031 $\pm$         0.060\\
+
+
+ 
+    \bottomrule
+    \multicolumn{8}{l}{Reported: selected / mean / standard deviation (lower = better)}
+    \end{tabular}
+    }
+    
+        \vskip 0.2cm
+        \caption{Regret of 5 re-runs ($mean \pm std$) with different train/val/test splits with each $k=5$ restarts for policy learning in an additional setting simulated with a \textbf{multimodal GPS}. 
+}
+    \label{tab:reruns_bimodal}    
+    
+\end{table}
+
+We can interpret the results as follows:
+
+(1) The column ``selected'' displays the final performance of our method when using the finally recommended policy. In this column, the $ mean \pm std $ can be considered as the expected regret with Monte-Carlo-CV confidence intervals (including retraining the nuisance functions) and should primarily be used for evaluating the performance and for comparison with different policy learning methods. We observe that our method significantly outperforms the baselines. 
+ 
+(2) The column ``mean'' represents the means within the $k$ restarts of the policy learning (i.e., Step~3 in our method). As such, its values can indicate how a randomly selected policy out of the $k$ restarts would perform compared to the ``selected one''. For example, we observe that, for the ``na{\"i}ve'' baselines using a na{\"i}ve MSE loss for selection, suboptimal policies are oftentimes selected, whereas our method shows robust behavior. 
+ 
+(3) The column ``std'' shows the standard deviation within the $k$ restarts of the policy learning (i.e., Step~3 in our method). As such, the values indicate how often similar performing policies are learned. It thus refers to the robustness within the $k$ runs. As a consequence, lower values imply that (i)~probably fewer restarts $k$ are needed to find the targeted optimum, and (ii)~fewer local optima are learned, which reduces the risk of selecting a suboptimal policy.
+ 
+Hence, we suggest using the ``selected'' column ($ mean \pm std $) for evaluating the final performance of our method, and the other two columns (``mean'' and ``std'') to show the inner robustness of our method compared to ablation baselines. 
+
+Overall, we demonstrate that the performance of our framework is robust across the tested settings and has low regret and low variation across different re-reruns and different restarts, including the more complex setup.
+
+\textbf{Sensitivity analysis of the reliability threshold $\Bar{\varepsilon}$}: In our experiments, we set the reliability threshold $\Bar{\varepsilon}$ to the $5\%$-quantile of the estimated GPS $\hat{f}(t, x)$ of the train set. This is due to the reason that the GPS is a probability density function over a $p$-dimensional continuous space and, hence, is hard to interpret intuitively. Unlike discrete probabilities, which are bounded between $0$ and $1$ and can be interpreted intuitively by humans, the GPS has no upper bound. To this end, we suggest a heuristic to choose $\Bar{\varepsilon}$ dependent on $x\%$-quantiles of the estimated GPS based on the train dataset. As a result, we aim to learn optimal dosages, which have at least the same estimated reliability as $x\%$ of the observed data.
+
+In our heuristic, the selection of the quantile $x$ is still subjective and cannot be optimized during hyperparameter tuning, as we assume to have no access to the ground truth $\mu(t, x)$. Nevertheless, we can leverage our semi-synthetic data to perform a sensitivity analysis over $x$ for $\Bar{\varepsilon}$ and thus corroborate our choice. For this, we evaluate the final performance of our method on the test data for $\Bar{\varepsilon}$ set to different quantiles of $\hat{f}$ over $k=5$ runs. The results are displayed in Fig.~\ref{fig:epsilon}.
+
+We observe that, depending on the dataset, different quantiles for selecting $\Bar{\varepsilon}$ can lead to differences in variability. However, we find that lower values tend to lead to less variability. Also, we find that, even when there is higher variability within the $k$ runs, for every setting, a run with low regret is selected. We attribute this to our validation loss from Eq.~\ref{eq:validation}. Together, the results are in line with our expectations and add to the robustness of our methods.
+
+
+\begin{figure}[h]
+ \centering
+\begin{subfigure}{0.49\textwidth}
+  \centering
+  \caption{MIMIC-IV}
+  \includegraphics[width=1\linewidth]{fig/epsilon_mimic.png}
+\end{subfigure}
+\begin{subfigure}{0.49\textwidth}
+  \centering
+  \caption{TCGA}
+  \includegraphics[width=1\linewidth]{fig/epsilon_tcga.png}
+\end{subfigure}
+\caption{Sensitivity analysis of the reliability threshold $\Bar{\varepsilon}$ for different quantiles of $\hat{f}$ of the train set. \emph{Shown:} selected policy (line) and the range over 5 runs (area).}
+\label{fig:epsilon}
+\end{figure} 
+
+
+
+\clearpage
+
+\section{Insights} \label{appendix:insights}
+
+
+\textbf{Individualized dose-response estimates:} In our experiments in Sec.~\ref{sec:experiments} and in Appendix~\ref{sec:appendix_experiments}, we showed a comparison to na\"ive baselines. Therein, in particular, we mainly demonstrated that the reliable optimization step in our method is an important source of performance gain. We now give additional intuition as to why also our DCNet is a source of performance gain. In the following, we first demonstrate that our DCNet is able to estimate the dose-response function more accurately than the baseline in regions with sufficient overlap. We then discuss why this brings large gains for our reliable optimization. Thereby, we offer an explanation why both DCNet and reliable policy optimization are highly effective when used in combination.
+
+In Table~\ref{tab:DRest}, we display the performance of the dose-response estimators. In detail, we report: (i)~the mean squared error (``Biased MSE''), calculated on a holdout test dataset which follows the same biased dosage assignment as the train data; (ii)~the mean (``MISE'', see e.g., \cite{Schwab.2020}) of the integrated squared error calculated on areas with sufficient overlap, i.e. $\sum_{i=1}^n\int_{[0, 1]^p}(\mu(t, x_i)-\hat{\mu}(t, x_i))^2dt \; | \; \hat{f}(t, x)>\overline{\varepsilon}$.; and (iii)~the standard deviation of the integrated squared error on areas with sufficient overlap (``SD-ISE''). Intuitively, the MISE and SD-ISE are the expected value and variation of the prediction error of the dose-response estimator over the covariate-treatment space with sufficient overlap. Hence, a low value implies that all suitable dosage combinations with sufficient overlap are estimated properly and that certain, less frequent or non-dominant combinations are not neglected. We observe that our DCNet also performs clearly best wrt. to all metrics, undermining its ability to successfully account for the different drug-drug interactions under dosage bias.
+
+\begin{table}[h]
+    \centering
+    \scriptsize
+    \begin{tabular}{l|rrr|rrr}
+        \toprule
+        
+         \multicolumn{1}{c}{\textbf{Methods}} & \multicolumn{3}{c}{\textbf{MIMIC-IV}} & \multicolumn{3}{c}{\textbf{TCGA}} \\
+         \cmidrule(lr){1-1}\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+        
+        $\hat{\mu}$  & Biased MSE \ &   MISE   & SD-ISE &  Biased MSE &   MISE  & SD-ISE \\
+        % &  \textit{MISE} &   \textit{MISE}
+        \midrule
+        MLP   &   0.293 &           0.049 &    0.069 &  0.438 &       0.374 & 0.745\\
+        VCNet &     0.691  &           0.558 &     0.749 &   0.551 &    0.406 & 0.474\\
+        \textbf{DCNet} (ours) &         0.260  &           0.013 &  0.032  &    0.257 &         0.006  & 0.010 \\
+        \midrule
+        \end{tabular}
+        
+        \vskip 0.2cm   
+        \caption{Estimation error of dose-response estimators. }
+        \label{tab:DRest}
+\end{table}
+
+To give further intuition to the above, we select one random observation per dataset and plot the following functions: (i)~the estimated GPS, (ii)~the oracle individualized dose-response surface, (iii)~the estimates using DCNet, and (iv)~the estimates using the baseline MLP. We compare two settings, namely with no dosage bias ($\alpha=0$) and thus sufficient overlap (in Fig.~\ref{fig:appendix_doseresponse_bias0}) and with dosage bias ($\alpha=2$) and thus clearly limited overlap (in Fig.~\ref{fig:appendix_doseresponse_bias2}). 
+
+The plots can be interpreted as follows. With no dosage bias (Fig.~\ref{fig:appendix_doseresponse_bias0}), both DCNet and MLP seem to approximate $\mu$ adequately (with slightly better estimates of DCNet at the modes at the boundary areas) and are thus suitable for na\"ive policy learning. However, the findings change in a setting with limited overlap (Fig.~\ref{fig:appendix_doseresponse_bias2}). Here, the limited overlap is indicated by areas with low estimated GPS $\hat{f}$. Both estimators for $\hat{\mu}$ show clear deviations to the oracle $\mu$. However, the deviations are smaller for large parts in the case of our DCNet (as compared to the MLP). Evidently, the dose-response surface predicted by the MLP loses its expressiveness, especially for the high-dimensional TCGA dataset, and fails to model the maximum adequately. This leads to erroneous predictions when used as a plug-in estimator for policy learning, which can not be compensated by constraining the search space to regions with sufficient overlap. DCNet, on the other hand, is able to model the dose-response surface more adequately in areas with sufficient overlap due to its custom prediction head ensuring expressiveness. However, in regions with limited overlap, the splines of the prediction head extrapolate and lead to strongly incorrect predictions. Anyway, as our goal is to learn a reliable policy, we aim to exclude the regions with limited overlap and thus high uncertainty (yellow regions) such that they do not affect our final predicted policy.
+
+In conclusion, when now applying our reliable policy optimization on top of our DCNet, we constrain the search space to the reliable regions, in which DCNet outperforms the MLP. Thus, we ensure reliable and accurate predictions for policy learning by using our method. 
+\begin{figure}[h]
+ \centering
+\begin{subfigure}{0.98\textwidth}
+  \centering
+  \caption{MIMIC-IV}
+  \includegraphics[width=1\linewidth]{fig/mimic_doseresponse_bias0.png}
+\end{subfigure}
+\begin{subfigure}{0.98\textwidth}
+  \centering
+  \caption{TCGA}
+  \includegraphics[width=1\linewidth]{fig/tcga_doseresponse_bias0.png}
+\end{subfigure}
+\caption{Insights for one randomly sampled observation in the setting with dosage bias \textbf{$\alpha = 0$}. We show (i) the estimated GPS and, additionally, the individualized dose-response surface through (ii) the true oracle function, (iii) the estimates using our DCNet, and (iv) the estimates using the baseline MLP. The optimal dosage combination is shown as a red point.}
+\label{fig:appendix_doseresponse_bias0}
+\end{figure}
+\begin{figure}[h]
+ \centering
+\begin{subfigure}{0.98\textwidth}
+  \centering
+  \caption{MIMIC-IV}
+  \includegraphics[width=1\linewidth]{fig/mimic_doseresponse_bias2.png}
+\end{subfigure}
+\begin{subfigure}{0.98\textwidth}
+  \centering
+  \caption{TCGA}
+  \includegraphics[width=1\linewidth]{fig/tcga_doseresponse_bias2.png}
+\end{subfigure}
+\caption{Insights for one randomly sampled observation in the setting with dosage bias \textbf{$\alpha = 2$}. We show (i) the estimated GPS and, additionally, the individualized dose-response surface through (ii) the true oracle function, (iii) the estimates using our DCNet, and (iv) the estimates using the baseline MLP. The optimal dosage combination is shown as a red point.}
+\label{fig:appendix_doseresponse_bias2}
+\end{figure}
+
+\clearpage
+
+\textbf{Computational complexity of policy optimization:} To ensure scalability at inference time, we train an additional policy neural network to directly predict the optimal policy, instead of performing optimization for new patients. We explain our motivation in the following:
+The complexity of a direct optimization at inference time is non-trivial and depends on the complexity of the forward pass of DCNet $\sigma_{\mu}$ and the CNFs $\sigma_{f}$, as well as the selected constrained optimization algorithm, and the number of patients to evaluate $n_\mathrm{eval}$. While the exact complexity of the direct optimization depends on the specific solver cost $\sigma_\mathrm{solve}$, which, for most algorithms, scales heavily with the dosage dimension $p$, it is at least $\mathcal{O}\left(n_\mathrm{eval} \times (\sigma_{\mu} + \sigma_{f}) \times \sigma_\mathrm{solve}\right)$. This becomes costly for large-scale datasets in practice. In contrast, our policy network is trained only once. Hence, upon deployment, it simply needs operations for evaluation, which is at most  $\mathcal{O}(n_\mathrm{eval} \times \sigma_\mathrm{net})$, where $\sigma_\mathrm{net}$ is the complexity of only the forward pass of the policy network. Hence, it usually holds $\sigma_\mathrm{net} \ll \sigma_\mathrm{solve}$. 
+
+\clearpage
+
+\section{Modeling and Training Details} \label{sec:appendix_training}
+
+\textbf{Dose-response estimator:} For training our DCNet $\hat{\mu}(t, x)$, we follow previous works from the baseline VCNet \cite{Bellot.2022,Nie.2021}. We set the representation network $\phi$ to a multi-layer perceptron (MLP) with two hidden layers with 50 hidden neurons each and ReLU activation function. For the parameters of the prediction head $h$, we use the same model choices as for $\phi$. Additionally, we use B-splines with degree two and place the knots of the tensor product basis at $\{ 1/3, 2/3\}^p$. For the baseline MLP from Sec.~\ref{sec:experiments}, we ensure similar flexibility for fair comparison, and we thus select a MLP with four hidden layers with 50 hidden units each and ReLU activation. We train the networks minimizing the mean squared error (MSE) loss $\mathcal{L}_{\mu}=\frac{1}{n}\sum_{i=1}^n \left( \hat{\mu}(t_i, x_i) - y_i \right)^2$. For optimization, we use the Adam optimizer \cite{Kingma.2015} with batch size $1000$ and train the network for a maximum of 800 epochs using early stopping with a patience of $50$ on the MSE loss on the factual validation dataset.
+
+We tune the learning rate within the search space $\{0.0001, 0.0005, 0.001, 0.005, 0.01 \}$, and, for evaluation, we use the same criterion as for early stopping.
+
+\textbf{Conditional normalizing flows:} For modeling the GPS $\hat{f}(t, x)$, we use conditional normalizing flows (CNFs). Specifically, we use neural spline flows \cite{durkan2019neural} in combination with masked auto-regressive networks \cite{dolatabadi2020invertible}. We use a flow length of $1$ with 5 equally spaced bins and quadratic splines. For the autoregressive network, we use a MLP with 2 hidden layers and 50 neurons each. Additionally, we use noise regularization with noise sampled from $N(0, 0.1)$. We train the CNFs by minimizing the negative log-likelihood (NLL) loss $ \mathcal{L}_{f}= - \frac{1}{n}\sum_{i=1}^n  \log  \hat{f}(t_i, x_i)$. For optimization, we use the Adam optimizer with batch size $512$ and train the CNFs for a maximum of 800 epochs using early stopping with a patience of $50$ on the NLL loss on the factual validation dataset. 
+
+We tune the learning rate within the search space $\{0.0001, 0.0005, 0.001, 0.005, 0.01 \}$ and for evaluation we use the same criterion as for early stopping.
+
+\textbf{Policy learning:} After training the nuisance models $\hat{\mu}$ and $\hat{f}$, we use them as plug-in estimators for our policy learning. For the policy network $\hat{\pi}_\theta$, we select a MLP with 2 hidden layers with 50 neurons each and ReLU activation. We set the reliability threshold $\Bar{\varepsilon}$ to the $5\%$-quantile of the estimated GPS $\hat{f}(t, x)$ of the train set, when not specified otherwise. We use Adam optimizers for updating $\theta$ and $\lambda$ each, with batch size $512$, and train the network using the gradient descent-ascent optimization objective from Eq.~\eqref{eq:lagrangian_optimization} for a maximum of 400 epochs using early stopping with a patience of $20$ on the validation loss from Eq.~\eqref{eq:validation} on the factual validation dataset.
+
+We set the learning rate for updating $\lambda$ to $\eta_\lambda= 0.01$ and use random search with 10 configurations to tune the learning rate for updating the parameters of the policy network $\eta_\theta \in \{0.0001, 0.0005, 0.001, 0.005, 0.01 \}$ and the initial value of the Lagrangian multipliers $\lambda_i \in [1, 5]$. To evaluate the performance during hyperparameter search, we use the same criterion as for early stopping. Then, after determining the hyperparameters, we perform  $k=5$ runs to find the optimal policy.
+
+Our above procedure was chosen to ensure a fair and direct comparison to previous literature and to the na\"ive baselines, which enables us to show the sources of performance gain in our method (see Sec.~\ref{sec:experiments}). Note that when applying our method for reliable policy learning for dosage combinations in production, one might consider optimizing more exhaustively also over the different modeling choices of the nuisance estimators and the policy network.

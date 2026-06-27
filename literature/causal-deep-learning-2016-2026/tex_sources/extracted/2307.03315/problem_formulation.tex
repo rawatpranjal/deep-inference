@@ -1,0 +1,29 @@
+
+
+\begin{figure*}[tbh!] 
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/TEVAE.pdf}
+    \caption{Overview of TVAE. 1)  the Treatment Joint Inference encodes input $X$ into a latent space with direct prediction of treatment assignment and potential outcomes; 2) Distribution Balancing module disentangles the latent space and balances the nonconfounding latent dimensions between treatment and control groups; 3) the Label Balancing module upsamples the under-represented minority group from the learned latent distribution; 4) the upsampled \textit{fake} data are merged with the original data as the updated training inputs for the next iteration. }
+\end{figure*}
+
+\section{Problem Formulation}
+Throughout this paper, we adopt Rubin’s potential outcomes model \cite{rubin} and consider the population of COVID-19 subjects where each subject $i$ is associated with a $p$-dimensional feature $X_i \in X \subseteq \mathbb{R}^p$, a binary treatment assignment indicator  $W_i \in \{0,1\}$, and two potential outcomes $Y_i(1)$, $Y_i(0)\in \{0,1\}$ drawn from a Bernoulli distribution $
+    (Y_i(1), Y_i(0))|X_i \sim P(.|X_i)
+$. For an observational dataset $D$ comprising $n$ independent samples of
+the tuple $\{X_i, W_i, Y_i(W_i)\}$, where $Y_i(W_i)$ and $Y_i(1-W_i)$ are the factual and the counterfactual outcomes, respectively, we are interested in the probability of treatment assignment (propensity score) $p(x) = P(W_i = 1|X_i)$, the potential outcome with treatment $\mathbb{E} [Y_i(1) |X_i ]$ and the potential outcome without treatment $\mathbb{E} [Y_i(0) |X_i ]$. As the treatment outcomes are binary (survival or death), the treatment is \textit{"impactful"} only if treatment leads to a change from death to survival. In a more generalized setting, a \textit{proxy} of treatment impact is always used, which is the reduction in mortality risk (the individualized treatment effect, or ITE) $ T(X_i) = \mathbb{E} [Y_i(1) - Y_i(0) |X_i ]$ \cite{rubin}. 
+ As the counterfactual outcome, $Y_i(1-W_i)$, can never be observed in practice, direct test-set evaluation of the treatment effect is impossible. Existing counterfactual estimation methods usually make the following important assumptions:
+
+\begin{assumption}[No Unmeasured Confounding]
+Given $X$, the outcome variables $Y_0$ and $Y_1$
+are independent of treatment assignment, i.e., ($Y_0$, $Y_1$) $\ind W |X$.
+\end{assumption}
+
+\begin{assumption}[Positivity]
+For any covariates $X_i$, the probability to receive/not receive treatment is positive, i.e., $0 < P(W = w|X = X_i)$ $< 1, \forall w$ and $i$.
+\end{assumption}
+
+The first assumption comes from the fact that every candidate patient is continuously measured in various aspects that might be relevant to treatment assignment and potential treatment outcomes, and clinicians rely on these measures to make reasonable treatment decisions. As all such measurements/tests are captured in the EHR dataset, we believe the dataset has included all confounding variables. The second assumption holds because only potential treatment candidates are included in this study, and no patients \textit{must} receive ECMO treatment in real clinical scenario. 
+More discussions on two assumptions are attached in Appendix A. 
+
+
+

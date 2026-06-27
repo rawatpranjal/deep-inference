@@ -1,0 +1,22 @@
+\section{Methods}
+\label{sec:methods}
+
+\import{methods/}{cmsm}
+\import{methods/}{bounds}
+\import{methods/}{po_estimator}
+\import{methods/}{interval_estimator}
+\import{methods/}{uncertainty_step}
+
+\subsection{Scalable Continuous Treatment Effect Estimation}
+\label{sec:scalable}
+Following \cite{shalit2017estimating}, \cite{schwab2020learning}, and \cite{nie2021vcnet}, we propose using neural-network architectures with two basic components: a feature extractor, $\bm{\phi}(\x; \params)$ ($\bm{\phi}$, for short) and a conditional outcome prediction block $f(\bm{\phi}, \tf; \params)$. 
+The feature extractor design will be problem and data specific.
+In \Cref{sec:experiments}, we look at using both a simple feed-forward neural network, and also a transformer \cite{vaswani2017attention}.
+For the conditional outcome block, we depart from more complex structures (\cite{schwab2020learning, nie2021vcnet}) and simply focus on a residual \citep{he2016deep}, feed-forward, S-learner \citep{kunzel2019metalearners} structure. 
+For the final piece of the puzzle, we follow \cite{jesson2021quantifying} and propose a $n_{\y}$ component Gaussian mixture density:
+\begin{equation*}
+    p(\y \mid \tf, \x, \params) =
+    \sum_{j=1}^{n_{\y}} \pitilde_{j}(\bm{\phi}, \tf; \params) \mathcal{N}\left(\y \mid \mut_{j}(\bm{\phi}, \tf; \params), \sigmat^{2}_j(\bm{\phi}, \tf; \params)\right),
+\end{equation*}
+and $\mut(\x, \tf; \params) = \sum_{j=1}^{n_{\y}} \pitilde_{j}(\bm{\phi}, \tf; \params)\mut_{j}(\bm{\phi}, \tf; \params)$ \citep{bishop1994mixture}.
+Models are optimized by maximizing the log-likelihood of $p(\y \mid \tf, \x, \params)$.

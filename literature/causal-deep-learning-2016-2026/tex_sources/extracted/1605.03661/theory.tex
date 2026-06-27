@@ -1,0 +1,73 @@
+\section{Theory}\label{Sec:theory}
+
+In this section we derive an upper bound on the relative counterfactual generalization error of a representation function $\Phi$. The bound only uses quantities we can measure directly from the available data. In the previous section we gave several methods for learning representations which approximately minimize the upper bound.
+
+Recall that for an observed context or instance $x_i \in \mathcal{X}$ with observed treatment $t_i \in \{0,1\}$, the two potential outcomes are $Y_0(x_i), Y_1(x_i) \in \mathcal{Y}$, of which we observe the \emph{factual} outcome $y^F_i = t_i Y_1(x_i) + (1-t_i)Y_0(x_i)$.
+Let $ (x_1, t_1, y^F_1), \ldots, (x_n, t_n, y^F_n)$ be a sample from the factual distribution.
+Similarly, let $(x_1, 1-t_1, y^{CF}_1), \ldots, (x_n, 1-t_n, y^{CF}_n)$  be the counterfactual sample. Note that while we know the factual outcomes $y^F_i$, we do not know the counterfactual outcomes $y^{CF}_i$.
+Let $\Phi : \mathcal{X} \rightarrow \R^d$ be a representation function, and let $\mathcal{R}(\Phi)$ denote its range.
+Denote by $\hat{P}_\Phi^F$ the empirical distribution over the representations and treatment assignments $ (\Phi(x_1), t_1),  \ldots, (\Phi(x_n), t_n)$, and similarly $\hat{P}_\Phi^{CF}$ the empirical distribution over the representations and counterfactual treatment assignments $ (\Phi(x_1), 1-t_1),  \ldots, (\Phi(x_n), 1-t_n)$.
+Let $\hypspace_l$ be the hypothesis set of linear functions $\beta : \mathcal{R}(\Phi) \times \{0,1\} \rightarrow \mathcal{Y}$.
+
+\begin{definition}[\citealt{mansour2009domain}]
+Given a hypothesis set $\hypspace$ and a loss function $L$, the empirical discrepancy between
+the empirical distributions $\pF$ and $\pC$ is:
+\begin{align*}
+&\discPQH = \\
+&\max_{\beta, \beta' \in \hypspace} \left| \underset{x \sim \pF}{\mathbb{E}}[L(\beta(x),\beta'(x))] - \underset{x \sim \pC}{\mathbb{E}}[L(\beta(x),\beta'(x))]\right|
+\end{align*}
+\end{definition}
+
+where $L$ is a loss function $L : \mathcal{Y} \times \mathcal{Y} \rightarrow \R$ with weak Lipschitz constant $\mu$ relative to $\hypspace$ \footnote{When $L$ is the squared loss we can show that if  $\|\Phi(x)\|_2 \leq m$ and $|y|\leq M$, and the hypothesis set $\mathcal{H}$ is that of linear functions with norm bounded by $m/\lambda$, then $\mu \leq 2M (1 + m^2/\lambda )$.}.
+Note that the discrepancy is defined with respect to a hypothesis class and a loss function, and is therefore very useful for obtaining generalization bounds involving different distributions. Throughout this section we always have $L$ denote the squared loss.
+We prove the following, based on \citet{cortes2014domain}:
+\begin{theorem}\label{thrm1}
+For a sample $\{(x_i,t_i,y_i^F)\}_{i=1}^n$,  $x_i \in \mathcal{X}$, $t_i \in \{0,1\}$ and $y_i \in \mathcal{Y} $, and a given representation function $\Phi :\mathcal{X} \rightarrow \R^d$, let $\pF = (\Phi(x_1), t_1),  \ldots, (\Phi(x_n), t_n)$, $\pC = (\Phi(x_1), 1-t_1),  \ldots, (\Phi(x_n), 1-t_n) $. We assume that $\mathcal{X}$ is a metric space with metric $\mathrm{d}$, and that the potential outcome functions $Y_0(x)$  and $Y_1(x)$ are Lipschitz continuous with constants $K_0$ and $K_1$ respectively, such that $\mathrm{d}(x_a,x_b) \leq c \implies |Y_t(x_a) - Y_t(x_b)| \leq K_t \cdot c\,$ \, for $t=0,1$.
+
+Let $\hypspace_l \subset\R^{d+1}$ be the space of linear functions $\beta: \mathcal{X} \times \left\{0,1\right\} \rightarrow \mathcal{Y}$, and for $\beta \in \hypspace_l$, let $\mathcal{L}_{P}(\beta) = \mathbb{E}_{(x,t,y) \sim P} \left[L(\beta(x,t),y)\right]$ be the expected loss of $\beta$ over distribution $P$. Let $r = max\left(\mathbb{E}_{(x,t) \sim P^F}\left[\|[\Phi(x), t]\|_2\right],\mathbb{E}_{(x,t) \sim P^{CF}}\left[\|[\Phi(x), t]\|_2\right]\right)$ be the maximum expected radius of the distributions.
+For $\lambda >0$, let $\bfp = \argmin_{\beta \in \hypspace_l} \mathcal{L}_{\pF}(\beta) + \lambda \|\beta\|_2^2$, and  $\bcp$ similarly for $\pC$, i.e. $\bfp$ and $\bcp$ are the ridge regression solutions for the factual and counterfactual empirical distributions, respectively.
+
+Let $\hat{y}_i^F(\Phi,h) = h^\top [\Phi(x_i) , t_i]$ and $\hat{y}_i^{CF}(\Phi,h) = h^\top [\Phi(x_i) , \, 1-t_i]$ be the outputs of the hypothesis $h \in \hypspace_l$ over the representation $\Phi(x_i)$ for the factual and counterfactual settings of $t_i$, respectively. Finally, for each $i, j \in \{1 \ldots n\}$, let $\mathrm{d}_{i,j} \equiv \mathrm{d}(x_i,x_j)$ and $j(i) \in \argmin_{j \in \{1\ldots n\} \text{ s.t. } t_j = 1-t_i} \mathrm{d}(x_j,x_i)$ be the nearest neighbor in $\mathcal{X}$ of $x_i$ among the group that received the opposite treatment from unit $i$.
+Then for \emph{both} $Q = P^F$ and $Q=P^{CF}$ we have:
+
+\begin{align}
+&\frac{\lambda}{\mu r} (\mathcal{L}_{Q}(\bfp)-\mathcal{L}_{Q}(\bcp))^2 \leq \nonumber \\
+& \discPQHl \;\; + \label{eq:disc} \\
+& \min_{h\in \hypspace_l} \frac{1}{n} \sum_{i=1}^n \left( | \hat{y}_i^F(\Phi,h)- y_i^F |  + |\hat{y}_i^{CF}(\Phi,h)  - y_i^{CF}|\right)\label{eq:eta} \leq \\
+& \discPQHl + \nonumber \\
+& \min_{h\in \hypspace_l} \frac{1}{n} \sum_{i=1}^n \left( | \hat{y}_i^F(\Phi,h)- y_i^F |  + |\hat{y}_i^{CF}(\Phi,h)  - y_{j(i)}^F|\right) + \label{eq:g}\\
+& \frac{K_0}{n} \sum_{i: t_i=1} \mathrm{d}_{i,j(i)} + \frac{K_1}{n} \sum_{i: t_i=0} \mathrm{d}_{i,j(i)} \label{eq:nn} .
+\end{align}
+\end{theorem}
+
+The proof is in the supplemental material.
+
+Theorem \ref{thrm1} gives, for all fixed representations $\Phi$, a bound on the relative error for a ridge regression model fit on the factual outcomes and evaluated on the counterfactual, as compared with ridge regression had it been fit on the unobserved counterfactual outcomes. It does not take into account how $\Phi$ is obtained, and applies even if $h(\Phi(x),t)$ is not convex in $x$, e.g. if $\Phi$ is a neural net. Since the bound in the theorem is true for all representations $\Phi$, we can attempt to minimize it over $\Phi$, as done in Algorithm \ref{alg:model}.
+
+The term on line \eqref{eq:eta} of the bound includes the unknown counterfactual outcomes $y^{CF}_i$. It measures how well could we in principle fit the factual and counterfactual outcomes together using a linear hypothesis over the representation $\Phi$. For example, if the dimension of the representation is greater than the number of samples, and in addition if there exist constants $b$ and $\epsilon$ such that $|y_i^F - y_i^{CF} - b| \leq \epsilon$, then this term is upper bounded by $\epsilon$. In general however, we cannot directly control its magnitude.
+
+The term on line \eqref{eq:disc} measures the discrepancy between the factual and counterfactual distributions over the representation $\Phi$. In \ref{sec:lindisc} below, we show that this term is closely related to the norm of the difference in means between the representation of the control group and the treated group. A representation for which the means of the treated and control are close (small value of \eqref{eq:disc}), but at the same time allows for a good prediction of the factuals and counterfactuals (small value of \eqref{eq:eta}), is guaranteed to yield structural risk minimizers with similar generalization errors between factual and counterfactual.
+
+We further show that the term on line \eqref{eq:eta}, which cannot be evaluated since we do not know $y^{CF}_i$, can be upper bounded by a sum of the terms on lines \eqref{eq:g} and \eqref{eq:nn}. The term \eqref{eq:g} includes two empirical data fitting terms: $| \hat{y}_i^F(\Phi,v)- y_i^F |$ and  $|\hat{y}_i^{CF}(\Phi,v)  - y_{j(i)}^F|$. The first is simply fitting the observed factual outcomes using a linear function over the representation $\Phi$. The second term is a form of nearest-neighbor regression, where the counterfactual outcomes for a treated (resp. control) instance are fit to the most similar factual outcome among the control (resp. treated) set, where similarity is measured in the original space $\mathcal{X}$.
+Finally, the term on line \eqref{eq:nn}, is the only quantity which is independent of the representation $\Phi$. It measures the average distance between each treated instance to the nearest control, and vice-versa, scaled by the Lipschitz constants of the true treated and control outcome functions. This term will be small when: (a) the true outcome functions $Y_0(x)$ and $Y_1(x)$ are relatively smooth, and (b) there is overlap between the treated and control groups, leading to small average nearest neighbor distance across the groups. It is well-known that when there is not much overlap between treated and control, causal inference in general is more difficult since the extrapolation from treated to control and vice-versa is more extreme \citep{rosenbaum2009design}.
+
+The upper bound in Theorem \ref{thrm1} suggests the following approach for counterfactual regression. First minimize the terms \eqref{eq:disc} and \eqref{eq:g} as functions of the representation $\Phi$. Once $\Phi$ is obtained, perform a ridge regression on the factual outcomes using the representations $\Phi(x)$ and the treatment assignments as input. The terms in the bound ensure that $\Phi$ would have a good fit for the data (term \eqref{eq:g}), while removing aspects of the treated and control which create a large discrepancy term \eqref{eq:disc}). For example, if there is a feature which is much more strongly associated with the treatment assignment than with the outcome, it might be advisable to not use it \cite{pearl2011invited}.
+
+\subsection{Linear discrepancy}
+\label{sec:lindisc}
+A straightforward calculation shows that for a class $\hypspace_l$ of linear hypotheses, $$\disc_{\hypspace_l}(P,Q) = \|\mu_2(P) - \mu_2(Q)\|_2~.$$ Here, $\|A\|_2$ is the spectral norm of $A$ and $\mu_2(P) = \expect_{x \sim P}[xx^\top]$ is the second-order moment of $x \sim P$. In the special case of counterfactual inference, $P$ and $Q$ differ only in the treatment assignment. Specifically,
+\begin{align}
+\discPQ &=&
+\left\|
+\begin{bmatrix}
+    0_{d,d} & v \\
+    v^\top & 2p-1
+\end{bmatrix}
+\right\|_2 \\
+&=& p - \frac{1}{2} + \sqrt{\frac{(2p-1)^2}{4} + \|v\|_2^2}
+\label{eq:lindisc}
+\end{align}
+where $v = \expect_{(x,t) \sim \pF}[\Phi(x)\cdot t] -  \expect_{(x,t) \sim \pF}[\Phi(x) \cdot (1-t)]$ and $p = \expect[t]$.
+
+Let $\mu_1(\Phi) = \expect_{(x,t) \sim \pF}[\Phi(x)|t=1]$ and $\mu_0(\Phi) = \expect_{(x,t) \sim \pF}[\Phi(x)|t=0]$ be the treated and control means in $\Phi$ space. Then $v = p\cdot \mu_1(\Phi) - (1-p)\cdot \mu_0(\Phi)$, exactly the difference in means between the treated and control groups, weighted by their respective sizes.
+As a consequence, minimizing the discrepancy with linear hypotheses constitutes matching means in feature space.

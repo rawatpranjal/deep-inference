@@ -1,0 +1,135 @@
+\documentclass{article}
+\usepackage{natbib}
+\usepackage[title]{appendix}
+\newcommand{\Ex}{\mathbb{E}}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{hyperref}
+\hypersetup{colorlinks,
+            linktoc=page,
+            urlcolor=red,
+            linkcolor=red,
+            citecolor=blue}
+
+\usepackage[most]{tcolorbox}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{setspace}
+\usepackage{authblk}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+
+
+% Custom colors
+\usepackage{color}
+\definecolor{deepblue}{rgb}{0,0,0.5}
+\definecolor{deepred}{rgb}{0.6,0,0}
+\definecolor{deepgreen}{rgb}{0,0.5,0}
+
+\usepackage{listings}
+\usepackage{courier}
+
+% Python style for highlighting
+\newcommand\pythonstyle{\lstset{
+language=Python,
+basicstyle=\footnotesize\ttfamily,
+breaklines=true
+morekeywords={self},              % Add keywords here
+keywordstyle=\ttfamily\color{deepblue},
+emph={MyClass,__init__},          % Custom highlighting
+emphstyle=\ttfamily\color{deepred},    % Custom highlighting style
+stringstyle=\color{deepgreen},
+frame=tb,                         % Any extra options here
+showstringspaces=false
+}}
+
+
+% Python environment
+\lstnewenvironment{python}[1][]
+{
+\pythonstyle
+\lstset{#1}
+}
+{}
+
+
+%% page layout
+\topmargin 0pt
+\textheight 46\baselineskip
+\advance\textheight by \topskip
+\oddsidemargin 0.1in
+\evensidemargin 0.15in
+\marginparwidth 1in
+\oddsidemargin 0.125in
+\evensidemargin 0.125in
+\marginparwidth 0.75in
+\textwidth 6.125in
+%% paragraphs
+\setlength{\parskip}{0.7ex plus0.1ex minus0.1ex}
+
+
+\tcbset{boxstyle/.style={width=\textwidth,breakable,colback=red!5!white,colframe=red!75!red,fonttitle=\bfseries,code={\singlespacing},before upper={\parindent15pt}}}
+
+% A separate box with a separate list type named rawlings
+\newtcolorbox[auto counter,list inside=boxstyle]{TCBBox}[2][]{boxstyle,title=Box~\thetcbcounter: #2, #1}
+%{breakable,colback=red!5!white,colframe=red!75!k,fonttitle=\bfseries,list inside=TCBBox}{}
+
+\newcommand{\listofboxes}{%
+  \tcblistof[\section*]{boxstyle}{Boxes}
+}
+
+\title{A Primer on Deep Learning for Causal Inference}
+\author[1,2,3]{Bernard J. Koch\thanks{bernardkoch@ucla.edu}}
+\author[4]{Tim Sainburg}
+\author[1]{Pablo Geraldo Bast\'ias}
+\author[5]{Song Jiang}
+\author[5]{Yizhou Sun}
+\author[1,6]{Jacob Foster}
+\affil[1]{UCLA Department of Sociology}
+\affil[2]{Northwestern Kellogg School of Management}
+\affil[3]{University of Chicago Department of Sociology}
+\affil[4]{Harvard Medical School}
+\affil[5]{UCLA Department of Computer Science}
+\affil[6]{Santa Fe Institute}
+\date{April 2023}
+
+\renewcommand\Authands{ and }
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This primer systematizes the emerging literature on causal inference using deep neural networks under the potential outcomes framework. It provides an intuitive introduction on building and optimizing custom deep learning models and shows how to adapt them to estimate/predict heterogeneous treatment effects. It also discusses ongoing work to extend causal inference to settings where confounding is non-linear, time-varying, or encoded in text, networks, and images. To maximize accessibility, we also introduce prerequisite concepts from causal inference and deep learning. The primer differs from other treatments of deep learning and causal inference in its sharp focus on observational causal estimation, its extended exposition of key algorithms, and its \href{https://github.com/kochbj/Deep-Learning-for-Causal-Inference}{detailed tutorials} for implementing, training, and selecting among deep estimators in Tensorflow 2 and PyTorch.
+\end{abstract}
+
+\newpage
+\singlespacing
+\tableofcontents
+
+\listofboxes
+
+\newpage
+\doublespacing
+
+
+\input{content/introduction.tex}
+\input{content/deeplearning.tex}
+\input{content/causalinference.tex}
+\input{content/architectures.tex}
+\input{content/outcomemodeling.tex}
+\input{content/balancing.tex}
+\input{content/propensity.tex}
+\input{content/interpretation.tex}
+\input{content/nontraditional.tex}
+\input{content/conclusion.tex}
+
+\bibliographystyle{asr}
+\bibliography{article}
+
+\begin{appendices}
+\input{content/appendix.tex}
+\end{appendices}
+\end{document}

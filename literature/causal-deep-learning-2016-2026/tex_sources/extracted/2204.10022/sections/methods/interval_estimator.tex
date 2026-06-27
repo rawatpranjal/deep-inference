@@ -1,0 +1,35 @@
+\subsection{Solving for w}
+\label{sec:algorithm}
+We are interested in a scalable algorithm to compute the intervals on the CAPO function, \cref{eq:CAPO_lower_param,eq:CAPO_upper_param}, and the APO (dose-response) function, \cref{eq:APO_lower_param,eq:APO_upper_param}.
+The need for scalability stems not only from dataset size.
+The intervals also need to be evaluated for arbitrarily many values of the continuous treatment variable, $\tf$, and the sensitivity parameter $\Lambda$.
+The bounds on the CAPO function can be calculated independently for each instance $\x$, 
+and the limits on the APO are an expectation over the CAPO function bounds.
+
+The upper and lower bounds of the CAPO function under treatment, $\tf$, and sensitivity parameter, $\Lambda$, can be estimated for any observed covariate value, $\x$, as
+\begin{equation*}
+    \widehat{\underline{\mu}}(\x, \tf; \Lambda, \params) \coloneqq \mu(H(\underline{\y} - \y); \x, \tf, \Lambda, \params),
+\end{equation*}
+\begin{equation*}
+    \widehat{\overline{\mu}}(\x, \tf; \Lambda, \params) \coloneqq \mu(H(\y - \overline{\y}); \x, \tf, \Lambda, \params),
+\end{equation*}
+where $\underline{\y}$ and $\overline{\y}$ are found using \Cref{alg:grid-search}.
+See \Cref{alg:line-search} and \Cref{app:gradient} for optional methods.
+
+The upper and lower bounds for the APO (dose-response) function under treatment $\Tf=\tf$ and sensitivity parameter $\Lambda$ can be estimated over any set of observed covariates $\D_\x = \{\x_i\}_{i=1}^n$, as
+\noindent
+\begin{minipage}{.45\linewidth}
+    \begin{equation*}
+        \widehat{\underline{\mu}}(\tf; \Lambda, \params) \coloneqq \frac{1}{n} \sum_{i = 1}^{n} \widehat{\underline{\mu}}(\x_i, \tf; \Lambda, \params),
+    \end{equation*}
+\end{minipage}%
+\begin{minipage}{.45\linewidth}
+    \begin{equation*}
+        \widehat{\overline{\mu}}(\tf; \Lambda, \params) \coloneqq \frac{1}{n} \sum_{i = 1}^{n} \widehat{\overline{\mu}}(\x_i, \tf; \Lambda, \params),
+    \end{equation*}
+\end{minipage}%
+\begin{minipage}{.1\linewidth}
+    \begin{equation*}
+        \x_i \in \D_\x.
+    \end{equation*}
+\end{minipage}

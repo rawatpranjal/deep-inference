@@ -1,0 +1,389 @@
+\vspace{-2mm}
+\section{Regularized Deep IV}\label{sec:method-intro}
+\vspace{-2mm}
+
+In this section, we introduce a two-stage algorithm, Regularized DeepIV (RDIV), aimed at obtaining the least square solution $h_0$ as defined in Equation \eqref{eq:def-ls}. Even though we borrow the DeepIV terminology from the prior work \citep{hartford2017deep}, our method can be used with arbitrary function approximators and not necessarily neural network function spaces.
+Being inspired by the original constrained optimization \eqref{eq:def-ls}, we aim to solve a regularized version of the problem: \begin{align}\label{eq:pop-reg-noniter}
+h_{*} := \argmin_{h\in \Hcal} \|Y-\Tcal h \|_2^2 + \alpha \|h\|_2^2
+\end{align}
+where $\Hcal \subset L_2(X)$ represents a hypothesis class that consists of possible candidates for $h_0$, and $\alpha\in \RR^+$ denotes a parameter controlling the strength of regularization. 
+%%%It's well-known that for a suitably chosen $\alpha$, Equation \eqref{eq:pop-reg-noniter} is equivalent to the original constrained optimization problem in Equation \eqref{eq:def-ls} \citep{cavalier2011inverse,mendelson2010regularization}.
+% Remarkably, we do not assume realizability, i.e. $h_0 \in \Hcal$,  which often fails under many cases, e.g. $\Hcal$ is a neural network.  \zihao{add some reference}
+% Specifically, we can set $h_{-1,*} = 0$. 
+While this formulation itself has been known in the literature on general inverse problems \citep{cavalier2011inverse,mendelson2010regularization}, we consider common scenarios in IV   where both the conditional expectation operator $\Tcal$ and the population expectation in Equation \eqref{eq:pop-reg-noniter} are unknown, and need to leverage dataset $\{X_i,Y_i,Z_i\}$.  
+
+\begin{algorithm}[!t] 
+\caption{Regularized Deep IV (RDIV) }
+
+\begin{algorithmic}[1]\label{alg:dbiv-noniterative}
+        \REQUIRE Validation dataset $\{X_i,Y_i,Z_i\}_{i\in[n']}$ that is independent from the training dataset, function class $\Gcal\subset \{\Zcal \to \Delta(\Xcal)\}$, function class $\Hcal \subset \{\Xcal \to \RR\}$, a regularization hyperparameter $\alpha \in \RR_{>0}$
+        \STATE Learn $\hat{g}(x|z)$ with MLE: 
+        \begin{align}\label{eq:mle-est}
+    \hat{g} = \argmax_{g\in\Gcal} \E_n[\log g(X|Z)],
+\end{align} 
+        \STATE   Learn $\hat{h}$ by the following estimator:  
+        \begin{align}\label{eq:emp-reg-noniter}
+    \hat{h}= \argmin_{h\in\Hcal} \E_n[\big(Y - (\hat{\Tcal} h)(Z)\big)^2]+ \alpha \cdot \E_n[h(X)^2]
+    \end{align}
+    where  $\hat{\Tcal}: L_2(X) \rightarrow L_2(Z)$ is defined by $\hat{\Tcal} f(Z) = \E_{x\sim \hat{g}(X|Z)}[f(X)]$ using $\hat g$ in the first step. 
+    %     \STATE \begin{align}\label{eq: emp-iter}
+    % \hat{h}_{m}=&\argmin_{h\in\Hcal} \E_n[\big(Y - \hat{\Tcal} h(Z)\big)^2]\nonumber\\
+    % &\qquad \qquad+ \alpha \cdot \E_n[\big(h(X) - \hat{h}_{m-1}(X)\big)^2],
+    % \end{align}
+    \OUTPUT $\hat{h}$.
+\end{algorithmic}
+\end{algorithm}
+
+
+To address this challenge, by integrating general function approximation such as neural networks, we propose a two-stage method, the \emph{Regularized Deep Instrumental Variable (RDIV)}, which is summarized in \pref{alg:dbiv-noniterative}. In the first stage, given a function class $\Gcal$ comprising functions of the form $\big\{g: \Xcal\times\Zcal \rightarrow \RR,\int_\Xcal g(x|z) \mu(dx) =1 \text{ for all } z\big\}$, we aim to learn the conditional expectation operator $\Tcal$ by estimating the ground-truth conditional density $g_0(x|z)$ from the dataset $\{X_i, Z_i\}_{i\in[n]}$ with MLE in Equation \eqref{eq:mle-est}. In the second stage, with the learned conditional density $\hat{g}$ in the first step, we learn $h_0$ by replacing expectation and $\Tcal$ in Equation \eqref{eq:pop-reg-noniter} with empirical approximation and $\hat \Tcal$, respectively, as shown in Equation \eqref{eq:emp-reg-noniter}. 
+
+
+
+
+Importantly, our method does not necessitate a demanding computational oracle such as non-convex non-concave minimax or bilevel optimization, unlike many existing works for nonparametric IV with general function approximation  \citep{lewis2018adversarial,xu2021deep, bennett2023minimax}. Even when using neural networks for $\Gcal$ and $\Hcal$, we just need standard ERM oracles for density estimation or regression whose optimization is empirically known to be successful and theoretically more supported \citep{du2019gradient,chen2018convergence,zaheer2018adaptive,barakat2021convergence,wu2019global,zhou2018convergence,ward2020adagrad}.  We leave the numerical comparison between our method and existing NPIV methods \citep{hartford2017deep, dikkala2020minimax,xu2021deep,singh2019kernel} in Appendix \ref{sec:experiment}.
+
+
+\begin{remark}[Comparison with Deep IV]
+Our algorithm shares similarities with DeepIV in \citep{hartford2017deep}, and indeed, it draws inspiration from it. However, a key distinction lies in our introduction of an explicit regularization term in Equation~\eqref{eq:emp-reg-noniter}. Such a term endows the loss function with strong convexity, which plays a pivotal role in obtaining guarantees without the requirement for solution uniqueness. Furthermore, the original DeepIV work lacks a rigorous discussion on convergence guarantees or model selection. Hence, despite the algorithmic resemblances, our contributions primarily focus on the theoretical aspect, showcasing rapid convergence guarantees under mild assumptions, linking them to a formal model selection procedure, and exploring the iterative version to achieve a refined rate in \pref{sec: iterative}.
+\end{remark}
+
+\begin{remark}[Computaion for $\hat \Tcal$]
+Some astute readers might notice it could be hard to evaluate $\hat{\Tcal}h $ exactly in Equation \eqref{eq:emp-reg-noniter}. However, in practical application when $h$ is parametrized as a neural network, we can sample a batch of $\{X_j'\}_{j\in[B]}$ by $\hat{g}(X|Z_i)$ for every $Z_i$ in the dataset, and calculate a stochastic gradient that is an unbiased estimator of the real gradient of the loss function in Equation \eqref{eq:emp-reg-noniter}. Existing theory and empirical results for stochastic first-order methods can then guarantee the performance in many scenarios \citep{,jin2019nonconvex,barakat2021convergence,chen2018convergence,hartford2017deep}.
+
+% However, we can easily approximate $\hat{\Tcal}$ with Monte Carlo method by generating i.i.d. samples from $\hat{g}(x|z)$. Especially when we estimate $\hat{\Tcal}$ with $O(n^2)$ samples, the errors due to Monte Carlo approximation are of order $O(\delta_{n,\Hcal}) \sim O(\|\hat \Tcal f - \Tcal f\|)$,  which are negligible compared to primal error terms. 
+\end{remark}
+
+
+
+
+\vspace{-2mm}
+\section{Finite Sample Guarantees}\label{sec: finite-sample}
+\vspace{-2mm}
+
+In this section, we demonstrate a convergence result of our estimator $\hat{h}$ in RDIV to $h_0$ and derive its $L_2$ error rate after introducing several assumptions. 
+%%%The proofs of Theorems \ref{thm: mle-nonmisspec-noniter} and \ref{thm:chi2-mle-result-noniter} are deferred to Appendix \ref{sec:proof-mle-nonmisspec-noniter}, while the proofs of Theorems \ref{thm: mle-misspec} and \ref{thm: chi2mle-misspec} are provided in Appendix \ref{sec: proof-misspec}.
+
+We commence by introducing the $\beta$-source condition, a concept commonly used in the literature on inverse problems \citep{carrasco2007linear,ito2014inverse,engl1996regularization,bennett2023source,liao2021instrumental}, which mathematically captures the well-posedness of the function $h_0$.
+\begin{assumption}[$\beta$-Source Conditon]\label{ass:source-cond}
+The least norm solution $h_0$ satisfies $ h_0 = (\Tcal^*\Tcal)^{\beta/2}w_0$ for some $w_0\in {\Hcal}$ and $\beta \in \RR_{\geq 0}$, i.e.,$h_0 \in \Rcal(\Tcal^*\Tcal )^{\beta/2}$. Recall $\Tcal^*$ is an adjoint operator of $\Tcal$ defined in \pref{sec:notations}. 
+\end{assumption}
+
+In the following, we present its interpretation. First, as special cases, when $\Xcal,\Zcal$ are finite (e.g., discrete random variables), it holds when $\beta=\infty$. However, in our cases of interests where $\Xcal,\Zcal$ are not finite, this assumption restricts the smoothness of $h_0$. 
+Intuitively, when the parameter $\beta$ is large, the function $h_0$ exhibits greater smoothness, and the assumption gets stronger, in the sense that eigenfunctions of $h_0$ relative to an operator $\Tcal$ have smaller eigenvalues as explained in \citet[Section 6.4]{bennett2023minimax}.   
+%%%%Source conditions are commonly used to derive strong convergence rate guarantees in the inverse problem literature. 
+%%%Such conditions have been widely used for both inverse problems with known operators \citep{ito2014inverse,engl1996regularization} and IV problems with unknown operators \citep{bennett2023minimax, bennett2023source,liao2021instrumental,florens2011identification}.
+
+Next, we introduce another standard assumption as follows. This requires that the function classes $\Hcal$ and $\Gcal$ are well-specified. We will later consider misspecified cases as in \pref{sec:misspecified}. 
+\vspace{-2mm}
+\begin{assumption}[Realizability of function classes]\label{ass: realizability}
+    We assume $h_0\in\Hcal$, $g_0\in \Gcal$.
+\end{assumption}
+\vspace{-2mm}
+
+% We organize the rest of this section in two parts. In Section \ref{sec:mle-noniterative}, we discuss the convergence rate for MLE-based estimator, and in Section \ref{sec:chi2mle-noniterative}, we discuss the convergence rate for $\chi^2$-MLE estimator.
+%%%%\subsection{Results with Vanilla MLE}\label{sec:mle-noniterative} \masa{The original subsection sounds wired, I changed }
+%%%%We first discuss a finite sample convergence rate of  Algorithm \ref{alg:dbiv-noniterative} when using  MLE as $\hat g$ (i.e., using \eqref{eq:mle-est}). 
+
+ 
+%%%%Such a theorem assumes that the conditional density is uniformly bounded away from zero on $\Xcal$. 
+% Recent studies such as \citet{bilodeau2023minimax} have shown how to analyze MLE without such an assumption, however, to convey clarity in our narrative, we choose to retain this assumption.\masa{I don't think we need this last sentence. }
+
+
+
+The final assumption is as follows. This is standard in analyzing the convergence of nonparametric MLE \citep[Chap 14, p.g. 476]{wainwright2019high}. We will later discuss how to relax such an assumption in Remark~\ref{rem:bounded} and Appendix~\ref{sec:chi2}. 
+\iffalse 
+\footnote{Several works \citep{bilodeau2023minimax,Zhang_2006} have shown how to analyze MLE without such an assumption. However, to convey our main contributions clearly without further complications, we choose to retain them. We will later discuss how to relax such an assumption in Remark~\ref{rem:bounded} and Appendix~\ref{sec:chi2}. }.
+\fi 
+
+\vspace{-2mm}
+\begin{assumption}[Lower-bounded density]\label{ass:lower-bound}
+    We assume a constant $C_0>0$ such that $g_0(x|z) > C_0$ holds for all $x \in \Xcal$ and $z\in\Zcal$. 
+\end{assumption}
+\vspace{-2mm}
+% The following moment comparison assumption bounds $L_2$ norm by $L_4$ norm from below.
+% \begin{assumption}[(Moment Comparison]\label{ass:bound-2-4}
+%      There is a constant $\cmc$ such that for all $h - h' \in \Hcal - \Hcal$, we have $$
+%      \| h - h'\|_4 \leq \cmc \| h - h'\|_2.
+%      $$
+% \end{assumption}
+% The moment comparison condition has been used in statistics as a minimal assumption for learning without boundedness \cite{lecue2013learning,mendelson2015learning,liang2015learning}.
+
+Finally, we present our guarantee for Algorithm \ref{alg:dbiv-noniterative}. 
+
+\vspace{-2mm}
+\begin{theorem}[$L_2$ convergence rate for RDIV with  MLE]\label{thm: mle-nonmisspec-noniter}
+    Suppose Assumption \ref{ass:source-cond},\ref{ass: realizability},\ref{ass:lower-bound} hold. Let $\|Y\|_\infty\leq C_Y$, $\|h\|_\infty \leq C_\Hcal$ holds for all $h\in\Hcal$, $\|g\|_\infty \leq C_\Gcal$ holds for all $g\in\Gcal$. 
+    There exists absolute constant $c_1, c_2$, such that with probability at least $1- c_1\exp(c_2n\delta_n^2)$: 
+    \begin{align*}\textstyle 
+           \| \hat{h} - h_0 \|_2^2 =   O(\underbrace{\delta^2_n/\alpha^2}_{\text{(i)}}  +  \underbrace{\alpha^{\min(\beta,2) }}_{\text{(ii)}}   ) 
+    \end{align*}
+  In particular, by setting $\alpha = \delta_n^{\frac{2}{2+\min\{\beta, 2\}}}$
+    we have 
+    \begin{align}\label{eq:final}\textstyle 
+    \| \hat{h} - h_0 \|_2^2 =  O\big(\delta_n^{\frac{2\min\{\beta, 2\}}{2 + \min\{\beta, 2\}}}\big).       
+    \end{align}
+    Here $\delta_{n} = \max\{\delta_{n, \Gcal},\delta_{n, \Hcal} \}$, where $\delta_{n, \Fcal}$ is the critical radius of $star(\Fcal - \Fcal) = \{\lambda (f - f'), f,f'\in\Fcal, \lambda \in [0,1]\}$. $O(\cdot)$ hides constants of polynomial order of $C_Y, C_\Gcal, C_\Hcal, $ and $1/C_0$.
+\end{theorem}
+
+
+\vspace{-2mm}
+\paragraph{Sketch of the proof.}
+We now sketch the proof of Theorem \ref{thm: mle-nonmisspec-noniter}. Recall that $h_*$ is the optimizer of the Tikhonov-regularized loss function \eqref{eq:pop-reg-noniter}. We first introduce the following lemma, which characterizes the bias caused by the regularization. 
+\begin{lemma}[Regularization Bias]\label{lem:bias-noniter}
+    Under Assumption \ref{ass:source-cond}, we have $$
+    \|h_* - h_0\|_2^2 =O\big(\alpha^{\min\{\beta,2\}}\|w_0\|_2^2\big).
+    $$
+\end{lemma}
+
+Therefore, recalling $\|\hat h- h_0 \|_2^2 \leq 2(\|h_* - h_0\|_2^2 + \|\hat{h} - h_*\|_2^2)$, we only need to bound $\|\hat{h} - h_*\|_2^2$. Utilizing the strong convexity of \eqref{eq:pop-reg-noniter}, we have the following lemma:
+\begin{lemma}[Empirical Deviation \& First-stage Bias]\label{lem: bound-term2}
+    With probability at least $1- c_1 \exp(c_2n\delta_{n,\Hcal}^2)$, we have the following inequality: 
+    \begin{align*}
+        \|\hat h - h_* \|^2_2 
+        \leq \frac{1}{\alpha}\bigg\{\underbrace{|(\EE_n-\EE)  [L(\hat \Tcal \hat h) - L(\hat{\Tcal} h_*) ]|}_{\text{(a1)}}+ \underbrace{\|(\hat \Tcal - \Tcal)(\hat h - h_*)\|_1}_{\text{(a2)}}\bigg\},
+    \end{align*}
+    where $L(f) := (Y - f(Z))^2$.
+\end{lemma}
+Lemma \ref{lem: bound-term2} shows we can bound $\|\hat{h} - h_{*}\|_2^2$ by two terms (a1) and (a2). Here (a1) is a centered empirical process, and  (a2) is the error when estimating $\Tcal$ by $\hat\Tcal$. Utilizing localized concentration inequality and the boundedness of function class $\Hcal$, we can bound (a1) by $O(\delta_{n,\Hcal}^2 + \delta_{n,\Hcal}\|\hat{h} - h_*\|_2)$. To control (a2), we prove the following lemma: \begin{lemma}[MLE error]\label{lem:operator-error}
+With probability at least $1-\exp(n\delta^2_{n,\Gcal})$, we have 
+$$\|(\hat \Tcal-\Tcal)(h- h')\|_1 \leq \{C_{\Gcal}/C_0+1\}\cdot \delta_{n,\Gcal} \|h- h'\|_2    $$
+for every $h- h' \in \Hcal - \Hcal$.
+\end{lemma}
+Note that such a bound is nontrivial since the standard analysis for MLE only results in a convergence rate in terms of Hellinger distance between the $\hat{g}$ and $g$, and does not directly provide a bound on $L_1$ norm of $\Tcal h - \hat \Tcal h$. With Lemma \ref{lem:operator-error}, we can now bound (a2) from above with the critical radius of $\Gcal$, and the $L_2$ distance between $\hat h$ and $h_*$. Finally, combining current arguments, Lemma \ref{lem: bound-term2} and \ref{lem:operator-error},  we have
+\begin{align*}
+     \|\hat h - h_* \|^2_2=c'\{\delta_{n,\Hcal}^2 + \delta_{n,\Hcal}\|\hat{h} - h_*\|_2  + \{C_{\Gcal}/C_0+1\}\cdot \delta_{n,\Gcal} \|\hat{h} - h_*\|_2 \} 
+\end{align*}
+for certain constants $c'$. 
+By organizing the above equation, we have \begin{align}\label{eq:bound-term2}
+\textstyle  \|\hat{h} - h_0\|^2 = O\bigg(\frac{\max\{\delta_{n,\Gcal}, \delta_{n,\Hcal}\}^2}{\alpha^2}\bigg).
+\end{align}
+Combine Lemma \ref{lem:bias-noniter} and Equation \eqref{eq:bound-term2}, we further have $$ \textstyle 
+\|\hat h - h_0\|_2^2 = O\bigg(\frac{\delta_n^2}{\alpha^2} + \alpha^{\min\{\beta,2\}}\bigg),
+$$
+select $\alpha = \delta_n^{\frac{2}{2 + \min\{\beta, 2\}}}$ and we conclude the proof. $\QEDA$
+    
+The critical radius $\delta_n$ measures the statistical complexity of function class $\Hcal$ and $\Gcal$. For example, for parametric class or Gaussian Kernel, $\delta_n =\Tilde{O}(n^{-1/2})$, while for first order Sobolev class, $\delta_n = \tilde{O}(n^{-1/3})$ \citep{wainwright2019high, bartlett2002localized}. In those cases, when $\beta \geq 2$, the final rate in $L_2$ metric will be $\tilde{O}(n^{-1/2})$ in the former case and $\tilde{O}(n^{-1/3})$ in the latter case, respectively. 
+We now give the interpretation of our result. The bound of $\|\hat{h} - h_0\|_2^2$ consists of two terms. Term (i) comes from a statistical error to estimate $h_{*}$ from $\Hcal$ and $\Gcal$ (i.e., $\|\hat h- h_{*}\|_2$). Here, we use the strong convexity owing to Tikhonov regularization as it enables us to convert the population risk error to an error in $L_2$ metric as in Lemma~\ref{lem: bound-term2}. Then, we properly bounded the population risk from above  by the empirical process term properly as in Lemma~\ref{lem:operator-error}. While this $\delta^2_n$ rate is known as the standard fast rate in nonparametric regression \citep{wainwright2019high}, our result is still non-trivial because we need to handle a statistical error term properly when approximating $\Tcal$ with $\hat \Tcal$, which comes from the MLE error in the form of Hellinger distance. 
+
+The term (ii) comes from the bias $\|h_0- h_{*}\|_2$ incurred by adding a Tikhonov regularization. This analysis has been used in existing works (e.g., \citep{cavalier2011inverse}). Due to $\min(\beta,2)$, while we cannot leverage a high smoothness $\beta$ especially when $\beta \geq 2$, we will see how to leverage $\beta$ in such a case by introducing an iterative estimator in Section~\ref{sec: iterative}. 
+
+
+%%%Note that (ii) \masa{Is this (i)?} comes from the strong convexity endowed by the Tikhonov regularization, as it enables us to convert the population risk error to an error in $L_2$ metric, the former is further bounded by a concentration inequality for an empirical process. 
+%%%%Finally, in Equation \eqref{eq:final}, 
+% \masa{if we can elborare more, it is better}
+% Notably, the obtained rate in Theorem \ref{thm: mle-nonmisspec-noniter} is equivalent to the current state-of-the-art rates in terms of $L_2$ metric when using general function approximation \citep{bennett2023source,bennett2023minimax}, although the used realizability assumptions are different and we cannot have an exact comparison. 
+We also compare our work to existing state-of-the-art convergence rate $O\big(\delta_n^{2\frac{\min\{\beta,1\}}{1+\min\{\beta,1\}}}\big)$ in \cite{bennett2023source}, in which they employ a minimax-type algorithm. When $\beta \geq 2$, we achieve the same rate. We also remark that although our rate is slightly slower than theirs when $\beta \leq 2$, our method does not require a minimax-optimization oracle and can be incorporated with method selection methods. Besides, we will show that our method can achieve a state-of-the-art rate 
+in our extension to iterative estimator in \pref{sec: iterative}.
+
+% we have $\|\hat{h} - h_0\|_2^2=O(\delta_n)$, and when $\beta <2$, we have $\|\hat{h} - h_0\|_2^2= O(\delta_n^{\frac{2\beta}{2+\beta}})$. While in \cite{bennett2023source}, when $\beta \geq 1$ they achieve $\|\hat{h} - h_0\|_2^2= O(\delta_n)$, and when $\beta <1$, they have $\|\hat{h} - h_0\|_2^2= O(\delta_n^{\frac{2\beta}{1+\beta}})$. 
+
+
+
+% \begin{proof}
+%     For a detailed proof, see Appendix \ref{sec:proof-mle-nonmisspec-noniter}. \masa{Just first say we are gonna include all of the proof in Appendix first somewhere. We don't need to repeat this kind of stuff a lot.  }
+% \end{proof}
+% \zihao{Need remarks here for interpretation?}
+% \masa{Say why this result is good. It is the SOTA result compared to XXX. }
+
+\vspace{-2mm}
+\begin{remark}[Removing the Boundedness Assumption]\label{rem:bounded}
+While the lower-boundedness of density function in  Assumption \ref{ass:lower-bound}  is widely used in existing literature, we can easily remove it in several ways. We show that we can relax it by using a $\chi^2$-\textbf{MLE} instead of MLE: 
+ \begin{align}\label{eq:chi2-mle-est}
+\hat{g} = \argmin_{g\in\Gcal} \frac{1}{2}\cdot \E_n\bigg[\int_{\Xcal} g^2(x|Z)d\mu(x)\bigg] - \E_n[g(X|Z)]. 
+\end{align}
+We delay detailed results for our methods under $\chi^2$-MLE in Appendix \ref{sec:chi2}.
+\end{remark}
+\vspace{-2mm}
+
+\vspace{-2mm}
+\section{Misspecified Setting}\label{sec:misspecified}
+\vspace{-2mm}
+
+Next, we establish the finite sample result when Assumption \ref{ass: realizability} does not hold, i.e., function classes $\Hcal$ and $\Gcal$ are misspecified. This result serves as an important role in formalizing the model selection procedure in \pref{sec:model-selection}. 
+% \masa{Can we get actual rates? }\zihao{For NN, yes we can. However the approximation theory needs additional assumptions for $h_0$ and $g_0$ (Holder smooth etc), could it be too verbose?} \masa{I think we don't need to it formally. But, we can just say in a few sentence without making a lemma or something? }\zihao{Added below the theorem}
+% \masa{if we say this stuff, I think we should present actual final rates in those cases when using sieves after these theorems. }
+
+\vspace{-2mm}
+\begin{theorem}[$L_2$ convergence rate for RDIV with  MLE under misspecification]\label{thm: mle-misspec}
+    Suppose Assumption \ref{ass:source-cond} and \ref{ass:lower-bound} hold, and there exists $h^{\dag}\in \Hcal$ and $g^{\dag} \in \Gcal$ such that $\|h_0 - h^{\dag}\|_2 \leq \epsilon_\Hcal$ and $\E_{z\sim g_0}[\kl(g_0(\cdot|z)\mid g^{\dag}(\cdot|z))] \leq \epsilon_\Gcal$. 
+    For any $0<\alpha\leq 1$, we have \begin{align*}
+\|\hat{h} - h_0\|_2^2= O\bigg(\underbrace{\frac{\delta_n^2}{\alpha^2}}_{(b1)}+ \underbrace{\alpha^{\min\{\beta+1,2\}-1}}_{ (b2)}+\underbrace{\frac{\epsilon_\Hcal^2}{\alpha} + \frac{  \epsilon_\Gcal}{\alpha^2}}_{(b3)}\bigg)
+\end{align*}
+holds with probability at least $1- c_1\exp(c_2n\delta_n^2)$. Here $\delta_{n}$ has the same definition in Theorem \ref{thm: mle-nonmisspec-noniter}.
+\end{theorem}
+% \masa{We should add some explanation, what is (b1), (b2), (b3) something like that. }
+% \begin{remark}
+% In Theorem \ref{thm: mle-misspec}, the first term  $O(\frac{\delta_n^2 +  \epsilon_\Gcal}{\alpha^2})$ upper bounds $\|\hat{h} - h_*\|$, which comes from the misspecification of $\Gcal$, the statistical error of . The term $O(\alpha^{\min\{\beta,2\}})$ upper bounds the bias caused by regularization , i.e. $\|h_* - h_0\|$. The term  $O(\big(1+ \frac{1}{\alpha}\big) \{\alpha^{\min\{\beta,2\}} + \epsilon_\Hcal^2\})$ comes from the misspecification error of $\Hcal$. Here $(1+\frac{1}{\alpha})$ upper bounds the condition number of the loss function in Equation \eqref{eq:pop-reg-noniter}, which measures how much 
+% $h_*$ would shift when the function class $\Hcal$ changes.
+% \end{remark}
+
+% \begin{remark}
+%     If we assume that there exists a $h^{\ddagger}$ such that $\|h_* - h^{\ddagger}\|_2 \leq \epsilon_\Hcal$, i.e. the distance of the minimizer of \eqref{eq:pop-reg-noniter} , then we get $$
+%     \|\hat{h} - h_0\|_2^2 = O\bigg({\frac{\delta_n^2}{\alpha^2}}+ {\alpha^{\min\{\beta,2\}}}+{\frac{\epsilon_\Hcal^2}{\alpha} + \frac{  \epsilon_\Gcal}{\alpha^2}}\bigg),
+%     $$
+%     which matches the results in Theorem \ref{thm: mle-nonmisspec}. We leave the proof of this remark in Appendix \ref{}.
+% \end{remark}
+The bound for $\|\hat{h} - h_0\|^2_2$ consists of three terms: term (b1) measures the statistical deviation of a normalized empirical process, term (b2) measures the regularization error caused by Tikhonov regularization and term (b3) measures the effect of model misspecification. Here term (b3) has a poly$(\frac{1}{\alpha})$ dependency. This is because model misspecification causes a higher population risk in both stage 1 and 2 of Algorithm \ref{alg:dbiv-noniterative}. Hence, the more convex the loss function, the lesser the shift in the optimizer. The readers may notice that term (b2) is slightly slower than the original bias term in Theorem \ref{thm: mle-nonmisspec}. This is because the difference of the optimal value in \eqref{eq:pop-reg-noniter} due to misspecification of $\Hcal$ is of order $O(\alpha^{\min\{\beta+1,2\}}+ \epsilon_{\Hcal}^2) $, as we will show in Lemma \ref{lem:misspec-main} in the Appendix. By the $\alpha$-strong convexity endowed by Tikhonov regularization, this results in a shift of $h_*$ of magnitude 
+$O\big(\alpha^{\min\{\beta+1,2\}-1}+ \epsilon_{\Hcal}^2/\alpha\big)$.
+
+
+Theorem \ref{thm: mle-misspec} is particularly useful when we apply estimators based on sample-dependent function classes $\Hcal$ and $\Gcal$ (a.k.a. sieve estimators) that approximate certain function spaces. For example, $\Hcal$ can be linear models with polynomial basis functions that take the form $\langle \phi(X), \theta\rangle$, which can gradually approach H\"{o}lder or Sobolev balls, and $\Gcal$ can be a set of neural networks with a growing dimension \citep{chen2007large,chen2022nonparametric,schmidt2020nonparametric}. 
+More specifically, when $X$ and $Z$ are bounded, and $h_0$ and $g_0$ are $s$-H{\"o}lder smooth, it is well known that a deep ReLU neural network with depth $O(\log(1/\epsilon))$, width $O(d\epsilon^{-d/s})$ and weights bounded by $\tilde{O}(1)$ could satisfy the approximation error in Theorem \ref{thm: mle-misspec} \citep{schmidt2019deep}, recall that $d$ is the dimension of $X$ and $Z$ . In that case, $\delta_n^2 = \tilde{O}(\epsilon^{-d/s}/n)$ \citep{bartlett2002localized, chen2022nonparametric}. Choosing the architecture of the neural network according to $\epsilon = \tilde{O}(n^{-1/(1+d/s)})$, then Theorem \ref{thm: mle-misspec} shows that by setting $\alpha = O(n^{\frac{1}{(1+d/\alpha)(\min\{\beta+1,2\}+1)}})$, we have $\|\hat{h} - h_0\|_2^2 = \tilde{O}(n^{\frac{\min\{\beta+1,2\}-1}{(1+d/s)(\min\{\beta+1,2\}+1)}})$.
+
+
+\iffalse 
+\begin{remark}\label{remark: mle-mispec}
+    Our result brings insight into how to select $\alpha$ under model misspecification. We define $\epsilon:= \max\{\epsilon_\Gcal, \epsilon_\Hcal^2\}$. For $\epsilon<1$, Then by setting $\alpha = (\delta_n^2 + \epsilon)^{\frac{1}{\min\{\beta,2\}+1}}$, we have $$
+    \|\hat{h} - h_0\|_2^2 = O\big((\delta_n^2 + \epsilon)^{\frac{\min\{\beta+1,2\}-1}{\min\{\beta+1,2\}+1}}\big).
+    $$ 
+    For $\epsilon \geq 1$,  we  set $\alpha = 1$, and $\|\hat{h} - h_0\|^2 = O(\epsilon)$.
+\end{remark}
+\fi 
+
+\vspace{-2mm}
+\section{Model Selection}\label{sec:model-selection}
+\vspace{-2mm}
+
+One advantage of employing the proposed two-staged algorithm is that it enables model selection, which is not attainable when a minimax approach is used. In this section, we explain how we perform model selection. We focus on the model selection for the second stage, as the conditional density $\hat{g}$ from the first stage can be selected via existing methods for model selection for maximum likelihood estimators (e.g. \cite{MLEselection,conditiondensitySelection,vijaykumar2021localization}). 
+
+With an MLE-based estimator $\hat{g}$ obtained from the first stage in Algorithm \ref{alg:model_selection}, we consider model selection using the regularized loss in the second stage, with theoretical guarantees in the $\|\cdot\|_{2}$ metric. More concretely, given a choice of $M$ candidate models $\{h_1, \dots, h_M\}$ and a validation dataset $\{X'_i,Y'_i,Z'_i\}_{i=1}^n$ (distinct from the one used for training models $\{h_i\}$ and $\hat{g}$), the goal is for the final output of the model selection algorithm to achieve oracle rates with respect to the minimal misspecification error.
+
+
+We present our algorithm in Algorithm~\ref{alg:model_selection}. We provide two options for model selection: Best-ERM and Convex-ERM. Best-ERM selects the model that minimizes the regularized loss on a validation set, while Convex-ERM constructs a convex aggregate of the candidate models that minimizes the regularized loss on a validation set.
+
+
+\iffalse 
+For ease of notation, throughout this section, we use $\ell_{h,\hat{g}}(Y,Z,X)$ to denote the loss evaluated for a function $h$ using the likelihood function $\hat{g}$: 
+\begin{align*}
+    \ell_{h,\hat{g}}(Y,Z,X) ={\left(Y - \int h(x)\hat{g}(x|Z)\mu(dx)\right)^2} + {\alpha h(X)^2},
+\end{align*}
+and $h_\theta = \sum_{j=1}^M \theta_i h_i$, where $\sum_{j=1}^M \theta_j =1, \theta_j\geq 0$.
+
+In this section, we examine 2 common approaches used for model selection: Best-ERM and Convex-ERM using the regularized loss. Best-ERM selects the best single model, i.e. $\hat{\theta} = \argmin_{\theta = e_1, \dots, e_M}  \E_n[\ell_{h_\theta,g}(Y,Z,X)] $, whereas Convex-ERM constructs a convex aggregate of the candidate models, i.e. $\hat{\theta} = \argmin_{\theta \in \Theta}  \E_n[\ell_{h_\theta,g}(Y,Z,X)]$. The following theorem illustrates that the output of both algorithms attains rates with respect to the smallest misspecification error that matches that of Theorem \ref{thm: mle-misspec} and \ref{thm: chi2mle-misspec}. For a detailed proof, see Appendix \ref{sec: proof-model-selection}.
+% Let $R$ denotes the population risk:
+% \begin{align*}
+%     R(h,g) :=~& \E[\ell_{h,g}(Y,Z,X)]
+% \end{align*}
+% Moreover, we also define some optimal aggregates in the following sense:
+% \begin{align*}
+%     j^*_{\alpha} :=~& \argmin_{j = 1, \dots, M}  R(h_{j},g_0) &
+%     j^* :=~& \argmin_{j = 1, \dots, M} \|h_0 - h_j\|^2\\
+%     \theta^*_{\alpha} :=~& \argmin_{\theta \in \Theta} R(h_{\theta},g_0) &
+%     \theta^* :=~& \argmin_{\theta \in \Theta} \|h_0 - h_{\theta}\|^2\\
+%     h_{\alpha}^* :=~& \argmin R(h,g_0) 
+% \end{align*}
+% \masa{As a natural question for readers, they would think how we choose $\hat g$. Talk about it somewhere?} \hlan{I've added a sentence pointing the readers to model selection for the conditional density.}
+\fi 
+\begin{algorithm}[!t] \label{alg:model_selection}
+\caption{Model Selection for Regularized Deep IV }
+\begin{algorithmic}[1]\label{alg:model_selection}
+        \REQUIRE Validation dataset $\{X'_i,Y'_i,Z'_i\}_{i\in[n]}$, $M$ candidate models $\{h_i\}_{i=1}^M$, a regularization hyperparameter $\alpha \in \RR_{>0}$, an estimator $\hat g$, which can obtained by MLE with standard model selection procedure in \citet{MLEselection,conditiondensitySelection}. 
+        \STATE   Learn $\hat \theta$ with each of the followings:  
+        \begin{align}
+  \textbf{Best-ERM:}\quad   {\hat \theta} &= \argmin_{\theta= e_1, \dots, e_M} \E_n[\big(Y - (\hat{\Tcal} h_{\theta})(Z)\big)^2]+ \alpha \cdot \E_n[h_{\theta}(X)^2], \\
+    \textbf{Convex-ERM:}\quad   \hat{\theta} & = \argmin_{\theta \in \Theta} \E_n[\big(Y - (\hat{\Tcal} h_{\theta})(Z)\big)^2]+ \alpha \cdot \E_n[h_{\theta}(X)^2], 
+    \end{align}
+      where $h_\theta = \sum_{j=1}^M \theta_i h_i$, $\sum_{j=1}^M \theta_j =1, \theta_j\geq 0$, $\hat{\Tcal} f(Z) = \E_{x\sim \hat{g}(X|Z)}[f(X)]$ and $\EE_n[\cdot]$ is defined for $\{X'_i,Y'_i,Z'_i\}_{i \in [n]}$. 
+    %     \STATE \begin{align}\label{eq: emp-iter}
+    % \hat{h}_{m}=&\argmin_{h\in\Hcal} \E_n[\big(Y - \hat{\Tcal} h(Z)\big)^2]\nonumber\\
+    % &\qquad \qquad+ \alpha \cdot \E_n[\big(h(X) - \hat{h}_{m-1}(X)\big)^2],
+    % \end{align}
+    \OUTPUT $h_{\hat \theta}$.
+\end{algorithmic}
+\end{algorithm}
+
+
+ 
+
+\begin{theorem} [Model Selection Rates] \label{thm:model_selection}
+    Consider the model selection problem given $M$ candidate models with any choice of $\alpha$, over $M$ function classes $\{\Hcal_1, \dots, \Hcal_M\}$. Suppose Assumption \ref{ass:source-cond} and \ref{ass:lower-bound} hold, and there exists $g^{\dag} \in \Gcal$ and  $h^{\dag}_j\in \Hcal_j$ for all $j$ such that $\|h_0 - h^{\dag}_j\|_2 \leq \epsilon_{\Hcal_j}$ and  $\E\big[\int_{\Xcal} (g^{\dag}(x|Z) - g_0(x|Z)  )^2 d \mu(x)\big] \leq \epsilon_\Gcal$. Assume that $Y$ is almost surely bounded by $C_Y$, each candidate model $h_j$ is uniformly bounded in $[-C_{\Hcal},C_{\Hcal}]$ almost surely. Let $\delta_{n,j} = \max\{\delta_{n,\Gcal},\delta_{n,\Hcal_j}, \delta_{n,M}\}$, where $\delta_{n,M}$ denotes the critical radius of the convex hull over M variables for Best-ERM (i.e. $\delta_{n,M} = \frac{\log(M)}{n}$), and the critical radius of the set of $M$ candidate functions for Convex-ERM (i.e. $\delta_{n,M} = \frac{M}{n}$). 
+    
+    With probability $1-c_1 \exp(c_2 n \sum_j^M\delta_{n,j}^2)$, the output of Convex-ERM or Best-ERM $\hat{\theta}$, satisfies:
+    % \begin{align*}
+    %     \|h_{\hat{\theta}}-h_0\|^2 
+    %     % \leq ~&O\big(\min_j (\delta_{n,j} + \epsilon_{\Gcal})^{\frac{\min\{\beta, 2\}}{2 + \min\{\beta, 2\}}} + \epsilon_{\Hcal_j}\big)\\
+    %     \leq ~& \min_j O\big( \frac{\delta_{n,j} + \epsilon_{\Gcal}}{\alpha^2} + \alpha^{\min\{\beta,2\}}+\epsilon_{\Hcal_j}\big)
+    % \end{align*} 
+    \begin{align*}
+        \|h_{\hat{\theta}} - h_0\|_2^2 \leq \min_{j \in [M]}O\left(\frac{\delta_{n,j}^2 }{\alpha^2} + \alpha^{\min\{\beta+1,2\}-1} +\frac{\epsilon_{\Hcal_j}^2}{\alpha}  +  \frac{\epsilon_\Gcal}{\alpha^2}. \right)
+    \end{align*}
+\end{theorem}
+
+
+We explain its implications. Most importantly, our obtained rate is the best (i.e., oracle rate) among rates when invoking a result of (convergence result for RDIV in \pref{thm: mle-misspec} with misspecified model) for each function class $\Hcal_i$. 
+Some astute readers might wonder whether we can just invoke \pref{thm: mle-misspec} by making new function classes $\Hcal_{\text{best}}:=\{h_{\theta}:\theta=e_1,\dots,e_M\}$ or $\Hcal_{\text{conv}}:=\{h_{\theta}:\sum_j \theta_j = 1, \theta_j \geq 0 \}$, and bound the misspecification error $\epsilon_{\Hcal_{\text{conv}}}$ or $\epsilon_{\Hcal_{\text{best}}}$ by $\|h_j - h_0\|$ will lead to a slower rate with an extra factor of $\frac{1}{\alpha}$. The key is only to handle the misspecification error once to avoid the $\frac{1}{\alpha}$ factor by deferring the invocation of strong convexity and working with the excess risk (difference in the expected loss) instead of the $L_2$ difference.
+
+
+
+\vspace{-2mm}
+\section{Extension to Iterative Version}\label{sec: iterative}
+\vspace{-2mm}
+
+
+One drawback of the result so far is its lack of adaptability to the degree of ill-posedness in the inverse problem, especially for larger values of $\beta$ corresponding to milder problems, when $\beta \geq 2$. To address this issue, in this section, we further generalize our results in Section \ref{sec:method-intro} and \ref{sec: finite-sample}, and propose an iterated Regularized Deep method, which is summarized in Algorithm \ref{alg:dbiv}. In this algorithm, instead of targeting \eqref{eq:pop-reg-noniter}, we target $h_{m, *}$, which is given by the following recursive least square regression with Tikhonov regularization: \begin{align}\label{eq:popu-iter}
+    h_{m, *} = &\argmin_{h\in\Hcal} \E[(Y - \Tcal h(Z))^2]+ \alpha\cdot \E[(h - h_{m-1,*})^2(X)].
+\end{align}
+and we set $h_{-1,*} = 0$. This is the recursive version of the previous regularized objective in Equation \eqref{eq:pop-reg-noniter}, by using Tikhonov regularization around a prior target $h_{m-1,*}$ instead of $0$. Then, with the learned conditional density $\hat{g}$ by MLE in Equation \eqref{eq:mle-est}, we construct an estimator in \eqref{eq: emp-iter} by replacing expectation and an operator $\Tcal$ with empirical approximation and the learned operator $\hat \Tcal$, respectively, in Equation \eqref{eq:popu-iter}. 
+
+\begin{algorithm}[!t]
+\caption{Iterative Regularized Deep IV}
+\begin{algorithmic}[1]\label{alg:dbiv}
+        \REQUIRE Dataset $\{X_i,Y_i,Z_i\}_{i\in[n]}$, function class $\Gcal$, function class $\Hcal$, $\hat{h}_{-1} = 0$
+        \STATE Learn $\hat{g}(x|z)$ by MLE \eqref{eq:mle-est}
+        \FOR{$m = 1,2,\cdots, M$}
+        \STATE   Learn $\hat{h}_m$ by iterative Tikhonov estimator as the following:
+        \begin{align}\label{eq: emp-iter}
+    \hat{h}_{m}=\argmin_{h\in\Hcal} \E_n[\big(Y - \hat{\Tcal} h(Z)\big)^2]+ \alpha \cdot \E_n[\big(h(X) - \hat{h}_{m-1}(X)\big)^2],
+\end{align}
+        \ENDFOR
+        \OUTPUT $\hat h_M$
+    %     \STATE \begin{align}\label{eq: emp-iter}
+    % \hat{h}_{m}=&\argmin_{h\in\Hcal} \E_n[\big(Y - \hat{\Tcal} h(Z)\big)^2]\nonumber\\
+    % &\qquad \qquad+ \alpha \cdot \E_n[\big(h(X) - \hat{h}_{m-1}(X)\big)^2],
+    % \end{align}
+\end{algorithmic}
+\end{algorithm}
+
+%%%Notably, the additional term $\E_n[\big(h(X) - \hat{h}_{m-1}(X)\big)^2]$ is the Tikhonov regularization term. When $m = 0$, it reduces to the noniterative estimator \eqref{eq:emp-reg-noniter} we discussed in Section \ref{sec:method-intro}. 
+
+
+% \masa{I remove the lemma. This part is not new. So, we don't need to spend so much space. It might affect the proof. }
+\iffalse 
+Now, we consider  a convergence rate for $\|h_{m,*} - h_0\|_2$. Based on this, we further derive the $L_2$ convergence rate of our proposed estimator $\hat{h}_m$ for a finite sample dataset. Using the source condition in Assumption \ref{ass:source-cond}, and the realizability in Assumption \ref{ass: realizability}, we can upper bound the bias brought by the Tikhonov regularization. 
+\begin{lemma}[Iterated Tikhonov Regularization Bias]\label{lem:iter-tikh-bias}
+ Under Assumption \ref{ass: realizability} and \ref{ass:source-cond}, for $h_{m,*}$ defined by \eqref{eq:popu-iter}, we have \begin{align*}
+\|h_{m,*} - h_0\|_2^2 &\leq \|w_0\|_2^2\cdot \alpha^{\min\{\beta, 2m\}}.
+% \\
+% \|\Tcal h_{m,*} - \Tcal h_0\|_2^2 &\leq \|w_0\|_2^2\cdot \alpha^{\min\{\beta+1, 2m\}}.
+\end{align*}
+
+\end{lemma}
+Such inequality is widely recognized \citep{bennett2023source,cavalier2011inverse, liao2021instrumental},  and upper-bound the bias in both strong and weak metrics. Specifically, when $h_0\in\Hcal$, by selecting $\alpha<1$ and $m\rightarrow \infty$, $h_{m,*}$ converges to the least norm solution $h_0$, thus the consistency of the solution in Equation \eqref{eq:popu-iter} is guaranteed. In the following sections, we further prove that our method can achieve a statistical state-of-the-art rate when we only have access to a finite sample dataset.
+\fi 
+
+Now, we delve into estimating the finite sample convergence rate of Algorithm \ref{alg:dbiv}. Our findings are summarized in the following theorem.
+
+\vspace{-2mm}
+\begin{theorem}[$L_2$ convergence rate for iterative MLE estimator]\label{thm: mle-nonmisspec}
+    Suppose Assumption  \ref{ass:source-cond}, \ref{ass: realizability}, \ref{ass:lower-bound} hold. Let $\|Y\|_\infty\leq C_Y$, $\|h\|_\infty \leq C_\Hcal$ holds for all $h\in\Hcal$, $\|g\|_\infty \leq C_\Gcal$ holds for all $g\in\Gcal$. By setting $\alpha = \delta_n^{\frac{2}{2+\min\{\beta, 2m\}}}$, with probability at least $1- c_1 m\exp(c_2n\delta_n^2)$, we have $$
+    \| \hat{h}_m - h_0 \|_2^2 =O\big(16^{2m}\cdot\delta_n^{\frac{2\min\{\beta, 2m\}}{2 + \min\{\beta, 2m\}}}\big),
+    $$
+    here $\delta_{n} $ has the same definition in Theorem \ref{thm: mle-nonmisspec-noniter}.
+\end{theorem}
+\vspace{-2mm}
+% \begin{proof}
+%     For a detailed proof, see Appendix \ref{sec: proof-iterative}.
+% \end{proof}
+
+
+Importantly, we can have a rate $O\big(\delta_n^{\frac{2\beta}{2 + \beta}}\big)$ in relatively mild conditions while the previous Theorem~\ref{thm: mle-nonmisspec-noniter} (non-iteratie version) can only allow for $O\big(\delta_n^{\frac{2\min(\beta,2)}{2 + 2\min(\beta,2)}}\big)$, and cannot fully leverage the well-posedness of $h_0$, illustrated by the source condtion $\beta$. Indeed, if we choose the iteration number $m = \lceil \min\{\beta/ 2, \log\log(1/\delta_n)\} \rceil$, then we get a rate of $$\|\hat{h}_m - h_0\|_2^2 = O\bigg(\min\{16^\beta, \log (1/\delta_n)\}\delta_n^{\frac{2\min\{\beta, 2m\}}{2 + \min\{\beta, 2m\}}}\bigg) .$$ Hence for any constant $\beta$, as $n$ grows, eventually $\log\log 1/\delta_n \geq \beta $, and we get the rate of $O\big(\delta_n^{\frac{2\beta}{2 + \beta}}\big)$. This rate can be achieved even if $\beta$ grows with $n$, as long as it grows slower than $O(\log\log 1/\delta_n)$. If $\delta_n = O(n^{-\iota})$ for some $\iota > 0 $, e.g. RKHS or first order Sobolev space \citep[Chapt 14.1.2]{wainwright2019high}, then we note that we can set $m = \lceil \min\{\beta/ 2, \sqrt{\log(1/\delta_n)}\} \rceil$, and $16^{\sqrt{\log(1/\delta_n)}} = O(n^{\epsilon})$ for any $\epsilon > 0$, thus we still obtain a rate of $O(\delta_n^{\frac{2\beta}{2+\beta}})$ when $\sqrt{\log(1/\delta_n)} \geq \beta/2$. In such a case, we can obtain a $O(\delta_n^{\frac{2\beta}{2+\beta}})$ rate even $\beta$ grows with $n$, as long as it grows slower than $\sqrt{\log(1/\delta_n)}$.
+
+Our results for the iterative estimator match the state-of-the-art convergence rate with respect to $L_2$ norm for an iterative estimator in \cite{bennett2023source}. However, their method requires a minimax computation oracle, while our method does not.
+
+% \section{Proof Sketch}
+% Due to space limit, in this section, we only include the proof sketch of Theorem \ref{thm: mle-nonmisspec-noniter} and Theorem \ref{thm:model_selection}, i.e. . For detailed proof of results in this paper, please refer to the Appendix.
+
+
+
+
+

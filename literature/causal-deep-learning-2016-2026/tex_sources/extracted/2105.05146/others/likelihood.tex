@@ -1,0 +1,157 @@
+\documentclass[10pt]{article}
+%\usepackage{arxiv}
+% For french
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsthm,amsmath,natbib}
+\usepackage{amsfonts,amssymb}
+\RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[toc,page]{appendix}
+
+% For tikz pictures
+\usepackage{tikz}
+\usetikzlibrary{matrix,chains,positioning,decorations.pathreplacing,arrows}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+\usepackage{algorithm}
+\usepackage[]{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{afterpage}
+\usepackage{bbm}
+\usepackage{setspace}
+\usepackage{comment}
+\usepackage[normalem]{ulem}
+\usepackage{parskip}
+%\doublespacing
+
+\newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+
+% Additional definitions
+\def\tt{\mathbf t}
+\def\z{\mathbf z}
+\def\X{\mathbf X}
+\def\inv{^{-1}}
+\def\H{\mathbf H}
+\def\x{\mathbf x}
+\def\xs{\underline {\mathbf x}}
+\def\Xs{\underline { \mathbf X} }
+\def\r{\mathbf r}
+\def\y{\mathbf y}
+\def\lmax{\lambda_\mathrm{max}}
+\def\emax{\mathbf{e}_\mathrm{max}}
+\def\emin{\mathbf{e}_\mathrm{min}}
+\def\lmin{\lambda_\mathrm{min}}
+\def\bbeta{\boldsymbol \beta}
+\def\ggamma{\boldsymbol \gamma}
+\def\intinf{\int_\infty^\infty}
+\def\sumi{\sum_{i=1}^n}
+\def\t{^\top}
+\def\eps{\boldsymbol \varepsilon}
+\def\KL{\mathbb {KL}}
+\def\E{\mathbb E}
+\def\V{\mathbb V}
+\def\N{\mathcal N}
+\def \real{\rm I\!R}
+\def \I{\mathbf I}
+\def \L {\mathcal{L}}
+
+% define alphabetical enumeration in \bgin{enumerate}
+\renewcommand{\theenumi}{\alph{enumi}}
+\renewcommand{\labelenumi}{\theenumi)}
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclareMathOperator*{\argmin}{argmin~} % for subscripts and superscripts
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{property}[theorem]{Property}
+
+
+
+\begin{document}
+
+
+\section*{Siamese Model for Individual Treatment Effect}
+
+{\centering
+   Mouloud Belbahri \&  Alejandro Murua \\
+  Department of Mathematics and Statistics, 
+  University of Montreal
+}
+
+\vspace{30pt}
+
+
+
+Consider the random variables $Z_1 = YT - Y(1-T)$ and $Z_0 = (1-Y)T - (1-Y)(1-T)$.
+We have
+\[ Z_1 = \left\{ \begin{array}{cc} 1, &  Y=1, T=1, \\ -1, & Y=1, T=0\\ 0 & \sim \end{array} \right.
+\]
+and
+\[ Z_0 = \left\{ \begin{array}{cc} 1, &  Y=0, T=1, \\ -1, & Y=0, T=0\\ 0 & \sim \end{array} \right.
+\]
+
+Now consider the random variable
+\[ Z = \left\{ \begin{array}{cc} Z_1, &  Y=1 \\ Z_0, & Y=0 \end{array} \right.
+\]
+Note that $Z= 2T -1 $.
+
+We consider the case $P(T=1)=P(T=0) = 0.5$.
+Let $m_{yt} = P( Y=y | T=t)$, and $p_{yt} = m_{yt} / ( m_{yt} + m_{y(1-t)})$.
+We have
+\begin{align*}
+  P( Z = 1 | Y=1 )  & = P( Z =1 , Y=1 ) / P(Y = 1)  \\
+   & = \tfrac{\biggl\{P( Z=1, Y=1, T=1 ) + P(Z=1, Y=1, T=0)\biggr\}}{ P(Y=1)} \\
+  & = \tfrac{\biggl\{P(Z_1=1 | Y=1, T=1)P(Y=1 | T=1) P(T=1)  + P(Z_1=1 | Y=1, T=0)P(Y=1 | T=0) P(T=0) \biggr\}}
+  {\biggl\{ P(Y=1|T=1)P(T=1) + P(Y=1 | T=0) P(T=0) \biggr\} } \\
+   & = m_{11} / ( m_{11} + m_{10}) = p_{11}.
+\end{align*}
+Similarly,
+\begin{align*}
+  P( Z = -1 | Y=1 ) & = P( Z =-1 , Y=1 ) / P(Y = 1) \\
+  & = \tfrac{\biggl\{P( Z=-1, Y=1, T=1 ) + P(Z=-1, Y=1, T=0)\biggr\}}{ P(Y=1)} \\
+  & = \tfrac{\biggl\{P(Z_1=-1 | Y=1, T=1)P(Y=1 | T=1) P(T=1) + P(Z_1=-1 | Y=1, T=0)P(Y=1 | T=0) P(T=0) \biggr\}}
+  {\biggl\{ P(Y=1|T=1)P(T=1) + P(Y=1 | T=0) P(T=0) \biggr\}} \\
+  & = m_{10} / ( m_{11} + m_{10}) = 1 - p_{11}.
+\end{align*}
+Proceeding in the same way, we have
+\begin{align*}
+  P( Z = 1 | Y=0 ) & = P( Z =1 , Y=0 ) / P(Y = 0)  \\
+  & = \tfrac{\biggl\{P( Z=1, Y=0, T=1 ) + P(Z=1, Y=0, T=0)\biggr\} }{ P(Y=1)} \\
+  & = \tfrac{\biggl\{P(Z_0=1 | Y=0, T=1)P(Y=0 | T=1) P(T=1) + P(Z_0=1 | Y=0, T=0)P(Y=0 | T=0) P(T=0) \biggr\}}
+  {\biggl\{ P(Y=0|T=1)P(T=1) + P(Y=0 | T=0) P(T=0) \biggr\}} \\
+  & = m_{01} / ( m_{01} + m_{00}) = p_{01},
+\end{align*}
+and
+\begin{align*}
+  P( Z = -1 | Y=0 ) & = P( Z =-1 , Y=0 ) / P(Y = 0)  \\
+  & = \tfrac{\biggl\{P( Z=-1, Y=0, T=1 ) + P(Z=-1, Y=0, T=0)\biggr\}}{ P(Y=1)} \\
+  & = \tfrac{\biggl\{P(Z_0=-1 | Y=0, T=1)P(Y=0 | T=1) P(T=1) + P(Z_0=-1 | Y=0, T=0)P(Y=0 | T=0) P(T=0) \biggr\} }
+  {\biggl\{ P(Y=0|T=1)P(T=1) + P(Y=0 | T=0) P(T=0) \biggr\} }\\
+  & = m_{00} / ( m_{01} + m_{00}) = 1 - p_{01}.
+\end{align*}
+
+Notons que $Z = 1$ iff $T=1$ and $Z=-1$ iff $T=0$. This fact will be useful to write the likelihood of the complete data.
+This is given by
+\begin{multline*}
+  \prod_{i=1}^n P( z_i, y_i, t_i)  = \prod_{i=1}^n P( z_i | y_i) P( y_i | t_i) P(t_i) \\
+   = 2^{-n}\prod_{i=1}^n p_{11}^{t_i y_i} (1 - p_{11})^{(1-t_i)y_i} p_{01}^{t_i (1-y_i)} (1 - p_{01})^{(1-t_i)(1-y_i)}
+   m_{11}^{t_i y_i} (1 - m_{11})^{t_i (1-y_i)}   m_{10}^{(1-t_i) y_i} (1 - m_{10})^{(1-t_i) (1-y_i)} \\
+   = 2^{-n}\prod_{i=1}^n p_{y_i 1}^{t_i } (1 - p_{y_i 1})^{(1-t_i)} m_{1t_i}^{y_i} (1 - m_{1t_i})^{(1-y_i)} \\
+   = 2^{-n} \exp\{ \sum_{i=1}^n t_i \log p_{y_i 1} + (1 - t_i)\log(1 - p_{y_i 1}) \}
+     \times \exp\{ \sum_{i=1}^n y_i \log m_{ 1 t_i 1} + (1 - y_i)\log(1 - m_{1 t_i }) \}.
+\end{multline*}
+
+  
+
+
+
+
+
+
+
+
+\end{document}

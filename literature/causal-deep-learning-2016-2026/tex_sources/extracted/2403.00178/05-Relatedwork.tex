@@ -1,0 +1,36 @@
+\section{Preliminaries and Related Work}
+
+\subsection{Graph Neural Networks (GNNs)}
+Graph Neural Networks (GNNs) are a class of neural networks that operate on graph-structured data by passing local messages~\cite{GCN,GAT,GIN}.
+They have been extensively employed in various applications such as node classification, link prediction, and recommendation systems~\cite{huang2023concept2box,SSAGA}.
+GNNs have shown to be efficient for approximating pair-wise node interactions and achieved accurate predictions for multi-agent dynamical systems \cite{NRI,jure}. 
+The majority of existing studies propose discrete GNN-based simulators where they take the node features at time $t$ as input to predict the node features at time $t$+1. To further capture the long-term temporal dependency for predicting future trajectories, some work utilizes recurrent neural networks such as RNN, LSTM, or self-attention mechanism to make predictions at time $t$ +1 based on the historical trajectory sequence~\cite{VGRNN,Dygnn,hgt}. However, they restrict themselves to learning a one-step state transition function. Therefore, when we successively apply these one-step simulators to previous predictions in order to generate the rollout trajectories, error accumulates and impairs the prediction accuracy, especially for long-range prediction.
+
+
+\subsection{Graph Ordinary Differential Equations for
+Continuous Multi-agent Dynamical Systems}~\label{sec:graphode}
+The dynamics of a multi-agent system can be captured by a series of nonlinear first-order ordinary differential equations (ODEs)~\cite{latentODE,LG-ODE,huang2023generalizing, hope}, which describe how the states of $N$ dependent variables co-evolve over continuous time: $\dot{\bm{z}}_{i}^{t}:=\frac{d \bm{z}_{i}^{t}}{d t}=g\left(\bm{z}_{1}^{t}, \bm{z}_{2}^{t} \cdots \bm{z}_{N}^{t}\right)$. Here $\bm{z}_i^t\in\mathbb{R}^d$ denotes the state variable for agent $i$ at timestamp $t$ and $g$ denotes the ODE function that drives the system to move forward. Given the initial states $\bm{z}_{1}^{0}, 
+\cdots \bm{z}_{N}^{0}$ for all agents and the ODE function $g$, a numerical ODE solver such as Runge-Kutta~\cite{solver} can be used to 
+evaluate $\bm{z}_i^T$ at any desired time $T$ using Eqn~\eqref{eq:ode}: 
+\begin{equation}
+    \bm{z}_{i}^{T}=\bm{z}_{i}^{0}+\int_{t=0}^{T} g\left(\bm{z}_{1}^{t}, \bm{z}_{2}^{t} \cdots \bm{z}_{N}^{t}\right) \mathrm d t.
+    \label{eq:ode}
+\end{equation}
+To model the interactions among agents, recent studies~\cite{LG-ODE,huang2021coupled,ndcn,poli2019graph} propose using a GNN as the ODE function $g$ which is learned from observational data. Such GraphODE framework follows an encoder-processor-decoder architecture. The encoder computes latent initial states for all agents based on historical observations. The GNN-based ODE function then predicts the latent trajectories starting from the learned initial states. Finally, a decoder extracts the predicted dynamic features. To regularize the generated trajectories, GraphODE frameworks often adopt a variational autoencoder (VAE) structure~\cite{VAE}, where the encoder samples initial states from approximated posterior distributions. GraphODEs are promising in making long-range predictions and can handle irregularly-sampled observations effectively~\cite{LG-ODE,ndcn}.
+
+
+\subsection{Causal Inference Over Time}
+Time-dependent causal inference methods mainly differ in how they deal with confounding. They differ from traditional statistical time series analysis~\cite{kipf2018neural,zhang2023crossformer,bai2022temporal} which we do not discuss in this paper.  Traditionally, many statistical tools that are applied, such as marginal structural models (MSMs)~\cite{robins2000marginal} utilize the inverse probability of treatment weighting (IPTW). Recently,  representation learning-based balancing approaches are proposed, which learn representations that are not predictable of the treatments to ensure unbiased outcome prediction~\cite{BicaAJS20,MelnychukFF22}. 
+%This is achieved by training the model with both the prediction loss and the treatment balancing loss. 
+However, one major limitation is that they are discrete methods, which can offer poor performance on continuous systems such as the spread of COVID-19. 
+There are a series of works~\cite{seedat2022continuous,bica2020crn,gwak2020neural,de2022predicting} that estimate the continuous counterfactual outcomes through neural ODEs or neural controlled differential equations (CDEs). Despite their success, they assume that nodes are independent of each other, regardless of their interactions. One recent work~\cite{anonymous2023cfgode} proposed to parameterize the ODE function with a GNN for multi-agent settings. However, this model cannot handle evolving graph structures and the effect of multiple treatments.
+
+
+
+
+
+
+
+
+
+

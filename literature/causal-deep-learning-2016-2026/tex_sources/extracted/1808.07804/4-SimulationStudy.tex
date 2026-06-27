@@ -1,0 +1,158 @@
+% Data sources:
+% 1.)	http://journals.sagepub.com/doi/abs/10.1177/1532673X16686556 The Generalizability of Social Pressure Effects on Turnout Across High-Salience Electoral Contexts: Field Experimental Evidence From 1.96 Million Citizens in 17 States		
+% 2.) https://scholar.harvard.edu/files/todd_rogers/files/social_pressure.pdf Social pressure and voting: A field experiment conducted in a high-salience election
+% 3.) https://www.povertyactionlab.org/sites/default/files/publications/4707_The-Comparative-Effectiveness-of-turnout-of-positively-versus-negatively-framed-voter-mob-appeals_March2017.pdf, Study 2 THE COMPARATIVE EFFECTIVENESS ON TURNOUT OF POSITIVELY VERSUS NEGATIVELY FRAMED VOTER MOBILIZATION APPEALS
+
+% TODO:  
+% BENCHMARKS: 
+% 1.) Reproduce the study suggested by Nie and Wager
+% 2.) Design an experiment which shows how powerful it can be to have a big set of people which are neither in the control nor in the treated group
+		% It might also be good to not take experiments other people have done, and create experiments
+		% which are very closely related to those experiments. (e.g., Demystifying Double Robustness, 2007
+		% , section 1.4)
+		%
+		% CONCLUSIONS we want to draw from these experiments are and should be somehow emphasized 
+		% and shown in the experiments are: (We might find that not all of these conclusions are actually true, 
+		% but this is what I would expect to be true based on what we have seen so far.)
+		% 		a) Neural Networks for heterogeneous treatment effect estimation is a very powerful and
+		% 			flexible "base-learner" in other words X-Neural Networks does better than X-RF
+		% 		b) Transfer learning for causal inference can significantly improve the prediction performance
+		% 		c) (Maybe) Show that Jases suggestion to match known quantities (e.g., average similar to the 
+		% 			ATE) will protect us from some forms of over fitting
+		%		d) Reptile helps, Multi head helps, but the combination of the two helps the most
+
+
+\section{Evaluation} \label{section:Simulation}
+We evaluate our transfer learning estimators on both real and simulated data.  In our data example, we consider the important problem of voter encouragement. Analyzing a large data set of 1.96 million potential voters, we show how transfer learning across elections and geographic regions can dramatically improve our CATE estimators. This example shows that transfer learning can substantially improve the performance of CATE estimators. \textbf{To the best of our knowledge, this is the first successful demonstration of transfer learning for CATE estimation.} The simulated data has been intentionally chosen to be different in character from our real-world example. In particular, the simulated input space is images and the estimated outcome variable is continuous. %These features make the simulation problem quite challenging.
+
+%\begin{center}
+%	\begin{tabular}{ | p{1.7cm} | p{2.3cm} | p{2.3cm} | p{2.3cm} |p{2.3cm} |p{2.3cm} |}
+%		\hline
+%		Experiment & $x$ & outcome & $\mu_0$ & $\mu_1$ & $\tau$ \\ [0.5ex] 
+%		\hline \hline
+%		GOTV & a voter profile & \parbox[t]{2.3cm}{The voter's \\ propensity to \\ vote} & \parbox[t]{2.3cm}{The voter's \\ propensity to \\ vote when they \\ do not receive \\ a mailer} & \parbox[t]{2.3cm}{The voter's \\ propensity to \\ vote when they \\ do receive a \\ mailer} & \parbox[t]{2.3cm}{Change in the \\ voter's \\ propensity to \\ vote after \\ receiving a \\ mailer \\ } \\  \hline
+%		%MNIST & \parbox[t]{1.7cm}{an MNIST \\ image} & \parbox[t]{2.3cm}{ Price generated \\ for the image. \\ Depends on \\ magnitude of \\ depicted number \\ } & \parbox[t]{2.3cm}{Price function \\ for poorly lit \\ image} & \parbox[t]{2.3cm}{Price function \\ for well lit \\ image} & \parbox[t]{2.3cm}{Difference in \\ price between \\ poorly lit and \\ well lit image} \\ [1ex] 
+%		\hline
+%	\end{tabular}
+%\end{center}
+
+%on a real world experiment and we use two different data sources to improve the estimate of the treatment effect estimates. 
+
+%Performing well on simulations can reveal very useful insights on the relevant effects, but the real important benchmark is how well it performs on real data.
+
+
+
+
+%To emphasize that the conclusions we draw are not specific for voter persuasion studies and the available features in our lead example
+
+
+
+\subsection{GOTV Experiment} \label{section:GOTV}
+
+%In a field experiments with 229,461 potential voters, \cite{GerberGreenLarimer} evaluate the effect of a mailer on the voter turnout on the August 2006 primary election in Michigan. The mailer starts with the words ``WHO VOTES IS PUBLIC INFORMATION'' it  contains the voting history for all subjects in the household, a blank field for the upcoming election and the letter promises to sent an updated version after the election. For each individual the study contains seven individual discrete covariates: gender, age, and the voting turnout for the primary elections in 2000, 2002, 2004, and the general election in 2000 and 2002. 
+
+%BCS 05/16: I think we need to make it clear what $\mu_0^i$, $\mu_1^i$, $X^i$, and $\tau^i$ are for this dataset. Also emphasize what the treatment effect we're measuring is and why it matters. Maybe we should even put them in a table or something?
+
+To evaluate transfer learning for CATE estimation on real data, we reanalyze a set of large field experiments with more than 1.96 million potential voters \citep{gerber2017generalizability}. The authors conducted 17 experiments to evaluate the effect of a mailer on voter turnout in the 2014 U.S.\ Midterm Elections. 
+The mailer informs the targeted individual whether or not they voted in the past four major elections (2006, 2008, 2010, and 2012), and it compares their voting behavior with that of the people in the same state. The mailer finishes with a reminder that their voting behavior will be monitored. The idea is that social pressure---i.e., the social norm of voting---will encourage people to vote. 
+The likelihood of voting increases by about 2.2\% (s.e.=0.001) when given the mailer.
+
+
+Each of the experiments target a different state. This results in different populations, different ballots, and different electoral environments. In addition to this, the treatment is slightly different in each experiment, as the median voting behavior in each state is different.
+However, there are still many similarities across the experiments, so there should be gains from transferring information. %For example, as \cite{kunzel2017meta} point out, potential voters aged 63 to 67 tend to be particularly receptive to this kind of treatment while the effect of such a mailer for younger voters is much smaller.
+
+In this example, the input $X$ is a voter's demographic data including age, past voting turnout in 2006, 2008, 2009, 2010, 2011, 2012, and 2013, marital status, race, and gender. The treatment response function $\hat{\mu}_1(x)$ estimates the voting propensity for a potential voter who receives a mailer encouraging them to vote. The control response function $\hat{\mu}_0$ estimates the voting propensity if that voter did not receive a mailer. 
+The CATE $\tau$ is thus the change in the probability of voting when a unit receives a mailer. The complete dataset has this data over 17 different states. Treating each state as a separate experiment, we can perform transfer learning across them.  
+
+\begin{center}
+	\begin{tabular}{| p{2.3cm} | p{2.3cm} | p{2.3cm} |p{2.3cm} |p{2.3cm} |}
+		\hline
+		$x$ & outcome & $\mu_0$ & $\mu_1$ & $\tau$ \\ [0.5ex] 
+		\hline \hline
+		a voter profile & \parbox[t]{2cm}{The voter's \\ propensity to \\ vote} & \parbox[t]{2cm}{The voter's \\ propensity to \\ vote when they \\ do not receive \\ a mailer} & \parbox[t]{2cm}{The voter's \\ propensity to \\ vote when they \\ do receive a \\ mailer} & \parbox[t]{2cm}{Change in the \\ voter's \\ propensity to \\ vote after \\ receiving a \\ mailer \\ } \\  \hline
+		%MNIST & \parbox[t]{1.7cm}{an MNIST \\ image} & \parbox[t]{2cm}{ Price generated \\ for the image. \\ Depends on \\ magnitude of \\ depicted number \\ } & \parbox[t]{2.3cm}{Price function \\ for poorly lit \\ image} & \parbox[t]{2.3cm}{Price function \\ for well lit \\ image} & \parbox[t]{2.3cm}{Difference in \\ price between \\ poorly lit and \\ well lit image} \\ [1ex] 
+		\hline
+	\end{tabular}
+\end{center}
+
+Being able to estimate the treatment effect of sending a mailer is an important problem in elections. We may wish to only treat people whose likelihood of voting would significantly increase when receiving the mailer, to justify the cost for these mailers. Furthermore, we wish to avoid sending mailers to voters who will respond negatively to them. %Applied researchers have observed a backlash from these mailers
+This negative response has been previously observed and is therefore feasible and a relevant problem---e.g., some recipients call their Secretary of State's office or local election registrar to complain \citep{mann2010there,michelson2016risk}.  
+
+\subsubsection*{Evaluating CATE estimators on real data}
+Evaluating a CATE estimator on real data is difficult since one does not observe the true CATE or the individual treatment effect, $Y_i(1) - Y_i(0)$, for any unit because by definition only one of the two outcomes is observed for any unit. One could use the original features and simulate the outcome features, but this would require us to create a response model. Instead, we estimate the "truth" on the real data using linear models (version 1) or random forests (version 2), and we then draw the data based on these estimates. For a detailed description, we refer to Appendix \ref{section:Appendix-GOTV}. We then ask the question: how do the various methods perform when they have less data than the entire sample?
+%JSS: I really don't like the linear thing....kind of sucks.
+
+We evaluate S-NN, T-NN, and Y-NN using our transfer learning methods. We also added a baseline benchmark which does not use any transfer learning for each of the CATE estimators. 
+In addition to this, we added the S-RF and T-RF as random forest baselines, as well as the Joint estimator and the MLRW estimator, both of which use transfer learning.
+Figure \ref{fig:mainpapergotv21lm1} shows the performance of these estimators when the regression functions were created using a linear model, and Figure \ref{fig:mainpaperGOTV22rf1} shows the same, but the response functions are created using a random forest fitted on the real data. 
+
+In previous work, the non-transfer tree-based estimators such as T-RF and S-RF have achieved state of the art results on this problem \citep{kunzel2017meta}. For CATE estimation, these methods are very competitive baselines \citep{green2012modeling}. Happily for us, even non-transfer neural-network-based learners vastly outperform the prior art. In both examples, non-transfer S-NN, T-NN, and Y-NN learners are better or not much worse than T-RF and S-RF. S-NN and Y-NN perform extremely well in this example. Better still, our transfer learning approaches consistently outperform all classical baselines and non-transfer neural network learners on this benchmark. Positive transfer between experiments is readily apparent. 
+%, but we don't believe that either learner is consistently the best, and assert that it depends on the underlying data-generating distribution.  
+
+%getting rid of list 
+We find that multi-head, frozen features, and SF are usually the best methods to improve an existing neural network-based CATE estimator.  \textbf{The best estimator is MLRW.} This algorithm consistently converges to a very good solution with very few observations.
+
+%The authors collected age, past voting turnout in 2006, 2008, 2009, 2010, 2011, 2012, 2013, martial status, race dummies, and sex for each unit in the training set. 
+%We are using these covariates to target the treatments. 
+
+%%%%%%%%%%%
+
+%%PA.5.17: captions for figures don't have enough info; they should be made self-contained;  e.g. need to include which of the experiments (MNIST or CATE), need to include explanation of what's being plotted, what's observed, what's concluded from these observations
+
+
+
+\begin{figure}
+	\centering
+	\includegraphics[width=.8\linewidth]{figures/main_paper_GOTV_2_1_lm_1}
+    \caption{Social Pressure and Voter Turnout, Version 1. Our results far exceed the previous state of the art, which are represented here as S-RF, T-RF, and the baseline method for S-NN and T-NN. Our new methods are Y-NN and the transfer learning methods: warm, frozen, multi-head, joint, SF Reptile, and MLRW.}
+    %captions for figures don't have enough info; they should be made self-contained;  e.g. need to include which of the experiments (MNIST or CATE), need to include explanation of what's being plotted, what's observed, what's concluded from these observations}
+    	\label{fig:mainpapergotv21lm1}
+\end{figure}
+
+\begin{figure}
+	\centering
+	\includegraphics[width=.8\linewidth]{figures/main_paper_GOTV_2_2_rf_1}
+       \caption{Social Pressure and Voter Turnout, Version 2. Our results exceed the previous state of the art results, which are represented here as S-RF, T-RF, and the baseline method for S-NN and T-NN. Our new methods are Y-NN and the transfer learning methods: warm, frozen, multi-head, joint, SF Reptile, and MLRW.}
+       %captions for figures don't have enough info; they should be made self-contained;  e.g. need to include which of the experiments (MNIST or CATE), need to include explanation of what's being plotted, what's observed, what's concluded from these observations
+    	\label{fig:mainpaperGOTV22rf1}
+\end{figure}
+
+%%PA.5.17: how come truth is linear or random forest? is this by design?  I thought the voter thing was on real data? and MNIST definitely isn't linear classification (is it somehow here?); I am rather confused...
+
+
+
+\subsection{MNIST Example} \label{section:MNIST}
+
+%\textbf{BCS 05/16: I think we need to make it clear what $\mu_0^i$, $\mu_1^i$, $X^i$, and $\tau^i$ are for this dataset. Also emphasize what the treatment effect we're measuring is and why it's interesting. As it stands, this section really makes zero sense. I don't really understand the interpretation of the image being `well lit' or not.}
+
+
+In the previous experiment, we observed that the MLRW estimator performed most favorably and transfer learning significantly improved upon the baseline. To confirm that this conclusion is not specific to voter persuasion studies, we consider in this section intentionally a very different type of data.
+Recently, \cite{nie2017learning} introduced a simulation study wherein MNIST digits are rotated by some number of degrees $\alpha$; with $\alpha$ furnished via a single data generating process that depends on the value of the depicted digit. They then attempt to do CATE estimation to measure the heterogeneous treatment effect of a digit's label. 
+
+Motivated by this example, we develop a data generating process using MNIST digits wherein transfer learning for CATE estimation is applicable. In our example, the input $X$ is an MNIST image. We have $k$ data generating processes which return different outcomes for each input when given either treatment or control. Thus, under some fixed data generating process, $\mu_0$ represents the outcome when the input image $X$ is given the control, $\mu_1$ represents the outcome when $X$ is given the treatment, and $\tau$ is the difference in outcomes given the placement of $X$ in the treatment or control group. Each data generating process has different response functions ($\mu_0$ and $\mu_1$) and thus different CATEs ($\tau$), but each of these functions only depend on the image label presented in the image $X$. We thus hope that transfer learning could expedite the process of learning features which are indicative of the label. See Appendix \ref{app:simulation} for full details of the data generation process. 
+In Figure \ref{fig:MNIST} of Appendix \ref{app:simulation}, we confirm that a transfer learning strategy outperforms its non-transfer learning counterpart, even on image data, and also that MLRW performs well.
+%%PA.5.17: I am confused as to what it means to be willing to pay a price for an image; how has that been determined when the data set was generated?
+
+
+%For our MNIST simulation study (Section \ref{section:MNIST}), we used the MNIST database \citep{lecun1998mnist} which contains labeled handwritten images. We follow here the notation of \cite{nie2017learning}, who introduce a very similar simulation study which is not trying to evaluate transfer learning for CATE estimation, but it also emulates a RCT with the goal to evaluate different CATE estimators. 
+
+%SRK: ! We will have both simulations and we will say that, if the data is maximally different (e.g. simulation 2 MLRW will learn very littel while in very similar situations it will learn a lot. 
+
+%This example is motivated by a recent paper of \cite{nie2017learning}. Here we simulate several randomized controlled trials using image data of handwritten digits as input features \citep{lecun1998mnist}. We then simulate the response functions by rotating the digits. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

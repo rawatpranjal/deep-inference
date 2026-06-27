@@ -1,0 +1,101 @@
+\newpage
+\section{Old Experiments Section}
+
+%We conduct a simulation study to examine the performance of our models. We compare with existing uplift methods using three types of datasets: i) a real-world dataset from a marketing campaign (see Section~\ref{sec:application} for the analysis); ii) bootstrapped versions of the real-world dataset with synthetic outcomes generated from tree-based models, and iii) synthetic datasets generated from parametric models.
+
+\subsection{Fine-tuning}
+
+Deep Learning has enabled remarkable progress over the last years on a variety of tasks, such as image recognition, speech recognition, and machine translation. One crucial aspect for this progress are novel neural architectures. Currently employed architectures have mostly been developed manually by human experts, which is a time-consuming and error-prone process. Because of this, there is growing interest in automated neural architecture search (NAS) methods. NAS methods can be categorized according to three dimensions \citep{elsken2018neural}: search space, search strategy, and performance estimation strategy.
+
+The search space defines which architectures can be represented
+in principle. Incorporating prior knowledge about typical properties of architectures well-suited for a task can reduce the size of the search space and simplify the search. SMITE architecture is a Sieamese multi-layer perceptron. Therefore, the search space for the architecture is first defined by the number of hidden layers and the number of hidden units per layer. However, it should not be limited to these two parameters. The choice of loss functions, regularization and activations in deep networks has also a significant effect on the training dynamics and task performance. These functions are therefore part of the architecture and should be included in the search space.
+
+Neural network activations determine the output of a node and are a crucial component of deep learning. When the activation function is non-linear, then a two-layer neural network can be proven to be a universal function approximator. The identity activation function does not satisfy this property. When multiple layers use the identity activation function, the entire network is equivalent to a single-layer model. The Parameteric Rectified Linear Unit (PReLU) \citep{he2015delving} has been proposed as an extension of Rectified Linear Unit (ReLU) \citep{nair2010rectified} in order to improve image classification accuracy. The PReLU function is defined as
+
+\[
+f_a (x) = 
+\begin{cases}
+    x, ~\mathrm{if}~ x \geq 0\\
+    ax, ~\mathrm{otherwise}
+\end{cases}
+\]
+
+where $a \in [0;1]$ is learned in the training via backpropagation. When $a=0$, PReLU simplifies to ReLU and if $a$ is set to a fixed value, PReLU simplifies to Leaky ReLU (LReLU)  \citep{maas2013rectifier}.
+
+
+The search strategy details how to explore the search space
+(which is often exponentially large or even unbounded). It encompasses the classical exploration-exploitation trade-off since, on the one hand, it is desirable to find well-performing architectures quickly, while on the other hand, premature convergence to a region of suboptimal architectures should be avoided. In \cite{yang2019evaluation},  based on a benchmark of 8 NAS methods on 5 datasets, they compare methods with different search spaces, using a method’s relative improvement over the randomly sampled average architecture, which effectively removes advantages arising from expertly engineered search spaces or training protocols. Surprisingly, they find that many NAS techniques struggle to significantly beat the average architecture baseline. Furthermore, it is desirable to have a search strategy because unfortunately, in many deep learning tasks, training is computationally expensive. However, for our application, training SMITE on the real data takes 10 minutes for 100 epochs (on a Dual Intel Xeon 256 Gb RAM and 1 Titan V12GB). Therefore, we believe that grid search is suitable for SMITE architecture search. Table~\ref{tab:NAS} summarizes the hyper-parameters responsible for defining the architecture of SMITE. Hyper-parameter 3 must be defined for each layer. Although hyper-parameters 5-6 do not modify the architecture, they are important in terms of training. We prefer to enumerate them in Table~\ref{tab:NAS} in order to include them in the architecture search. Hyper-parameter 7 is important for reproducible results. Our experimental results are presented in Table~\ref{tab:experiments_low_rank_full_rank} on the real-world marketing campaign dataset (see Section~\ref{sec:application} for the description).
+
+\begin{table}[htb]
+    \caption{Hyper-parameters that define the architecture of SMITE.}
+    \centering
+    \begin{tabular}{|c||l|l|l|}
+         \hline
+         \# &  Hyper-parameter & Type & Scope\\
+         \hline
+         1 & \# of hidden layers & Integer & $\{0,1\}$\\
+         2 & \# of hidden units & Integer & $\{8, 16, 32, 64, \ldots, 2048\}$\\
+         3 & Activation & Nominal & $\{$ReLU, LReLU$(0.05)\}$\\
+         4 & Objective function & Nominal & $\{$TO, IE$\}$ \\
+         5 & Batch size $m$ & Integer & $\{128,256\}$ \\
+         6 & Learning rate $\xi$ & Continuous & $\{0.01,0.02,\ldots,0.10\}$ \\
+         7 & Seed & Integer & $\{1,2,3,\ldots,10\}$ \\
+         \hline
+    \end{tabular}
+    \label{tab:NAS}
+\end{table}
+
+The objective of NAS is typically to find architectures that achieve high predictive performance on unseen data. Performance estimation refers to the process of estimating this performance: the simplest option is to perform a standard training and validation of the architecture on data. Here, we use the reference metric for uplift, that is, the adjusted Qini coefficient \eqref{eq:qadj}.
+
+
+\begin{table}[H]
+    \centering
+    \caption{Fine-tuning SMITE with $p=40$ using the insurance policy data. Reported $\qadj$ are averaged over $30$ runs on validation sets, with standard errors in parenthesis. Here, the objective function used is IE.}
+    \begin{tabular}{|c||l|l|l|l|}
+        \hline
+        $m$ &  No SVD & $r=\min\{m,p\}$ & $r=\ceil{0.5\min\{m,p\}}$ & $r=\ceil{0.1\min\{m,p\}}$\\
+        \hline
+        8 & & & & \\
+        16 & & & & \\
+        32 & & & & \\
+        64 & & & & \\
+        128 & & & & \\
+        256 & & & & \\
+        512 & & & & \\
+        1024 & & & & \\
+        2048 & & & & \\
+        \hline
+    \end{tabular}
+    \label{tab:experiments_low_rank_full_rank}
+\end{table}
+
+
+
+\subsection{Data generation}
+
+We evaluate the performance of SMITE using synthetic data generated using two types of mechanisms.
+
+\paragraph{Bootstrap Data.} The underlying treatment effects are inaccessible in real-world data. To create realistic scenarios, we based one of our simulation study data generation on insurance policy data. Moreover, since we compare SMITE to random forests, we want to evaluate its performance when the data generation process comes from a tree-based model. We follow the procedure in the simulation studies of \cite{belba2019qbased}. These simulations allow us to evaluate if SMITE can recover the right representation for data generated from a tree-based model. This also makes comparisons to random forest methods fair.
+
+Several tree-based methods have been suggested in the uplift literature. Here, we use the uplift random forest as the data generation process, which is readily available in the {\bf R} library {\it uplift} \citep{guelman2014R_uplift}. We fit the random-forest on a random sub-sample $\mathcal{D}$ of the real data. We use $100$ trees and the Kullback-Leibler split criterion. Each tree has maximum depth of $5$. Based on the fitted model, we can extract the probabilities $\mu_0(\x)$ and $\mu_1(\x)$ for any given value $\mathbf{x}$. We use these probabilities to draw synthetic outcomes for treated and control observations. We start by creating a bootstrap sample $\mathcal{S}$ of size $n_\mathcal{S}$ from $\mathcal{D}$. For each observation $\mathbf{x}_i \in \mathcal{S}$, we generate a random vector $\tilde{y}_i =(\tilde{y}_{i0}, \tilde{y}_{i1})$, where $\tilde{y}_{i0}$ is the binary outcome of a Bernoulli trial with success probability $\mu_0(\mathbf{x}_i)$, and  $\tilde{y}_{i1}$ is the binary outcome of a Bernoulli trial with success probability  $\mu_1(\mathbf{x}_i)$, $i=1,\ldots, n_\mathcal{S}$. The augmented synthetic dataset $\{ \x_i , t_i, \tilde{y}_i \}_{i=1}^{n_{\mathcal{S}}}$ is the data of interest in the simulation.
+
+We repeat this process several times. Each bootstrapped data size is $10,000$ observations with $40$ covariates. 
+
+
+
+
+\subsection{Experimental results}
+
+For both simulated datasets, we do not consider any out-of-sample subset. In Monte Carlo settings, we are able to generate as much data as we want. Therefore, we first fine-tuned the methods on a single synthetic dataset of same size as the one we used in the repeated simulations presented. We generate $n=10,000$ observations with $p=40$ covariates for the bootstrapped data. For the fully synthetic datasets, we report results from experiments with $n=10,000$ observations and $p=100$ covariates. We split into training and validation and compare the results averaged over $30$ runs for the models that performed best on the validation set. 
+
+Results are described in Table \ref{tab:boot_perf} for the bootstrap datasets and Table \ref{tab:synthe_perf} for the synthetic datasets. For the fully synthetic data, we see that Causal Forest (H) and SMITE (TO) had similar performance on the validation set while SMITE (IE) significantly outperformed all the other methods. For the bootstrap data for which the outcomes were generated based on random forest model, it is interesting to see that SMITE (TO) and Causal Forest (H) give similar results. Moreover, once again, the SMITE (IE) model outperforms all the other models.
+
+%bootstrap data results
+\input{tables/table_bootstrap.tex}
+
+%MOULOUD
+%\textcolor{blue}{HERE WE NEED TO SHOW ESTIMATED AND PREDICTED UPLIFTS DISTRIBUTIONS PER METHOD. I THINK THIS WILL SHOW THAT RF METHODS COVER A RANGE THAT IS A LOT LARGER THAN SMITE. WE CAN ALSO COMPUTE THE EMPIRICAL VARIANCES AND COMPUTE A CONFIDENCE INTERVAL FOR THE VARIANCE OF THE PREDICTED UPLIFTS TO SEE IF THERE ARE SIGNIFICANTLY LARGER THANT SMITE'S VARIANCE.}
+
+
+%synthtetic data results
+\input{tables/table_synthetic.tex}

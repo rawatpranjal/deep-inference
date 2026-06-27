@@ -1,0 +1,52 @@
+\section{Confidence and Interpretation}
+\label{section:interpretation}
+
+In this section, we move from theory to practice, and  treat best practices for building confidence intervals and interpreting heterogeneous treatment effects. Both of these topics are active areas of development, not only within the causal inference literature, but across machine learning research. Here we specifically focus on recommendations that can be easily implemented by analysts.
+
+\subsection{Assessing Confidence}
+\label{subsection:confidence}
+(Tutorial 4 \href{https://colab.research.google.com/drive/1NHYTbvGq-cWyy-mm0TrBH2rAmMqtcgPJ?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png} })
+
+In this paper, we feature Dragonnet over other approaches because of its attractive statistical properties. Because the Targeted Regularization procedure in Dragonnet is essentially a variant of TMLE, an asymptotically valid standard error can be calculated as the sample corrected variance of the efficient influence curve $\sigma_{\hat{ATE}}$, where
+\begin{equation}
+\sigma_{\hat{ATE_{TR}}}=\sqrt{\frac{Var(EIC_{\hat{ATE_{TR}}})}{N}}
+\end{equation}
+and,
+
+\begin{equation}
+Var(EIC_{\hat{ATE_{TR}}}) = Var[(\frac{T}{\pi(X,1)}-\frac{1-T}{\pi(X,0)})(Y-h^*(X,T))+(h^*(X,1)-h^*(X,0))-\hat{ATE_{TR}}]
+\end{equation}
+(\citep{van2011targeted}, pp. 96)
+
+In Tutorial 5, we show how $\sigma_{\hat{ATE}}$ can be used to calculate a Wald confidence interval for Dragonnet. While not featured in this review, asymptotically valid conference intervals can also be calculated using RieszNet, a variant of Dragonnet introduced in \citet{chernozhukov2022riesznet} that connects neural network estimation to the automatically debiased machine learning literature currently popular in causal econometrics \citep{chernozhukov2016double,chernozhukov2021automatic}.
+
+\subsection{Interpretation}
+\label{subsection:interpretation}
+(Tutorial 4 \href{https://colab.research.google.com/drive/1NHYTbvGq-cWyy-mm0TrBH2rAmMqtcgPJ?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png} })
+
+A lack of interpretability has been a barrier to the adoption of machine learning methods like neural networks and random forests in social science settings. However, the literature on post-hoc interpretability techniques has matured considerably over the past five years, and several techniques for identifying important features/covariates such as permutation importance, LIME scores, SHAP scores, Individual Conditional Expectation plots etc... are in widespread usage today \citep{altmann2010,goldstein2017,lundberg2017,ribeiro2016should}. For a broad and accessible treatment on interpreting machine learning models, see \citet{molnar2022interpretable}.  
+
+Building on criteria used to evaluate other explainable AI methods, \citet{crabbe2022benchmarking} note four desirable properties of a feature importance technique for the interpretation of deep causal estimators: sensitivity, completeness, linearity, and implementation invariance \citep{sundararajan2017axiomatic}.  A method that is 'sensitive' can distinguish between features that are simply predictive of the outcome, and those that actually influence CATE heterogeneity. A method that is 'complete' identifies all features that, together, explain all effect heterogeneity compared to a baseline. A 'linear' method is one where the feature importance scores additively describe the prediction. Lastly, the approach should be agnostic to both the model architecture (e.g., TARNet, Dragonnet) and different architectural hyperparameterizations (i.e., invariant to implementation). Of the feature importance methods surveyed, they identify two that manifest all four of these qualities: SHAP scores, and integrated gradients.
+
+SHAP (SHapley Additive exPlanations) scores have emerged as one of the most popular methods for evaluating machine learning models in recent years \citep{lundberg2017}. SHAP is what is called a  “local” interpretability method: it provides feature importance estimates for each individual datum. Theoretically, SHAP frames feature importance estimation as a cooperative (game-theoretic) game between covariates to predict a specific outcome. Under the hood, the algorithm exhaustively compares all possible “coalitions” of covariates and their ability to predict the outcome (win the game). Predictions from this powerset of coalitions are used to calculate the additive marginal contributions of each feature in prediction using Shapley values. The disadvantage of SHAP is that, even with computational tricks, calculating scores for every unit can become computationally intractable in high dimensional datasets. SHAP scores are interpreted in comparison to a causal baseline of the ATE.
+
+Because of the computational expense of SHAP scores, \citet{crabbe2022benchmarking} also recommend another local-interpretability method called “Integrated Gradients” \citep{sundararajan2017axiomatic}. Intuitively, this algorithm draws a straight-line, linear path in feature space between the target input (individual unit) and a baseline (i.e., a hypothetical unit who is exactly average on all covariates). A feature importance score can then be constructed by calculating the gradient in prediction error along this path with respect to the feature of interest. Note that SHAP scores can also be understood theoretically within the path framework. From this perspective, coalitions are paths in which each feature is turned on sequentially, and the SHAP score is the expectation across these paths. This interpretation leads to a gradient-based algorithm for calculating SHAP scores specifically for neural networks, which is also in the SHAP package. In practice, we recommend that analysts experiment with both integrated gradients and SHAP scores.
+
+\subsection{What's in the tutorials?}
+\label{subsection:tutorials}
+
+To move from theory to empirics, the \href{https://github.com/kochbj/Deep-Learning-for-Causal-Inference/tree/main}{online tutorials} show how to implement many of the ideas presented throughout this primer. The tutorials are hosted in notebooks in the Google Colaboratory environment. When users open a Colab notebook, Google immediately provides a free virtual machine with standard Python machine learning packages available. This means that readers need not install anything on their own computers to experiment with these models. The tutorials are written in the Python programming language and provide examples in both Tensorflow2 and Pytorch, the two most popular deep learning frameworks. We note that both Tensorflow2 and Pytorch have implementations in R. However, we strongly recommend that readers interested in getting into deep learning work in Python, which has a much richer ecosystem of third-party packages for machine learning. 
+
+Currently there are five tutorials:
+
+\begin{itemize}
+    \item \href{https://colab.research.google.com/drive/1hjnyfJjFm0wWM3BcZMi0cpW0uBRd5c5f?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png}} Tutorial 1 introduces S-learners, and T-learners before TARNet as a way to get familiar with building custom Tensorflow models.
+    \item \href{https://colab.research.google.com/drive/1MBUkQO7rh89JrlAV0p1aLNoF9CIB3rZZ?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png}} Tutorial 2 focuses on causal inference metrics and hyperparameter optimization. Because we do not observe counterfactual outcomes, it's not obvious how to optimize supervised learning models for causal inference. This tutorial introduces some metrics for evaluating model performance. In the first part, you learn how to assess performance on these metrics in Tensorboard. In the second part, we hack \href{https://keras-team.github.io/keras-tuner/}{Keras Tuner} to do hyperparameter optimization for TARNet, and discuss considerations for training models as estimators rather than predictors.
+    \item \href{https://colab.research.google.com/drive/1XzyOINgdSr78_KT7HJRJn07AwkHh-fG8?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png}} Tutorial 3 highlights the semi-parametric extension to TARNet featured in \citet{Shi2019}. We add treatment modeling to our TARNet model, and build an augmented inverse propensity score estimator. We then briefly describe the algorithm for Targeted Maximum Likelihood Estimation to introduce and build a Dragonnet with Shi et al.'s Targeted Regularization.  
+    \item \href{https://colab.research.google.com/drive/1NHYTbvGq-cWyy-mm0TrBH2rAmMqtcgPJ?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png}} Tutorial 4 reimplements Dragonnet in Pytorch and shows how to calculate asymptotically-valid confidence intervals for the average treatment effect. We also interpret the features contributing to different heterogeneous CATEs using Integrated Gradients and SHAP scores. This tutorial is a good tutorial if you also just want to learn how to interpret SHAP scores, independent of the context of causal inference.
+    \item \href{https://colab.research.google.com/drive/1phpoNEdvDgipCZCnpfvPC5anuIuodKB6?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png}} 
+    Tutorial 5 features the Counterfactual Regression Network (CFRNet) and propensity-weighted CFRNet in \citet{Shalit2017,Johansson2018,johannson2020} (Appendix A.\ref{appendix:cfrnet}). This approach relies on integral probability metrics to bound the counterfactual prediction loss and force the treated and control distributions closer together. The weighted variant adds adaptive propensity-based weights that provide a consistency guarantee, relax overlap assumptions, and ideally reduce bias.
+
+
+    
+\end{itemize}

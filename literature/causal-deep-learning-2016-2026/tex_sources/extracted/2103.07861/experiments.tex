@@ -1,0 +1,127 @@
+\section{Experiments}\label{sec:experiments}
+
+\begin{table}[t]
+\vspace{-5mm}
+\centering{}%
+\scalebox{0.92}{
+\begin{tabular}{c|c|cccc}
+\toprule[0.8pt]
+Dataset & Model & Naive & Doubly Robust & TMLE & TR\tabularnewline
+\hline 
+\multirow{3}{*}{Simulation} & Dragonnet & $0.045\pm0.00094$ & $0.026\pm0.0012$ & $0.037\pm0.00086$ & $0.028\pm0.00088$\tabularnewline
+ & Drnet & $0.042\pm0.00090$ & $0.023\pm0.0011$ & $0.035\pm0.00083$ & $0.027\pm0.00086$\tabularnewline
+ & Vcnet & $0.018\pm0.00098$ & $0.022\pm0.0013$ & $0.016\pm0.00082$ & $0.014\pm0.00091$\tabularnewline
+\hline 
+\multirow{3}{*}{IHDP} & Dragonnet & $0.350\pm0.016$ & $0.307\pm0.016$ & $0.252\pm0.0087$ & $0.208\pm0.0072$\tabularnewline
+ & DRnet & $0.316\pm0.016$ & $0.274\pm0.014$ & $0.274\pm0.018$ & $0.230\pm0.0086$\tabularnewline
+ & Vcnet & $0.189\pm0.013$ & $0.190\pm0.013$ & $0.148\pm0.010$ & $0.117\pm0.0085$\tabularnewline
+\hline 
+\multirow{3}{*}{News} & Dragonnet & $0.180\pm0.0081$ & $0.155\pm0.0057$ & $0.179\pm0.0080$ & $0.149\pm0.0051$\tabularnewline
+ & DRnet & $0.183\pm0.0084$ & $0.141\pm0.0054$ & $0.183\pm0.0083$ & $0.114\pm0.0041$\tabularnewline
+ & Vcnet & $0.028\pm0.0011$ & $0.023\pm0.0013$ & $0.028\pm0.0010$ & $0.024\pm0.0009$\tabularnewline
+\bottomrule[0.8pt]
+\end{tabular}}
+\caption{Experiment result comparing neural network based methods. TR refers to targeted regularization. Numbers reported are AMSE of testing data based on 100 repeats for Simulation and IHDP and 20 repeats for News, and numbers after $\pm$ are the estimated standard deviation of the average value.}
+\label{table:experiment} \vspace{-3mm}
+\end{table}
+
+\begin{table}[t]
+\centering{}
+\scalebox{1.}{
+\begin{tabular}{c|ccc}
+\toprule[0.8pt]
+Method           & Simulation       & IHDP & News  
+\tabularnewline
+\hline 
+Causal Forest    & $0.043\pm0.0021$  & $0.97\pm0.034$ &  $0.211\pm0.003$\\
+BART             & $0.040\pm0.0013$  & $0.33\pm0.005$& $0.066\pm0.003$ \\
+GPS              & $0.028\pm0.0016$  & $0.67\pm0.025$ & $0.022\pm0.001$ \\
+VCNet+TR         & $0.014\pm0.0009$  & $0.12\pm0.009$ & $0.024\pm0.001$ \tabularnewline
+\bottomrule[0.8pt]
+\end{tabular}}
+\caption{Comparison of VCNet against non-neural-network based baselines. Reported AMSE are averaged over 100 experiments for simulation and IHDP, and 20 experiments for News. Numbers after $\pm$ are estimated standard deviation of the average AMSE. }
+\label{table:experiment_baselines} \vspace{-5mm}
+\end{table}
+
+\textbf{Dataset.} 
+Since the true ADRF are rarely available for real-world data, previous methods on treatment effect estimation often use synthetic/semi-synthetic data for empirical evaluation. Following this convention, we consider one synthetic and two semi-synthetic datasets: IHDP \citep{hill2011bayesian} and News \citep{newman2008bag}. The synthetic dataset contains 500 training points and 200 testing points, with the detailed generating scheme included in the Appendix. IHDP contains binary treatment with 747 observations on 25 covariates, and News consists of 3000 randomly sampled news items from the NY Times corpus \citep{newman2008bag}.
+Both IHDP and News are widely used benchmarking datasets for binary treatment effect estimation, but here we focus on continuous treatment and thus we need to generate the continuous treatment as well as outcome by ourselves. The generating scheme is in the Appendix. For IHDP and news,  we randomly split into training set (67\%) and testing set (33\%). 
+
+
+\textbf{Baselines and Settings.}
+For neural network baselines, we compare against Dragonnet \citep{shi2019adapting} and DRNet \citep{schwab2019learning}. 
+% Dragonnet is SOTA  among neural network methods for estimating average treatment effect in binary treatment, and DRNet is SOTA in estimating individual dose-response curve. We improve upon the original Dragonnet and DRNet by (a) concatenating $T$ as an extra input and using separate heads for $T$ in different blocks for Dragonnet, and (b) 
+%As suggests by \citet{shi2019adapting}, adding a conditional density estimation head improves the performance and thus we modify the original DRNet with an extra conditional density estimator for fair comparision.
+We improve upon the original Dragonnet and DRNet by (a) using separate heads for $T$ in different blocks for Dragonnet, and (b) adding a conditional density estimation head for DRNet, since it has been suggested by \citet{shi2019adapting} that adding a conditional density estimation head improves the performance.
+%The estimation of ADRF is provably and empirically improved by adding a conditional density estimator head \citep{shi2019adapting}. Thus, for fairness, we add a conditional density estimating head for DRNet.
+For non-neural-network baselines, we consider causal forest  \citep{wager2018estimation}, Bayesian Additive Regression Tree (BART) \citep{chipman2010bart}, and GPS \citep{imbens2000role}. 
+
+For VCNet, we use truncated polynomial basis with degree 2 and two knots at $\{1/3,2/3\}$ (thus altogether 5 basis). Dragonnet and DRNet use 5 blocks and thus the model complexity of neural-network models are the same. In practice we may vary the degree and number of knots in VCNet, here the choice is made simply for fair comparison against Dragonnet and DRNet, ensuring the number of parameters of the compared models is the same.
+The other hyper-parameters of each method on each data are tuned on 20 separate tuning sets.
+Due to space limit, we refer readers to the Appendix \ref{apxsec: exp} for more details on experimental settings. 
+%, including the number of trees for BART, the number of trees and node size for CF, and the number of knots for GPS. The other hyper-parameters are set to the default value of the R packages.
+%1. all improve via conditional density estimator; 2. TRnet, 5 blocks and thus same network complexity as ours; 3. Drnet 5 blocks with network complexity slightly larger than ours due the concatenate of $t$. Also introduce doubly robust/TMLE
+
+
+
+\textbf{Estimator and Metrics.} 
+{\color{black}To evaluate the effectiveness of targeted regularization}, for all neural-network methods we implement four versions: naive version (with conditional density estimator head, trained using loss (\ref{eq:loss_without_tr})), doubly robust version \citep{kennedy2017non} by regressing (\ref{eq:clever_response}) on treatment with $\hat \mu,\hat\pi$ trained using loss (\ref{eq:loss_without_tr}), TMLE \citep{van2006targeted} version with initial estimator trained using loss (\ref{eq:loss_without_tr}), and TR version trained using loss (\ref{eq:targeted_reg}).
+For non-neural-network based models, we use the usual estimator.
+For evaluation metric, following \cite{schwab2019learning}, we use the average mean squared error (AMSE) on test set, where
+\iffalse
+\begin{equation*}
+    \widehat{\text{Bias}}=\int_{\mathcal{T}}|\widehat{\psi_s(t)}-\psi(t)|\pi(t)dt,
+\end{equation*}
+\fi
+$
+    \text{AMSE}=\frac{1}{S}\sum_{s=1}^S\int_{\mathcal{T}}[\hat{\psi_s}(t)-\psi(t)]^2\pi(t)dt
+$
+and $\hat{\psi_s}(t)$ is the estimated $\psi(t)$ in the $s$-th simulation.
+
+
+
+% \begin{table}
+
+% \begin{subtable}{1\textwidth}
+% \sisetup{table-format=-1.2}   % 2 decima
+% \centering%
+% \begin{tabular}{c|cccc}
+% \toprule[0.75pt]
+% Model & Naive & Doubly Robust & TMLE & TR\tabularnewline
+% \hline 
+% Dragonnet & $0.045\pm0.00094$ & $0.026\pm0.0012$ & $0.037\pm0.00086$ & $0.028\pm0.00088$\tabularnewline
+% DRNet+Dragonnet & $0.042\pm0.00090$ & $0.023\pm0.0011$ & $0.035\pm0.00083$ & $0.027\pm0.00086$\tabularnewline
+% VCNet & $0.018\pm0.00098$ & $0.022\pm0.0013$ & $0.016\pm0.00082$ & $0.014\pm0.00091$\tabularnewline
+% \bottomrule[0.75pt]
+% \end{tabular}
+% \caption{Synthetic dataset.}
+% \label{table:simulation}
+% \end{subtable}
+
+% \begin{subtable}{1\textwidth}
+% \sisetup{table-format=-1.2}
+% %\begin{table}
+% \centering%
+% \begin{tabular}{c|cccc}
+% \toprule[0.75pt]
+% Model & Naive & Doubly Robust & TMLE & TR\tabularnewline
+% \hline 
+% Dragonnet & $0.350\pm0.016$ & $0.307\pm0.016$ & $0.252\pm0.0087$ & $0.208\pm0.0072$\tabularnewline
+% DRNet+Dragonnet & $0.316\pm0.016$ & $0.274\pm0.014$ & $0.274\pm0.018$ & $0.230\pm0.0086$\tabularnewline
+% VCNet & $0.189\pm0.013$ & $0.190\pm0.013$ & $0.148\pm0.010$ & $0.117\pm0.0085$\tabularnewline
+% \bottomrule[0.75pt]
+% \end{tabular}
+% \caption{IHDP. }
+% \label{table:ihdp}
+% %\end{table}
+% \end{subtable}
+% \caption{VCNet with TR is SOTA among neural network based methods. Numbers reported are AMSE of testing data based on 100 simulated datasets, and numbers after $\pm$ are the estimated standard deviation.}
+% \vspace{-2em}
+% \end{table}
+
+\textbf{Results.}
+Table \ref{table:experiment} compares neural network based methods. Comparing results in each column, we observe a performance boost from the varying coefficient structure. Comparing results in each row, we find that naive versions consistently perform the worst, targeted regularization often achieves the best performance, whereas performance of doubly robust estimator and TMLE varies across datasets.
+In Table \ref{table:experiment_baselines}, we compare our approach with traditional statistical models. We observe that in simulation and IHDP, VCNet + targeted regularization outperforms baselines by a large margin. In News, its performance is close to the best one. %Thus, we conclude that the proposed method has good and robust performance. 
+The implementation can be found in an open source repository\footnote{\url{https://github.com/lushleaf/varying-coefficient-net-with-functional-tr}}.
+
+

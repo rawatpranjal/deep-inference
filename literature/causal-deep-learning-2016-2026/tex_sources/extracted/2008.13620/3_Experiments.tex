@@ -1,0 +1,85 @@
+\vspace{-5pt}
+\section{Experimental Setup}
+To evaluate the performance of the proposed model, we conduct comprehensive comparison experiments on three different datasets: fully-synthetic dataset, semi-synthetic dataset and real-world dataset.
+
+\subsection{Datasets and Simulation}
+\subsubsection{Synthetic Dataset}
+As introduced in the previous section, the treatment assignments $a^{(i)}_t$ at each time stamp are influenced by the confounders $q^{(i)}_t$, which are consist of previous hidden confounders $z^{(i)}_{t-1}$, current time-varying covariates $x^{(i)}_t$ and static features $c^{(i)}$. We first simulate $x^{(i)}_t$ and $z^{(i)}_{t}$ for each patient at time $t$ following $p$-order autoregressive process \cite{mills1991time} as,
+\begin{equation}
+\begin{aligned}
+    x^{(i)}_{t,j} = \frac{1}{p}\sum_{r=1}^{p}(\alpha_{r,j}x^{(i)}_{t-r,j}+\beta_{r}a^{(i)}_{t-r}) + \eta_{t}\\
+    z^{(i)}_{t,j} = \frac{1}{p}\sum_{r=1}^{p}(\mu_{r,j}z^{(i)}_{t-r,j}+\upsilon_{r}a^{(i)}_{t-r}) + \epsilon_{t}
+\end{aligned}
+\end{equation}
+where $x^{(i)}_{t,j}$ and $z^{(i)}_{t,j}$ denote the $j$-th column of $x^{(i)}_t$ and $z^{(i)}_{t}$, respectively. For each $j$, $\alpha_{r,j},\mu_{r,j}\sim \mathcal{N}(1-(r/p),(1/p)^{2})$ control the amount of historical information of last p time stamps incorporated to the current representations. $\beta_{r},\upsilon_{r}\sim \mathcal{N}(0, 0.02^{2})$ controls the influence of previous treatment assignments. $\eta_{t},\epsilon_{t}\sim \mathcal{N}(0,0.01^{2})$ are randomly sampled noises. 
+
+To simulate the treatment assignments, we generate $1000$ treated samples and $3000$ control samples. For treated samples, we randomly pick the treatment initial point among all time stamps. The treatments starting from the initial point are all set to $1$. For the control samples, the treatments at each time stamp are all set to $0$. 
+
+The confounders $q^{(i)}_t$ at time stamp $t$ and outcome $y^{(i)}_{T+\tau}$ can be simulated using the hidden confounders and current covariates as follows,
+\begin{equation}
+\label{eq:synthetic-outcome}
+\begin{aligned}
+& q^{(i)}_t = \gamma_{h}\frac{1}{t}\sum_{r=1}^{t}z^{(i)}_{r} + (1-\gamma_{h})g([x^{(i)}_t,c^{(i)}])\\
+& y^{(i)}_{T+\tau} = w^{\top}q^{(i)}_{T}+b
+\end{aligned}
+\end{equation}
+% \begin{equation}
+% \label{eq:syn-outcome}
+    
+% \end{equation} 
+where $\gamma_{h}$ is the parameter to control the influence of hidden confounders, $w\sim\mathcal{U}(-1,1)$ and $b\sim\mathcal{N}(0,0.1)$. The function $g(\cdot)$ maps the concatenated feature vectors $[x^{(i)}_t,c^{(i)}]$ into the hidden space. In this paper, for each individual, we simulate 100 time-varying covariates, 5 static covariates with 10 time stamps in total. We modify the value of $\gamma_{h}\in\{0.1, 0.3,0.5,0.7\}$ and obtain four variants of the current dataset. 
+
+\subsubsection{Semi-synthetic Dataset based on MIMIC-III}
+With a similar simulation process, we construct a semi-synthetic dataset based on a real-world dataset: Medical Information Mart for Intensive Care version III (MIMIC-III) \cite{johnson2016mimic}. MIMIC-III has more than 61,000 ICU admissions from 2001 to 2012 with recorded patients’ demographics and temporal information, including vital signs, lab tests, and treatment decisions. We extracted 11,715 adult sepsis patients fulfilling the sepsis-3 criteria \cite{sepsis3} as our studied cohort from MIMIC-III since sepsis contributes to up to half of all hospital deaths and is associated with more than \$24 billion in annual costs in the United States \cite{liu2014hospital}.
+
+
+Here, we obtain 27 time-varying covariates (vital signs: temperature, pulse rate, glucose, etc; lab tests: potassium, sodium, chloride, etc.) and 12 static demographics (i.e., age, gender, race, height, weight, etc.) as potential confounding variables. The full list of covariates is available at Github\footnote{\url{https://github.com/ruoqi-liu/DSW}}. We consider vasopressors as treatments since they are commonly used in septic patients. As the MIMIC-III dataset is real world observational data, then it is impossible to obtain the counterfactual outcomes for calculating the ground truth treatment effect. Therefore, we simulate the potential outcomes for each patient using the observed covariates and treatment assignments. The simulation process is similar to the way we generate fully-synthetic dataset, with the exception that we only need to synthesize the potential outcomes (using Eq. \ref{eq:synthetic-outcome}). By varying the values of $\gamma_h\in\{0.1, 0.3, 0.5, 0.7\}$, we have four variants of the current datasets.
+
+
+\subsubsection{Real world Dataset: MIMIC-III}
+To evaluate the performance of our model in a real-world application, we design a causal inference setting based on the MIMIC-III dataset. (1) \textbf{Treatment}. We consider two available treatment assignments: vasopressors (vaso) and mechanical ventilator (mv). For each treatment option, we separately evaluate its causal effect on the important outcome signals. (2) \textbf{Outcomes}. To evaluate the treatment effect of vasopressors, we use mean blood pressure (Meanbp) as target outcomes since vasopressors are highly related to Meanbp. For mechanical ventilator, we adopt oxygen saturation (SpO2) as outcome since ventilator is usually assigned to patients with the difficulty of breathing. (3) \textbf{Confounders}. We consider the same confounders as in synthetic dataset (27 time-varying covariates and 12 static demographics).
+
+\subsection{Methods for comparison}
+To evaluate the performance of the proposed framework in estimating the ITE, we conduct comparison experiments on the following state-of-the-art causal inference methods,
+
+% \textcolor{blue}{$\leftarrow$ To evaluate the performance of proposed framework in estimating the ITE, we conduct comparison experiments to compare the proposed model with the four categories of state-of-the-art causal inference methods, including two base model, two matching based models, four representation learning based models and two forest based models.}
+
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Linear Regression (LR)}. LR directly regard the treatment as an additional feature for potential outcome prediction. It ignores the confounders and selection bias in observational data.
+    \item \textbf{Random Forest (RF)}. The training process is same as LR (using treatment as a feature). We vary the number of trees in range $\{50,60,..,150\}$ and select best parameter setting on validation set. 
+    \item \textbf{K-Nearest Neighbor Matching (KNN)} \cite{crump2008nonparametric}. KNN is a matching based method that estimates the counterfactual outcomes of treated (control) group from K-nearest neighbors in control (treated) group. We attempts three different distance metrics \textit{euclidean}, \textit{minkowski} and \textit{mahalanobis}, and choose the the metric yields best performance on the validation dataset.  
+    \item \textbf{Propensity Score Matching (PSM)} \cite{rosenbaum1983central}. PSM is also a matching based method but instead use propensity score to measure the distance among individuals. Commonly, logistic regression is adopted for propensity score estimation. For logistic regression, we try different solvers: \textit{liblinear}, \textit{lbfgs}, \textit{sag} and \textit{saga} on the training set and select the solver with best performance on the validation set.
+    \item \textbf{Counterfactual Regression (CFR)} \cite{johansson2016learning,shalit2017estimating}. CFR is deep representation learning based method. CFR has four different variants according the selection of distribution balancing metrics: Maximum Mean Discrepancy (\textbf{CFR MMD}), Wasserstein (\textbf{CFR WASS}), \textbf{BNN}, \textbf{TARNet}.
+    \item \textbf{Causal Forest (CF)} \cite{wager2018estimation}. CF is an extension of RF for estimating the ITE, which is designed for causal effect estimation.
+    \item \textbf{Bayesian Additive Regression Trees (BART)} \cite{hill2011bayesian}. BART is a non-parametric Bayesian regression tree model, which takes the covariates and treatment as inputs and outputs the distribution of outcomes. 
+    % \item \textbf{Causal Effect Variational Autoencoder (CEVAE)\cite{louizos2017causal}}. CEVAE is a deep latent-variable models for estimating ITE. It assumes the existence of hidden confounders.
+\end{itemize}
+
+% We further evaluate the effectiveness of each component of the proposed method by implementing two variants of \model as follows,
+% \begin{itemize}
+%     % \item \textbf{\modelnospace-GRU}. \modelnospace-M removes the GRU layer and attention operation and linearly concatenate the time-varying covariates with treatments. In this way, the model will not take advantage of historical information. 
+%     \item \textbf{\modelnospace-Weighting}. To evaluate the impact of time-varying weighting operation, \modelnospace-Weightingl removes the weights for each indiviudal when computing the loss function. 
+%     \item \textbf{\modelnospace-MaxPool}. To evaluate the impact of max-poolin operation, \modelnospace-MaxPool removes the max-pooling layer and directly leverage the last time stamp output from GRU for outcome prediction. 
+% \end{itemize}
+
+\subsection{Performance Measurement}
+To evaluate the estimated ITE, we adopt mean squared error (MSE) between the ground truth and estimated ITE as follows,
+\begin{equation}
+    \text{PEHE} = \frac{1}{N}\sum_{i=1}^{N}((y^{(i)}_{1}-y^{(i)}_{0})-(\hat{y}^{(i)}_{1}-\hat{y}^{(i)}_{0}))^{2},
+\end{equation}
+which is also known as Precision in Estimation of Heterogeneous Effect (PEHE). Typically, we report the rooted PEHE $\sqrt{\text{PEHE}}$ in our paper. We are also interested in the causal effect over the whole population to help determine whether a treatment should be assigned to population. Then we calculate the mean absolute error (MAE) between the ground truth and estimated and average treatment effect (ATE):
+\begin{equation}
+    \text{ATE}=|\frac{1}{N}\sum_{i=1}^{N}(y^{(i)}_{1}-y^{(i)}_{0})-\frac{1}{N}\sum_{i=1}^{N}(\hat{y}^{(i)}_{1}-\hat{y}^{(i)}_{0})|
+\end{equation}
+Additionally, we adopt rooted mean squared error (RMSE) between the estimated factual outcomes and ground truth outcomes to evaluate the performance on factual prediction task as follows,
+\begin{equation}
+\text{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^{N}(\hat{y}^{(i)}_{t}-y^{(i)}_{t})^2}
+\end{equation}
+
+% \textcolor{green}{We need some justifications here: 1. What do such PEHE and ATE mean in plain English; 2. Why those metrics are related? Don't expect any causal inference background from reviewers.}
+
+\subsection{Implement Details}
+The model is implemented and trained with Python 3.6 and PyTorch 1.4 \footnote{https://pytorch.org/}, on a high-performance computing cluster with four NVIDIA TITAN RTX 6000 GPUs. We train our model using the adaptive moment estimation (Adam) algorithm with a batch size of 128 subjects and the learning rate is 0.001. The data is randomly split into training, validation and test sets with a ratio of $70\%$, $10\%$, $20\%$. The information from a given patient is only present in one set. The validation set is used to improve the models and select the best model hyper-parameters. We report the performance of our model and baselines on the test set. We use $\sqrt{\text{PEHE}}$ and ATE error to measure the models' performance on ITE estimation, and RMSE for factual prediction. As all baseline methods are originally designed for static environment, we run these models independently on each time stamp and average the evaluation metrics over all time stamps. The code and more implementation details are available at \url{https://github.com/ruoqi-liu/DSW}.
+
+
+

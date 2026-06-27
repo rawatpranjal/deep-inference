@@ -1,0 +1,230 @@
+
+\section{Experiments}
+\label{sec:appendix_experiments}
+
+
+In this section, we present in more detail the experimental protocol as well as the results associated with the different scenarios.
+
+
+Each simulation is defined by a data-generating process with a known effect function. Each run of each simulation generates a dataset, and split into training, validation, and test subsets. We use the training data to estimate $L$ different uplift functions $\{\hat{u}_l\}_{l=1}^L$ using $L$ different methods. For each of those we calculate the validation metric $\qadj$ using the data in validation set. The models selected by optimizing each validation-set metric are then used to predict the uplift on the test set.
+
+\paragraph{Data generating process}
+
+We generate synthetic data similar  to  \cite{powers2018some}. For each experiment, we generate $n$ observations and $p$ covariates. We draw odd-numbered covariates independently from a standard Gaussian distribution. Then, we draw even-numbered covariates independently from a Bernoulli distribution with probability $1/2$. Across all experiments, we define the mean effect function $\mu(\cdot)$ and the treatment effect function $\tau(\cdot)$ for a given noise level $\sigma^2$. Given the elements above, our data generation model is, for $i=1,...,n$,
+\begin{align*}
+    &Y_i^* \mid \x_i, t_i \sim \mathcal{N}(\mu(\x_i) + t_i\tau(\x_i), \sigma^2),\\
+    &Y_i = \mathbbm{1}(Y_i^* > 0 \mid \x_i, t_i)
+\end{align*}
+where $t_i$ is the realisation of the random variable $T_i \sim \mathrm{Bernoulli}(1/2)$ and $Y_i$ is the binary outcome random variable. Therefore, $Y_i$ follows a Bernoulli distribution with parameter $\mathrm{Pr}(Y_i^* > 0 \mid \x_i, t_i)$ and it is easy to recover the ``true'' uplift $u_i^*$, that is,
+\begin{align}
+    u_i^* &= \mathrm{Pr}(Y_i^* > 0 \mid \x_i, T_i = 1) - \mathrm{Pr}(Y_i^* > 0 \mid \x_i, T_i = 0) \nonumber \\
+    u_i^* &= \Phi \Bigl( \frac{\mu(\x_i) + \tau(\x_i)}{\sigma} \Bigr) - \Phi \Big( \frac{\mu(\x_i)}{\sigma} \Big) \label{eq:sim_true_uplift}
+\end{align}
+for $i=1,\ldots,n$, where $\Phi(.)$ is the standard Gaussian cumulative distribution function.
+
+Following \cite{powers2018some},  within each set of simulations, we make different choices of mean effect function and treatment effect function, each represents a wide variety of functional forms, univariate and multivariate, additive and interactive, linear and  piecewise constant. The functions are
+\begin{align*}
+    f_1(\x) &= 0 \\
+    f_2(\x) &= 5 \mathbbm{1}(x_1 > 1) - 5\\
+    f_3(\x) &= 2 x_1 - 4 \\
+    f_4(\x) &= x_2 x_4 x_6 + 2 x_2 x_4 (1-x_6) +3x_2(1-x_4)x_6 + 4x_2(1-x_4)(1-x_6) + 5(1-x_2)x_4x_6 \\
+            &+ 6(1-x_2)x_4(1-x_6) + 7 (1-x_2)(1-x_4)x_6 + 8(1-x_2)(1-x_4)(1-x_6)\\
+    f_5(\x) &= x_1 + x_3 + x_5 + x_7 + x_8 + x_9 - 2\\
+    f_6(\x) &= 4 \mathbbm{1}(x_1 > 1)\mathbbm{1}(x_3 > 0) + 4\mathbbm{1}(x_5 > 1)\mathbbm{1}(x_7 > 0) + 2x_8x_9\\
+    f_7(\x) &= \frac{1}{2} (x_1^2 + x_2 + x_3^2 + x_4 + x_5^2 + x_6 + x_7^2 + x_8 + x_9^2 - 11)\\
+    f_8(\x) &= \frac{1}{\sqrt{2}} (f_4(\x) + f_5(\x)).
+\end{align*}
+
+Table~\ref{tab:scenarios} gives the mean and treatment effect functions for the different randomized simulations, in terms of the eight functions above. In Figure~\ref{fig:qini_curves_scene}, we show the Qini curves associated with the ``true" uplift $u^*$. 
+
+
+\begin{table}[!ht]
+    \centering
+    \caption{Specifications for the 5 simulation scenarios. The rows of the table correspond, respectively, to the sample size, dimensionality, mean effect function, treatment effect function and noise level.}
+    \label{tab:scenarios}
+    \begin{tabular}{l|ccccc}
+        Scenarios & 1 & 2 & 3 & 4 & 5\\
+        Parameters & & & & & \\
+        \hline
+        $n$ & 10000 & 20000 & 20000 & 20000 & 20000 \\
+        $p$ & 200 & 100 & 100 & 100 & 100 \\
+        $\mu(\x)$ & $f_7(\x)$ & $f_3(\x)$ & $f_1(\x)$ & $f_2(\x)$ & $f_6(\x)$\\
+        $\tau(\x)$ & $f_4(\x)$ & $f_5(\x)$ & $f_6(\x)$ &$ f_7(\x)$ & $f_8(\x)$\\
+        $\sigma$ & $1/2$ & $1$ & $1$ & $2$ & $4$\\
+        \hline
+    \end{tabular}
+\end{table}
+
+The defined scenarios are interesting because they represent different situations that we can face with real data. Indeed, scenario 1, although it seems simpler than the others (with a small noise level), is in fact a case that happens often, especially for marketing campaigns. In this scenario, by construction, there are no do-not-disturb clients. This results in an increasing monotonic Qini curve. In scenario 2, we introduce a group of do-not-disturb clients. In addition, we increase the noise level as well as the number of observations, but we reduce the number of variables. The average treatment effect is negative but a small group of persuadables is generated. In scenario 3, the main effect function is zero. Thus, the uplift is entirely guided by the treatment effect function. In scenario 4, we introduce a quadratic treatment effect function and scenario 5 is the most complex one. 
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.49\textwidth]{figures/simulations/Qini_Curve_Scene_1.pdf}
+    \includegraphics[width=0.49\textwidth]{figures/simulations/Qini_Curve_Scene_2.pdf}
+    \includegraphics[width=0.49\textwidth]{figures/simulations/Qini_Curve_Scene_3.pdf}
+    \includegraphics[width=0.49\textwidth]{figures/simulations/Qini_Curve_Scene_4.pdf}
+    %\includegraphics[width=0.3\textwidth]{figures/simulations/Qini_Curve_Scene_5.pdf}
+    \caption{Qini curves based on the ``true" uplift with respect to scenarios 1-4 of Table~\ref{tab:scenarios}.}
+    \label{fig:qini_curves_scene}
+\end{figure}
+
+
+\paragraph{Benchmarks and implementation}
+Each run of each simulation generates a dataset, which we split into training ($40\%$), validation ($30\%$), and test samples ($30\%$). We use the training and the validation sets to fit and fine-tune the models. Note that fine-tuning is specific to the type of the model, e.g. for a neural network, we fine-tune the learning rate and the regularization constant but for random forests, we fine-tune the number of trees as well as the depth of each tree. Then, we score the test samples with the fine-tuned models and compute performance metrics. We repeat each experiment $20$ times.
+
+For each simulated dataset, we implement the following models:
+\begin{enumerate}
+    \item[(a)] a multivariate logistic regression, i.e. a twin model with no hidden layer that optimizes the Binomial likelihood. This is the baseline model, and we will refer to it as \textit{Logistic}. For fair comparison, we use the twin neural architecture and $L_1$ regularization.
+    \item[(b)] our twin models, i.e. models (with and without hidden layers) that optimize the augmented loss function \eqref{eq:augmented_loss_function} to estimate the regression parameters. We denote these models by \textit{Twin$_{\mu}$} and \textit{Twin$_{\mathrm{NN}}$}.
+    \item[(c)] a Qini-based uplift regression model that uses several LHS structures to search for the optimal parameters (see \citep{belba2019qbased} for more details). We denote this model by \textit{Qini-based}.
+    \item[(d)] two types of random forests designed for causal inference (see \citep{athey2019generalized} for more details). This method uses honest estimation, i.e., it does not use the same information for the partition of the covariates space and for the estimation of the uplift. We denote these models by \textit{Causal Forest} and \textit{Causal Forest (Honest)} without and with honest estimation respectively.
+    \item[(e)] two types of random forests designed for uplift (see \citep{rzepakowski2010decision,guelman2012random} for more details). This method uses different split criteria. We denote these models by \textit{Uplift Random Forest (KL)} and \textit{Uplift Random Forest (ED)} for Kullback-Leibler and Euclidean split criterion respectively.
+\end{enumerate}
+
+
+
+\paragraph{Results} All results are reported in Table~\ref{tab:all_scenarios}.
+
+\begin{table}[!ht]
+    \centering
+    \begin{tabular}{l|c|ccccc}
+        \hline
+        Method & Hidden-Layer Size & 1 & 2 & 3 & 4 & 5 \\
+        \hline
+        {\it Logistic} && $0.75$ & $1.80$  & $3.50$ & $0.98$ & $2.59$\\
+        {\it Qini-based} && $1.02$ & $\bf2.68$ & $4.36$ & $1.09$ & $2.94$\\
+        {\it Twin$_{\mu}$} && $\bf1.24$  & $2.32$ & $\bf4.41$ & $\bf1.20$ & $\bf3.12$\\
+        \hline
+        {\it Twin$_{\mathrm{NN}}$}
+        & $64$  & $1.54$  & $2.61$ & $\bf 4.91$ & $1.22$ & $3.10$ \\
+        & $128$ & $1.56$  & $2.54$ & $4.80$ & $1.28$ & $3.16$\\
+        & $201$ & $\bf 1.63$ & $\bf 2.67$  & $4.86$ & $1.30$ & $3.14$\\
+        & $256$ & $1.57$ & $2.65$ & $4.78$ & $\bf 1.32$ & $3.26$ \\
+        & $512$ & $1.60$ & $2.49$ & $4.64$ & $1.18$ & $\bf 3.35$\\
+        \hline
+        & $340/512$ & $1.67$  & $2.63$ & $5.03$ & $1.35$ & $3.58$\\
+        \hline
+        {\it Causal Forest} & &$0.75$ & $2.22$ & $4.42$ & $0.94$ & $2.79$ \\
+        {\it Causal Forest (Honest)} && $0.75$  & $2.51$ & $4.53$ & $1.14$ & $3.07$\\
+        {\it Uplift Random Forest (KL)} && $0.74$ & $2.52$ & $4.02$ & $1.01$& $2.19$ \\
+        {\it Uplift Random Forest (ED)} && $0.68$ & $2.42$ & $4.18$ & $0.99$ & $2.33$ \\
+        \hline
+    \end{tabular}
+    \vspace{2mm}
+    \caption{Summary: models comparison in terms of $\qadj$.}
+    \label{tab:all_scenarios}
+\end{table}
+
+
+\paragraph{The optimization criterion}
+
+In this part of the analysis, we focus on the simple model (i.e. no hidden layer {\vahid [do you mean the logistic regression with interaction terms, better to refer with eqref to the right model to be precise]}), $\mu_{1t}(\x, \boldsymbol{\theta})$, defined in \eqref{eq:neural_network_1}. The goal is to compare three different ways to estimate the parameters. The {\it Logistic} method optimizes the penalized Binomial likelihood, as in the case of a {\it lasso} logistic regression. The {\it Qini-based} is a two-stage method which also makes use of the $L_1$ regularization. The methodology is based on $\qadj$ and imposing sparsity using the lasso. The $\qadj$ is a difficult statistic to compute, maximizing it directly is not an easy task. Therefore, the {\it Qini-based} first applies the pathwise coordinate descent algorithm \citep{friedman2007pathwise} to compute a sequence of critical regularization values and corresponding (sparse) model parameters. Then, it uses a derivative-free optimization algorithm (Latin Hypercube Sampling or LHS) to explore the parameters space in order to find the optimal model. The {\it Augmented loss} method optimizes our augmented loss function defined in \eqref{eq:augmented_loss_function} with $L_1$ regularization. Table~\ref{tab:param_estimation_results} shows the averaged results on the test dataset, for different scenarios. 
+
+\begin{table}[!ht]
+    \centering
+    \caption{Comparison of parameter estimation for the $\mu_{1t}(\x, \boldsymbol{\theta})$ model in terms of $\qadj$.}
+    \label{tab:param_estimation_results}
+    \begin{tabular}{l|ccccc}
+        Scenarios & 1 & 2 & 3 & 4 & 5\\
+        Method & & & & & \\
+        \hline
+        {\it Logistic + $L_1$} & $0.75$ & $1.80$  & $3.50$ & $0.98$ & $2.59$\\
+        {\it Qini-based} & $1.02$ & $\bf2.68$ & $4.36$ & $1.09$ & $2.94$\\
+        {\it Augmented loss + $L_1$} & $\bf1.24$  & $2.32$ & $\bf4.41$ & $\bf1.20$ & $\bf3.12$\\
+        \hline
+    \end{tabular}
+\end{table}
+
+
+If we pick “winners” in each of the simulation scenarios based on which
+method has the highest $\qadj$, {\it AL} would win all scenarios except for the second one. In scenario 2, the {\it Qini-based} model has the highest $\qadj$. In general both methods outperform the {\it Logistic} model.
+
+\paragraph{Beyond linearity}
+
+Ensemble methods are amongst the most powerful for the uplift case \citep{soltys2015ensemble}. A method that has proven to be very effective in estimating individual treatment effects is one based on generalized random forests \citep{athey2019generalized}. This method uses honest estimation, i.e., it does not use the same information for the partition of the covariates space and for the estimation of the uplift. This has the effect of reducing overfitting. Another candidate that we consider in our experiments is also based on random forests and designed for uplift \citep{rzepakowski2010decision,guelman2012random}. For this method, we consider two different split criteria, one based on the Kullback-Leibler divergence and one based on the Euclidean distance. In Table~\ref{tab:beyond_linearity_results}, we compare these methods to our neural-network version defined in \eqref{eq:neural_network_2}, that is, $\mathrm{NN}_{1t}(\x, \mathbf{W})$  with $m=2p+1$ hidden neurons. Here, we only consider $L_1$ regularization on the model's parameters.
+
+\begin{table}[!ht]
+    \centering
+    \caption{{\vahid [bad table caption, why is it called AL? what is CF? URF? remember a table caption must be self contained.] Rethink about abbreviations, do not abbreviate if it is not necessary, otherwise it explodes your caption.}Comparison of non-linear models in terms of $\qadj$. The {\it AL} method optimizes the $\mathrm{NN}_{1t}(\x, \mathbf{W})$ model with $m=2p+1$ hidden neurons and $L_1$ regularization.}
+    \label{tab:beyond_linearity_results}
+    \begin{tabular}{l|ccccc}
+        Scenarios & 1 & 2 & 3 & 4 & 5\\
+        Method & & & & &\\
+        \hline
+        {\it AL$_{(p+1)\times m}$} & $\bf 1.63$ & $\bf 2.67$  & $\bf 4.86$ & $\bf 1.30$ & $\bf 3.14$\\
+        {\it CF} & $0.75$ & $2.22$ & $4.42$ & $0.94$ & $2.79$ \\
+        {\it CF$_{h}$} & $0.75$  & $2.51$ & $4.53$ & $1.14$ & $3.07$\\
+        {\it URF$_{\mathrm{KL}}$} & $0.74$ & $2.52$ & $4.02$ & $1.01$& $2.19$ \\
+        {\it URF$_{\mathrm{ED}}$} & $0.68$ & $2.42$ & $4.18$ & $0.99$ & $2.33$ \\
+        \hline
+    \end{tabular}
+   
+\end{table}
+
+
+
+We observe that the random forests tend to overfit for several scenarios, with the exception of the honesty criteria which seems to mitigate this problem. On the other hand, we observe a good adequacy of the twin model in all scenarios. Overall, the results of {\it AL} appear to outperform all other methods significantly (based on  Wilcoxon signed-rank test \citep{wilcoxon1992individual}).
+
+\paragraph{Parameter size}
+{\vahid [this section is messy. simplify your paragraphs. I got lost.]}
+Neural networks have two main hyper-parameters that control the architecture or topology of the network: the number of hidden layers and the number of nodes in each hidden layer. In the previous simulations, we fixed the number of hidden layers to $1$ and the number of nodes in the hidden layer to $2p+1$ as per Theorem~\ref{theorem}. However, the number of nodes can be seen as a hyper-parameter as well. 
+
+Here, we vary the number of nodes to assess the impact on predictive performance, using either $m=64, 128, 256$ or $m=512$ nodes.  In Table~\ref{tab:hidden_neurons_results}, we report the averaged results. As we can see, there is not one optimal value of $m$ among the ones we compare that gives the best model for all scenarios. Depending on the scenario, we observe clear differences in terms of performance. 
+
+For scenario 1, in which $p = 200$, we see that the best model is reached for $m = 512$; for scenario 2 and scenario 3, the model performs best with $m = 64$ and $m = 256$ respectively, and finally with $m = 256$ and $m = 512$ for scenarios 4 and 5. Therefore, in practice, for a specific dataset, it is important to consider the number of neurons in the hidden layer as a hyper-parameter that can be fine-tuned by cross-validation.
+
+\begin{table}[!ht]
+    \centering
+    \caption{Fine-tuning the number of nodes in terms of $\qadj$. The {\it AL} method optimizes the $\mathrm{NN}_{1t}(\x, \mathbf{W})$ model with $m$ hidden neurons and $L_1$ regularization.}
+    \label{tab:hidden_neurons_results}
+    \begin{tabular}{l|l|ccccc}
+        Scenarios &$m$ & 1 & 2 & 3 & 4 & 5\\
+        Method &&&&&&\\
+        \hline
+        {\it AL$_{(p+1)\times m}$} 
+        & $64$ & $1.54$  & $2.61$ & $\bf 4.91$ & $1.22$ & $3.10$ \\
+        & $128$ & $1.56$  & $2.54$ & $4.80$ & $1.28$ & $3.16$\\
+        & $256$ & $1.57$ & $\bf 2.65$ & $4.78$ & $\bf 1.32$ & $3.26$ \\
+        & $512$ & $\bf 1.60$ & $2.49$ & $4.64$ & $1.18$ & $\bf 3.35$\\
+               \hline
+    \end{tabular}
+\end{table}
+
+Choosing the number of hidden neurons by cross-validation is very common in practice. This is part of architecture search. However, choosing among a few values does not necessarily mean that all the selected model's neurons are useful. As discussed in Section~\ref{sec:choice_reg_function}, the use of the group lasso penalization on the weight matrix allows to automatically fine-tune the number of hidden neurons (i.e. pruning). This has the effect of increasing the performance of the underlying models from a predictive point of view, as shown in Table~\ref{tab:hidden_neurons_pruning}. Thus, we suggest to start with a fairly large number of hidden neurons (e.g. $m \geq 2p +1$), and to let the optimization determine the number of active neurons needed for a specific dataset.
+
+\begin{table}[!ht]
+    \centering
+    \caption{Performance when automatically pruning the number of nodes. The {\it AL} method optimizes the $\mathrm{NN}_{1t}(\x, \mathbf{W})$ model with $m=512$ hidden neurons and $L_1$ + \emph{group lasso} regularization functions.}
+    \label{tab:hidden_neurons_pruning}
+    \begin{tabular}{l|l|ccccc}
+        Scenarios & & 1 & 2 & 3 & 4 & 5\\
+        \hline
+        {\it AL$_{(p+1)\times 512}$} 
+        & $\hat{m}$ & $422$  & $97$ & $48$ & $178$ & $340$ \\
+        & $\qadj$ & $1.67$  & $2.63$ & $5.03$ & $1.35$ & $3.58$\\
+        \hline
+    \end{tabular}
+\end{table}
+
+
+\paragraph{Summary} The number of hidden layers can also be seen as a hyper-parameter for the neural network architecture. In our experiments, increasing the number of hidden layers did not improve the performance significantly. When we fix the initial number of hidden neurons to $p+1$ and $p$ for the $2$ hidden layer, in scenarios 1 and 5, the average $\qadj$ are $1.59$ and $3.39$ respectively.  We report the averaged results as well as a summary of all previous experiments in Table~\ref{tab:hidden_layers_results}. For random forests uplift models, we report the best score between the four used methods. For scenarios 1, 3, 4 and 5, the best results are obtained with the $1$-hidden layer twin model. For scenario 2, the {\it Qini-based} uplift regression achieves the highest $\qadj$, tying with the $1$-hidden layer twin model (i.e. $2.68$ vs. $2.67$).
+{\vahid[This is not summary. The conclusion is what? Scnarios change the performance? number of hidden units are not important? lasso and group lasso finds the moinimal $m$? ]}
+\begin{table}[H]
+    \centering
+    \caption{Summary: performance of fitted models in terms of $\qadj$.}
+    \label{tab:hidden_layers_results}
+    \begin{tabular}{l|l|ccccc}
+        Scenarios &$h$ & 1 & 2 & 3 & 4 & 5\\
+        Method &&&&&&\\
+        \hline
+        {\it AL + $L_1$} & $0$ & $1.24$  & $2.32$ & $4.41$ & $1.20$ & $3.12$\\
+        {\it Logistic + $L_1$} & - & $0.75$ & $1.80$  & $3.50$ & $0.98$ & $2.59$\\
+        {\it Qini-based} & - & $1.02$ & $\bf 2.68$ & $4.36$ & $1.09$ & $2.94$\\
+        \hline
+        {\it AL + $L_1$} & $1$ & $1.63$ & $2.67$  & $4.91$ & $1.32$ & $3.35$\\
+        {\it AL + $L_1$ + \emph{group lasso}} & $1$ & $\bf 1.67$  & $2.63$ & $\bf5.03$ & $\bf1.35$ & $\bf3.58$\\
+        %  & $2$ & $1.59$ & $2.36$ & $4.92$ & $1.38$ & $ 3.39$ \\
+        Best {\it RF} & - & $0.75$ & $2.52$ & $4.53$ & $ 1.14$ & $3.07$\\
+        \hline
+    \end{tabular}
+\end{table}

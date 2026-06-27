@@ -1,0 +1,72 @@
+\section{Experiments}
+The first part of the experiments examine how TVAE performs under real ECMO settings. For each individual case, we look at the predicted treatment assignment and the factual response (mortality or survival) with the assigned treatment option. Since the factual  response may come from either treatment group or control group, the performance in response prediction suggests the overall performance in predicting both treatment and control (no-treatment) outcomes. 
+To evaluate TVAE's performance in estimating treatment effect, we rely on the public synthesized datasets (where counterfactual outcomes are also available). Our experiments are designed to to answer the following questions: 
+\begin{enumerate}
+    \item Can TVAE predict the treatment assignment and factual responses? 
+    \item How do the tailored components (DB and LB) contribute to the TVAE model? 
+    \item How does TVAE perform in individual treatment effect estimation on synthesized datasets?     
+\end{enumerate}
+
+\input{tables/table1}
+
+\subsection{Data}
+In this study, we constructed two real COVID-19 datasets from different continents. Data access agreement and IRB approval were acquired prior to the study, as shown in Appendix E, together with data processing pipeline, feature extraction methods, and characteristics of the cohort. Evaluating the individual treatment effect (ITE) estimation on the ISARIC and BJC ECMO data is impossible, since the ground truth of the counterfactual outcomes is not available in reality. Therefore, we also implement TVAE using the synthesized Infant Health and Development Program (IHDP) dataset, described in previous studies \cite{louizos2017cevae,chipman2010bart,wager2018cf,shalit2017cfrnet,shi2019adapting}. It consists of 1000 replications. In each replication, the dataset contains 747 subjects (139 treated and
+608 control), represented by 25 covariates.
+
+\paragraph{ISARIC Dataset}
+The first ECMO dataset includes COVID-19 individuals from the International Severe Acute Respiratory and Emerging Infection Consortium (ISARIC)–World Health Organization (WHO) Clinical Characterisation Protocol (CCP), referred hereafter as ISARIC Data. Through international collaborative efforts, it covers 1651 hospitals across 63 countries from 26 January 2020 to 20 September 2021. We include a total of 118,801 patients who were admitted to an Intensive Care Unit (ICU) for at least 24 hours so that ECMO treatment is a feasible treatment option (hence the assumption of a positive probability for treatment assignment holds). Among these patients, 1,451 (1.22\%) received ECMO treatment. As the patients are from different hospitals with different treatment decision criteria, the characteristics in both treatment  and control groups are heterogenous. The mortality ratio is 40.00\% in treatment group and 50.56\% in control group. 
+
+\paragraph{BJC Dataset}
+The second ECMO dataset is a single institutional dataset, containing electronic health records (EHR) spanning 15 hospitals in Barnes Jewish HealthCare system. This dataset is referred hereafter as BJC Dataset. It contains COVID-19 patients admitted to ICU during 19 months (March 3rd 2020 - October 1st 2021). Among the total of 6,016 included patients, 134 (2.23\%) received ECMO treatment. As the patients are from the same healthcare system, the treatment assignment is made by a panel of clinical experts with consistent decision criteria. The mortality ratio in the treatment group is 47.01\% and in the control group is 18.99\%. Detailed data processing and feature extraction are provided in Appendix E.
+\input{figures/figure4.tex}
+\input{figures/fig2.tex}
+
+\subsection{Baseline Settings and Evaluation Metrics}
+We implemented the state-of-the-art treatment effect algorithms that were discussed in the related works. This includes a linear ordinary least square model (OLS), a nonparametric k-Nearest Neighbor model (kNN), the tree-based causal inference models (BART \cite{chipman2010bart} and Causal Forest (CF) \cite{wager2018cf}), deep generative causal inference models (CEVAE and GANITE \cite{louizos2017cevae,yoon2018ganite}), and other deep representation causal inference models (DCN-PD, BNN, TNet, SNet, TARNET, and Dragonnet). \cite{alaa2017dcnpd,johansson2016bnn,yao2018site,shalit2017tarnet,shi2019adapting, curth2021st}.
+
+Among all the models, we performed the grid-search of hyper-parameters. The final hyper-parameter settings are described in Appendix G. 
+An ablation study is conducted to  investigate if the tailored components (Distribution Balancing and Label Balancing) help with ECMO prediction. This involves both quantitative evaluations by prediction performance and qualitative evaluation by visualizing the latent distributions. TVAE\textsuperscript{-DB} represents the model when distribution balancing is removed from the loss function, and TVAE\textsuperscript{-LB} represents the model when the minority cases are not up-sampled from the learned latent distribution. 
+
+In ISARIC Dataset and BJC Dataset, both treatment assignment and factual outcomes are binary, therefore the area under the Receiver-Operating Characteristic curves (AUROC) is used to evaluate the predictive power of each model. Due to the scarcity of the treatment resources, we are interested in the trade-off of precision and recall, hence we also calculate the area under the Precision Recall curve (AUPRC). Quantitative results are reported with mean and standard error after 5-fold cross validation, where the stratification is random while preserving the treatment assignment ratio in each fold of patients.
+For IHDP dataset, we followed the train/test split strategy with 1000 replications provided in the previous study \cite{louizos2017cevae}, and calculate the square root of the Precision in Estimation of Heterogeneous Effect (rPEHE), defined as:
+$
+    \epsilon_{rPEHE} = \sqrt{\frac{1}{N}\sum_{i=1}^{N} (\Tilde{Y_i(1)}-\Tilde{Y_i(0)} - (Y_i(1) -Y_i(0) ) )^2} 
+$
+where $\Tilde{Y_i(1)}$ and $\Tilde{Y_i(0)}$ are the estimated treatment and no-treatment outcomes, respectively. 
+
+\input{tables/table2}
+\subsection{Quantitative and Qualitative Results in ECMO Prediction}
+The quantitative results of prediction metrics are reported in Table 1 for ISARIC Dataset, and Table 2 for BJC Dataset. For models that do not (explicitly) predict propensity score, the corresponding fields are labeled as "N/A".
+\subsubsection{Overall performance}
+Our proposed TVAE outperforms all the baseline methods in ISARIC and BJC datasets by all metrics. Such observation has statistical significance, measured by 90\% confidence interval and paired one-tail t-test. 
+\subsubsection{Model complexity v.s. over-fitting} 
+On BJC Dataset where the cohort size of ECMO patients is significantly small (134 cases) and the input feature dimensions are relatively large (178 features), simple linear models such as OLS perform better than complex tree-based models and most of the deep-learning models. This is likely the result of over-fitting when complex models try to characterize scarce treatment cases. On the other hand, more complex models (such as BART, CF, GANITE, CEVAE and Dragonnet) outperform OLS on ISARIC Dataset, as it is significant larger and more heterogeneous. Armed with multiple novel regularization schemes (semi-supervised encoding, disentanglement and distribution matching), TVAE demonstrates its robustness in BJC cohort, meanwhile its deep learning architecture is capable of discovering the underlying nonlinear patterns in ISARIC cohort. 
+\subsubsection{Tree-based learning v.s. deep representation learning}
+Similar as observed in a previous study \cite{grinsztajn2022tabular,xue2021use}, tree-based models have high prediction performance in tabular data, but performance deteriorates when facing label imbalance. In the label-imbalanced treatment assignment prediction, CEVAE and DCNPD achieves similar or better AUROC/AURPC than tree-based models. In our TVAE, the carefully designed architecture improves its representation learning, achieving even more significant improvement over tree-based models in imbalanced problems (treatment assignment prediction) while matching the performance in factual prediction. 
+% \subsubsection{Regularization in generative models}
+% An important difference between TVAE and other generative models is the elimination of auxiliary networks, hence the predictions $\hat{W}$, $\hat{Y(0)}$ and $\hat{Y(1)}$ can be regularized through input reconstruction and semi-supervision. Such difference leads to a drastic improvement over CEVAE in factual response prediction on BJC Dataset, as its auxiliary networks are not regularized, and both treatment outcome network and control outcome network only take partial data in the training process. As treatment assignment prediction has more severe label imbalance than factual response prediction, we can see that generative models such as CEVAE has superior prediction performance over most baselines. This is due to the shared latent space by treatment and control groups in VAE architecture, regularized by clustering (KL divergence) and input reconstruction. With the additional label-balancing module, TVAE is able to perform even better than CEVAE, achieving the highest performance in response prediction too. 
+
+\subsubsection{Ablation analysis.} 
+We are interested in how the dedicated components affect the model performance. To quantitatively evaluate the contribution of Distribution Balancing, we remove the MMD loss and disentanglement, and reduce the weight of KL divergence (KL divergence helps disentanglement \cite{higgins2017beta}, but it must be kept for clustering effects). After the removal of the Distribution Balancing, all metrics dropped, and the decrease is more significant in the BJC Dataset, resulting in 6.6\% reduction in the AUPRC of treatment assignment prediction. This is consistent with the fact that the BJC Dataset has limited treatment samples, hence more prone to overfitting. To qualitatively visualize how Distribution Balancing affects the latent representations, in Fig. 2 we plot the direct visualizations of projected inputs in the latent space (as well as probability density distribution) of treatment and control groups in unsupervised dimensions, with and without Distribution Balancing. Each scatter point represents an ECMO/control case, and the transparency is proportional to the empirical probability density at this location. The empirical probability density is calculated through kernel density estimation (KDE). We used the 4th and 5th latent dimension, as the first three dimensions are for treatment assignment, factual and counter factual estimation, respectively. A clear divergence between treatment and control groups is observed after the removal of Distribution Balancing, suggesting the potential existence of selection bias in these dimensions or overfitting. 
+
+To quantitatively evaluate the contribution of Label Balancing, we remove the upsampling from the training process. Without balancing the treatment/control groups, we observed 25.1\% and 7.9\% drops in the AUPRC of treatment assignment on ISARIC Dataset and BJC Dataset. To investigate the optimal upsampling ratio,  we vary the relative size of the upsampled ECMO cases and the optimal unsampled size is found to be 80\% (relative to the number of control cases) for ISARIC Dataset and 60\% for BJC Dataset, as can be seen in Appendix H. 
+Note that the ablation of Treatment Joint Inference is not within the scope of this study, since removing it will totally change the architecture of the proposed work. 
+
+\subsubsection{Risk stratification.} Given TVAE as a decision assistance tool, we want to visualize the consistency between risk predictions and observed outcomes. In Fig. 3, we plot the predicted propensity score, and the treatment effects (measured by the mortality risk with ECMO minus the mortality risk without ECMO). Via propensity scoring, TVAE separates cases that are more likely to be assigned treatment from cases that are not, and the stratification matches with the actual clinical decisions. By predicting the potential risk reduction by ECMO treatment, our model divides the treatment group into those who benefit more from ECMO and those who benefit less. The division is consistent with the actual death and survival outcomes.
+
+
+
+% \input{figures/fig2.tex}
+
+
+
+
+\subsection{Individual Treatment Effect Estimation}
+
+We first compare the treatment effect estimation between TVAE and the state-of-the-art algorithms. Recent literature has noted the inconsistency of results reported in existing literature, where the calculated metrics might be different, or sometimes from different replication strategies \cite{curth2021really}. To generate a fair comparison between all algorithms, we followed the train/test split strategy with 1000 replications provided in the original study \cite{louizos2017cevae}, and calculate the square root of the Precision in Estimation of Heterogeneous Effect (rPEHE) for all included state-of-the-art algorithms.
+For reproducibility, the results of TVAE as well as existing algorithms are provided using Jupyter Notebook on Github: \url{https://github.com/xuebing1234/tvae}. As tabulated in Table 3, TVAE has significant improvement in estimating treatment effects over the state-of-the-art models. 
+
+Since both the factual and counterfactual outcomes are available, we further evaluate how different Distribution Matching strategies (Kernelized MMD, MMD, Wasserstein Distance, and KL divergence) affect the treatment effect estimation. Among them, Kernelized MMD and and KL divergence lead to lowest estimation errors, indicating that they might be more suitable for distribution matching in batch learning. 
+It is noteworthy that IHDP (and potentially any other synthesized datasets) does not possess the complexity in real ECMO scenario. For instance, the level of scarcity in the treatment assignment (pos/neg ratio 23\%) is >10 times higher than ECMO datasets, and it has much smaller selection bias (derandomization simply by removing non-white mothers) and simpler input space. 
+
+\input{tables/table3.tex}

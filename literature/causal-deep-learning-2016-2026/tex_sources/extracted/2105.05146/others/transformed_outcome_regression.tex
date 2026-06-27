@@ -1,0 +1,1238 @@
+\documentclass{article}
+\usepackage{arxiv}
+% For french
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsthm,amsmath,natbib}
+\usepackage{amsfonts,amssymb}
+\RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage[toc,page]{appendix}
+
+% For tikz pictures
+\usepackage{tikz}
+\usetikzlibrary{matrix,chains,positioning,decorations.pathreplacing,arrows}
+\usepackage{neuralnetwork}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+\usepackage{algorithm}
+\usepackage[]{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{afterpage}
+\usepackage{bbm}
+\usepackage{setspace}
+\usepackage{comment}
+\usepackage[normalem]{ulem}
+%\doublespacing
+
+\newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}
+
+% Additional definitions
+\def\qadj{\hat{q}_{\mathrm{adj}}}
+\def\tt{\mathbf t}
+\def\z{\mathbf z}
+\def\X{\mathbf X}
+\def\inv{^{-1}}
+\def\H{\mathbf H}
+\def\x{\mathbf x}
+\def\xs{\underline {\mathbf x}}
+\def\Xs{\underline { \mathbf X} }
+\def\r{\mathbf r}
+\def\s{\mathbf s}
+\def\y{\mathbf y}
+\def\u{\mathbf u}
+\def\v{\mathbf v}
+\def\lmax{\lambda_\mathrm{max}}
+\def\emax{\mathbf{e}_\mathrm{max}}
+\def\emin{\mathbf{e}_\mathrm{min}}
+\def\lmin{\lambda_\mathrm{min}}
+\def\bbeta{\boldsymbol \beta}
+\def\ggamma{\boldsymbol \gamma}
+\def\intinf{\int_\infty^\infty}
+\def\sumi{\sum_{i=1}^n}
+\def\t{^\top}
+\def\eps{\boldsymbol \varepsilon}
+\def\KL{\mathbb {KL}}
+\def\E{\mathbb E}
+\def\V{\mathbb V}
+\def\N{\mathcal N}
+\def \real{\rm I\!R}
+\def \I{\mathbf I}
+\def \L {\mathcal{L}}
+\def \r {\mathrm{ReLU}}
+\def \vahid {\color{magenta}}
+
+
+% define alphabetical enumeration in \bgin{enumerate}
+\renewcommand{\theenumi}{\alph{enumi}}
+\renewcommand{\labelenumi}{\theenumi)}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclareMathOperator*{\argmax}{argmax~} % for subscripts and superscripts
+\DeclareMathOperator*{\argmin}{argmin~} % for subscripts and superscripts
+\DeclareMathOperator{\sign}{sign} % for functions
+
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+%\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+%\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.} }{\ \rule{0.5em}{0.5em}}
+
+
+\title{A Twin Neural Model for Uplift}
+
+\author{
+  \thanks{Corresponding author: belbahrim@dms.umontreal.ca} Mouloud Belbahri \\
+  Department of Mathematics and Statistics\\
+  University of Montreal
+  \And
+  Alejandro Murua\\
+  Department of Mathematics and Statistics\\
+  University of Montreal
+  \And
+  Olivier Gandouet\\
+  Advanced Analytics\\
+  TD Insurance
+  \And
+  Vahid Partovi Nia \\
+  Department of Mathematics and Industrial Engineering\\
+  École Polytechnique de Montréal
+}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\vahid{clarify the strategy for the paper. We must start with providing some ground about re-defining the loss. Then hammering on prediction power as the most important issue for uplift in practice and neural networks as a successful tool that targets prediction power. We must argue with beating common existing models in terms of performance. We will follow the sections in the same order as we mention in the abstract. Hammer on methodology, combined with pruning. }
+\end{abstract}
+
+\keywords{causal inference \and marketing \and neural networks \and regularization}
+
+
+\section{Introduction}
+\label{sec:intro}
+
+Uplift modeling is an important research area  in marketing field \citep{radcliffe1999differential, hansotia2002direct, lo2002true, radcliffe2007using} and refers to modeling customers behavioral change that results directly from a specific treatment, such as a marketing intervention, a courtesy call, targeted advertisement. Typically, uplift models are developed for randomized controlled trials, where both the treatment and outcome are binary random variables. %{\color{orange} modified}
+
+
+Customers are segmented into different groups depending on their  potential outcome \citep{kane2014mining}:  \textit{persuadable}, \textit{sure thing}, \textit{lost cause}, \textit{do-no-disturb}  client. A persuadable is an individual who purchases the product only if he receives a call; a sure thing client is an individual who purchases the product whether he receives the call or not; a lost cause client is an individual who will not purchase the product regardless of whether he receives the call or not; a do-no-disturb client is an individual who will not purchase the product if he receives a call. In general, from marketing standpoint  interesting customers are the \textit{persuadable} and the \textit{do-not-disturb} clients. The persuadable clients provide incremental sales whereas the do-not-disturb individuals respond  negatively to the marketing campaign. %{\color{orange} modified}
+
+Uplift fits within the causal modeling framework \citep{rubin1974estimating, holland1986statistics}. Let $Y$ be the binary response variable, $T$ be the binary  treatment indicator, and $X_1,\ldots,X_p$ be the predictors. Suppose that $n$ independent iid samples  are observed $\{(y_i, \textbf{x}_i, t_i)\}_{i=1}^n$, where $\x_i = (x_{i1}, \ldots, x_{ip})$ are realisations of the predictors. The uplift model estimates
+\begin{equation*}
+u (\textbf{x}_i)= m_{11}(\x_i) - m_{10}(\x_i),
+\end{equation*}
+
+where the notation $m_{yt}(\x) = \mathrm{Pr}(Y = y \mid \x ,T=t)$ stands for the corresponding conditional probability. This difference in conditional probabilities is named  \emph{individual treatment effect,} \emph{conditional average treatment effect} in the context of causal inference, or \emph{uplift} in the context of marketing research. There are different  methods to estimate individual treatment effects from randomized data. The process of estimating these effects is alternatively referred to as heterogeneous effect modeling, individual treatment effect modeling, or uplift modeling. 
+
+
+Since the response variable is binary, the simplest parametric model that can be used is a logistic regression. Thus, the underlying optimization problem becomes the maximization of the Binomial likelihood. On the other hand, maximizing the likelihood is not necessarily appropriate to estimate the uplift \citep{belba2019qbased}. So, very quickly, research in the uplift field turned to non-parametric models. Indeed, most of the existing methods are based on classification and regression trees \citep{breiman1984classification}. The idea is to predict the individual uplift by the uplift observed in a terminal node, or by the average when several trees are used, e.g. random forests \citep{Breiman-RandomForest-2001}. Various modifications of the split criteria have been proposed in the literature \citep{radcliffe1999differential, hansotia2002incremental, hansotia2002direct, jaskowski2012uplift, radcliffe2011real}. Thus, there is not a lot of research on defining new loss functions. 
+
+However, there are several advantages to defining an appropriate loss function. First, this would allow to re-explore the use of simple parametric models for which parameter estimation becomes appropriate for uplift. This gives a considerable advantage over non-parametric methods, since interpretation becomes simpler. This is not negligible in practice since the deployment of a model that can be interpreted minimizes the risks that a business can take. Then, when prediction becomes more important, it suffices to define a more complex model. Having a well-defined loss function allows any off the shelf method to be used for the related optimization problem. One way to have a more complex model based on a method known for its prediction power is to turn to the use of a neural network. Indeed, when working within the neural networks framework, it is possible to define a simple model (i.e. no hidden layer), but it is also possible to model statistical interactions between predictors easily \citep{tsang2018neural}, or to model polynomial functions \citep{andoni2014learning} while maintaining a very competitive prediction power.
+
+
+For these reasons, in this work we focus on defining new loss functions for uplift. We develop our methodology for neural networks because of prediction power being the most important issue for uplift in practice and that it generalizes the logistic regression for which interpretation of the odds ratios is well-known. However, using our losses, our procedure can be easily generalized to other models. Empirically, we show that our proposed optimization has the impact to improve prediction performance of uplift models. Furthermore, the flexibility of our proposed method opens a door to connections with the estimation of uplift in observational data settings. We evaluate the performance of the proposed loss functions and models on both synthetic datasets and a real-world dataset made available to us by a Canadian insurance company. The experimental results demonstrate significant improvement over state-of-the-art tree-based uplift modeling.
+
+
+\section{Uplift modeling}
+\label{sec:literature}
+
+
+Uplift is the difference between the two conditional means $m_{11}(\x)$ and $m_{10}(\x)$. The intuitive approach to model uplift is to build two classification models \citep{hansotia2002direct,snowden2011implementation,austin2012using}. This consists of fitting two separate conditional probability models: one model for the treated individuals, and another separate model for the untreated individuals. Then, uplift is the difference between these two conditional probability models. These models are called T-learners (T for ``two models") in the literature \citep{kunzel2019metalearners}. The asset of T-learners is their simplicity, but they do not perform well in practice, because each model focuses on predicting only a one-class probability and for each model information about the other treatment is never provided to the learning algorithm \citep{radcliffe2011real}. In addition, differences between the covariates distributions in the two treatment groups can lead to bias in treatment effect estimation. There has been efforts in correcting such drawbacks through a combined classification model known as S-learners, for ``single-model" \citep{kunzel2019metalearners}). The idea behind the S-learner is to use the treatment variable as a feature and to add explicit interaction terms between each covariate and the treatment indicator to  fit a model, e.g. a logistic regression \citep{lo2002true}. The parameters of the interaction terms measure the additional effect of each covariate due to treatment.
+
+
+\subsection{General assumptions}
+
+Following the potential outcomes framework \citep{holland1986statistics} we make the following standard assumptions. The binary variable $T$ indicates if a unit is exposed to treatment ($T=1$) or control ($T=0$). Let $Y_0$  and $Y_1$ be the potential outcomes under control and treatment respectively. Although each customer $i$ is associated with two potential outcomes, only one of them can be realized as the observed outcome $y_i$. 
+
+{\it Assumption 1.} (Unconfoundedness) Potential outcomes $(Y_0,Y_1)$ are independent ($\independent$) of the treatment assignment indicator $T$ conditioned on all pre-treatment characteristics $(X_1, \ldots, X_p)$, i.e.,
+
+$$\big( Y_0, Y_1 \big) \independent T | X_1,\ldots,X_p. $$
+
+This allows the unbiased estimation of the uplift. Define the \textit{propensity score} $e(\x)= \mathrm{Pr}(T=1 \mid \x)$. This parameter is widely used to estimate treatment effects from observational data \citep{rubin1974estimating,rosenbaum1983central,athey2015machine}.
+
+{\it Assumption 2.} (Overlap) For any $\x$, the true propensity score is strictly between $0$ and $1$, i.e., 
+
+$$0 < e(\x) < 1.$$
+
+In the context of complete randomization, $e(\x)$ is a constant. 
+
+{\it Assumption 3.} (Consistency) Observed outcome $Y$ is represented using the potential outcomes and treatment assignment indicator as follows,
+
+$$Y=TY_1 + (1-T)Y_0.$$
+
+
+An uplift model estimates the conditional average treatment effect in various sub-populations as a function of the possible values of the covariates $\x$,
+
+\begin{align}
+    u(\x) &= \mathbb{E} ( Y_1 \mid \x) - \mathbb{E} ( Y_0 \mid \x) 
+    %u(\x)  &= \mathbb{E} ( Y \mid \x, T=1) - \mathbb{E} ( Y \mid \x, T=0) \nonumber \\
+    %u(\x)  &= \mathrm{Pr} ( Y = 1 \mid \x, T=1) - \mathrm{Pr} ( Y = 1 \mid \x, T=0) \nonumber \\
+    =m_{11}(\x) - m_{10}(\x). 
+    \label{eq:uplift}
+\end{align}
+%{\color{orange} these are all equivalent. Use one definition only.}
+
+\subsection{Uplift and machine learning}
+
+Several machine learning methods try to model the uplift directly. Some $k$-nearest neighbours \citep{cover1967nearest} based methods are adopted for uplift estimation \citep{crump2008nonparametric, Alemi.etal-PersonalizedMedicine-2009, su2012facilitating}. The main idea is to estimate the uplift for an observation based on its neighbourhood containing at least one treated and one control observations. However, these methods quickly become computationally expensive for large datasets. On the contrary, adaptive tree-based methods such as random forests outperform the nearest neighbours approach, especially in the presence of irrelevant covariates \citep{wager2018estimation}. 
+
+
+State-of-the-art proposed methods view the forests as an adaptive neighborhood metric, and estimate the treatment effect at the leaf node \citep{su2009subgroup,chipman2010bart}. Therefore, most active research in uplift modeling is in the direction of classification and regression trees \citep{breiman1984classification} where the majority are modified random forests \citep{Breiman-RandomForest-2001}.
+
+In \cite{radcliffe1999differential, radcliffe2011real,hansotia2002direct, hansotia2002incremental,jaskowski2012uplift}, modified split criteria that suited the uplift purpose were studied. The criteria used for choosing each split during the growth of the uplift trees is based on maximization of the difference in uplifts between the two child nodes. However, in practice, these approaches are prone to overfitting. The splitting criteria introduced are based solely on maximizing differences in uplifts. Therefore, splits are likely to be placed next to extreme values because outliers of any treatment can influence the choice of a split point. Within each leaf, uplift is estimated with the difference between the two conditional means. The belief is that since the uplift is defined as a difference, if we can get good estimates of each mean, we have a good estimate of the difference. However, the existing tree-based uplift optimization problems do not take into account the estimation of each mean. Instead, the focus is on maximizing the heterogeneity in treatment effects. Without careful regularization (e.g. honest estimation \citep{athey2019generalized}), splits are likely to be placed next to extreme values because outliers of any treatment can influence the choice of a split point. In addition, successive splits tend to group together similar extreme values, introducing more variance in the prediction of uplift \citep{zhao2017practically}. Alternatively some models use the transformed outcome \citep{athey2015machine}, an unbiased estimator of the uplift. However, this estimate suffers from higher variance than the conditional mean estimator \citep{powers2018some}. In addition, for both estimators, if random noise is larger than the treatment effect, the model will more likely predict random noise instead of uplift. This is particularly problematic for uplift trees, as the split criteria is function of the two treatment effects. As a result, based on several experiments on real data, and although the literature suggests that tree-based methods are state-of-the-art for uplift \citep{soltys2015ensemble}, the published models over-fit the training data and predicting uplift still lacks satisfactory solutions.
+
+\section{Methodology}
+
+Let's start with the uplift interaction model \citep{lo2002true} as a simple preliminary model. This model is based on logistic regression. Given a $p$-dimensional predictor vector $\textbf{x}_i$, $i \in \{1,\ldots,n\},$ {\vahid [Make sure $\theta_o$ is a good notation. I prefer $\theta_0$.]} logistic intercept $\theta_o \in \real$, and logistic regression coefficients $\bbeta \in \real^p$, 
+the model is
+\begin{equation*} 
+     \mathrm{Pr}(Y_i=1 \mid \textbf{x}_i, \theta_o, \bbeta) = \bigl(1 + \mathrm{exp}\{- (\theta_o + \textbf{x}_i^{\top} \bbeta) \} \bigr)^{-1}.
+\end{equation*}
+
+Throughout the paper, the superscript $^\top$ stands for the transpose of a column vector or matrix. In the uplift context, one needs to add explicit interaction terms between each explanatory variable and the treatment indicator {\vahid [Why? explain more and maybe spend some sentences to explain and elaborate the reason here why interaction model is better than without interaction other than flexibility]}. Let $\gamma$ denote the treatment effect, $\boldsymbol{\beta}$, the vector of main effects, $\boldsymbol{\delta}$, the vector of interactions effects, and $\theta_o$, the intercept. 
+The model is 
+\begin{equation}
+  \mu_{1t_i}(\x_i, \theta_o, \boldsymbol{\theta}) = \mathrm{Pr} (Y_i = 1 \mid \mathbf{x}_i, t_i, \theta_o, \boldsymbol{\theta}) =
+  \bigl( 1+ \mathrm{exp}\{-(\theta_o + \gamma t_i + \mathbf{x}_i^\top [\boldsymbol{\beta} + t_i \boldsymbol{\delta}] ) \} \bigr)^{-1},
+\label{eq:pitheta}
+\end{equation}
+where $\boldsymbol{\theta} = (\boldsymbol{\beta}, \gamma, \boldsymbol{\delta})$, denotes all model parameters except for the intercept $\theta_o$. The likelihood function associated with the interaction uplift model is 
+\begin{equation}
+    \mathcal{L}(\theta_o, \boldsymbol{\theta}) =  \prod_{i=1}^{n} \mu_{1t_i}(\x_i, \theta_o, \boldsymbol{\theta})^{y_i} \{1-\mu_{1t_i}(\x_i, \theta_o, \boldsymbol{\theta})\}^{(1-y_i)},
+    \label{eq:uplift_likelihood}
+\end{equation}
+where $\{y_i : i=1,\ldots,n\}$ are the observed response variables.
+The maximum likelihood estimates of  $(\theta_o, \boldsymbol{\theta})$ will be denoted by $(\hat{\theta}_o, \hat{\boldsymbol{\theta}}),$
+with $\hat{\boldsymbol{\theta}} = (\boldsymbol{\hat{\beta}}, \hat{\gamma}, \boldsymbol{\hat{\delta}})$.
+%
+The predicted uplift associated with the covariates vector $\mathbf{x}_{n+1}$ of a future individual is estimated by
+
+$$ \hat{u}(\mathbf{x}_{n+1}) = \mu_{11}(\x_{n+1}, \hat{\theta}_o, \hat{\boldsymbol{\theta}}) - \mu_{10}(\x_{n+1}, \hat{\theta}_o, \hat{\boldsymbol{\theta}}).$$
+
+The interaction model is easy to fit using standard statistical packages. In addition, the variance in comparison with T-learners {\vahid [I recommend to replace T-learner with ``twin learner"]} is reduced, and the homogeneity of observations with similar properties is kept irrespective of whether they have been treated or not {\vahid [It is not clear what you wanted to say here]}. However, there is still some disadvantage: the solution is not optimized with respect to finding maximally different groups. Instead, the parameters are estimated with respect to the likelihood. The methodology introduced in \cite{belba2019qbased} attacks parameter estimation framework in uplift regression. This methodology is based on uplift goodness-of-fit measures and imposing sparsity using the lasso of \cite{Tibshirani_lasso_1996}. {\vahid [checked, writing is acceptable.]} 
+
+The uplift goodness-of-fit measure is a difficult statistic to compute (see Section~\ref{sec:qini} for the definition), maximizing it directly is not an easy task. Therefore, \cite{belba2019qbased} first apply the pathwise coordinate descent algorithm \citep{friedman2007pathwise} to the uplift model to compute  a sequence of critical regularization values $\lambda_1 < \cdots < \lambda_{\min\{n,p'\}}$ and corresponding (sparse) model parameters $\{ (\hat \theta_o(\lambda_j), \boldsymbol{\hat\beta}(\lambda_j), \hat\gamma(\lambda_j), \boldsymbol{\hat\delta}(\lambda_j)) \}_{j=1}^{\min\{n,p'\}}$ of dimension $p'$, with $p'=2p+1$. Then, using a derivative-free optimization algorithm to explore the parameters space in order to find the maximum uplift. Empirical results show that estimating the regression parameters by maximizing the uplift goodness-of-fit improves the uplift performance. 
+
+We generalize this idea further. However, instead of maximizing the goodness-of-fit measure, we would like our method to be completely driven by gradient of the objective function {\vahid [ Why?]}. To do so, we propose two alternatives to the likelihood function \eqref{eq:uplift_likelihood}. Our method is easy to implement and both objective functions have clear interpretations. {\vahid [This is a very important paragraph. You must sell your method here and attract the attention of the reader to your method. Sell your method as a businessman here. I think you argument remain weak and you need to make it clear why somebody must prefer your method.]}
+
+
+\subsection{The transformed outcome}
+\label{sec:transformed_outcome}
+
+The transformed outcome variable $Z_1$, which was proposed by \citep{athey2015machine} is defined as  
+
+\begin{equation}
+    Z_1 =  \frac{T Y}{e(\x)} - \frac{(1 - T) Y}{1 - e(\x)}.
+    \label{eq:transformed_outcome}
+\end{equation}
+
+This transformation has the key property that, under the complete randomization or unconfoundedness assumption, its expectation conditional on $(\X=\x)$ is equal to $u(\x)$. Therefore, the transformed outcome is an unbiased estimate of the uplift. In our case, with $e(\x) = 1/2$, $Z_1$ simplifies to
+
+\[ Z_1 = \left\{ \begin{array}{cc}
+      2 & \mathrm{if}~T=1, Y=1, \\
+      -2 & \mathrm{if}~T=0, Y=1, \\
+      0 & \mathrm{otherwise.} 
+   \end{array} \right.
+\]
+
+Observing $Z_1=2$ and $Z_1=-2$ involve an interesting interpretation  in the uplift context. For instance $Z=2$ for  happens when a client is called ($T = 1$) and then buys the insurance policy ($Y = 1$). Thus, for its counterfactual (i.e., $T = 0$), there are two possibilities i) either the client bought  the policy ($Y = 1$) and in this case it belongs to the \textit{sure things} group, or ii) the client did not buy the policy ($Y = 0$) so belongs to  \textit{persuadable} group {\vahid [re-read my sentence revision, make sure it is correct]}. Thus, in the worst case scenario, individuals with $Z_1 = 2$ are \textit{sure things}. The same logic applies for $Z_1 = -2$ where a client could either be a \textit{sure thing} or a \textit{do-not-disturb}. For \textit{lost cause} clients, by definition $Z_1 = 0$. This interpretation does not cover all scenarios for $Z_1=0$ but gives insights about ordering customers with $Y=1$. {\vahid [ this paragraph is confusing. clean it up. you try to interpret and make sure the reader understand the meaning, but you confuse the reader further. Divide it perhaps into two paragraphs?]}
+
+
+In the same spirit, we introduce $Z_0$, another transformed outcome variable which gives insights about ordering customers with $Y=0$, such as
+
+\begin{equation}
+    Z_0 =  \frac{T (1-Y)}{e(\x)} - \frac{(1-T)(1-Y)}{1-e(\x)}.
+    \label{eq:transformed_outcome_w}
+\end{equation}
+
+In our case, with $e(\x) = 1/2$, $Z_0$ simplifies to
+
+\[ Z_0 = 
+    \left\{ \begin{array}{cc}
+      2 & \mathrm{if}~T=1, Y=0, \\
+      -2 & \mathrm{if}~T=0, Y=0, \\
+      0 & \mathrm{otherwise.} 
+            \end{array} \right.
+\]
+
+Here again, an interesting interpretation of $Z_0=2$ and $Z_0=-2$ raises. If $Z_0=2$happens only when a client is called ($T = 1$) but did not buy the insurance ($Y = 0$). Thus, for its counterfactual (i.e., $T = 0$), there are two possibilities  i) either the client bought the policy ($Y = 1$) so belongs to the  \textit{do-not-disturb} group, or ii) the client did not buy the policy ($Y = 0$) annd belong to the \textit{lost cause}. In the best case scenario, individuals with $Z_0 = 2$ is a \textit{lost cause}. The same logic applies for $Z_0 = -2$ where a client could either be a \textit{lost cause} or a \textit{persuadable}. Here, for \textit{sure things} clients, by definition $Z_0 = 0$. {\vahid [follow the same paragraph structure as in $Z_1$. Your last sentence is confusing: why do you talk about ``sure thing" here? isn't it obvious?]}
+
+\subsection{Augmented data conditional mean regression} 
+\label{sec:smite_ie}
+{\vahid [before going to the development you need to motivate the reader, why do you want this section, why data augmentation in this form is meaningful, etc. The development below are simple algebraic manipulation, you may declare a corollary and put the details in Appendix.]}
+
+
+
+The fundamental problem of causal inference can be thought of as a missing data problem, or more specifically, a missing potential outcomes problem. Indeed, under the counterfactual consistency assumption, each participant is missing one potential outcome: that corresponding to the treatment not received.
+
+If the potential outcomes were fully observed, then causal inference could be made in a trivial way. While often not explicitly discussed in the uplift literature, the links between causal inference and missing data can provide additional insight.
+%
+To make causal inference using a counterfactual framework, we must now find a way to impute the missing potential outcomes either implicitly or explicitly.
+%
+Amongst all the missing data imputation techniques, data augmentation is not so popular in the literature and very few articles mentioned the use of the technique to account for missing data problems. 
+
+The term {\it data augmentation} refers to methods for constructing iterative optimization or sampling algorithms via the introduction of unobserved data or latent variables. For deterministic algorithms, the method was popularized in the general statistical community by the seminal article by \cite{dempster1977maximum} on the EM algorithm for maximizing a likelihood function or, more generally, a posterior density.
+
+
+Instead of using the transformed outcome directly as a response variable, we can think of it as an auxiliary or latent variable and augment the data.
+
+
+Recall the transformed outcomes $Z_1$ \eqref{eq:transformed_outcome} and $Z_0$ \eqref{eq:transformed_outcome_w} defined in Section~\ref{sec:transformed_outcome}. Now consider the random variable
+
+
+\[ Z = \left\{ \begin{array}{cc} 
+    Z_1/2 & \mathrm{if}~ Y=1, \\ 
+    Z_0/2 & \mathrm{if}~ Y=0. 
+    \end{array} \right.
+\]
+
+
+Now, suppose $n$ independent customer observations $\{y_i, \textbf{x}_i, t_i, z_i\}_{i=1}^n$ are at our disposal, where $\{z_i\}_{i=1}^n$ are realisations of the transformed outcome $Z$.
+
+
+
+Note that $Z= 2T -1 $. 
+
+
+Again, we consider the case where $e(\x)=1/2$, hence, $\mathrm{Pr}(T=1)=\mathrm{Pr}(T=0)=1/2$. Although the following corollary is simplified based on the assumption assumption that $e(\x) = 1/2$, the development holds for any constant $e(\x)$. Moreover, one can use an under or over-sampling procedure to recover the $e(\x) = 1/2$ case. 
+
+
+\begin{corollary}
+Let $m_{yt} = \mathrm{Pr}( Y=y | T=t)$, and $p_{yt} = m_{yt} / ( m_{yt} + m_{y(1-t)})$ and suppose that the propensity score $e(\x)=1/2$. Then, the augmented data $\{y_i, t_i, z_i\}_{i=1}^n$ likelihood can be written as
+\begin{align}
+    \prod_{i=1}^n  \mathrm{Pr}( z_i, y_i, t_i)  = 2^{-n}\prod_{i=1}^n p_{y_i 1}^{t_i } (1 - p_{y_i 1})^{(1-t_i)} m_{1t_i}^{y_i} (1 - m_{1t_i})^{(1-y_i)}.
+    \label{eq:adata_lik}
+\end{align}
+\end{corollary}
+
+
+
+
+
+
+\begin{corollary}
+Let $\gamma$ denote the treatment effect, $\boldsymbol{\beta}$, the vector of main effects, $\boldsymbol{\delta}$, the vector of interactions effects, and $\theta_o$, the intercept. 
+Define the uplift model as 
+\begin{equation}
+  \mu_{1t_i}(\x_i, \theta_o, \boldsymbol{\theta}) = \mathrm{Pr} (Y_i = 1 \mid \mathbf{x}_i, t_i, \theta_o, \boldsymbol{\theta}) =
+  \bigl( 1+ \mathrm{exp}\{-(\theta_o + \gamma t_i + \mathbf{x}_i^\top [\boldsymbol{\beta} + t_i \boldsymbol{\delta}] ) \} \bigr)^{-1},
+\label{eq:pitheta}
+\end{equation}
+where $\boldsymbol{\theta} = (\boldsymbol{\beta}, \gamma, \boldsymbol{\delta})$, denotes all model parameters except for the intercept $\theta_o$. The parameters are estimated by maximizing the likelihood \eqref{eq:adata_lik}. This is equivalent to minimizing the following objective function
+
+\begin{equation}
+    - \sum_{i=1}^n \Big(y_i \log m_{ 1 t_i} + (1 - y_i)\log(1 - m_{1 t_i }) \Big) - \sum_{i=1}^n \Big(t_i \log p_{y_i 1} + (1 - t_i)\log(1 - p_{y_i 1})  \Big).
+    \label{eq:IE_neg_likelihood}
+\end{equation}
+
+
+
+\end{corollary}
+
+
+
+We have
+
+\begin{align*}
+  \mathrm{Pr}( Z = 1 | Y=1 )  & = \mathrm{Pr}( Z =1 , Y=1 ) / \mathrm{Pr}(Y = 1)\\
+    & = \{\mathrm{Pr}( Z=1, Y=1, T=1 ) + \mathrm{Pr}(Z=1, Y=1, T=0)\} / \mathrm{Pr}(Y=1) \\
+    & = \tfrac{\mathrm{Pr}(Z_1=2 | Y=1, T=1)\mathrm{Pr}(Y=1 | T=1) \mathrm{Pr}(T=1)  + \mathrm{Pr}(Z_1=2 | Y=1, T=0)\mathrm{Pr}(Y=1 | T=0) \mathrm{Pr}(T=0)}
+  { \mathrm{Pr}(Y=1|T=1)\mathrm{Pr}(T=1) + \mathrm{Pr}(Y=1 | T=0) \mathrm{Pr}(T=0) } \\
+    & = m_{11} / ( m_{11} + m_{10}) = p_{11}.
+\end{align*}
+Similarly,
+\begin{align*}
+  \mathrm{Pr}( Z = -1 | Y=1 ) & = \mathrm{Pr}( Z =-1 , Y=1 ) / \mathrm{Pr}(Y = 1) \\
+  & = \{\mathrm{Pr}( Z=-1, Y=1, T=1 ) + \mathrm{Pr}(Z=-1, Y=1, T=0)\} / \mathrm{Pr}(Y=1) \\
+  & = \tfrac{\mathrm{Pr}(Z_1=-2 | Y=1, T=1)\mathrm{Pr}(Y=1 | T=1) \mathrm{Pr}(T=1) + \mathrm{Pr}(Z_1=-2 | Y=1, T=0)\mathrm{Pr}(Y=1 | T=0) \mathrm{Pr}(T=0) }
+  { \mathrm{Pr}(Y=1|T=1)P(T=1) +  \mathrm{Pr}(Y=1 | T=0)  \mathrm{Pr}(T=0) } \\
+  & = m_{10} / ( m_{11} + m_{10}) = 1 - p_{11}.
+\end{align*}
+Proceeding in the same way, we have
+\begin{align*}
+  \mathrm{Pr}( Z = 1 | Y=0 ) & =  \mathrm{Pr}( Z =1 , Y=0 ) /  \mathrm{Pr}(Y = 0)  \\
+  & = \{ \mathrm{Pr}( Z=1, Y=0, T=1 ) +  \mathrm{Pr}(Z=1, Y=0, T=0)\}/  \mathrm{Pr}(Y=0) \\
+  & = \tfrac{ \mathrm{Pr}(Z_0=2 | Y=0, T=1) \mathrm{Pr}(Y=0 | T=1)  \mathrm{Pr}(T=1) +  \mathrm{Pr}(Z_0=2 | Y=0, T=0) \mathrm{Pr}(Y=0 | T=0)  \mathrm{Pr}(T=0) }
+  {  \mathrm{Pr}(Y=0|T=1) \mathrm{Pr}(T=1) +  \mathrm{Pr}(Y=0 | T=0)  \mathrm{Pr}(T=0)} \\
+  & = m_{01} / ( m_{01} + m_{00}) = p_{01},
+\end{align*}
+and
+\begin{align*}
+   \mathrm{Pr}( Z = -1 | Y=0 ) & =  \mathrm{Pr}( Z =-1 , Y=0 ) /  \mathrm{Pr}(Y = 0)  \\
+  & = \{ \mathrm{Pr}( Z=-1, Y=0, T=1 ) +  \mathrm{Pr}(Z=-1, Y=0, T=0)\}/ \mathrm{Pr}(Y=0) \\
+  & = \tfrac{ \mathrm{Pr}(Z_0=-2 | Y=0, T=1) \mathrm{Pr}(Y=0 | T=1)  \mathrm{Pr}(T=1) +  \mathrm{Pr}(Z_0=-2 | Y=0, T=0) \mathrm{Pr}(Y=0 | T=0)  \mathrm{Pr}(T=0) }
+  { \mathrm{Pr}(Y=0|T=1) \mathrm{Pr}(T=1) +  \mathrm{Pr}(Y=0 | T=0)  \mathrm{Pr}(T=0) }\\
+  & = m_{00} / ( m_{01} + m_{00}) = 1 - p_{01}.
+\end{align*}
+
+Note that $Z = 1$ iff $T=1$ and $Z=-1$ iff $T=0$. This fact will be useful to write the likelihood of the complete data.
+This is given by
+\begin{align}
+    &\prod_{i=1}^n  \mathrm{Pr}( z_i, y_i, t_i)  = \prod_{i=1}^n  \mathrm{Pr}( z_i | y_i)  \mathrm{Pr}( y_i | t_i)  \mathrm{Pr}(t_i) \label{eq:IE_likelihood}\\
+    &= 2^{-n}\prod_{i=1}^n p_{11}^{t_i y_i} (1 - p_{11})^{(1-t_i)y_i} p_{01}^{t_i (1-y_i)} (1 - p_{01})^{(1-t_i)(1-y_i)}
+    m_{11}^{t_i y_i} (1 - m_{11})^{t_i (1-y_i)}   m_{10}^{(1-t_i) y_i} (1 - m_{10})^{(1-t_i) (1-y_i)} \nonumber \\
+    &= 2^{-n}\prod_{i=1}^n p_{y_i 1}^{t_i } (1 - p_{y_i 1})^{(1-t_i)} m_{1t_i}^{y_i} (1 - m_{1t_i})^{(1-y_i)} \nonumber \\
+    &= 2^{-n} \exp\biggl\{ \sum_{i=1}^n \Big( t_i \log p_{y_i 1} + (1 - t_i)\log(1 - p_{y_i 1}) \Big) \biggr\}
+    \exp\biggl\{ \sum_{i=1}^n \Big( y_i \log m_{ 1 t_i} + (1 - y_i)\log(1 - m_{1 t_i }) \Big) \biggr\}. \nonumber
+\end{align}
+
+
+Now, by rearranging the terms and taking the negative logarithm of the likelihood, maximizing \eqref{eq:IE_likelihood} is equivalent to minimizing the following function, with respect to the model's parameters, that is,
+
+\begin{equation}
+    - \sum_{i=1}^n \Big(y_i \log m_{ 1 t_i} + (1 - y_i)\log(1 - m_{1 t_i }) \Big) - \sum_{i=1}^n \Big(t_i \log p_{y_i 1} + (1 - t_i)\log(1 - p_{y_i 1})  \Big).
+    \label{eq:IE_neg_likelihood}
+\end{equation}
+
+
+If we model $m_{1t_i}$ by $\mu_{1t_i}(\theta_o,\boldsymbol{\theta})$ as in Section \ref{sec:smite_to}, the first term of \eqref{eq:IE_neg_likelihood} is equivalent to the one of \eqref{eq:SMITE_objective}, that is, $\ell(\theta_o,\boldsymbol{\theta})$. The second term of \eqref{eq:IE_neg_likelihood}, which is also a function of $\mu_{1t_i}(\theta_o,\boldsymbol{\theta})$ can be interpreted as the regularization term. We can denote this function as $\mathcal{I}(\theta_o,\boldsymbol{\theta})$. In this case, our  \textit{indirect} regularized conditional means regression solves
+
+\begin{align}
+    (\hat{\theta}_o,{\boldsymbol{\hat\theta}}) = \argmin_{\theta_o,\boldsymbol{\theta}} \ell(\theta_o,\boldsymbol{\theta}) + \mathcal{I}(\theta_o,\boldsymbol{\theta}).
+    \label{eq:SMITE_objective_IE}
+\end{align}
+
+
+{\vahid where is $\lambda$? is it equal one? then it is a special case, mention it!}
+
+
+{\vahid [this section is badly written. it is not clear what is the purpose of the section until the end of the section. It appears to me that you develop a model that becomes a special case of the Lagragian form. In this case, why you do not start with this section and put the Largragian after the model to claim generalization? Think again about this section. You need to bring out the message of the section earlier.]}
+
+
+\subsection{Regularized conditional means regression}
+\label{sec:smite_to}
+
+
+We propose to combine $Z_1$ and $Z_0$ in order to define a new random variable, which can be used as an unbiased estimator of the uplift, but still carry a meaningful interpretation. We define the random variable $S$ such as when $e(\x) = 1/2$, 
+
+\begin{equation}
+   S =  \frac{1}{2} (Z_1 - Z_0)  = 
+    \left\{ \begin{array}{cc}
+       1 & \mathrm{if} ~ T = Y, \\
+      -1 & \mathrm{if} ~ T \neq Y.
+            \end{array} \right.
+    \label{eq:transformed_outcome_sign}
+\end{equation}
+
+
+Here, with regards to the 4 types of clients, {\vahid [which 4 types of clients?]} we have that for $S=1$, the client is either a \textit{lost cause}, a \textit{sure thing} or a \textit{persuadable} (i.e. $u(\x) \geq 0$) and for $S=-1$, the client is either a \textit{do-not-disturb}, a \textit{lost cause} or a \textit{sure thing} (i.e. $u(\x) \leq 0$). Therefore, the random variable $S$ can be interpreted as the sign of $u(\x)$. Next, we will use this transformed outcome in order to penalize the logistic regression for uplift.
+
+
+
+Suppose $n$ independent customer observations $\{y_i, \textbf{x}_i, t_i, s_i\}_{i=1}^n$ are at our disposal, where $\{s_i\}_{i=1}^n$ are realisations of the transformed outcome $S$. Let us denote the model parameters by $(\theta_o, \boldsymbol{\theta})$. Regularization can be seen as a constrained optimization problem; using the transformed outcome $S$ the optimization problem reduces to
+
+\begin{align} 
+     {(\hat{\theta}_o,\boldsymbol{\hat\theta})} & = \argmin_{\boldsymbol{\theta}} ~  \ell\Big({\mu_{1t}}(\theta_o,\boldsymbol{\theta}) \mid \y, \x, \tt \Big) \nonumber \\ 
+     & \mathrm{s.t.} \nonumber \\
+        %& \mathcal{J}\Big({\mu_0}(\boldsymbol{\theta}),{\mu_1}(\boldsymbol{\theta}), \r\Big) < \epsilon,
+        & \sign \Big(u_i(\theta_o,\boldsymbol{\theta})\Big) = s_i \mathrm{~for~} i=1,\ldots,n.
+     \label{eq:objective}
+\end{align}
+
+The quantities $\mu_{1t}(\cdot)$ and $u_i(\cdot)$ are functions of the covariates $\x$ and could be denoted $\mu_{1t}(\x)$ and $u(\x_i)$. {\vahid [you need to talk about $\ell$ here.]}  To simplify the notation, we prefer to omit this specification throughout the rest of the paper. This optimization predicts the uplift $u(\x)$ and the sign of $u(\x)$ is determined by transformed outcome $S$ {\vahid [what is the point of this sentence?]}. Formally, we define the negative log-likelihood $\ell(\theta_o,\boldsymbol{\theta})$ with respect to the model parameters as 
+
+\begin{equation*}
+    \ell(\theta_o,\boldsymbol{\theta}) = - \sum_{i=1}^{n} \Big( y_i\mathrm{log} \{\mu_{1t_i}(\theta_o,\boldsymbol{\theta})\} + (1-y_i) \mathrm{log} \{1-\mu_{1t_i}(\theta_o,\boldsymbol{\theta})\} \Big),
+\end{equation*}
+
+where $\mu_{1t_i}(\theta_o,\boldsymbol{\theta})$ is defined in \eqref{eq:pitheta}. The constraint in \eqref{eq:objective} is what we will next refer to as the \textit{direct} uplift regularization. We propose to use the exponential loss such as
+
+\begin{equation}
+    \mathcal{J}(\theta_o,\boldsymbol{\theta}) =   \frac{1}{n} \sum_{i=1}^{n} \mathrm{exp}\Big(- s_i u_i(\theta_o,\boldsymbol{\theta}) \Big).
+    \label{eq:direct_uplift_loss}
+\end{equation}
+
+where $u_i(\theta_o,\boldsymbol{\theta}) = {\mu_{11_i}}(\theta_o,\boldsymbol{\theta }) - {\mu_{10_i}}(\theta_o,\boldsymbol{\theta})$. It is helpful to rewrite the Lagrangian dual of  (\ref{eq:objective}) in his as 
+
+\begin{align*}
+    (\hat{\theta}_o,{\boldsymbol{\hat\theta}})_{\lambda} =  \argmin_{\theta_o,\boldsymbol{\theta}} \ell(\theta_o,\boldsymbol{\theta}) + \lambda \mathcal{J}(\theta_o,\boldsymbol{\theta})
+\end{align*}
+
+where $\lambda > 0$ is the regularization constant. However, in our framework, we use the transformation $\alpha = \lambda / (1+\lambda)$. This transformation allows to interpret $\alpha \in [0,1)$ as a hyper-parameter which controls the trade-off between the two losses in the optimization problem. Hence, our direct regularized conditional means regression solves
+
+\begin{align}
+    (\hat{\theta}_o,{\boldsymbol{\hat\theta}})_{\alpha} = \argmin_{\theta_o,\boldsymbol{\theta}} (1 - \alpha)  \ell(\theta_o,\boldsymbol{\theta}) + \alpha \mathcal{J}(\theta_o,\boldsymbol{\theta}).
+    \label{eq:SMITE_objective}
+\end{align}
+
+
+\section{Graphical representation of the uplift model}
+Logistic regression may be visualised in a model diagram, with a single node to represent the link function, and multiple nodes to represent input or outputs. This sort of vosialuzation is very common in neural networks community. In Figure~\ref{fig:int_as_nn}, we show a  the diagram  of the uplift interaction model \eqref{eq:pitheta}.
+
+\begin{figure}[!ht]
+    \centering
+    \input{figures/tikz_int_1hrelu}
+    \caption{Graphical representation of the uplift interaction model (left panel). Neural network representation of the uplift model (right panel). Note that $h_j = \r(\x,t)$ for $j=1,\ldots,m$ and for $m=2p+1$, Theorem~\ref{theorem} shows the equivalence between the interaction model \eqref{eq:neural_network_1} and a particular case of the neural network with $1$ hidden layer and $\r$ activation \eqref{eq:neural_network_2}. %\vahid [Do you want sigmoid for the neural network or ReLU? perhaps you need to modify the right panel.] ]
+    }
+    \label{fig:int_as_nn}
+\end{figure}
+
+\subsection{Uplift neural model}
+
+The uplift interaction model \eqref{eq:pitheta}
+can be represented by a fully-connected neural network with no hidden layer, a bias, $2p+1$ input neurons and $1$ output neuron with sigmoid activation function (see Figure~\ref{fig:int_as_nn} left panel). Without loss of generality, we define $\x = (x_1,...,x_p) \in [0,c]^{p}$ for $c>0$ and $t \in \{0,1\}$, a binary variable. Let us further define $\theta_{j}$, for $j=1,\ldots,2p+1$, the weight that connects the $j$th neuron to the output and let $\theta_o \in \mathbb{R}$ be the bias.
+
+The output of the uplift interaction model neural network $\mathrm{NN}_1$ can be written as
+\begin{equation}
+    \mathrm{NN}_1(\x,t) = \sigma \Big(\theta_o + \sum_{j=1}^{p} \theta_j x_j + \sum_{j=p+1}^{2p} \theta_j t x_{j-p} +  \theta_{2p+1} t  \Big),
+    \label{eq:neural_network_1}
+\end{equation}
+
+where $\sigma(\cdot)$ represents the sigmoid function. Now, define $\mathrm{NN}_2$, a fully connected network, with an input of size $p+1$, and one hidden layer of size $2p+1$ with a bias attached to each hidden node as well as a ReLU activation function $\r(\cdot)$, where for $z \in \real$, we have $\r(z) = \max\{0,z\}$. The hidden layer is then connected to a single output neuron with a sigmoid activation function (see Figure~\ref{fig:int_as_nn} right panel). The output of the neural network $\mathrm{NN}_2$ can be written as
+
+\begin{equation}
+    \mathrm{NN}_2(\x,t) = \sigma \biggl\{ w_o^{(2)} + \sum_{k=1}^{2p+1} w_k^{(2)}  \r\Big(w_{o,k}^{(1)} + \sum_{j=1}^{p} w_{j,k}^{(1)} x_j +  w_{p+1,k}^{(1)} t \Big)  \biggr\},
+    \label{eq:neural_network_2}
+\end{equation}
+
+where $w_{j,k}^{(1)}$ represent the weight that connects the $j$th input neuron to the $k$th hidden neuron and $w_k^{(2)}$ represents the weight that connects the $k$th hidden neuron to the output. We denote the biases for the hiddden layer and the output layer by $w_{o,k}^{(1)}$, $k=1,\ldots,2p+1$  and $w_o^{(2)}$ respectively.
+
+
+
+\begin{theorem} \label{theorem}
+Let $\mathrm{NN}_1(\x,t)$ and $\mathrm{NN}_2(\x,t)$ be two neural networks defined as in \eqref{eq:neural_network_1} and \eqref{eq:neural_network_2} respectively. Let $c \in \real^+$ be a positive constant. For all $\theta_j \in \real$, $j=1,\ldots,2p+1$ and $\theta_o \in \real$, there exists a matrix of weights $\Big(w_{j,k}^{(1)}\Big) \in \real^{(p+1) \times (2p+1)}$, a bias vector $\Big(w_{o,k}^{(1)}\Big) \in \real^{2p+1}$, a vector of weights $\Big(w_{k}^{(2)}\Big) \in \real^{2p+1}$ and a bias scalar $w_o^{(2)} \in \real$ such that  for all $\x \in [0,c]^p$ and $t \in \{0,1\}$
+\begin{equation}
+    \mathrm{NN}_1(\x,t) = \mathrm{NN}_2(\x,t).
+    \label{eq:theorem_equality}
+\end{equation}
+\end{theorem}
+
+{\vahid put the proof in the Appendix.}
+\begin{proof}
+We prove the theorem by finding explicitly the weights of $\mathrm{NN}_2(\x,t)$ that verify the equality \eqref{eq:theorem_equality}.
+
+First, we fix the vector of weights that connects the hidden layer to the output such as 
+$$w_{k}^{(2)} = \theta_j,$$ 
+
+for $k=j$, for $k,j=1,\ldots,2p+1$. Moreover, we fix the bias scalar $w_o^{(2)}$ to be equal to the bias scalar from the first network, that is, $w_o^{(2)} = \theta_o$. Therefore, $\mathrm{NN}_2(\x,t)$ can be written as
+
+\begin{equation}
+    \mathrm{NN}_2(\x,t) = \sigma \biggl\{ \theta_o + \sum_{k=1}^{2p+1} \theta_k  r\Big(w_{o,k}^{(1)} + \sum_{j=1}^{p} w_{j,k}^{(1)} x_j +  w_{p+1,k}^{(1)} t \Big)  \biggr\}.
+    \label{eq:neural_network2_proof}
+\end{equation}
+
+Next, we need to define the right structure for the matrix of weights $\Big(w_{j,k}^{(1)}\Big) \in \real^{(p+1) \times (2p+1)}$ to be able to recover the 
+$\mathrm{NN}_1(\x,t)$ model. First, let us fix the bias vector $\Big(w_{o,k}^{(1)}\Big) \in \real^{2p+1}$ such as
+
+\[ w_{o,k}^{(1)} = 
+    \left\{ \begin{array}{cl}
+      0 & \mathrm{if}~k \in \{1,\ldots,p\}\\
+      -c & \mathrm{if}~k \in \{p+1, \ldots, 2p\}\\
+      0 & \mathrm{if}~k=2p+1 
+            \end{array} \right.
+\]
+
+Finally, we give the following representation to the matrix of weights $\Big(w_{j,k}^{(1)}\Big) \in \real^{(p+1) \times (2p+1)}$, that is,
+
+
+\[ \Big(w_{j,k}^{(1)}\Big) = 
+\left(
+\begin{array}{cccc|cccc|c}
+1 & 0 & \cdots & 0 & 1 & 0 & \cdots & 0 & 0  \\
+0 & 1 & \cdots & 0 & 0 & 1 & \cdots & 0 & 0  \\
+\vdots  & \vdots  & \ddots & \vdots & \vdots  & \vdots  & \ddots & \vdots & \vdots  \\
+0 & 0 & \cdots & 1 & 0 & 0 & \cdots & 1 & 0  \\
+\hline
+0 & 0 & \cdots & 0 & c & c & \cdots & c & 1  \\
+\end{array}
+\right)
+\]
+
+
+Therefore, based on these attributions, we have the following equalities. For $k \in \{1, \ldots, p\}$, 
+
+\begin{equation}
+    r\Big(w_{o,k}^{(1)} + \sum_{j=1}^{p} w_{j,k}^{(1)} x_j +  w_{p+1,k}^{(1)} t \Big) = r(x_k) = x_k.
+    \label{eq:1st_equality}
+\end{equation}
+
+Then, for $k \in \{p+1, \ldots, 2p\}$,
+
+\begin{equation}
+    r\Big(w_{o,k}^{(1)} + \sum_{j=1}^{p} w_{j,k}^{(1)} x_j +  w_{p+1,k}^{(1)} t \Big) = r(-c + x_{k-p} + ct) = t x_{k-p}.
+    \label{eq:2nd_equality}
+\end{equation}
+
+In \eqref{eq:2nd_equality}, the outcome depends on the value of $t$ and the second equality comes from the fact that we have
+
+\[ r(-c + x_{k-p} + ct) = 
+    \left\{ \begin{array}{ll}
+      r(x_{k-p} - c) = 0 & \mathrm{if}~t = 0,\\
+      r(x_{k-p}) = x_{k-p} & \mathrm{if}~t=1,
+            \end{array} \right.
+\]
+
+therefore, $r(-c + x_{k-p} + ct) = t x_{k-p}$. Finally, for $k=2p+1$, we have
+
+\begin{equation}
+    r\Big(w_{o,k}^{(1)} + \sum_{j=1}^{p} w_{j,k}^{(1)} x_j +  w_{p+1,k}^{(1)} t \Big) = r(t) = t.
+    \label{eq:3rd_equality}
+\end{equation}
+
+Hence, the desired result is obtained by simply replacing \eqref{eq:1st_equality}, \eqref{eq:2nd_equality} and \eqref{eq:3rd_equality} in \eqref{eq:neural_network2_proof}.
+\end{proof}
+
+
+
+\subsection{Twin neural model for uplift}
+
+After the uplift model parameters are estimated, the uplift prediction is computed in three steps. i) step the conditional probabilities are estimated by fixing the treatment variable $T$ to $1$ or $0$ ii)  the difference is taken to compute the uplift iii) the uplift is visualized. The model plays a major role in implementing these three steps. The twin neural model diagram is shown in  Figure~\ref{fig:siamese_network}. This representation reminds us resembles the Siamese model {\vahid [cite the siamese model]} \cite{} in the context of deep learning.
+
+\begin{figure}[!ht]
+    \centering
+    \input{figures/tikzsmite}
+    \caption{Diagram of the twin logistic interaction model {\vahid [add the ReLU hidde layers to the diagram]}.}
+    \label{fig:siamese_network}
+\end{figure}
+
+
+Twin  networks were first introduced in signature verification as an image matching problem \citep{bromley1994signature}, where the task is to compare two hand-written signatures and infer identity. A twin  neural network consists of two  networks which are fed with distinct inputs, but their output are matched by an energy function. This function computes some metric between the highest level feature representation on each side. The parameters between the twin networks are tied. Weight tying guarantees that two extremely similar images could not possibly be mapped by their respective networks to  different locations in feature space because each network computes the same function. Such networks are mostly known for their application to face verification and recognition \citep{chopra2005learning,taigman2014deepface,parkhi2015deep,schroff2015facenet}, areal-to-ground image matching \citep{lin2015learning}, stereo matching \citep{zbontar2015computing}], patch matching \citep{han2015matchnet, simo2015discriminative,zagoruyko2015learning}, optical flow \citep{dosovitskiy2015flownet}, large scale video classification \citep{karpathy2014large} and one-shot character recognition \citep{koch2015siamese}. To the best of our knowledge we are the first to propose a twin model in the uplift estimation. Our experiments show that this approach bridge the gap between performance and interpretability {\vahid [Shall we move this sentence upper to introduction or methodology section?]}. 
+
+%
+
+The twin network  representation of the uplift interaction model is easily generalized to neural networks, as show in Figure~\ref{fig:nite}. There are several reasons why neural networks are suitable tool for uplift i)  they are flexible models and easy to train with current GPU hardware. ii) with a single hidden layer modeling input interactions is straightforward \citep{tsang2018neural} iii) they are guaranteed to approximate a large class of  functions \citep{cybenko1989approximation, hornik1991approximation, pinkus1999approximation} iv) neural networks perform very well on predictive tasks which is the main objective of uplift v)  a simple network architecture ensures model interpretability for further studies. 
+
+
+\input{figures/nnsmite.tex}
+{\vahid [Revise caption to Figure 3. Add ReLU layer to  Figure 3.]}
+
+Here, we propose a twin neural network for uplift which is composed of two collaborative models two almost identical input vectors. This twin model outputs the estimate of the conditional mean $\mu_{1t}(\x)$ and at the same time predicts uplift $u(\x)$. This model simplifies the fitting process to a great extent. After feeding the network with input values, the model computes the conditional means, as well as the uplift. This is why two input vectors are fed to almost identical sub-models with shared parameters. 
+
+
+
+The inputs contain the covariates vector $\x$ and, for the left sub-component, the treatment variable fixed to $1$. The treatment variable is fixed to $0$ for the right sub-component as shown in Figures~ \ref{fig:siamese_network} and \ref{fig:nite}. The sub-components output the predicted conditional means for treated ($\mu_{11}(\x)$) and for control ($\mu_{10}(\x)$). The difference gives direct prediction of $u(\x)$. At the same time, the predicted conditional mean $\mu_{1t}(\x)$ is based on the actual received treatment for each individual $t \in \{0,1\}$, i.e., $\mu_{1t}(\x) = t \mu_{11}(\x) + (1-t) \mu_{10}(\x)$. 
+{\vahid This paragraph is confusing. I did not get what you wanted to say. Re-write.}
+
+\subsection{Parameter estimation}
+\label{sec:smite_to_sgd}
+
+Gradient-based optimization is one of the pillars of machine learning. Given an objective function $f: \real^n \rightarrow \real$, classical gradient descent has the goal of finding
+(local) minima $\hat{\boldsymbol{\theta}} = \argmin_{\boldsymbol{\theta}} f(\boldsymbol{\theta})$ via updates of the form $ \Delta (\boldsymbol{\theta}) =  -\xi \nabla f$, where $\xi$
+is a positive step size (or the learning rate). Two main classes of optimization methods can be applied to solve such problems : (i) {\it stochastic} and (ii) {\it batch}.
+
+The prototypical stochastic optimization method is the stochastic gradient
+method \citep{robbins1951stochastic}, which, in the context of minimizing $f(\boldsymbol{\theta})$ and with $\boldsymbol{\theta}^{(0)} \in \real^p$ given, is defined by
+
+\begin{equation}
+    \boldsymbol{\theta}^{(k+1)} \leftarrow \boldsymbol{\theta}^{(k)} - \xi \nabla f_{i_k} (\boldsymbol{\theta}^{(k)}).
+\end{equation}
+
+Here, for all $k \in \mathbb{N}$, the index $i_k$ is chosen randomly from $\{1,...,n\}$. There is no particular reason to employ information from only one sample point per iteration. Instead, one can employ a {\it mini-batch} approach in which a small subset of samples $\mathcal{S}_k \subseteq \{1, ..., n\}$, is chosen randomly in each iteration, leading to
+
+\begin{equation}
+    \boldsymbol{\theta}^{(k+1)} \leftarrow \boldsymbol{\theta}^{(k)} - \frac{\xi}{|\mathcal{S}_k|} \sum_{i \in \mathcal{S}_k} \nabla f_{i} (\boldsymbol{\theta}^{(k)}).
+    \label{eq:mini-batch-sgd}
+\end{equation}
+
+Here, $|\mathcal{S}_k|$ is the batch size. Such a mini-batch stochastic gradient method has been widely used in practice.  There are some fundamental practical and theoretical reasons why stochastic methods have inherent advantages for large-scale machine learning \citep{bottou2018optimization}. In our experiments, we train our models by solving (\ref{eq:SMITE_objective}) and/or (\ref{eq:SMITE_objective_IE}) using the mini-batch stochastic gradient descent (SGD) updates as in (\ref{eq:mini-batch-sgd}). Note that optimization algorithms that use only the gradient are called first-order optimization algorithms. Second-order optimization algorithms such as Newton's method use the Hessian matrix. Like all neural network training, we train the network using first-order gradient methods. 
+
+%\subsection{Deep learning ?}
+
+
+%\textcolor{blue}{Deep Learning has enabled remarkable progress over the last years on a variety of tasks, such as image recognition, speech recognition, and machine translation. One crucial aspect for this progress are novel neural architectures. Currently employed architectures have mostly been developed manually by human experts, which is a time-consuming and error-prone process. Because of this, there is growing interest in automated neural architecture search methods \citep{elsken2018neural}.
+%
+%The search space defines which architectures can be representedin principle. Incorporating prior knowledge about typical properties of architectures well-suited for a task can reduce the size of the search space and simplify the search. SMITE architecture is a Sieamese multi-layer perceptron. Therefore, the search space for the architecture is first defined by the number of hidden layers and the number of hidden units per layer. However, it should not be limited to these two parameters. The choice of loss functions, regularization and activations in deep networks has also a significant effect on the training dynamics and task performance. These functions are therefore part of the architecture and should be included in the search space.}
+
+
+%\textcolor{blue}{Neural Networks are heavy to compute on low resource devices. There have been several approaches developed to overcome this issue, such as network pruning, architecture design, and quantization...}
+
+
+
+\section{Evaluating uplift models}\label{sec:qini}
+
+In the context of model selection, in practice, given $M$ models and/or hyperparameter settings, we build $M$ estimators $\{ \hat{u}_1, \hat{u}_2, \ldots, \hat{u}_M \}$. The quantity of interest in this case is the expected prediction risk of the model when it is applied to new data, according to some goodness-of-fit statistic. The idea of model selection is to estimate this expected risk for each of our models and find the model that optimizes it. There are several ways to estimate this risk, including information criteria, but data-splitting is the easiest and most widely applicable \citep{arlot2010survey}. Before fitting the models, the observations are randomly split into training and validation samples. The models are fit on the training sample $\mathcal{T}$ and evaluated on the validation sample $\mathcal{V}$. In cross-validation, this process is repeated round-robin across different random splits of the data and the estimated risks are averaged per model.
+
+Classic evaluation approaches break down for treatment effect estimation because the true treatment effect is never observed in any sample. Despite this, we can attempt to use prediction error to select among treatment effect models.
+
+Assuming the treatment effect model is built by regressing the outcomes onto the covariates and treatment to obtain $\hat\mu_0$ and $\hat\mu_1$, straightforward goodness-of-fit statistic often referred to as the $\mu$-risk can be compared for different models. This statistic is defined for continuous outcome $Y$ and can be estimated by $\frac{1}{|\mathcal{V}|}\sum_{i \in \mathcal{V}}( \hat{\mu}_{t_i}(\x_i) - y_i )^2$ with observations from the validation set $\mathcal{V}$. In the context of a binary response variables, one can use the Deviance instead.
+
+An alternative is to maximize the {\it value} of the treatment policy $d(\x) = \mathbbm{1}(u(\x) > 0)$ which indicates which individuals we expect to benefit from the treatment \citep{zhao2017uplift}. The value of a decision policy $\hat d$ is estimated by $\hat v =  \frac{1}{|\mathcal{V}|}\sum_{i \in \mathcal{V}} \frac{\mathbbm{1}(\hat d(\x_i) = t_i) y_i}{e(\x_i)}$. In other words, the value is the expected outcome of an individual when all individuals are treated according to the policy $\hat d$. If larger values of the outcome are more desirable (e.g. lifespan, click-through rate, approval ratings), then the policy that maximizes the value is optimal. If all we are interested is the treatment decision (and not the treatment effect itself), then we are already justified in maximizing value. However, a drawback of this metric is that it only utilizes a portion of the data. Indeed, it throws away individuals whose treatments do not match $\hat d(\x_i)$.
+
+The goal of uplift modeling is to separate all observations into heterogeneous segments that differ as much as possible with regard to the reactions to the treatment and, thus, identify (sub)groups with very different uplifts. In the uplift literature, the {\it Qini coefficient} is commonly used as a goodness-of-fit measure for uplift models. The computation of this statistic requires the construction of the {\it Qini curve} \citep{radcliffe2007using}.
+
+For a given model, let $\hat{u}_{(1)} \geq \hat{u}_{(2)} \geq ... \geq \hat{u}_{(|\mathcal{V}|)}$ be the sorted predicted uplifts on the validation set $\mathcal{V}$. Let $\phi \in [0,1]$ be a given proportion and let $ N_{\phi} = \{i: \hat{u}_{i} \geq \hat{u}_{(\ceil{\phi |\mathcal{V}|})} \} \subset \lbrace 1, \ldots, |\mathcal{V}| \rbrace$ be the subset of observations with the $\phi |\mathcal{V}| \times 100 \%$ highest predicted uplifts $\hat{u}_i$ (here $\ceil{s}$ denotes the smallest integer larger or equal to $s\in \real$). 
+
+The \textit{Qini curve} is defined as a function $f$ of the fraction of population targeted $\phi$, where 
+\begin{equation*}
+    f(\phi) = \frac{1}{n_t}\biggl(\sum\limits_{i \in  N_{\phi}} y_i t_i - \sum\limits_{i \in  N_{\phi}} y_i (1-t_i) \biggl\{ \sum\limits_{i \in  N_{\phi}} t_i / \sum\limits_{i \in  N_{\phi}} (1-t_i) \biggr\} \biggr),
+\end{equation*}
+where $n_t = \sum_{i=1}^{|\mathcal{V}|} t_i$ is the number of treated customers, with $f(0)=0$ and $f(1)$ is the average treatment effect. In other words, $f(\phi)$ represents the incremental number of positive responses for a fraction $\phi$ or targeted customers relative to the total number of targeted customers in the sample. The Qini helps visualize the performance of an uplift model, a bit like the ROC curve of a binary classification model. Following the same logic, a straight line between the points $(0,0)$ and $(1, f(1))$ defines a benchmark to compare the performance of the model to a strategy that would randomly target individuals. This means that if a proportion $\phi$ of the population is targeted, we expect to observe an uplift of $\phi f(1)$.
+The {\it Qini coefficient} \citep{radcliffe2007using} is defined as
+\begin{equation*}
+     q = \int_0^1 Q(\phi) ~\mathrm{d}\phi = \int_0^1 \{f(\phi) - \phi~f(1)\} ~\mathrm{d}\phi,
+\end{equation*}
+where $Q(\phi) = f(\phi) - \phi~f(1)$. This area can be numerically approximated using a Riemann method such as the trapezoid rule formula: the domain of $\phi \in [0,1]$ is partitioned into $K$ bins, or $K+1$ grid points $0=\phi_1 < \phi_2 < ... < \phi_{K+1} = 1$, to approximate $q$ by its empirical estimation
+\begin{equation}
+  \hat{q} = \dfrac{1}{2} \sum_{k=1}^K (\phi_{k+1}-\phi_k)\{Q(\phi_{k+1}) + Q(\phi_{k})\}.
+  \label{eq:q:hat}
+\end{equation}
+
+It is important to note, unlike the area under the ROC curve, $\hat{q}$ could be negative. This would simply mean that a strategy following the model in question does worse than random targeting. 
+
+Measuring the goodness-of-fit of an uplift model can also be achieved by the similarity between the theoretical uplift percentiles (given by the model's predictions) and empirical percentiles (observed in the data) based on the model. This can be approximated by the {\it Kendall's uplift rank correlation} \citep{belba2019qbased} defined as
+\begin{equation}
+    \hat{\rho} = \frac{2}{K(K-1)} \sum_{i<j} \mathrm{sign}(\bar{\hat{u}}_i - \bar{\hat{u}}_j)~\mathrm{sign}(\bar{u}_i - \bar{u}_j),
+    \label{eq:corr_coeff}
+\end{equation}
+where $\bar{\hat{u}}_k$ is the average predicted uplift in bin $k$,  $k \in {1,...,K}$, and $\bar{u}_k$ is the observed uplift in the same bin. 
+
+The \textit{adjusted Qini coefficient} represents a trade-off between maximizing the area under the Qini curve and grouping the individuals in decreasing uplift bins. It is given by
+
+\begin{equation}
+    \qadj = \rho~\mathrm{max}\{ 0, \hat{q}\}.
+    \label{eq:qadj}
+\end{equation}
+
+
+%MOULOUD
+%\newpage
+\section{Experiments}
+\label{sec:experiments}
+
+We demonstrate the utility of our proposed methods using simulations. Each simulation is defined by a data-generating process with a known effect function. Each run of each simulation generates
+a dataset, which we split into training, validation, and test samples. We use
+the training data to estimate $M$ different uplift functions $\{\hat{u}_m\}_{m=1}^M$ using
+$M$ different algorithms (e.g. Qini-based uplift regression, SMITE$_{\mathrm{TO}}$ or causal forest). For each of those we calculate the validation metric $\qadj$ using the data in validation set. The models selected by optimizing each validation-set metric are then used to estimate the uplift on the test set. Each simulation is repeated multiple times. 
+
+\subsection{Data generating process}
+
+We generate synthetic data in a similar way to the simulation studies of \cite{tian2014simple}, inspired by scenarios defined in \cite{powers2018some}. For each scenario, we generate $n$ observations and $p$ covariates. We draw odd-numbered covariates independently from a standard Gaussian distribution. We draw even-numbered covariates independently from a
+Bernoulli distribution with probability $1/2$. Accross all scenarios, we define the mean effect function $\mu(\cdot)$ and the treatment effect function $\tau(\cdot)$. We also control the noise level $\sigma^2$.
+
+Given the elements above, our data generation model is, for $i=1,...,n$ :
+
+\begin{align*}
+    Y_i^* \mid \x_i, t_i \sim \mathcal{N}(\mu(\x_i) + t_i\tau(\x_i), \sigma^2).
+\end{align*}
+
+where $t_i$ is the realisation of the random variable $T_i \sim \mathrm{Bernoulli}(1/2)$. Then, we define $Y_i$ to be the binary outcome as $
+    Y_i = \mathbbm{1}(Y_i^* > 0 \mid \x_i, t_i)$.
+Hence, $Y_i$ follows a Bernoulli distribution with parameter $\mathrm{Pr}(Y_i^* > 0 \mid \x_i, t_i)$ and it is easy to recover the ``true'' uplift $u_i^*$ as follows
+
+\begin{align}
+    u_i^* &= \mathrm{Pr}(Y_i^* > 0 \mid \x_i, T_i = 1) - \mathrm{Pr}(Y_i^* > 0 \mid \x_i, T_i = 0) \nonumber \\
+    u_i^* &= \Phi \Bigl( \frac{\mu(\x_i) + \tau(\x_i)}{\sigma} \Bigr) - \Phi \Big( \frac{\mu(\x_i)}{\sigma} \Big) \label{eq:sim_true_uplift}
+\end{align}
+for $i=1,\ldots,n$, where $\Phi(.)$ is the standard Gaussian cumulative distribution function. Following \cite{powers2018some},  within each set of simulations, we make different choices of mean effect function and treatment effect function, meant to represent a wide variety of functional forms: both univariate and multivariate; both additive and interactive; both linear and piecewise constant. The functions are:
+
+\begin{align*}
+    f_1(\x) &= 0 \\
+    f_2(\x) &= 5 \mathbbm{1}(x_1 > 1) - 5\\
+    f_3(\x) &= 2 x_1 - 4 \\
+    f_4(\x) &= x_2 x_4 x_6 + 2 x_2 x_4 (1-x_6) +3x_2(1-x_4)x_6 + 4x_2(1-x_4)(1-x_6) + 5(1-x_2)x_4x_6 \\
+            &+ 6(1-x_2)x_4(1-x_6) + 7 (1-x_2)(1-x_4)x_6 + 8(1-x_2)(1-x_4)(1-x_6)\\
+    f_5(\x) &= x_1 + x_3 + x_5 + x_7 + x_8 + x_9 - 2\\
+    f_6(\x) &= 4 \mathbbm{1}(x_1 > 1)\mathbbm{1}(x_3 > 0) + 4\mathbbm{1}(x_5 > 1)\mathbbm{1}(x_7 > 0) + 2x_8x_9\\
+    f_7(\x) &= \frac{1}{2} (x_1^2 + x_2 + x_3^2 + x_4 + x_5^2 + x_6 + x_7^2 + x_8 + x_9^2 - 11)\\
+    f_8(\x) &= \frac{1}{\sqrt{2}} (f_4(\x) + f_5(\x)).
+\end{align*}
+
+
+%Each of the eight functions above is centered and scaled so that with respect to the predictors distributions, each has mean close to zero and all have roughly the same variance.
+Table~\ref{tab:scenarios} gives the mean and treatment effect functions for the different randomized simulations, in terms of the eight functions above. In Figure~\ref{fig:qini_curves_scene}, we show the Qini curves associated with the ``true" uplift $u^*$ \eqref{eq:sim_true_uplift}. 
+
+
+\begin{table}[!ht]
+    \centering
+    \caption{Specifications for the 5 simulation scenarios. The rows of the table correspond, respectively, to the sample size, dimensionality, mean effect function, treatment effect function, noise level and the adjusted Qini coefficient based off the ``true" uplift $u^*$ \eqref{eq:sim_true_uplift}.}
+    \label{tab:scenarios}
+    \begin{tabular}{l|ccccc}
+        Scenarios & 1 & 2 & 3 & 4 & 5\\
+        \hline
+        $n$ & 10000 & 20000 & 20000 & 20000 & 20000 \\
+        $p$ & 200 & 100 & 100 & 100 & 100 \\
+        $\mu(\x)$ & $f_7(\x)$ & $f_3(\x)$ & $f_1(\x)$ & $f_2(\x)$ & $f_6(\x)$\\
+        $\tau(\x)$ & $f_4(\x)$ & $f_5(\x)$ & $f_6(\x)$ &$ f_7(\x)$ & $f_8(\x)$\\
+        $\sigma$ & $1/2$ & $1$ & $1$ & $2$ & $4$\\
+        $\qadj (u^*)$ & $1.80$ & $3.00$ & $10.00$ & $ 2.16$ & $3.68$\\
+               \hline
+    \end{tabular}
+   
+\end{table}
+
+The defined scenarios are interesting because they represent different situations that we can face with real data. Indeed, scenario 1, although it seems simpler than the others (with a small noise level), is in fact a case that happens often, especially for marketing campaigns. In this scenario, by construction, the uplift is positive or zero. Thus, there are no do-not-disturb clients. This results in an increasing monotonic Qini curve. In scenario 2, we introduce a group of do-not-disturb clients. In addition, we increase the noise level as well as the number of observations, but we reduce the number of variables. Overall, the treatment effect is negative but a small group of persuadables is generated. In scenario 3, it is interesting to note that the main effect function is zero. Thus, the uplift is entirely guided by the treatment effect function. In scenario 4, we introduce a quadratic treatment effect function and scenario 5 is the most complex one. Using these scenarios, we believe it make it possible to compare the different methods rigorously.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.3\textwidth]{figures/simulations/Qini_Curve_Scene_1.pdf}
+    \includegraphics[width=0.3\textwidth]{figures/simulations/Qini_Curve_Scene_2.pdf}
+    \includegraphics[width=0.3\textwidth]{figures/simulations/Qini_Curve_Scene_3.pdf}
+    \includegraphics[width=0.3\textwidth]{figures/simulations/Qini_Curve_Scene_4.pdf}
+    \includegraphics[width=0.3\textwidth]{figures/simulations/Qini_Curve_Scene_5.pdf}
+    \caption{Qini curve based on the ``true" uplift with respect to the five scenarios of Table~\ref{tab:scenarios}.}
+    \label{fig:qini_curves_scene}
+\end{figure}
+
+
+\subsection{Benchmarks and implementation}
+
+Each run of each simulation generates a dataset, which we split into training ($40\%$), validation ($30\%$), and test samples ($30\%$). We use the training and the validation sets to fit and fine-tune the models by maximizing the adjusted Qini coefficient. Note that fine-tuning is specific to the type of the model, e.g. for our transformed outcome model, we fine-tune the learning rate and the trade-off constant but for random forests, we fine-tune the number of trees as well as the depth of each tree. Then, we score the test samples with the fine-tuned models and compute the related adjusted Qini coefficients. We repeat each experiment $20$ times.
+
+For each simulated dataset, we implement the following models:
+\begin{enumerate}
+    \item[(a)] a multivariate logistic regression without penalization as in (\ref{eq:uplift_likelihood}). This is the baseline model, and we will refer to it as \textit{Logistic}.
+    \item[(b)] a Qini-based uplift regression model that uses several LHS structures to search for the optimal parameters (see \citep{belba2019qbased} for more details). We denote this model by \textit{Qini-based}.
+    \item[(c)] two types of random forests designed for causal inference (see \citep{athey2019generalized} for more details). This method uses honest estimation, i.e., it does not use the same information for the partition of the covariates space and for the estimation of the uplift. We denote these models by \textit{CF} and \textit{CF$_h$} without and with honest estimation respectively.
+    \item[(d)] two types of random forests designed for uplift (see \citep{jaskowski2012uplift} for more details). This method uses different split criteria. We denote these models by \textit{ URF$_{\mathrm{KL}}$} and \textit{ URF$_{\mathrm{ED}}$} for Kullback-Leibler divergence and Euclidean distance split criterion respectively.
+    \item[(e)] our SMITE regression model that uses the TO objective function to estimate the regression parameters as explained in Section~\ref{sec:smite_to}. We denote this model by \textit{TO$_{\hat{\alpha}}$}.
+    \item[(f)] our SMITE regression model that uses the IE objective function to estimate the regression parameters as explained in Section~\ref{sec:smite_ie}. We denote this model by \textit{IE}.
+\end{enumerate}
+
+In our experiments, we make use of available implementations from the authors of the benchmarks. We use the \textbf{R} libraries \textit{grf} \citep{tibshirani2019R_grf} and \textit{uplift} \citep{guelman2014R_uplift} for the random forests implementations. We also use the \textbf{R} library \textit{tools4uplift} \citep{belba2020R_tools4uplift} to fit the Qini-based uplift regression \citep{belba2019qbased} and for computing the models goodness-of-fit measure. Note that the {\it Logistic}, \textit{TO$_{\hat{\alpha}}$} and \textit{IE}  methods were implemented with \textbf{Pytorch} in \textbf{Python}. 
+
+
+
+\subsection{Fine-tuning the trade-off constant $\alpha$}
+
+We start our simulation study by analyzing the impact of the trade-off constant $\alpha$ on SMITE$_{\mathrm{TO}}$ performance. Recall the objective function related to the  SMITE$_{\mathrm{TO}}$ model 
+
+$$ (1 - \alpha)  \ell(\theta_o,\boldsymbol{\theta}) + \alpha \mathcal{J}(\theta_o,\boldsymbol{\theta}), $$
+
+with $\alpha \in [0;1)$. In this experiment, we want to evaluate the impact of $\alpha$ on the predictive performance of the model. 
+
+To do this, for each run, we fix $\alpha$ and fine-tune the learning rate. We choose the model which gives the best $\qadj$ on the validation set. Next, we score the test samples and report the $\qadj$ for the test set. We repeat this for each $\alpha$ value between $0$ and $1$, with increments of $0.05$. The reported results are averaged over $20$ runs.
+
+Looking at the curves in Figure~\ref{fig:alpha_scene}, we see that the trade-off constant gives flexibility to the model to adapt to the underlying data generating process. We advise to consider $\alpha$ as a hyper-parameter and to select the optimal $\hat\alpha$ by cross-validation.
+
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.3\textwidth]{figures/simulations/Alpha_Scene1.pdf}
+    \includegraphics[width=0.3\textwidth]{figures/simulations/Alpha_Scene2.pdf}
+    \includegraphics[width=0.3\textwidth]{figures/simulations/Alpha_Scene3.pdf}
+    \includegraphics[width=0.3\textwidth]{figures/simulations/Alpha_Scene4.pdf}
+    \includegraphics[width=0.3\textwidth]{figures/simulations/Alpha_Scene5.pdf}
+    \caption{Average adjusted Qini coefficient as a function of the trade-off constant $\alpha$ for SMITE$_{\mathrm{TO}}$.}
+    \label{fig:alpha_scene}
+\end{figure}
+
+
+\subsection{Parameters estimation}
+
+
+In this part of the analysis, we focus on the simple model
+\begin{equation*}
+  \mu_{1t_i}(\x_i, \theta_o, \boldsymbol{\theta}) =
+  \bigl( 1+ \mathrm{exp}\{-(\theta_o + \gamma t_i + \mathbf{x}_i^\top [\boldsymbol{\beta} + t_i \boldsymbol{\delta}] ) \} \bigr)^{-1},
+\end{equation*}
+for $i=1,\ldots n$, where $\boldsymbol{\theta} = (\boldsymbol{\beta}, \gamma, \boldsymbol{\delta})$, denotes all model parameters except for the intercept $\theta_o$. We compare $4$ different methods to estimate the parameters, that is, with \textit{Logistic, Qini-based, TO$_{\hat{\alpha}}$}, and {\it IE}. Table~\ref{tab:param_estimation_results} shows the averaged results on the out-of-sample dataset. 
+
+\begin{table}[!ht]
+    \centering
+    \caption{Comparison of parameters estimation. The metric used is the adjusted Qini coefficient.}
+    \label{tab:param_estimation_results}
+    \begin{tabular}{l|ccccc}
+        Scenarios & 1 & 2 & 3 & 4 & 5\\
+        \hline
+        {\it Logistic} & $0.75$ & $1.80$  & $7.50$ & $0.98$ & $2.59$\\
+        {\it Qini-based} & $0.82$ & $\bf2.68$ & $8.36$ & $1.09$ & $2.94$\\
+        {\it TO$_{\hat{\alpha},(2p+1)}$} & $0.96$  & $2.06$ & $\bf8.84$ & $\bf1.22$ & $3.05$\\
+        {\it IE$_{(2p+1)}$} & $\bf1.24$  & $2.32$ & $8.41$ & $1.20$ & $\bf3.12$\\
+        \hline
+    \end{tabular}
+   
+\end{table}
+
+
+
+If we pick “winners” in each of the simulation scenarios based on which
+method has the highest $\qadj$, {\it IE} would win Scenarios
+1 and 5, tying with the regularized transformed outcome model {\it TO$_{\hat{\alpha}}$} in Scenario 4. The {\it TO$_{\hat{\alpha}}$} model would win Scenario 3, for which the generated data was purely guided by the treatment effect function and the optimal trade-off constant $\alpha$ is close to $1$ as seen in Figure~\ref{fig:alpha_scene}. In Scenario 2, the {\it Qini-based} model has the highest $\qadj$ while the {\it TO$_{\hat{\alpha}}$} model performance is lower than the one of {\it IE}. In general all of the methods outperform the {\it Logistic} model.
+
+\subsection{Beyond linearity}
+
+
+Ensemble methods are amongst the most powerful for the uplift case \citep{soltys2015ensemble}. A method that has proven to be very effective in estimating individual treatment effects is one based on generalized random forests \citep{athey2019generalized}. This method uses honest estimation, i.e., it does not use the same information for the partition of the covariates space and for the estimation of the uplift. This has the effect of reducing overfitting. Another candidate that we consider in our experiments is also based on random forests and designed for uplift \citep{jaskowski2012uplift}. For this method, we consider two different split criteria, one based on Kullback-Leibler divergence and one based on Euclidean distance. In Table~\ref{tab:beyond_linearity_results}, we compare these methods to our neural-network version of TO$_{\hat{\alpha}}$ and {\it IE} models.
+
+\begin{table}[!ht]
+    \centering
+    \caption{Comparison of non-linear models. The metric used is the adjusted Qini coefficient.}
+    \label{tab:beyond_linearity_results}
+    \begin{tabular}{l|ccccc}
+        Scenarios & 1 & 2 & 3 & 4 & 5\\
+        \hline
+        {\it TO$_{\hat{\alpha},(p+1)\times(2p+1)}$} & $1.59$ & $2.01$ & $9.09$ &  $1.23$ & $3.01$ \\
+        {\it IE$_{(p+1)\times(2p+1)}$} & $\bf 1.63$ & $\bf 2.67$  & $\bf 9.86$ & $\bf 1.30$ & $\bf 3.14$\\
+        {\it CF} & $0.75$ & $2.22$ & $9.42$ & $0.94$ & $2.79$ \\
+        {\it CF$_{h}$} & $0.75$  & $2.51$ & $9.53$ & $1.14$ & $3.07$\\
+        {\it URF$_{\mathrm{KL}}$} & $0.74$ & $2.52$ & $8.92$ & $1.01$& $1.99$ \\
+        {\it URF$_{\mathrm{ED}}$} & $0.68$ & $2.42$ & $9.18$ & $0.99$ & $2.33$ \\
+        \hline
+    \end{tabular}
+   
+\end{table}
+
+
+
+We observe that the random forests tend to overfit for several scenarios, with the exception of the honesty criteria which seems to mitigate this problem. On the other hand, we observe a good adequacy of SMITE models in all scenarios. Overall, the results of {\it IE} appear to outperform all other methods significantly (based on  Wilcoxon signed-rank test \citep{wilcoxon1992individual}).
+
+\subsection{Impact of the number of parameters on uplift prediction}
+
+Neural networks have two main hyper-parameters that control the architecture or topology of the network: the number of hidden layers and the number of nodes in each hidden layer. In the previous simulations, we fixed the number of hidden layers to $1$ and the number of nodes in the hidden layer to $2p+1$ as per Theorem~\ref{theorem}. However, the number of nodes can be seen as a hyper-parameter as well. Here, we vary the number of nodes to assess the impact on predictive performance, using either $m=64, 128, 256$ or $m=512$ nodes.  In Table~\ref{tab:hidden_neurons_results}, we report the averaged results. As we can see, there is not one optimal value of $m$ among the ones we compare that gives the best model for all scenarios. Depending on the scenario, we observe clear differences in terms of performance. However, between {\it TO} and {\it IE}, there are some similarities. For scenario 1, in which $p = 200$, we see that the best model is reached for $m = 512$; for scenario 3, the models perform best with $m = 64$, and finally with $m = 256$ and $m = 128$ for scenarios 4 and 5. Only scenario 2 gives two different values of $m$ for {\it TO} and {\it IE}, that is, $m = 128$ and $m = 256$ respectively. Therefore, in practice, for a specific dataset, it is important to consider the number of neurons in the hidden layer as a hyper-parameter and take the time to choose the optimal value by cross-validation.
+
+\begin{table}[!ht]
+    \centering
+    \caption{Fine-tuning the number of nodes. The metric used is the adjusted Qini coefficient.}
+    \label{tab:hidden_neurons_results}
+    \begin{tabular}{l|l|ccccc}
+        Scenarios &$m$ & 1 & 2 & 3 & 4 & 5\\
+        \hline
+        {\it TO$_{\hat\alpha,(p+1)\times m}$} 
+        & $64$ & $1.49$ & $2.01$ & $\bf 9.23$ & $1.16$ & $2.90$\\
+        & $128$ & $1.55$ & $\bf 2.08$ & $9.17$ & $1.20$ & $\bf 3.11$\\
+        & $256$ & $1.54$ & $2.03$ & $9.19$ & $\bf 1.23$ & $3.02$ \\
+        & $512$ & $\bf 1.61$ & $2.01$ & $9.05$ & $1.10$ & $2.98$\\
+        \hline
+        {\it IE$_{(p+1)\times m}$} 
+        & $64$ & $1.54$  & $2.61$ & $\bf 9.91$ & $1.22$ & $3.10$ \\
+        & $128$ & $1.56$  & $2.54$ & $9.80$ & $1.28$ & $\bf 3.16$\\
+        & $256$ & $1.57$ & $\bf 2.65$ & $9.78$ & $\bf 1.32$ & $3.13$ \\
+        & $512$ & $\bf 1.60$ & $2.49$ & $9.64$ & $1.18$ & $3.15$\\
+               \hline
+    \end{tabular}
+\end{table}
+
+
+As stated before, the number of hidden layers can also be seen as a hyper-parameter for the neural network architecture. In our case, we want to evaluate the performance of our models when using a $2$-hidden layers neural network. We fix the number of hidden neurons to $p+1$ and $p$ for the $2$ hidden layers respectively. We report the averaged results as well as a summary of all previous experiments in Table~\ref{tab:hidden_layers_results}. For random forests uplift models, we report the best score between the four used methods. We see that for the most complex scenario, that is, scenario 5, adding a second hidden layer improves the prediction performance of both models {\it TO$_{\hat\alpha}$} and {\it IE} achieving $\qadj$ of $3.12$ and $3.29$ respectively, both outperforming the {\it Best RF} result, that is a $\qadj$ of $3.07$. For scenarios 1, 3 and 4, the best results are attained with the $1$-hidden layer {\it IE} model. Finaly, for scenario $2$, the {\it Qini-based} uplift regression achieves the highest $\qadj$, tying with the {\it IE} model (i.e. $2.68$ vs. $2.67$).   
+
+\begin{table}[!ht]
+    \centering
+    \caption{Summary. The metric used is the adjusted Qini coefficient.}
+    \label{tab:hidden_layers_results}
+    \begin{tabular}{l|l|ccccc}
+        Scenarios &$h$ & 1 & 2 & 3 & 4 & 5\\
+        \hline
+        {\it TO$_{\hat\alpha}$}& $0$ & $0.96$  & $2.06$ & $8.84$ & $1.22$ & $3.05$\\
+        & $1$ & $1.61$ & $2.08$ & $9.23$ &  $1.23$ & $3.11$ \\
+        & $2$ & $1.44$ & $2.03$ & $8.99$ & $1.19$ & $3.12$ \\
+        \hline
+        {\it IE} & $0$ & $1.24$  & $2.32$ & $8.41$ & $1.20$ & $3.12$\\
+        & $1$ & $\bf 1.63$ & $2.67$  & $\bf 9.91$ & $\bf 1.32$ & $3.16$\\
+        & $2$ & $1.49$ & $2.36$ & $9.12$ & $1.28$ & $\bf 3.29$ \\
+        \hline
+        {\it Logistic} & - & $0.75$ & $1.80$  & $7.50$ & $0.98$ & $2.59$\\
+        {\it Qini-based} & - & $0.82$ & $\bf 2.68$ & $8.36$ & $1.09$ & $2.94$\\
+        Best {\it RF} & - & $0.75$ & $2.52$ & $9.53$ & $ 1.14$ & $3.07$\\
+        \hline
+%        $\qadj(u^*)$ & - & $1.80$ & $3.00$ & $10.00$ & $ 2.16$ & $3.68$
+    \end{tabular}
+\end{table}
+
+
+
+\newpage
+\section{Application}
+\label{sec:application}
+
+A data set with $n=50,000$ customers and $p=40$ covariates from an insurer is at our disposal to evaluate the performance of our methods. This company was interested in designing strategies to maximize its conversion rate. An experimental acquisition campaign was implemented for 6 months, for which half of the potential clients were randomly allocated into a treatment group and the other half into a control group. Potential clients under the treatment group were contacted using a different (and more costly) strategy. The goal of the analysis was to be able to select who among the clients portfolio should be contacted in that way going forward in order to maximize the benefits. The observed difference in sales rates between the treated group and the control shows some evidence of a positive impact of the marketing initiative ($\mathrm{ATE}=0.55\%$).
+
+We fit the SMITE models using {\it TO$_{\alpha}$} and {\it IE} losses to the data using the methodology described in the previous sections. We compare models with $0,1$ and $2$ hidden layers. For comparison purposes, we also considered the honest causal forest.
+
+We split the data into training ($40\%$), validation ($30\%$), and test samples ($30\%$). We use the training and the validation sets to fit and fine-tune the models. Then, we select the best model based on the validation set. Using the best model, we score the samples from the test set and compute the adjusted Qini coefficient $\qadj$. We repeat the experiment $30$ times and report averaged results as well as their standard-errors in Table~\ref{tab:final_models_results}.
+
+\begin{table}[!ht]
+    \centering
+    \caption{Final models performance: averaged $\qadj$ (S.E) over $30$ runs.}
+    \label{tab:final_models_results}
+    \begin{tabular}{l|cccc}
+        Method & $\hat{\alpha}$ & Training & Validation & Test \\
+        \hline
+        {\it TO$_{\hat{\alpha},(81)}$} & $0.5$ & $0.251~(0.028)$ & $0.112~(0.026)$ &  $0.037~(0.011)$\\
+        {\it IE$_{(81)}$} & - & $0.331~(0.029)$ & $0.115~(0.022)$ & $0.040~(0.013)$\\
+        \hline
+        {\it TO$_{\hat{\alpha},(41)\times(81)}$} & $0.3$ & $0.539~(0.042)$ & $0.181~(0.028)$  & $\bf 0.104~(0.024) $ \\
+        {\it IE$_{(41)\times(81)}$} & - & $0.705~(0.043)$ & $0.210~(0.029)$ &  $0.095~(0.018)$\\
+        \hline
+        {\it TO$_{\hat{\alpha},(41)\times(41) + (41)\times(40)}$} & $0.3$ & $0.928~(0.066)$ & $0.221~(0.032)$ & $0.095~(0.026)$ \\
+        {\it IE$_{(41)\times(41) + (41)\times(40)}$} & - & $\bf 0.944~(0.065)$ & $0.254~(0.034)$ & $0.091~(0.021)$ \\
+        \hline
+        {\it CF$_{h}$} & - & $0.873~(0.028)$  & $\bf 0.257~(0.022)$ & $0.019~(0.007)$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+
+In these kinds of marketing initiatives, it makes sense that the overall impact is close to zero. Indeed, customers are already interested in the product because it is mandatory to have insurance for their car. Also, the effect of the call is positive on average, that is to say that during the call, the advisor allows the customer to understand all the details of his coverage and thus reassure him about the product he buys. Thus, it is rather unlikely that the call could have a negative effect. We therefore think that for this data set, we have a situation similar to Scenario 1 of the simulations. This may explain why the causal forest does not produce good predictions here. On the other hand, both {\it IE} and {\it TO$_{\hat\alpha}$} work well on this data set. The $1$-hidden layer neural network version of the models improves significantly the fit for both loss functions. Adding a second layer does not seem to increase significantly the performance of the models.
+
+
+
+
+
+%In other studies \citep{gutierrez2017causal, schuler2018comparison, alaa2019validating}, the evaluation of an uplift predictor $\hat{u}$ has been formulated as accurately estimating the following ground-truth performance metric $r^2 = \mathbbm{E}[( \hat u - u )^2]$. This metric is usually referred to as the $\tau$-risk and also termed as the expected precision in estimation of heterogeneous effect (PEHE) \citep{hill2011bayesian}. This approach is intuitive and ideal. However, realizations of the true uplift are never observable, and thus, accurate performance estimation is difficult. A popular workaround \citep{rolling2014model} is to replace $\hat{u}$ with an estimate derived from a validation set $\mathcal{V}$ such as $\hat{r}^2 = \frac{1}{|\mathcal{V}|}\sum_{i \in \mathcal{V}}( \hat{u}_i - \Tilde{u}_i )^2$, where $\Tilde{u}$ is a {\it plug-in} estimate of $u$ estimated using data in the validation set. An alternative is to use the same bin as in \eqref{eq:corr_coeff} and estimate the risk by
+
+%\begin{equation}
+%    \hat{r}^2 = \frac{1}{K} \sum_{k=1}^K (\bar{\hat{u}}_k - \bar{\hat{u}}_k)^2.
+%    \label{eq:tau_risk}
+%\end{equation}
+
+
+
+%\begin{table}[!ht]
+%    \centering
+%    \caption{Final models performance: $\hat{r}^2$.}
+%    \label{tab:final_models_risk_score}
+%    \begin{tabular}{l|ccc}
+%        Method & Training & Validation & Test \\
+%        \hline
+       
+%        {\it TO$_{\hat{\alpha},(81)}$} &  &  & \\
+%        {\it IE$_{(81)}$} &  &  & \\
+%        \hline
+%        {\it TO$_{\hat{\alpha},(41)\times(81)}$} &  &  & \\
+%        {\it IE$_{(41)\times(81)}$} &  &  & \\
+%        \hline
+%        {\it TO$_{\hat{\alpha},(41)\times(41) + (41)\times(40)}$} &  &  & \\
+%        {\it IE$_{(41)\times(41) + (41)\times(40)}$} &  &  & \\
+%        \hline
+%        {\it CF$_{h}$} &  &  & \\
+%        \hline
+%    \end{tabular}
+%\end{table}
+
+
+%\paragraph{Predictions distributions.}
+
+%It is also interesting to note that the distribution of the predicted uplifts obtained by {\it IE} are in line with the expected uplifts (see Figure \ref{fig:pred_uplift_evol}).
+
+%Predicted uplift distributions
+%\input{figures/uplift_evolutions.tex}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+%We apply our methods to both real-world and synthetic data and we compare with what is, to the best of our knowledge, state-of-the-art methods for uplift. Our results show that penalized conditional means regression models significantly outperform random forests designed for uplift in all of our scenarios, with the exception of the honest causal forest model. 
+
+
+
+
+\bibliographystyle{plainnat}
+\bibliography{mybib}
+
+\newpage
+\appendix
+
+
+We give a brief summary of some of the conceptual steps that led to today's mathematical understanding of the universal approximation theorems. For a thorough and extensive historical bibliography on neural networks, \cite{schmidhuber2015deep} compiled 888 references. See \cite{goodfellow2016deep} for an elementary well documented introduction to the subject.
+
+\section{Universal approximation theorems}
+
+A neural network (NN; for a definition, see e.g. \cite{pinkus1999approximation} or \cite{calin2020deep}) transforms an input $x\in D\subset\mathbb{R}^{n}$ into an output $\widetilde{y}=\Phi\left(  x\right)  \in\mathbb{R}$. As such it is a concrete real function of $n$ real variables, $n$ being a priori an arbitrary positive integer. A natural question that has been asked for a long time is the following: can this NN (with an appropriate architecture) approximate functions of a given class (common example: multivariate continuous functions defined on $D=K$, a compact subset of $\mathbb{R}^{n}$, but more general function spaces, such as $L^{p}$ spaces, are usually the proper framework from an abstract mathematical viewpoint) \citep{mhaskar1996system}? In other words, can a NN generate a topologically dense subset of the function class in question? For example, in the case of a normed vector space, given $\epsilon>0$, is there and, if so, can one actually construct at a reasonable cost a NN such that
+
+\[
+\left\Vert f-\widetilde{y}\right\Vert <\epsilon\text{ ?}%
+\]
+
+A related question (among many other researchers are addressing \citep{fan2020universal}) is: to what extent does the choice of the norm (topology) affect this existence and/or construction?
+
+The proper mathematical interpretation of NN is based on the universal
+approximation theorems (UAT). The UAT are roughly divided into two categories:
+
+\begin{enumerate}
+\item arbitrary number of neurons in the case of {\it shallow} neural networks (SNN, arbitrary width). This is the classical case. It goes back to the pioneering work of the 1940-1980's;
+
+\item arbitrary number of layers with {\it deep} neural networks (DNN, arbitrary
+depth). In practice, the latter have proven to be more efficient
+\citep{mhaskar2019function}. It is always possible to build a SNN to emulate a DNN. However the number of neurons grows exponentially in order to obtain a
+comparable performance (in terms of error) \citep{telgarsky2016benefits,eldan2016power}.
+\end{enumerate}
+
+In this sense, the UAT are representations of classical existence theorems. They implement the construction (i.e. find the appropriate weights) of the approximation of large classes of functions \citep{paluzo2020two}. However, they do not say how one explicitly (with a formula or an algorithm) finds this approximation (weights).
+
+We give a brief summary of some of the conceptual steps that led to today's mathematical understanding of the UAT.
+
+\begin{itemize}
+\item The Kolmogorov--Arnold representation (or superposition) theorem \citep{kolmogorov1957representation} states that any continuous real multivariate function can be represented by a superposition of real one-variable continuous functions $f:\mathbb{R}^{n}\rightarrow\mathbb{R}$:
+\[
+f(x)  =\sum_{i=0}^{2n}\Phi_{i}\left(  \sum_{j=1}^{n}\phi
+_{i,j}(x_{j})  \right)
+\]
+This theorem gives a partial answer to Hilbert's 13th problem \citep{akashi2001application,khesin2014arnold}. A construction is proposed by \cite{polar2020urysohn}.
+
+\item Prior to the 1980s \citep{mcculloch1943logical,fukushima1975cognitron}, NN architectures were shallow. An understanding of SNN gives a good appreciation of DNN.
+
+\item The Kolmogorov-Arnold theorem gives an exact representation of the function $f(x)$. This representation proves to be very complex (fractal nature) and computationally very slow, therefore unusable in NN. The accuracy condition had to be relaxed for an approximation condition ($L^{p}$
+or uniform norm). The optimal solution is sought by iterative methods (the
+gradient descent, introduced by Jacques Hadamard in 1908, being the most
+popular). Pioneering modern work is due to \cite{cybenko1989approximation} for
+sigmoid activation functions (arbitrary width), \cite{funahashi1989approximate}, \cite{hornik1991approximation} (he showed that UAT was
+potentially constructible using a multilayer architecture of the NN rather
+than a specific choice of the activation function), \cite{barron1993universal} (bounds on smooth function errors), etc...
+
+\item  \cite{leshno1993multilayer} and \cite{pinkus1999approximation} have
+shown that the universal approximation property (see \cite{kratsios2019universal} for a
+definition) is equivalent to a non polynomial activation function.
+\end{itemize}
+
+\begin{theorem}
+(\cite{cybenko1989approximation,hornik1991approximation,pinkus1999approximation}). Let $n\in\mathbb{N}$, $K\subset\mathbb{R}^{n}$ compact, $f:K\rightarrow\mathbb{R}$ continuous, $\rho:\mathbb{R}\rightarrow\mathbb{R}$ non polynomial and continuous, and let $\epsilon>0$. Then there exists a
+two-layer NN $\Phi$ with activation function $\rho$ such that
+\[
+\left\Vert \Phi-f\right\Vert _{\infty}<\epsilon.
+\]
+\end{theorem}
+
+We also note that DNN have demonstrated their capabilities in the approximation of functions \citep{liang2016deep,yarotsky2017error,fan2020universal}. They are found to have good experimental (empirical) performance, but it is largely unknown why. This is a very active area of research \cite{caterini2018deep}.
+
+\begin{theorem}
+(\cite{lu2017expressive}) Let  $f:\mathbb{R}^{n}\rightarrow\mathbb{R}$ be Lebesgue-integrable and $\epsilon>0$. Then there exists a ReLU
+network of width $\leq n+4$ such that
+\[
+\int_{\mathbb{R}^{n}}\left\vert \Phi\left(  x\right)  -f\left(  x\right)  \right\vert dx<\epsilon
+\]
+
+\end{theorem}
+
+\begin{definition}
+(\cite{kidger2020universal}) Let $\rho:\mathbb{R}\rightarrow\mathbb{R}$ and $n,m,k\in\mathbb{N}$. Then let $NN_{n,m,k}$ represent the class of functions $\mathbb{R}^{n}\rightarrow\mathbb{R}^{m}$ described by feedforward neural networks with $n$ neurons in the input layer, $m$ neurons in the output layer, and an arbitrary number of hidden layers, each with $k$ neurons with activation function $\rho$. Every neuron in the output layer has the identity activation function.
+\end{definition}
+
+\begin{theorem}
+(\cite{kidger2020universal}) Let $\rho:\mathbb{R}\rightarrow\mathbb{R}$ be any non-affine continuous function which is continuously differentiable at
+at least one point, with non-zero derivative at that point. Let $K\subset\mathbb{R}^{n}$ be compact. Then NN$_{n,m,n+m+2}$ is dense in $C\left(  K,\mathbb{R}^{m}\right)$ with respect to the uniform norm.
+\end{theorem}
+
+
+\section{Low-rank approximation}
+
+Due to its fundamental role in Machine Learning, a huge literature is devoted
+to the singular value decomposition (SVD) of a matrix. We refer to some of the
+well respected texts: \cite{strang1993introduction}, \cite{trefethen1997numerical}, \cite{watkins2004fundamentals}, \cite{gentle2007matrix}, \cite{elden2007matrix}, \cite{lange2010numerical},
+and \cite{yanai2011projection} for
+instance. Let $A\in \mathbb{R}^{m\times n}$ be a matrix of rank $r$. Its SVD consists in factoring $A$ as
+\[
+A=U\Sigma V^\top=\sum_{i=1}^{r}\sigma_{i}\u_{i}\v_{i}^\top
+\]
+where $U\in\mathbb{R}^{m\times m}$ and $V\in\mathbb{R}^{n\times n}$ are orthogonal square matrices, and $\Sigma\in\mathbb{R}^{m\times n}$ (\textquotedblleft diagonal\textquotedblright\ rectangular matrix of the ordered singular values: $\sigma_{1}\geq\ldots\geq\sigma _{r}>\sigma_{r+1}=\ldots=0=\sigma_{\min\{m,n\}}$). This
+decomposition, and the related principal component analysis (PCA), has several
+uses in Data Analysis. Written as $AV=U\Sigma$, SVD says that there exist orthogonal matrices $U$ and $V$ such that $A$ maps the columns $\v_{i}$ of $V$ (right singular vectors of $A$, directions or principal axes in the PCA parlance) into the columns $\u_{i}$ of $U$ (left singular vectors of $A$) such as
+\[
+A\v_{i}=\sigma_{i}\u_{i},
+\]
+the principal components.
+
+Given a positive integer $1\leq k\leq r$, introduce the truncated matrices
+$U_{k}=\left[  \u_{1},\ldots,\u_{k}\right]  \in \mathbb{R}^{m\times k}$, $V_{k}=\left[  \v_{1},\ldots,\v_{k}\right]  \in \mathbb{R}^{k\times n}$, and $\Sigma_{k}=\mathrm{diag}(  \sigma_{1},\ldots,\sigma_{k}) \in \mathbb{R}^{k\times k}$. Then the matrix of rank $k$
+\[
+A_{k}=U_{k}\Sigma_{k}V_{k}^\top=\sum_{i=1}^{k}\sigma_{i}\u_{i}\v_{i}^\top
+\]
+is an optimal lower-rank approximation of $A$ in the sense of both the
+Frobenius norm and the $L_2$-norm. Indeed, the Eckart--Young--Mirsky theorem (for
+a proof, see \cite{markovsky2012low}) states that among all matrices $B\in\mathbb{R}^{m\times n}$ of a given rank $k\leq r$, the one closest to $A$ is
+$\hat{A}=A_{k}$, i.e.
+
+\begin{align*}
+\inf_{\mathrm{rank}(B)=k}\left\Vert A-B\right\Vert _{F} &  =\left\Vert
+A-\hat{A}\right\Vert _{F}=\sqrt{\sum_{i=k+1}^{r}\sigma_{i}^{2}},\\
+\inf_{\mathrm{rank}(B)=k}\left\Vert A-B\right\Vert _{2} &  =\left\Vert
+A-\hat{A}\right\Vert _{2}=\sigma_{k+1}.
+\end{align*}
+
+Furthermore, the approximating matrix $\hat{A}$ is unique if and only if
+$\sigma_{k+1}\neq\sigma_{k}$ \citep{markovsky2012low}. The theorem was proved in 1907 by Schmidt (of the Gram-Schmidt procedure) for the Frobenius norm \citep{leon2013gram}. A constructive solution was given by \cite{eckart1936approximation}. This solution was
+shown by \cite{mirsky1960symmetric} to hold for all unitarily invariant norms. A further generalization addressing collinearity issues was proposed by \cite{golub1987generalization}. See \cite{stewart1993early} for historical details. 
+
+One interpretation of the decomposition $A_{k}=U_{k}\Sigma_{k}V_{k}^{T}$ is as
+a compression/learning linear procedure of the data matrix $A$ (in other
+words, a dimension reduction method). Indeed, since the SVD extracts data in
+the direction with the highest variance (and going down to those with the
+lowest variance), matrix $U_{k}$ is the compression matrix in the first $k$
+directions, matrix $\Sigma_{k}$ contains the amount of error (cost function)
+we tolerate, and $V_{k}$ is the decompression matrix. If we keep all the non
+zero singular values ($k=r$), there is theoretically no loss in the
+compression (assuming that the data in $A$ are exact). If we drop the small
+singular values (set them to $0$), it is not possible to reconstruct the
+initial matrix $A$ exactly, but we obtain a matrix $A_{k}$ that is close. In
+other words, the SVD decomposition is a way to control the loss of information
+from $A$ under a predetermined level.
+
+The assumption (routinely validated in image processing, for example) in the
+above approach is that the components (columns of $U$) of the small singular
+values contain little information (mostly \textquotedblleft
+noise\textquotedblright) and should be discarded. However, the low-rank matrix approximation is easily seen not to be optimal if used to solve the linear regression problem (hence as a predictive tool) $y=A\beta+\epsilon$, that is to minimize
+\begin{equation}
+    \inf_{\mathrm{rank}(B)=k}\left\Vert \y-B\bbeta\right\Vert . 
+    \label{eq:svd_regression}
+\end{equation}
+
+While the SVD picks the parameter $k-$vector $\bbeta$ of minimum norm
+\citep{elden2007matrix,lange2010numerical},
+
+\begin{equation}
+    \hat{\bbeta}=A_{k}^{\dag} \y=\sum_{i=1}^{k}\frac{1}{\sigma_{i}} \u_{i}^\top \y \v_{i},
+    \label{eq:svd_reg_solution}
+\end{equation}
+
+where $A_{k}^{\dag}$ is the pseudoinverse of $A_{k}$, the general solution of
+\eqref{eq:svd_regression} is unknown \citep{xiang2012optimal}. See also \cite{talwalkar2010matrix} for a discussion in the Machine Learning context.
+
+Some authors \citep{jolliffe1982note,hadi1998some} warned against the misconceived (mainly due to collinearity considerations) use of \eqref{eq:svd_reg_solution} in an ordinary linear regression setting. Dropping some of the small singular values may result in ignoring significant variables, mainly because the approximation does not take into account the response variable $\y$. A partial solution is provided by the ridge regression \citep{hoerl1970ridge}. However, still from a predictive viewpoint, SVD may prove to be an interesting approach in deep neural networks \citep{bermeitinger2019singular}. Used for initialization in the first layer, SVD gave promising experimental results. Theoretical issues still need to be addressed.
+
+
+\section*{Appendix}
+Let's focus on a single batch size. For multiple batch size the sum need to be added to the loss. So the lasso problem is formulated as 
+$${1\over 2} (y-x^\top w )^2 +\lambda |w|,$$
+for a scalar $y$, and vectors $x,w$.
+The stochastic gradient descent for the lasso needs to be adapted to make sure the solution remain sparse, so SGD needs to be adapted using the projected gradient update. Split $w_i$ into two positive components $u_i$ and $v_i$, $w_i= u_i-v_i$ in which $u_i,v_i\geq 0$, of course $|w_i| = u_i+v_i$. Now the optimization routine must ensure $u_i\geq 0, v_i\geq 0$.
+Let's focus only on a single update of the parameter $w_i = u_i-v_i$
+\begin{eqnarray*}
+u_i &=& (u_i - \eta   \{\lambda - [y - x^\top w]  x_i\} )_+\\
+v_i &=& (v_i - \eta \{\lambda + [y - x^\top w]  x_i\} )_+\\
+w_i &=& u_i -v_i\\
+\end{eqnarray*}
+is the standard SGD update, and $x_+=\max(0,x)$ is the projection that forces $x$ to be non-negative. It can be easily adapted for the logistic regression or other loss functions by replacing the multiplicand of the learning rate $[y - x^\top w]  x_i$ with the derivative of the loss.
+
+
+{\vahid does it mean threshold for the forward pass, shrinkage on backprop? I am not sure, but at least now we know how to implement the  update properly.}
+
+
+
+One important technique related to proximal gradient methods is the Moreau decomposition, which decomposes the identity operator as the sum of two proximity operators.
+Let $ \varphi :\mathcal {X}\to \mathbb {R}$ be a lower semicontinuous, convex function on a vector space $\mathcal X$. 
+
+Define the Fenchel conjugate $\varphi ^{*}:{\mathcal {X}}\to \mathbb {R}$ to be 
+
+$$  \varphi ^{*}(u):=\sup _{x\in {\mathcal {X}}}\langle x,u\rangle -\varphi (x).$$ 
+
+According to Moreau's decomposition for any $ x\in \mathcal X, \gamma>0$ 
+
+$$ x=\operatorname {prox} _{\gamma \varphi }(x)+\gamma \operatorname {prox} _{\varphi ^{*}/\gamma }(x/\gamma ).$$ 
+Take $\gamma=1$, which implies $ x = \operatorname{prox}_{\varphi}(x)+\operatorname{prox}_{\varphi^*}(x). $  Then SGD for ordinary lasso is recovered if $\operatorname{prox}_{\varphi}(x) = x_+ .$
+
+
+Group lasso is a generalization of the lasso method when features are grouped into disjoint blocks when the blocks are known and $p$ inputs are grouped into $G<p$ groups. $ \{w_{1},\ldots ,w_{G}\}$ and each weight $w_1,\ldots, w_G$ is potentially a vector. The group lasso regularization uses 
+$$ R(w)=\sum _{g=1}^{G}\|w_{g}\|_{2},$$
+where $\|w_g\|_2 = \sqrt{\sum_{i=1}^{|g|} w_{gi}^2},$ is the Euclidean norm, the square root of the ridge penalty.  
+
+Proximity operator analysis for this regularization is a generalization of the lasso.  The lasso regularization imposes soft threshold  proximity operator on each eight. 
+
+The proximity operator for the group lasso is soft thresholding on each group based on an $\ell_2$ ball. For the group $ w_{g}$ the proximity operator  is 
+
+$$\phi_{\lambda \gamma }(w_{g})=\begin{cases}w_{g}-\lambda \gamma {\frac {w_{g}}{\|w_{g}\|_{2}}},&\|w_{g}\|_{2}>\lambda \gamma \\0,&\|w_{g}\|_{2}\leq \lambda \gamma \end{cases}.$$
+For simplicity one may take $\gamma=1$ like the lasso case.
+The derivation of the proximity operator for group lasso relies on the Moreau decomposition. Here the proximity operator of the conjugate of the group lasso penalty is a projection onto the ball of a dual norm, see \cite{mosci2010solving} for more details.
+
+
+{\vahid I am curious to see when group lasso falls on lasso if we use scaling factor. It appears to be different formulation but a scaling factor seems to impose a similar proximity. This is a direction of research in my opinion: when does scaling factor formulation differs from group lasso formulation? both of these methods are used in pruning networks and nobody studied it to me knowledge. To extend your knowledge on proximal operators you may take a look at \cite[Chapter 6]{beck2017first} available here  \url{https://archive.siam.org/books/mo25/mo25_ch6.pdf}} 
+
+\end{document}

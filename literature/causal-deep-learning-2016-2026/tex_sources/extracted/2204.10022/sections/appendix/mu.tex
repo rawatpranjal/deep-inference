@@ -1,0 +1,49 @@
+\section{Derivation of \Cref{eq:mu_w}}
+\begin{lemma}
+    \label{lem:capo}
+    \begin{align}
+        \mu(\x, \tf) = \mut(\x, \tf) + \frac{\int_\Ycal w(\y, \x) (\y - \mut(\x, \tf)) p(\y \mid \tf, \x)d\y}{(\Lambda^2 - 1)^{-1} + \int_\Ycal w(\y, \x)p(\y \mid \tf, \x)d\y}
+    \end{align}
+    \begin{proof}
+        Recall that the conditional average potential outcome, $\mu(\x, \tf) = \E[\Yt \mid \X=\x]$, is unidentifiable without further assumptions. Following \cite{kallus2019interval}, we start from,
+        \begin{subequations}
+            \begin{align*}
+                \mu(\x, \tf) 
+                &= \E\left[\Yt \mid \X=\x\right], \\
+                &= \frac{\int_{\Ycal}\yt p(\yt \mid \x)d\yt}{\int_{\Ycal}p(\yt \mid \x)d\yt}, \\
+                &= \frac{\int_{\Ycal} \yt \frac{p(\tf, \yt \mid \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\tf, \yt \mid \x)}{p(\tf \mid \yt, \x)}d\yt}, \\
+                &= \frac{\int_{\Ycal} \yt \frac{p(\yt \mid \tf, \x)p(\tf \mid \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)p(\tf \mid \x)}{p(\tf \mid \yt, \x)}d\yt}, \\
+                &= \frac{\int_{\Ycal} \yt \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt},
+            \end{align*}
+        \end{subequations}
+        which is convenient as it decomposes $\mu(\x, \tf)$ into it's identifiable, $p(\yt \mid \tf, \x)$, and unidentifiable, $p(\tf \mid \yt, \x)$, parts.
+        
+        Now, following \cite{jesson2021quantifying}, we add and subtract the empirical conditional outcome $\mut(\x, \tf) = \E[\Y \mid \Tf=\tf, \X=\x]$ from the right-hand-side above:
+        \begin{subequations}
+            \begin{align}
+                \mu(\x, \tf)
+                &= \frac{\int_{\Ycal} \yt \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}, \\
+                &= \mut(\x, \tf) + \frac{\int_{\Ycal} \yt \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt} - \mut(\x, \tf), \\
+                &= \mut(\x, \tf) + \frac{\int_{\Ycal} \yt \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt} - \mut(\x, \tf) \frac{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}, \\
+                &= \mut(\x, \tf) + \frac{\int_{\Ycal} \yt \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt} -  \frac{\int_{\Ycal} \mut(\x, \tf) \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}, \\
+                &= \mut(\x, \tf) + \frac{\int_{\Ycal} (\y - \mut(\x, \tf)) \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}.
+            \end{align}
+        \end{subequations}
+        
+        Following \cite{kallus2019interval} again, we reparameterize the inverse complete propensity density as, $\frac{1}{p(\tf \mid \yt, \x)} = \alpha(\x; \tf, \Lambda) + w(\y, \x) (\beta(\x; \tf, \Lambda) - \alpha(\x; \tf, \Lambda))$ with $w : \Ycal\times \Xcal \to [0, 1]$. We will shorten this expression to $\frac{1}{p(\tf \mid \yt, \x)} = \alpha + w(\y, \x) (\beta - \alpha)$ below. This gives,
+        \begin{subequations}
+            \begin{align}
+                \mu(\x, \tf)
+                &= \mut(\x, \tf) + \frac{\int_{\Ycal} (\y - \mut(\x, \tf)) \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_{\Ycal} \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}, \\
+                &= \mut(\x, \tf) + \frac{\int_{\Ycal} (\alpha + w(\y, \x) (\beta - \alpha))(\y - \mut(\x, \tf)) p(\yt \mid \tf, \x)d\yt}{\int_{\Ycal} (\alpha + w(\y, \x) (\beta - \alpha)) p(\yt \mid \tf, \x)d\yt}, \\
+                &= \mut(\x, \tf) + \frac{\alpha\int_{\Ycal} (\y - \mut(\x, \tf)) p(\yt \mid \tf, \x)d\yt + (\beta - \alpha)\int_{\Ycal} (\y - \mut(\x, \tf)) w(\y, \x) p(\yt \mid \tf, \x)d\yt}{\alpha\int_{\Ycal} p(\yt \mid \tf, \x)d\yt + (\beta - \alpha)\int_{\Ycal} w(\y, \x) p(\yt \mid \tf, \x)d\yt}, \\
+                &= \mut(\x, \tf) + \frac{\alpha\int_{\Ycal} (\y - \mut(\x, \tf)) p(\yt \mid \tf, \x)d\yt + (\beta - \alpha)\int_{\Ycal} (\y - \mut(\x, \tf)) w(\y, \x) p(\yt \mid \tf, \x)d\yt}{\alpha + (\beta - \alpha)\int_{\Ycal} w(\y, \x) p(\yt \mid \tf, \x)d\yt}, \\
+                &= \mut(\x, \tf) + \frac{(\beta - \alpha)\int_{\Ycal} (\y - \mut(\x, \tf)) w(\y, \x) p(\yt \mid \tf, \x)d\yt}{\alpha + (\beta - \alpha)\int_{\Ycal} w(\y, \x) p(\yt \mid \tf, \x)d\yt}, \\
+                &= \mut(\x, \tf) + \frac{\int_{\Ycal} (\y - \mut(\x, \tf)) w(\y, \x) p(\yt \mid \tf, \x)d\yt}{\frac{\alpha}{\beta - \alpha} + \int_{\Ycal} w(\y, \x) p(\yt \mid \tf, \x)d\yt}, \\
+                &= \mut(\x, \tf) + \frac{\int_{\Ycal} (\y - \mut(\x, \tf)) w(\y, \x) p(\yt \mid \tf, \x)d\yt}{\frac{1 / (\Lambda p(\tf \mid \x))}{\Lambda / p(\tf \mid \x) - 1 / (\Lambda p(\tf \mid \x))} + \int_{\Ycal} w(\y, \x) p(\yt \mid \tf, \x)d\yt}, \\
+                &= \mut(\x, \tf) + \frac{\int_{\Ycal} (\y - \mut(\x, \tf)) w(\y, \x) p(\yt \mid \tf, \x)d\yt}{\frac{1}{\Lambda^2 - 1} + \int_{\Ycal} w(\y, \x) p(\yt \mid \tf, \x)d\yt},
+            \end{align}
+        \end{subequations}
+        which concludes the proof.
+    \end{proof}
+\end{lemma}

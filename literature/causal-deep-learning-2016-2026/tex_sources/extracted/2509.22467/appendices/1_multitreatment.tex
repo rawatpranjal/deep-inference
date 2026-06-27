@@ -1,0 +1,72 @@
+\section{Treatment space generalizations}
+\label{app:treatments}
+
+Let us generalize the theory explained in \cref{sec:background} to the settings of multiple treatment and continuous treatment. \Ours can also be generalized following the same fashion.
+
+\subsection{Multiple discrete treatments}
+\label{sec:app:multitreatment}
+We extend the setup in \S\ref{sec:background} to $\treatment \in \treatmentspace=\{1,\dots,\numtreatments\}$. For each $k\in\{1,\dots,\numtreatments\}$, define the potential outcome $\outcome(k)$ and the potential outcome regressor
+\begin{equation}
+\mu_k(\samplecov)\;\defeq\;\E\!\left[\outcome(k)\mid \covariates=\samplecov\right].
+\end{equation}
+Pairwise conditional average treatment effects are contrasts
+\begin{equation}
+\label{eq:cate-multi}
+\tau_{ba}{(\samplecov)}\;\defeq\;\mu_b(\samplecov)-\mu_a(\samplecov),\qquad a,b\in\{1,\dots,\numtreatments\}.
+\end{equation}
+Assumptions generalize in the standard way: \itemi positivity, $P(\treatment=k\mid \covariates=\samplecov)>0$ for all $k$; \itemii conditional ignorability, $\outcome(k)\,\indep\,\giventhat{\treatment}{\covariates}$ for all $k$; \itemiii consistency, $\outcome_\indexone(\sampletreat_\indexone)=\sampleoutcomei_\indexone$; and \itemiv no interference. Let the propensity vector be $\,\propensity_k(\samplecov)=P(\treatment=k\mid \covariates=\samplecov)$, $\sum_{k}\propensity_k(\samplecov)=1$.
+
+\paragraph{S-learner (unchanged).}
+Use a single regressor $\hpo(\samplecov,\sampletreat)$; predicted heads are $\hat{\mu}_k(\samplecov)=\hpo(\samplecov,k)$. Train with factual MSE:
+\begin{equation}
+\label{eq:S-multi}
+\Loss_{\text{S-Learner}}\;=\;\frac{1}{\samplesize}\sum_{\indexone=1}^{\samplesize}\big(\hpo(\samplecov_\indexone,\sampletreat_\indexone)-\sampleoutcomei_\indexone\big)^2.
+\end{equation}
+
+\paragraph{T-learner ($\numtreatments$ heads).}
+Instantiate $\numtreatments$ heads $\hat{\mu}_k(\samplecov)$ and update only the factual head:
+\begin{equation}
+\label{eq:T-multi}
+\Loss_{\text{T-learner}}\;=\;\frac{1}{\samplesize}\sum_{\indexone=1}^{\samplesize}\big(\sampleoutcomei_\indexone-\hat{\mu}_{\sampletreat_\indexone}(\samplecov_\indexone)\big)^2.
+\end{equation}
+
+\paragraph{TARNet ($\numtreatments$ heads).}
+Use a shared representation $\latent(\samplecov)\in\R^{\latentsize}$ and $\numtreatments$ heads:
+\begin{equation}
+\label{eq:TAR-multi}
+\latent(\samplecov),\qquad \hat{\mu}_k(\latent(\samplecov))=\text{Head}_k\!\big(\latent(\samplecov)\big),\quad
+\Loss_{\text{TARNet}}=\frac{1}{\samplesize}\sum_{\indexone} \big(\sampleoutcomei_\indexone-\hat{\mu}_{\sampletreat_\indexone}(\latent(\samplecov_\indexone))\big)^2.
+\end{equation}
+
+\paragraph{DragonNet ($\numtreatments{+}1$ heads).}
+Add a propensity head with softmax output:
+\begin{equation}
+\label{eq:Drag-multi}
+\hat{\propensity}_k(\latent(\samplecov))=\text{softmax}_k\!\big(\!\latent(\samplecov)\big),\quad
+\Loss_{\text{DragonNet}}=\Loss_{\text{TARNet}}+
+\weight_{PS}
+\!\left[-\frac{1}{\samplesize}\sum_{\indexone}\log \hat{\propensity}_{\sampletreat_\indexone}(\latent(\samplecov_\indexone))\right].
+\end{equation}
+After training, pairwise CATEs follow from \eqref{eq:cate-multi} with $\mu_k$ replaced by $\hpo_k$.
+
+\subsection{Continuous treatments}
+\label{app:continuous}
+Let $\treatment \in \treatmentspace\subset\R$ and define the dose–response function
+\begin{equation}
+\label{eq:dose-response}
+\mu(\samplecov,\sampletreat)\;\defeq\;\E\!\left[\outcome(\sampletreat)\mid \covariates=\samplecov\right].
+\end{equation}
+For any reference level $t_0\in\treatmentspace$, the conditional effect of moving from $t_0$ to $t$ is
+\begin{equation}
+\label{eq:CATE-cont}
+\cate{\samplecov,t}\;\defeq\;\mu(\samplecov,t)-\mu(\samplecov,t_0),
+\end{equation}
+and local effects can be summarized by the marginal treatment effect $\partial \mu(\samplecov,t)/\partial t$ if desired. The identifiability assumptions extend as: positivity w.r.t.\ the treatment density $p(\sampletreat\mid \covariates)$, conditional ignorability $\outcome(t)\,\indep\,\giventhat{\treatment}{\covariates}$ for all $t\in\treatmentspace$, consistency, and no interference.
+
+\paragraph{Applicable architecture.}
+Among the causalNNs above, only the S-learner directly accommodates continuous $\sampletreat$:
+\begin{equation}
+\label{eq:S-cont}
+\Loss_{\text{S-cont}}=\frac{1}{\samplesize}\sum_{\indexone=1}^{\samplesize}\big(\hpo(\samplecov_\indexone,\sampletreat_\indexone)-\sampleoutcomei_\indexone\big)^2,
+\end{equation}
+with $\hcate{\samplecov,t}=\hpo(\samplecov,t)-\hpo(\samplecov,t_0)$. $\hcate{\samplecov,t}$ can also be provided direclty as a function of the treatment. T-learner/TARNet/DragonNet require finitely many treatment-specific heads and hence are not directly applicable without discretization of $\treatmentspace$; we therefore recommend the use of the S-learner in continuous-treatment settings.

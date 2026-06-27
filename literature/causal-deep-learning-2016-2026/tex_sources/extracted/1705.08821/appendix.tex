@@ -1,0 +1,45 @@
+% \appendix
+\subsection*{A. Simple example where one should not adjust for proxy variables}\label{appsec:simp}
+
+Let $\*Z,\*X,\*t,\*y$ all be binary variables following the graphical model in Figure 1(a).
+Assume the following model:
+\begin{enumerate}
+\item $p(\*Z=1) = p(\*Z=0) = 0.5$.
+\item $p(\*X=1|\*Z=1) = p(\*X=0|\*Z=0) = \rho_x$.
+\item $p(\*t=1|\*Z=1) = p(\*t=0|\*Z=0) = \rho_t$.
+\item $\*y = \*t \oplus \*Z$ ($\*y$ is deterministic)
+\end{enumerate}
+We will look at the quantity $p(\*y|do(\*t=1)$ and show that one should not simply adjust for $\*X$ when computing it. 
+We have the following identities:
+\begin{align*}
+&p(\*y=1|do(\*t=1)) = \\
+&\sum_\*z p(\*y=1|do(\*t=1),\*Z=\*z)p(\*Z=\*z|do(\*t=1)) = \\
+&\sum_\*z p(\*y=1|\*t=1,\*Z=\*z)p(\*Z=\*z|\*t=1) = \\
+&\sum_\*z p(\*y=1|\*t=1,\*Z=\*z)p(\*Z=\*z) = \\
+&p(\*z=0) = 0.5.
+\end{align*}
+
+The covariate adjustment formula if we treated $\*X$ as if it's the only confounder:
+\begin{align*}
+&p^{\text{wrong}}(\*y=1|do(\*t=1)) = \\
+&\sum_\*x p(\*y=1|\*t=1,\*X=\*x)p(\*X=\*x) = \\
+&0.5 \cdot \left(p(\*y=1|\*t=1,\*x=0) + p(\*y=1|\*t=1,\*x=1)\right) = \\
+&0.5\cdot\frac{p(\*t=1|\*z=0) p(\*x=0|\*z=0) p(\*z=0)}{p(\*t=1,\*x=0|\*z=0)p(\*z=0) + p(\*t=1,\*x=0|\*z=1)p(\*z=1)} + \\
+& 0.5 \cdot \frac{p(\*t=1|\*z=0) p(\*x=1|\*z=0) p(\*z=0)}{p(\*t=1,\*x=1|\*z=0)p(\*z=0) + p(\*t=1,\*x=1|\*z=1)p(\*z=1)} = \\
+& 0.5 \cdot  \left(\frac{(1-\rho_t)\rho_x}{(1-\rho_t) \rho_x + \rho_t (1-\rho_x)} + \frac{(1-\rho_t)(1-\rho_x)}{(1-\rho_t)(1-\rho_x) + \rho_t \rho_x}\right).
+\end{align*}
+
+A short inspection shows that we obtain the correct answer, $p^{\text{wrong}}(\*y=1|do(\*t=1)) = 0.5$, exactly under one of the following two conditions:
+\begin{enumerate}
+\item $\rho_t = 0.5$, i.e. treatment is assigned randomly.
+\item $\rho_x = 0$ or $\rho_x = 1$, i.e. $\*X$ is exactly equal to $\*Z$ or $1-\*Z$, and thus is a perfect proxy for $\*Z$.
+\end{enumerate}
+
+
+The crucial misstep in $p^{\text{wrong}}$ above is the fact that
+ $p(\*y=1|do(\*t=1),\*x) \neq p(\*y=1|\*t=1,\*x)$, while on the other hand $p(\*y=1|do(\*t=1),\*z) = p(\*y=1|\*t=1,\*z)$.
+ 
+We note that because of the symmetry in the conditional distributions $p(\*X|\*Z=1)$ and $p(\*X|\*Z=0)$, we will actually have that:
+$$p^{\text{wrong}}(\*y=1|do(\*t=1))  - p^{\text{wrong}}(\*y=1|do(\*t=0)) = p(\*y=1|do(\*t=1))  - p(\*y=1|do(\*t=0)).$$
+ It is straightforward to show that this situation does not happen once we set different values for the two conditional distributions of $p(\*X|\*Z=1)$ and $p(\*X|\*Z=0)$, in which case both $p^{\text{wrong}}(\*y=1|do(\*t)) \neq p(\*y=1|do(\*t))$ for $\*t=0,1$, and: $$p^{\text{wrong}}(\*y=1|do(\*t=1))  - p^{\text{wrong}}(\*y=1|do(\*t=0)) \neq p(\*y=1|do(\*t=1))  - p(\*y=1|do(\*t=0)).$$
+ 

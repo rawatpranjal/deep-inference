@@ -1,0 +1,156 @@
+\section{Model Formulation}
+
+\subsection{Notations and Preliminaries}
+Firstly, we describe the notations used in this paper. We denote a scalar with a letter (e.g., $t$), a vector with a boldface lowercase letter (e.g., $\mathbf{x}$), and a matrix with a boldface uppercase letter (e.g., $\mathbf{A}$).
+
+In our uplift estimation problem, we assume there are $N$ users in total. The data of each user $i$ can be represented as $\{\mathbf{x}_i,t_i,y_i\}$, where $\mathbf{x}_i \in \mathbb{R}^d$ represents the individual feature vector, $t_i\in\{0,1\}$ denotes the observed treatment and $y_i$ denotes the observed outcome. Note that $y_i(1)$ denotes the outcome of user $i$ when he receives the active treatment, and $y_i(0)$ denotes its outcome  with the control treatment. In this paper, we focus on the scenario of a randomized experiment, which means that each user is randomly given the treatment or not. Then, the actual uplift of user $i$ is defined as: 
+\begin{equation} \label{eq_up}
+	\tau_i = y_i(1) - y_i(0),
+\end{equation}
+and our target in this paper is to estimate the uplift of each user. 
+
+However, for a specific user $i$, we can only observe $y_i(1)$ or $y_i(0)$. The one we can observe is called the factual outcome. And the other one we cannot observe is called the counterfactual outcome. It is not difficult to find that the key and the challenging issue of uplift modeling is to do the counterfactual prediction. As we have stated before, the user's social relationships and his/her social neighbors' features contribute a lot to uplift estimation. Therefore, we introduce the social graph in our work. 
+
+We define the social graph as $\mathit{G}=(\mathit{V},\mathit{E})$ \footnote{For simplicity, we assume the social graph is a directed unweight graph}, where $\mathit{V}=\{v_1,...,v_N\}$ denotes the set of nodes, $N = \left| \mathit{V} \right|$ is the number of nodes, and $\mathit{E} \subseteq \mathit{V} \times \mathit{V}$ is the set of edges between nodes. Here the node denotes a user and the edge denotes two users' social relationships.  Let $\mathbf{X}$ be a matrix of node attributes.
+We define $\mathbf{H}^{(l)} = \left[ \mathbf{h}^{(l)}_1,\mathbf{h}^{(l)}_2,...,\mathbf{h}^{(l)}_N \right]$ as the hidden representations of nodes in the $l^{th}$ layer of the graph neural networks where $\mathbf{h}^{(l)}_i$ is the representation of node $v_i$. And we use $L$ as the number of layers for the GNN model. For convenience, we also denote $\mathbf{X}$ as $\mathbf{H}^{(0)}$. 
+
+\begin{figure*}[htb]
+	\centering
+	\includegraphics[width=2.0\columnwidth]{figures/fw0520.jpg} %
+	\caption{Framework of GNUM}
+	\label{fig:model}
+\end{figure*}
+
+\subsection{GNUM}
+To incorporate the social relations and the neighbors' attributes, we propose a novel GNN-based uplift model (GNUM). Figure \ref{fig:model} shows the overall framework of the proposed GNUM, which consists of two components, i.e. graph-based representation learning and uplift estimation. Specifically, we propose two GNN-based uplift estimators in this paper working for different scenarios to address the labeled data scarcity problem for uplift estimation scenarios. 
+
+\subsubsection{Graph-based Representation Learning}
+This component aims to learn the graph-based node (user) representations by extracting the key information from the social relations and neighbors' attributes. Basically, most GNNs can be represented by: 
+\begin{equation} \label{eq_hdl}
+	\begin{gathered}
+		 \mathbf{\tilde{h}}^{(l+1)}_i = AGGR(\mathbf{\tilde{h}}^{(l)}_i, \mathbf{\tilde{h}}^{(l)}_{\mathcal{N}_i}),
+	\end{gathered}
+\end{equation}
+where $\mathcal{N}_i$ represents the neighbors of user $i$ and AGGR represents the aggregation function of the target user's embedding and his neighbors' embeddings. Experimentally, we demonstrate our proposed uplift estimation framework works well with different aggregators like GCN and GAT. 
+
+Inspired by \cite{liu2019geniepath}, we propose more comprehensive graph-based aggregators in GNUM, which consist of a breadth aggregator to learn information from social neighbors of the current layer and a depth aggregator to ensemble information from different layers. The $l$-th graph convolution layer of GNUM is defined as:
+\begin{equation} \label{eq_hdli}
+	\begin{gathered}
+		 \mathbf{\tilde{h}}^{(l+1)}_i = tanh \left(\sum_{j \in ne(i) \cup \{i\}} 
+		\boldsymbol{\alpha}(\mathbf{h}_i^{(l)},\mathbf{h}_j^{(l)})
+		 \mathbf{h}^{(l)}_j  \mathbf{W}^{(l)} \right).
+	\end{gathered}
+\end{equation}
+where $\boldsymbol{\alpha}(\mathbf{h}_i^{(l)},\mathbf{h}_j^{(l)})$ is the attention function of the breadth aggregator to measure the importance of user $i$ and user $j$ for uplift modeling, defined as:
+\begin{equation} \label{eq_att}
+	\begin{gathered}
+		\boldsymbol{\alpha}(\mathbf{h}_i^{(l)},\mathbf{h}_j^{(l)}) = softmax(\mathbf{v}^{(l)}tanh(\mathbf{W}_{s}\mathbf{h}_i^{(l)} + \mathbf{W}_{d}\mathbf{h}_j^{(l)})),
+	\end{gathered}
+\end{equation}
+where  ${\mathbf{W}_s}^{(l)}$ represents the weight for the source node, ${\mathbf{W}_d}^{(l)}$ represents the weight for the target node and $\mathbf{v}^{(l)}$ denotes a vector to map the representations to a value.
+
+Given a user $u_i$, the breadth aggregator in each layer will adaptively gather the information from his neighbors and his own representations of the previous layer. Then we further stack multiple convolution layers and utilize a memory-based depth aggregator to aggregate the user embedding, defined as:
+
+$
+\begin{array}{ll}
+i_{i}=\sigma\left(W_{i}^{(l)^{\top}}  \mathbf{\tilde{h}}_i^{(l+1)}\right), & f_{i}=\sigma\left(W_{f}^{(l)^{\top}}  \mathbf{\tilde{h}}_i^{(l+1)}\right) \\
+o_{i}=\sigma\left(W_{o}^{(l)^{\top}}  \mathbf{\tilde{h}}_i^{(l+1)}\right), & \tilde{C}=\tanh \left(W_{c}^{(l)^{\top}}  \mathbf{\tilde{h}}_i^{(l+1)}\right) \\
+C_{i}^{(l+1)}=f_{i} \odot C_{i}^{(l)}+i_{i} \odot \tilde{C}, & \mathbf{h}_{i}^{(l+1)}=o_{i} \odot \tanh \left(C_{i}^{(l+1)}\right)
+\end{array}.
+$
+
+In this way, our proposed method can extract both local and global structural information from the social graph to obtain the graph-based representations for each user, which facilitates the learning of the following uplift estimators.
+
+\subsubsection{Transformed Target-based Uplift Estimator}
+\label{sec:uplift}
+With the graph-based hidden representations, an intuitive way is to build two pathways of models to project the node representations into the label space, aiming to approach the outcome with and without treatment using the treatment group data and control group data respectively \cite{guo2020learning,guo2020counterfactual}. The process can be formulated as $\hat{y}_i(t) = f^{(t)}(\mathbf{h}_i^{(L)}), t\in\{0,1\}$, where $f^{(t)}(\cdot)$ is one pathway of the model for treatment or control group data and $\hat{y}_{i}(t)$ represents the prediction of the user's outcome with the treatment or not. Note that $\hat{y}_{i}(t)$ can be continuous as the regression task or discrete as the multi-classification task. 
+
+By optimizing the regression loss or classification loss, the uplift of user $i$ can be estimated as $\hat{\tau}_i = \hat{y}_{i}(1) - \hat{y}_{i}(0)$. However, any one pathway of their model can only utilize one group of data to learn, which will suffer from the labeled data scarcity problem. Furthermore, as previous works of literature state \cite{gutierrez2017causal}, Two-Model methods cannot well capture the relationship between data of the treatment group and the control group, which limits their performance on uplift modeling.  
+
+To address the problem, we propose a class-transformed target and prove that by using the transformed target as the learning objective for both treatment and control group data, the model is equal to do uplift estimation. We first define the observed outcome of user $i$ as:
+\begin{equation}
+y_i^{obs} = t_iy_i(1) + (1 - t_i)y_i(0).
+\label{eqn:y_obs}
+\end{equation}
+
+Then the class-transformed target can be defined as follows:
+\begin{equation}  \label{eq_zi}
+	z_i = y_i^{obs}\cdot \frac{t_i-p}{p(1-p)},
+\end{equation}
+where $p=\mathbb{E}(t_i|\mathbf{x}_i,\mathit{G})=\mathbb{E}(t_i)=p(t_i=1)$ is defined as the probability that user $i$ receives the treatment. Since we focus on the randomized experiment, it is a constant. 
+
+We have the following important proposition: 
+\begin{prop}
+The uplift of user $i$ can be estimated in the following form: $\hat{\tau}_i=\mathbb{E}(z_i|\mathbf{x}_i, \mathit{G})$.
+\end{prop}
+
+\renewcommand{\qedsymbol}{}
+Inspired by \cite{athey2015machine}, the proof of the proposition can be found in the Appendix \ref{appx:proof}.
+
+Based on the proposition, we can project the node representations $\mathbf{H}^{(L)}$ to form the transformed target. The loss for the GNUM with class-transformed target (GNUM-CT) is:
+\begin{equation}\label{eq:loss_ct}
+	\mathcal{L}_{CT} =  \sum_{i \in \mathit{V}}{( {z}_{i} -\hat{z}_{i})^2}+\lambda L_{reg},
+\end{equation}
+where $z_i$ has been given in Eq. \eqref{eq_zi}, $\hat{{z}}_{i}= \sigma(\mathbf{W}_{CT}\mathbf{h}_i^{(L)}+\mathbf{b}_{CT})$ is the prediction of the target, $\mathbf{W}_{CT}$ and $\mathbf{b}_{CT}$ are learnable parameters. $L_{reg}$ is defined as the $L2$ regularized loss on all parameters of the proposed model and $\lambda$ is set to $0.0005$ in this paper.   
+
+In summary, both the treatment group and control group data are utilized to learn and optimize the proposed transformed uplift estimator, which can well alleviate the label scarcity problem and capture the inherent relationship between the two groups of data. Moreover, we do not make any assumption regarding the proposed uplift estimator with the class-transformed target. It can work well for any types of outcome, i.e. continuous and discrete outcome. Additionally, the newly proposed target is also general to balanced and imbalanced data of two groups. If the two groups of data are biased, we can also replace the $p$ in Eq. \eqref{eq_zi} with the sample's propensity score. Therefore, it is a very general uplift estimator which can comprehensively utilize the two groups of data for modeling individual uplift values. 
+ 
+\subsubsection{Partial-Label-based Uplift Estimator}
+When the outcome is discrete, i.e. a multi-classification outcome prediction problem,  we propose a partial-label-based uplift estimator to further utilize more labeled data for uplift estimation. For simplicity, we will assume that the outcome is binary and introduce our solution. It can be generalized to a multi-classification problem by transforming the problem into multiple binary scenarios. 
+
+In detail, we divide the whole users into three groups:
+\begin{itemize}
+	\item Group A: The group of users who give positive outcomes regardless of whether they receive the treatment.
+	\item Group B: The group of users who give positive outcomes only when they receive the treatment.
+	\item Group C: The group of users who do not give positive outcomes regardless of whether they receive the treatment.
+\end{itemize}
+Without loss of generality, in this paper, we consider the cases where the treatment has a positive impact on the user's outcome (e.g., promotional coupon). Thus the situation where a user gives a negative outcome with the treatment but gives a positive outcome without the treatment does not exist. 
+
+Next, we generate a 3-bits coding as the partial label for each user. Each bit of code corresponds to whether the user belongs to the above-mentioned group. 
+According to the treatment and observed outcome, the partial label of $S_i = [s_{i}^A, s_{i}^B, s_{i}^C]$ for user $i$ is defined as:
+\begin{equation}
+S_i =
+\begin{cases}
+[1, 0, 0]& \: if \: t_i=0 \: and \: y_i^{obs}=1\\
+[0, 1, 1]& \: if \: t_i=0 \: and \: y_i^{obs}=0\\
+[1, 1, 0]& \: if \: t_i=1\: and \: y_i^{obs}=1\\
+[0, 0, 1]& \: if \: t_i=1\: and \: y_i^{obs}=0.
+\end{cases}
+\end{equation}
+
+Taking a user belonging to $t_i=1, y_i^{obs}=1$ as an example: if we give the treatment to the user $i$, we can observe his positive outcome. Then based on our aforementioned definition, the user may belong to Group A or Group B. Therefore, based on our definition, the partial label is $[1, 1, 0]$ for user $i$. 
+
+We build two binary classifiers to help estimate the uplift. The first classifier gives the probability that the user belongs to group A, i.e. $P(S_i=[1, 0, 0]|\mathbf{x}_i)$. Then the instances whose partial labels are $S_i = [1, 0, 0]$ are regarded as positive samples, and the instances with the partial label $S_i \in \{[0, 1, 1], [0, 0, 1]\}$ are negative samples for the first classifier. The second classifier gives the probability that the user belongs to group C, i.e. $P(S_i=[0, 0, 1]|\mathbf{x}_i)$. Thus the instances with the partial label $S_i = [0, 0, 1]$ are positive samples, and the instances with $S_i \in \{[1, 1, 0], [1, 0, 0]\}$ are negative samples. 
+
+Then we project the node representations to the partial label space:
+\begin{equation} 
+\begin{split}
+    \hat{y}_i^{pl1} = \sigma(\mathbf{W}^{pl1}\mathbf{h}_i^{(L)}+\mathbf{b}^{pl1})  \\
+    \hat{y}_i^{pl2} = \sigma(\mathbf{W}^{pl2}\mathbf{h}_i^{(L)}+\mathbf{b}^{pl2}), 
+\label{eqn:partial_resp}
+\end{split}
+\end{equation}
+where $\hat{y}_i^{pl1}$ and $\hat{y}_i^{pl2}$ represent the prediction of the two partial labels, $\mathbf{W}^{pl1}$, $\mathbf{W}^{pl2}$, $\mathbf{b}^{pl1}$ and $\mathbf{b}^{pl2}$ are learnable parameters.
+
+Then we define the cross-entropy loss as the classification loss for partial labels. The overall loss function for GNUM with partial-label-based estimator (GNUM-PL) is defined as: 
+\begin{equation}
+	\mathcal{L} =  \sum_{i \in {V}} 
+	(\mathcal{F}(y_i^{pl1}, \hat{y}_{i}^{pl1}) + \mathcal{F}(y_i^{pl2}, \hat{y}_{i}^{pl2}))+\lambda  L_{reg}, 
+\label{eq:gnum_loss}
+\end{equation}
+where $y_i^{pl1}$ and $y_i^{pl2}$ are the ground truth for the first and second partial labels we defined. $\mathcal{F}(y_i, \hat{y}_{i})$ is defined as the cross-entropy loss, where $\mathcal{F}(y_i, \hat{y}_{i})=- ( {y}_{i} \log \hat{y}_{i} - (1- {y}_{i}) \log (1 -\hat{y}_{i}))$. $L_{reg}$ is defined as the $L2$ regularized loss on all the parameters of the model and $\lambda$ is set to $0.0005$ in this paper.  
+
+Using the above loss function, the proposed graph model with partial labels can be trained. Then the final uplift of user $i$ can be defined in the following ways:
+\begin{equation} 
+\begin{split}
+	 \hat{\tau}_i &= p(y_i(1)|\mathbf{x}_i,\mathit{G}) - p(y_i(0)|\mathbf{x}_i),\mathit{G}) \\
+	              &= 1 - P(S_i=[0, 0, 1]|\mathbf{x}_i,\mathit{G}) - P(S_i=[1, 0, 0]|\mathbf{x}_i,\mathit{G})  \\
+	              &= 1-\hat{y}_i^{pl1}-\hat{y}_i^{pl2} \nonumber 
+\end{split}.
+\end{equation}
+
+Now we introduce why the proposed model with the partial label can further improve the performance. Although the graph-based model with the transformed target we just proposed in Section \ref{sec:uplift} utilizes a general target for both treatment group data and control group data to capture the relationship between two groups of data, each sample can only be utilized once in each epoch of training. However, in our partial-label-based uplift estimator, both classifiers will utilize both the treatment data and the control data but focus on different facets of information. Specifically, the data with $S_i=[1,1,0]$ and $S_i=[0,1,1]$ can be utilized by both classifiers. In this way, on the one hand, more labeled data can be utilized to train each classifier, ensuring a better performance especially when the labeled data is scarce in uplift estimation scenarios. On the other hand, since the two classifiers can both obtain the two groups of data, the classifiers can better capture the relations and learn useful information from the two groups to achieve better results. 
+
+The pseudo-code and complexity analysis of GNUM-CT and GNUM-PL can be found in Appendix \ref{appx:code}.
+
+

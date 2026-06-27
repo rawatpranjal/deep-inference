@@ -1,0 +1,18 @@
+In this low dimenonal case, we consider  treatment variable $X$ to be $X = (p,t,s)$ and instrumental variable $Z$ to be $Z = (c,t,s)$, which is the standard benchmark for IV regression problem. We compare our DFIV method to two leading competitors, namely  KIV \citep{Singh2019} and DeepIV \citep{Hartford2017}.
+
+In the experiment, we used the same network architecture for feature map $\vec{\psi}_{\theta_X}, \vec{\phi}_{\theta_Z}$ as DeepIV. We tune the regularizer $\lambda_1,\lambda_2$ in the way discussed in Appendix~\ref{sec:hyper}, and the data is evenly split for stage 1 and stage 2. To cope with the extrapolation problem, we apply Spectral Normalization \citep{Miyato2018} during the learning to enhance the smoothness of feature maps.
+ 
+
+ We test the case where the total datasize is $n+m=\{1000, 5000, 10000\}$. For each algorithm and sample size, we ran 20 simulations.  The result is summarized in Figure~\ref{fig:demand}, where {\tt DFIV(vanilla)} presents the performance of DFIV without applying Spectral Normalization.
+ 
+\begin{figure}[t]
+    \begin{small}
+        \begin{center}
+            \includegraphics[width=1.0\textwidth]{Experiment/demand.pdf}
+        \end{center}
+        \caption{MSE for Demand design dataset with low dimensional confounders.}
+        \label{fig:demand}
+    \end{small}
+\end{figure}
+
+DFIV and DeepIV exhibit similar performance when we have enough amount of data, though DFIV performs significantly better than DeepIV when the data size is small. Moreover, the variances of MSE of DFIV tend to be smaller than that of DeepIV. Considering that these two methods share the same network architecture, this suggests that the learning methodology of DFIV is more stable and sample-efficient compared to DeepIV. Moreover, although the setting is more favorable for KIV, since it is designed to learn a extrapolatable smooth structural function, DFIV can match its performance when Spectral Normalization is applied.

@@ -1,0 +1,20 @@
+Let us consider the supervised learning setting, which aims to learn a feedforward neural net $y$ predicting $Y$ from $X$ given data ${(x_i, y_i)}$. Assume that the final layer of $y$ is a linear layer, i.e. $y(x) = \vec{w}^\top \vec{h}_\theta(x)$ with weight vector $\vec{w} \in \mathbb{R}^{d_w}$ and network activations $\vec{h}_\theta$ parameterised by $\theta$. Now, we minimize the following mean-squared error with $\ell_2$-regularization
+\begin{align*}
+    \hat{\vec{w}}, \hat{\theta} = \argmin_{\vec{w}, \theta} \mathcal{L}(\vec{w}, \theta), \quad \mathcal{L}(\vec{w}, \theta)= \sum_{i=1}^n \|y_i - \vec{w}^\top \vec{h}_\theta(x_i)\|^2 + \lambda\|\vec{w}\|^2 + \lambda\|\theta\|^2 
+\end{align*}
+to learn the parameters $\hat{\vec{w}}, \hat{\theta}$. The standard way of optimizing this is by gradient descent, where the estimates $\hat{\vec{w}}_t$ and $\hat{\theta}_t$ at iteration $t$
+are updated using
+\begin{align}
+    \hat{\vec{w}}_{t+1} \leftarrow \hat{\vec{w}}_{t} - \nabla_{\vec{w}}  \mathcal{L}(\hat{\vec{w}}_{t}, \hat{\theta}_t), \quad \hat{\theta}_{t+1} \leftarrow \hat{\theta}_{t} - \nabla_{\theta}  \mathcal{L}(\hat{\vec{w}}_t, \hat{\theta}_{t}). \label{eq:joint-gradient-descent}
+\end{align}
+Instead, we first solve the minimization problem for $\vec{w}$ with $\theta$ fixed to $\hat{\theta}_t$, and then, take a gradient step for $\theta$ while $\vec{w}$ is fixed to $\hat{\vec{w}}_t$. That is,
+%Since the minimizing argument $\hat{\vec{w}}_t$ can be explicitly computed via the linear ridge regression formula, the update is given as follows
+\begin{align}
+    \hat{\vec{w}}_{t} \leftarrow \left(H_t^\top H_t + \lambda I\right)^{-1}\left(H_t^\top \vec{y}\right), \quad 
+    \hat{\theta}_{t+1} \leftarrow \hat{\theta}_{t} - \nabla_{\theta}\mathcal{L}(\hat{\vec{w}}_{t}, \hat{\theta}_{t}), \label{eq:learn-adaptive-feature}
+\end{align}
+where $H_t = [\vec{h}_{\hat{\theta}_t}(x_1), \dots, \vec{h}_{\hat{\theta}_t}(x_n)]^\top \in \mathbb{R}^{n\times d_w}$ and  $\vec{y} = [y_1, \dots, y_n]^\top$.
+\yccomment{Do we treat $\hat{\vec{w}}$ as a function of $\theta$ and back-propagate the gradient of $\mathcal{L}$ through it? I think this is what we do in the implementation. There's a big difference from the current presentation. Current Eq.~\ref{eq:learn-adaptive-feature} is a kind of semi-coordinate descent.}
+The approach in \eqref{eq:learn-adaptive-feature} can converge faster to a good solution compared to the approach in \eqref{eq:joint-gradient-descent}, as shown in Appendix~\ref{sec:learning-comparison}. Furthermore, this will enable us to back-propagate the loss of stage 2 to the feature map of the treatment variable in the 2SLS algorithm.
+
+

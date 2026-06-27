@@ -1,0 +1,125 @@
+We model the whole population as a mixture of mutually exclusive causal groups coined as responders (R), doomed (D), survivors (S) and anti-responders (A). We denote their respective distributions as 
+$\{f_k(. | \theta_k) \}_{k \in \{R,D,S,A\}}$, and $\pi_k$ their mixing probability.
+
+%We model the whole population as a mixture of responders, doomed, survivors and anti-responders, with mutually exclusive prior distributions denoted by $\{f_k(. | \theta_k) \}_{k \in \{R,D,S,A\}}$ with the $\pi_k$ mixing probability. 
+%The distribution is expressed as
+%\begin{equation}
+%    p(x;\theta;\pi) = \sum_{k=1}^4 \pi_k f_k(x | \theta_k) 
+%\end{equation}
+%We assume that this log likelihood is log concave individually in terms of the parameters $\{\theta_k \}_{k=1,\cdots,4}$ and $\{\pi_k \}_{k=1,\cdots,4}$.
+%Typically, we will take in the sequel normal distribution $f_k(. | \theta_k) \sim \mathcal{N}(\mu_k, \Sigma_k)$ as normal distributions easily sastisfy that the log likelihood is concave in terms of the parameters $\mu_k$ and $\Sigma_k$.
+For an individual, the specific group to which he belongs is determined by his outcome with and without treatment. Since we can never observe both simultaneously, we introduce $Z_i=\{z_{ik}\}_{k \in \{R,D,S,A\}}$ the discrete latent variable that represents the class probability of individual $i$. %Figure \ref{Graphical_model} summarizes the corresponding Direct Acyclic Graphical model.
+
+%Each causal population is determined by its outcome with and without treatment.
+%(see Table~\ref{tab:Behaviors-probabilities}). 
+%but for a given individual $i$ we cannot observe simultaneously $Y_i(0)$ and $Y_i(1)$. We introduce $Z_i=\{z_{ik}\}_{k \in \{R,D,S,A\}}$ the discrete latent variable that represents the class probability. Figure \ref{Graphical_model} summarizes the corresponding Direct Acyclic Graphical model.
+
+%\input{figures/graphical_model.tex}
+Our model implies several constraints on the distribution of this latent variable, obviously excluding two causal populations according to the factual outcome and the assigned treatment. For example, it appears from Table~\ref{tab:Behaviors-probabilities} that an individual $i$ with $Y_i(0)=0$ cannot be a survivor or an anti-responder. The probability distribution of these two classes can then be set to zero ($z_{iS}=z_{iA}=0$). Similar constraints can be applied for every value of the factual outcomes and are summarized in Table~\ref{tab:causality_constraints}. Our goal is to estimate the latent distribution, from which we can in particular derive the ITE.
+
+
+ \begin{table*}[!ht]
+  \centering
+\resizebox {12cm} {!} {
+    \begin{tabular}{p{2cm}||c|c|c|c}
+  &$Y_i(0)=0$ & $Y_i(0)=1$ & $Y_i(1)=0$  & $Y_i(1)=1$ \\
+ %\hline
+ %Populations & R \& D& S \& A & D \& A & R \&S \\
+ \hline
+  Causality constraints &
+ $ \left\{
+    \begin{aligned}
+        z_{iS} = z_{iA} = 0 \\
+        z_{iR} + z_{iD} = 1
+    \end{aligned}
+\right. $
+& $ \left\{
+    \begin{aligned}
+        z_{iR} = z_{iD} = 0 \\
+        z_{iS} + z_{iA} = 1
+    \end{aligned}
+\right. $
+& $ \left\{
+    \begin{aligned}
+        z_{iR} = z_{iS} = 0 \\
+        z_{iD} + z_{iA} = 1
+    \end{aligned}
+\right. $
+& $ \left\{
+    \begin{aligned}
+        z_{iD} = z_{iA} = 0 \\
+        z_{iR} + z_{iS} = 1
+    \end{aligned}
+\right. $
+\\
+\end{tabular}
+    }
+\caption{The causality constraints ($C^*$)}
+ \label{tab:causality_constraints}
+\end{table*}
+ 
+
+ 
+%We estimate the parameters by maximizing the log-likelihood :
+%\begin{equation}
+%    \label{Loglikelihood}
+%\log p(x,z|\pi,\theta) 
+%    = \sum_i\sum_{k=1}^{4} z_{ik} \log %\pi_k
+%    + \sum_i\sum_{k=1}^{4} z_{ik} \log f(x_i;\theta_k)
+%\end{equation}
+
+
+%with $z$ satisfied the causality constraints. The causal population is then chosen as the one with the highest distribution probability.
+
+%Our model solves a more specific problem than the ITE because in addition to evaluating this quantity (see Proposition~\ref{prop:ITE}), we know the exact distribution of causal groups.
+
+\begin{proposition}\label{prop:ITE}
+Knowing the latent distribution %with respect to $X_i=x$
+, ITE writes as
+\begin{equation}
+    \label{eq:ITE}
+    \tau(x) = (l_R(x)+l_S(x)) \mathbb{E}[\mathds{1}_{Y_i(1)=1}]
+	  - (l_S(x)+l_A(x))
+	  \mathbb{E}[\mathds{1}_{Y_i(0)=1}]
+\end{equation}
+where $l_C(x)= \frac{\pi_C f_C(X_i=x|\theta_C)}{\sum_{G\in \{R,D,S,A\}} \pi_G f_G(X_i=x|\theta_G)}$, $C \in \{R,D,S,A\}$.
+\end{proposition}
+\begin{proof} 
+$\mathbb{E}[Y_i(1)=1|X_i=x] = \frac{\mathbb{E}[X_i(1)=x|Y_i(1)=1]P(Y_i(1)=1)}{P(X_i=x)}$ \\ $ \textcolor{white}{.} \hspace{38pt}
+= \frac{\mathbb{E}[X_i(1)=x|X_i \in \{R,S\}]P(Y_i(1)=1)}{P(X_i=x)}
+= \frac{\sum_{C \in \{R,S\}} \pi_C f_C(X_i=x|\theta_C) P(Y_i(1)=1)}{\sum_{C \in \{R,D,S,A\}}\pi_C f_C(X_i=x|\theta_C)}$
+\end{proof}
+
+
+
+
+
+
+
+
+\begin{comment}
+
+\subsection{ITE Estimation}
+
+Our model solves a more specific problem than the ITE because in addition to evaluating this quantity, we know the exact distribution of causal groups. Once we have solved the learning problem, it is trivial to estimate the ITE as proved by Proposition~\ref{prop:ITE} below.
+
+\begin{proposition}\label{prop:ITE}
+Knowing the conditional distribution with respect to $X=x$, we can compute explicitly the ITE as
+\begin{align}\label{eq:ITE}
+ \tau(x) &=  \sum_{i, \mathds{1}_{Y_i(1)} \neq 0} \frac{\mathds{1}_{Y_i(1)=1}}{\mathds{1}_{Y_i(1)}}(z_{i1}+z_{i3}) \nonumber&  \\
+	    & \hspace{0.5cm} -   \sum_{ i, \mathds{1}_{Y_i(0)} \neq 0}   \frac{\mathds{1}_{Y_i(0)=1}}{\mathds{1}_{Y_i(0)}}(z_{i3}+z_{i4})&
+\end{align}
+\end{proposition}
+
+\begin{proof}
+See proof provided in the Supplementary Materials%Section~\ref{proofITE}.
+\end{proof}
+
+
+\begin{remark}
+If the weights are such that $P(Y_i(1)=1)=P(Y_i(0)=1)$, i.e. same probabilities of a positive effect regardless of a treatment and control group,  ITE naturally simplifies to the difference between Responder and Anti-Responder distribution $\tau(x) \propto \sum_i (z_{i1}-z_{i4})$.  Notice that such a transformation does not affect the conditional class distributions.
+\end{remark}
+\end{comment}
+
+
+

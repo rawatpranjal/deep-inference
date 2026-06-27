@@ -1,0 +1,77 @@
+
+Gaussian distributions (for which parameters are the mean and variance denoted by $\theta=(\mu, \Sigma)$) are a natural choice for a mixture model. Once the model is learned, interpreting the $\mu_k$ as average elements of each causal population could be of great interest and could help to answer questions like "what does an average anti-responder looks like?" to improve treatment policies.
+Because of the fundamental impossibility to access the true counterfactual label of any given observation, the true ITE cannot be known and thus it is unclear how to best assess the relevance of any model in real-world conditions. Hence, we need to test our model on synthetic and semi-synthetic datasets. 
+
+We first designed a synthetic dataset with two covariates distributed as a mixture of four overlapping Gaussian distributions. We use two metrics standard for causal problems: the $\epsilon_{PEHE}$~\cite{hill2011bayesian} the AUUC (Area Under the Uplift Curve)~\cite{diemert2018large}. We compute these metrics for the optimal model (since it does not necessarily score maximally according to these metrics) and compare its values to the ones of the models we test.  
+We also use the IHDP semi-synthetic dataset, compiled for causal effect estimation in~\cite{hill2011bayesian}. Here the underlying distribution of each causal population remains unknown, but the outcomes with and without treatment are both available. In that case, we use our model to predict the most likely counterfactual of any individual.
+
+The results are reported out of a sample over $20$ trials and a Wilcoxon signed-rank test (with a confidence level of $5\%$) is used to confirm the significance of the results.
+We compare our method to standard baselines that provide competitive results with respect to the state of the art~\cite{alaa2018limits}: the approach using two separate classification models (LR2), the approach using the treatment variable as feature (LR1) and the model based on the class variable transformation~\cite{Jaskowski2012} (LRZ), each using logistic regressions as classifiers.
+
+
+\begin{table}[!ht]
+    \begin{center}
+    %\resizebox{12cm}{!}%
+    %{
+        \begin{tabular}{rllll}
+            \hline 
+            & \multicolumn{2}{c}{Synthetic dataset} & \multicolumn{2}{c}{IHDP}\\
+               & $\epsilon_{PEHE}$ & AUUC
+             & $\epsilon_{PEHE}$ & AUUC\\
+            \hline
+                  Ref.
+                & 0.24 
+                & 1488 
+                & .
+                & 3149 
+                \\ \hdashline
+                 LR1
+                & 0.57 +/- 0.08 
+                & 742 +/- 175
+                & 0.66 +/- 0.08
+                & 2202 +/- 625\\
+                 LR2
+                & 0.79 +/- 0.08
+                & 943 +/- 206
+                & 0.67 +/- 0.07
+                & 2168 +/- 618\\
+                 LRZ
+                & .
+                & 939 +/- 208
+                & .
+                & 2191 +/- 558 \\
+                 ECM
+                & \textbf{0.27 +/- 0.04}
+                & \textbf{1512 +/- 203}
+                & \textbf{0.59 +/- 0.09}
+                & 2226 +/- 580\\
+            \hline 
+        \end{tabular}
+    %}
+    \end{center}
+    \label{tab:results}
+    \caption{Experimental results on synthetic and real datasets.}
+    
+\end{table}
+
+
+\begin{comment}
+
+
+\paragraph{Uplift Curve $\&$ AUUC} metrics are used as a ranking evaluation measure~\cite{diemert2018large}, which can be used even when the real ITE does not exist. It has been developed to cope with this specific case and is defined as the area under the Uplift curve. 
+The Uplift curve is the difference between the lift of a model on the treatment group and its lift on the control group, where the lift curve is the proportion of positive outcomes as a function of the percentage of individuals selected.
+It can be interpreted as the net gain in success rate provided that a given percentage of the population is treated according to the model. In spirit, this curve is very similar to a ROC curve and area under the uplift curve AUUC has similar properties to the AUC. 
+On synthetic datasets, the uplift curve of the predicted models is compared with the optimal classifier curve calculated using the exact distribution of the data, while semi-synthetic data require to compare them with the real curve constructed from the classification of groups. This metric must be taken with caution because if a model predicts more positive outcomes than the existing ones, its AUUC may be higher than the true model.
+
+\paragraph{Causal Accuracy Rank(CAR)} is also a ranking metric that we have constructed specifically to assess the classification of each causal group. Unlike AUUC, it evaluates the rank of two individuals only if they are not in the same causal group. For example, two responders misclassified with respect to each other will not have any impact, while a responder misclassified with respect to a doomed will be penalized. We compare two by two all individuals who belong to different groups. If the difference of the two predicted ITEs have the same sign as difference of the two real ITE, then the two individuals are well ranked against each other.
+Thus, the accuracy rank is expressed as
+
+
+\begin{multline}
+    CAR = \frac{1}{N} \sum_{(x,x') \in \mathcal{X}^2|G(x) \neq G(x')} [sgn(ITE(x)-ITE(x'))- \\sgn(\hat{ITE(x)}-\hat{ITE(x')})]
+\end{multline}{}
+
+\end{comment}
+
+
+

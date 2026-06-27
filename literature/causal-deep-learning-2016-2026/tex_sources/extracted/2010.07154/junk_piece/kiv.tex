@@ -1,0 +1,16 @@
+In KIV, structural function $f$ is searched in a RKHS. Let $k_\mathcal{X}:\mathcal{X} \times \mathcal{X} \to \mathbb{R}$ and $k_\mathcal{Z}:\mathcal{Z} \times \mathcal{Z} \to \mathbb{R}$ be the positive semi-definite kernels, and $\mathcal{H}_\mathcal{X}, \mathcal{H}_\mathcal{Z}$ be the RKHS induced by $k_\mathcal{X}$ and $k_\mathcal{Z}$, respectively. We denote the feature map to these spaces as $\psi(x) = k_\mathcal{X}(x,\cdot)$ and  $\phi(z) = k_\mathcal{Z}(z,\cdot)$. If we consider the minimization in $f \in \mathcal{H}_\mathcal{X}$ and use Tikhonov regularization $\Omega(f) = \lambda_1\|f\|^2_{\mathcal{H}_\mathcal{X}}$, from the characteristics of reprodusing kernel, loss in \eqref{eq:total-loss} becomes
+\begin{align*}
+    \mathcal{L}(f) = \expect[YZ]{(Y - \braket[{\mathcal{H}_\mathcal{X}}]{f, \mu_{X|Z}})^2} + \lambda_1\|f\|^2_{\mathcal{H}_\mathcal{X}}, 
+\end{align*} 
+where $\mu_{X|Z}$ is a conditional mean embedding defined as $\mu_{X|z} = \expect{\phi(X) | z}$. As discussed previously, the goal of stage 1 is to obtain the estimation of the conditional expectation $\expect[X|z]{f(X)}$, hence it is sufficient to consider the conditional mean operator $E$ that maps $\phi(z)$ to $\mu_{X|z}$. Such operator can be learned from the following minimization.
+\begin{align}
+    \hat{E} = \argmin_{E: \mathcal{H}_\mathcal{Z} \to \mathcal{H}_\mathcal{X}} \mathcal{L}_1(E), \quad
+    \mathcal{L}_1(E) = \expect[X,Z]{\|\psi(X) - E \phi(Z)\|_{\mathcal{H}_\mathcal{X}}} + \lambda_1 \|E\|_{\mathcal{H}_\mathcal{Z} \to \mathcal{H}_\mathcal{X}}^2. \label{eq:stage1-loss}
+\end{align}
+In stage 2, we find $f$ by minimizing loss $\mathcal{L}(f)$ with the conditional expectation is replaced by the estimation in stage 1.
+\begin{align}
+    \hat{f} = \argmin_{f\in\mathcal{H}_\mathcal{X}} \mathcal{L}_2(f)\quad \mathcal{L}_2(f) = \expect[Y,Z]{(Y -  \braket[{\mathcal{H}_\mathcal{X}}]{f, \hat{E}\phi(Z)})^2}. \label{eq:stage2-loss}
+\end{align}
+
+Thanks to reproducing characteristics, minimization in \eqref{eq:stage1-loss} and \eqref{eq:stage2-loss} can be solved analytically. In this work, we propose the method to use adaptive feature maps that further reduce the loss.
+

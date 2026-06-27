@@ -1,0 +1,95 @@
+\section{Implementation Details}
+\label{app:implementation}
+
+Experiments were run using a single NVIDIA GeForce GTX 1080 ti, an Intel(R) Core(TM) i7-8700K, on a desktop computer with 16GB of RAM. 
+Code is written in python. Packages used include PyTorch \citep{paszke2019pytorch}, scikit-learn \citep{scikit-learn}, Ray \cite{moritz2018ray}, NumPy, SciPy, and Matplotlib. 
+We use ray tune \citep{liaw2018tune} with HyperBand Bayesian Optimization \cite{falkner2017combining} search algorithm to optimize our network hyper-parameters. 
+The hyper-parameters we consider are accounted for in Table \ref{tab:search_space}. 
+The final hyper-parameters used are given in Table \ref{tab:hparams}.
+The hyper-parameter optimization objective is the batch-wise Pearson correlation averaged across all outcomes of the validation data for a single dataset realization with random seed 1331.
+All experiments reported can be completed in 30 hours using this setup.
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Hyper-parameter & Search Space \\
+        \midrule
+        hidden units        & tune.qlograndint(32, 512, 32) \\
+        network depth       & tune.randint(2, 5) \\
+        gmm components      & tune.randint(1, 32) \\
+        attention heads     & tune.randint(1, 8) \\
+        negative slope      & tune.quniform(0.0, 0.5, 0.01) \\
+        dropout rate        & tune.quniform(0.0, 0.5, 0.01) \\
+        layer norm          & tune.choice([True, False]) \\
+        batch size          & tune.qlograndint(32, 256, 32) \\
+        learning rate       & tune.quniform(1e-4, 1e-3, 1e-4) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyper-parameter search space}
+    \label{tab:search_space}
+\end{table}
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{lccc}
+        \toprule
+        Hyper-parameter & Synthetic & ACCE NN & ACCE Transformer \\
+        \midrule
+        hidden units        & 96   & 256   & 256 \\
+        network depth       & 4     & 3     & 3 \\
+        gmm components      & 24    & 24    & 24 \\
+        attention heads     & NA    & NA    & 4 \\
+        negative slope      & 0.05  & 0.04  & 0.01 \\
+        dropout rate        & 0.04  & 0.2  & 0.5 \\
+        layer norm          & False  & False  & False \\
+        batch size          & 32    & 2048   & 32 \\
+        learning rate       & 0.0015  & 1e-4  & 2e-4 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Final hyper-parameters for each dataset/model}
+    \label{tab:hparams}
+\end{table}
+
+\subsection{Model Architecture}
+
+The general model architecture is shown in \Cref{fig:overcast-architecture}. 
+The models are neural-network architectures with two basic components: a feature extractor, $\bm{\phi}(\x; \params)$ ($\bm{\phi}$, for short), and a conditional outcome prediction block $f(\bm{\phi}, \tf; \params)$, or density estimator. 
+The covariates $\x$ (represented in \textcolor{blue}{\textbf{blue}}) are given as input to the feature extractor, whose output is concatenated with the treatment $\tf$ (represented in \textcolor{purple}{\textbf{purple}}) and given as input to the density estimator which outputs a Gaussian mixture density $p(\y \mid \tf, \x, \params)$ from which we can sample to obtain samples of the outcomes (represented in \textcolor{red}{\textbf{red}}).
+Models are optimized by maximizing the log-likelihood, $\log{p(\y \mid \tf, \x, \params)}$, using mini-batch stochastic gradient descent.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{figures/overcast-architecture}
+    \caption{\textbf{Overcast model architecture.} The inputs are represented by circles, in \textcolor{blue}{\textbf{blue}} the covariates, and in \textcolor{purple}{\textbf{purple}} the treatment. In the \textcolor{red}{\textbf{red}} circle is the output of the model, the outcomes distribution. The model has different feature extractors (in \textcolor{green}{green}) for the feed-forward neural network and the transformer. It has a single density estimator (in \textcolor{orange}{orange}).}
+    \label{fig:overcast-architecture}
+\end{figure}
+
+\subsubsection{Feature extractor}
+
+The feature extractor design is problem and data specific. 
+In our case, we look at using both a simple feed-forward neural network and also a transformer. 
+The transformer has the advantage of allowing us to model the spatio-temporal correlations between the covariates on a given day using the geographical coordinates of the observations as positional encoding.
+This is interesting when studying ACI because confounding may be latent in the relationships between neighboring variables.
+Typically, environmental processes (which is one source of confounding) are dependent upon the spatial distribution of clouds, humidity and aerosol, and this feature extractor may capture these confounding effects better. 
+
+\subsection{Density Estimator}
+
+The conditional outcome prediction block, relies on a $n_{\y}$ component Gaussian mixture density represented in \Cref{fig:overcast-gmm}.
+It outputs: 
+\begin{equation*}
+    p(\y \mid \tf, \x, \params) =
+    \sum_{j=1}^{n_{\y}} \pitilde_{j}(\bm{\phi}, \tf; \params) \mathcal{N}\left(\y \mid \mut_{j}(\bm{\phi}, \tf; \params), \sigmat^{2}_j(\bm{\phi}, \tf; \params)\right),
+\end{equation*}
+and 
+$$
+\mut(\x, \tf; \params) = \sum_{j=1}^{n_{\y}} \pitilde_{j}(\bm{\phi}, \tf; \params)\mut_{j}(\bm{\phi}, \tf; \params),
+$$
+where $\mathcal{N}(\cdot \mid \mu, \sigma^2)$ denotes a normal distribution with mean $\mu$ and variance $\sigma^2$. 
+
+\begin{figure}
+    \centering
+    \includegraphics[width=.6\linewidth]{figures/overcast-gmm.pdf}
+    \caption{\textbf{Overcast Gaussian mixture model.} The mixing coefficients $\mathbf{\pi}$ are estimated with a linear layer and a SoftMax layer, to obtain $\tilde{\mathbf{\pi}}$, represented in \textcolor{blue}{\textbf{blue}} in the figure. The vector of means of the Gaussian kernels $\tilde{\mathbf{\mu}}$ is obtained by $n_y$ linear layers (in \textcolor{green}{\textbf{green}} in the diagram), whilst the vector of variances $\tilde{\mathbf{\sigma}}$ is obtained by $n_y$ blocks of linear layers and SoftPlus layers (in \textcolor{orange}{\textbf{orange}} in the diagram).}
+    \label{fig:overcast-gmm}
+\end{figure}

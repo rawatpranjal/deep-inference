@@ -1,0 +1,142 @@
+\section{Estimating ITE: Error bounds}\label{sec:theory}
+
+In this section we prove a bound on the expected error in estimating the individual treatment effect for a given representation, and a hypothesis defined over that representation.
+The bound is expressed in terms of (1) the expected loss of the model when learning the observed outcomes $y$ as a function of $x$ and $t$, denoted $\epsilon_F$, $F$ standing for ``Factual''; (2) an Integral Probability Metric (IPM) distance between the distribution of treated and control units. The term $\epsilon_F$ is the classic machine learning generalization-error, and in turn can be upper bounded using the empirical error and model complexity terms, applying standard machine learning theory \citep{shalev2014understanding}.
+
+\subsection{Problem setup}
+We will employ the following assumptions and notations. The most important notations are in the Notation box in the supplement.
+The space of covariates is a bounded subset $\cX \subset \R^d$. The outcome space is $\cY\subset \R$. Treatment $t$ is a binary variable. We assume there exists a joint distribution $p(x,t,Y_0,Y_1)$, such that $(Y_1,Y_0) \indep t |x$ and $0<p(t=1|x)<1$ for all $x\in \cX$ (strong ignorability).
+%We call the marginal of $p$ over $(x,t)$ the \emph{factual distribution}, and denote it $p^F(x,t)$.
+The treated and control distributions are the distribution of the features $x$ conditioned on treatment: $\pt(x) := p(x|t=1)$, and $\pc(x) := p(x|t=0)$, respectively.
+
+%\begin{thmdef}\label{def:fcf}
+%Let the counterfactual distribution $p^{CF}(x,t)$ be the distribution over $\cX \times \{0,1\}$ such that $p^{CF}(1-t,x) := p^{F}(t,x)$, where $\cX \subset \R^d$.
+%\end{thmdef}
+
+%The counterfactual distribution is the factual distribution with the treatment assignment flipped.
+%Note that if treatment assignment is independent of the context $x$, and $p^F(t|x) = \frac{1}{2}$, then the counterfactual and factual distributions are identical; this is exactly the case of a randomized controlled trial, where treatment is assigned randomly with equal probability to units.
+
+
+
+Throughout this paper we will discuss \emph{representation functions} of the form
+ $\Phi : \cX \rightarrow \cR$, where $\cR$ is the representation space. We make the following assumption about $\Phi$:
+\begin{thmasmp}\label{asmp:inv}
+The representation $\Phi$ is a twice-differentiable, one-to-one function. Without loss of generality we will assume that $\cR$ is the image of $\cX$ under $\Phi$. We then have $\Psi :\cR \rightarrow \cX$ as the inverse of $\Phi$, such that $\Psi(\Phi(x)) = x$ for all $x \in \cX$.
+\end{thmasmp}
+The representation $\Phi$ pushes forward the treated and control distributions into the new space $\cR$; we denote the induced distribution by $p_\Phi$.
+\begin{thmdef}\label{def:phit}
+Define $\pt_\Phi(r) := p_\Phi(r|t=1)$, $\pc_\Phi(r) := p_\Phi(r|t=0)$, to be the treated and control distributions induced over $\cR$.
+For a one-to-one $\Phi$, the distributions $\pt_\Phi(r)$ and $\pc_\Phi(r)$ can be obtained by the standard change of variables formula, using the determinant of the Jacobian of $\Psi(r)$.
+\end{thmdef} %See \cite{ben1999change} for the case of a mapping $\Phi$ between spaces of different dimensions.
+
+Let $\Phi : \cX \rightarrow \cR$ be a representation function, and $h :\cR \times \{0,1\} \rightarrow \cY$ be an hypothesis defined over the representation space $\cR$. Let $L: \cY \times \cY \rightarrow \R_+$ be a loss function. We define two complimentary loss functions: one is the standard machine learning loss, which we will call the factual loss and denote $\epsilon_F$. The other is the expected loss with respect to the distribution where the treatment assignment is flipped, which we call the counterfactual loss, $\epsilon_{CF}$.
+
+
+\begin{thmdef}\label{def:perunitloss}
+The expected loss for the unit and treatment pair $(x,t)$ is:
+$\ell_{h,\Phi}(x,t) = \int_\cY L(Y_t,h(\Phi(x),t)) p(Y_t|x) dY_t.$
+The expected factual and counterfactual losses of $h$ and $\Phi$ are:
+\begin{align*}
+&\epsilon_F(h,\Phi) = \int_{\cX \times \{0,1\}} \!\!\!\!\!\!\! \lyth\, p(x,t)\, dxdt, \\
+&\epsilon_{CF}(h,\Phi) = \int_{\cX \times \{0,1\}} \!\!\!\!\!\!\! \lyth\, p(x,1-t)\, dxdt .
+\end{align*}
+\end{thmdef}
+
+If $x$ denotes patients' features, $t$ a treatment, and $Y_t$ a potential outcome such as mortality, we think of $\epsilon_F$ as measuring how well do $h$ and $\Phi$ predict mortality for the patients and doctors' actions sampled from the same distribution as our data sample. $\epsilon_{CF}$ measures how well our prediction with $h$ and $\Phi$ would do in a ``topsy-turvy'' world where the patients are the same but the doctors are inclined to prescribe exactly the opposite treatment than the one the real-world doctors would prescribe.
+
+\begin{thmdef}\label{def:decompef}
+The expected factual \emph{treated} and \emph{control} losses are:
+\begin{align*}
+&\epsilon^{t=1}_F(h,\Phi) = \int_{\cX } \!\!\! \lyxoneh\, \pt(x)\, dx ,\\
+&\epsilon^{t=0}_F(h,\Phi) = \int_{\cX } \!\!\! \lyxzeroh\, \pc(x)\, dx .
+\end{align*}
+\end{thmdef}
+For $u:=p(t=1)$, it is immediate to show that $\epsilon_F(h,\Phi) = u \epsilon^{t=1}(h,\Phi) + (1-u) \epsilon^{t=0}(h,\Phi)$.
+
+
+\begin{thmdef}\label{def:te}
+The treatment effect (ITE) for unit $x$ is:
+$$\tau(x) := \E\left[Y_1 - Y_0 | x \right].$$
+\end{thmdef}
+%\begin{thmdef}\label{def:m}
+%For $t=0,1$ define:
+%$$m_t(x) := \E\left[Y_t|x\right].$$
+%\end{thmdef}
+%Obviously $\tau(x) = m_1(x)-m_0(x)$.
+
+Let $f: \cX \times \{0,1\} \rightarrow \cY$ by an hypothesis. For example, we could have that $f(x,t) = h(\Phi(x),t)$.
+\begin{thmdef}\label{def:inditeerr}
+The treatment effect estimate of the hypothesis $f$ for unit $x$ is:
+\begin{align*}
+\hat{\tau}_f  (x) = f(x,1) - f(x,0).
+\end{align*}
+\end{thmdef}
+
+
+\begin{thmdef}
+The expected Precision in Estimation of Heterogeneous Effect (PEHE,  \citet{hill2011bayesian}) loss of $f$ is:
+\begin{equation}
+\label{eq:pehe}
+\epehe(f) = \int_{\cX } \left( \hat{\tau}_f(x) - \tau(x) \right)^2 \, p(x) \, dx ,
+\end{equation}
+When $f(x,t) = h(\Phi(x),t)$, we will also use the notation $\epehe(h,\Phi) = \epehe(f)$.
+\end{thmdef}
+
+Our proof relies on the notion of an \emph{Integral Probability Metric} (IPM), which is a class of metrics between probability distributions \citep{sriperumbudur2012empirical,muller1997integral}.
+For two probability density functions $p$, $q$ defined over $\cS \subseteq \R^d$, and for a function family $\cF$ of functions $g : \cS \rightarrow \R$, we have that $$\text{IPM}_\cF(p,q) :=\sup_{g\in \cF} \left| \int_\cS g(s) (p(s)-q(s))\, ds \right|.$$
+Integral probability metrics are always symmetric and obey the triangle inequality, and trivially satisfy $\text{IPM}_\cF(p,p) = 0$. For rich enough function families $\cF$, we also have that $\text{IPM}_\cF(p,q) =0 \implies p=q,$ and then $\text{IPM}_\cF$ is a true metric over the corresponding set of probabilities. Examples of function families $\cF$ for which $\text{IPM}_\cF$ is a true metric are the family of bounded continuous functions, the family of $1$-Lipschitz functions \citep{sriperumbudur2012empirical}, and the unit-ball of functions in a universal reproducing Hilbert kernel space \citep{gretton2012mmd}.
+
+
+
+\begin{thmdef}
+Recall that $m_t(x) = \E\left[Y_t|x\right]$.
+The expected variance of $Y_t$ with respect to a distribution $p(x,t)$:
+$$\sigma^2_{Y_t}(p(x,t)) = \int_{\cX \times \cY} \left(Y_t - m_t(x)\right)^2 p(Y_t|x)p(x,t) \, dY_t dx .$$
+We define:
+\begin{align*}
+&\sigma^2_{Y_t} = \min\{\sigma^2_{Y_t}(p(x,t)), \sigma^2_{Y_t}(p(x,1-t))\} , \\
+&\sigma^2_{Y} = \min\{\sigma^2_{Y_0},\sigma^2_{Y_1}\}.
+\end{align*}
+\end{thmdef}
+%If $Y_t$ are deterministic functions of $x$, then $\sigma^2_{Y} = 0$.
+\subsection{Bounds}
+
+We first state a Lemma bounding the counterfactual loss, a key step in obtaining the bound on the error in estimating individual treatment effect. We then give the main Thoerem. The proofs and details are in the supplement.
+
+Let $u := p(t=1)$ be the marginal probability of treatment. By the strong ignorability assumption, $0<u<1$.
+
+\begin{thmlem}\label{lem:gen}
+Let $\Phi : \cX \rightarrow \cR$ be a one-to-one representation function, with inverse $\Psi$.
+Let $h : \cR \times \{0,1\} \rightarrow \cY$ be an hypothesis. Let $\cF$ be a family of functions $g: \cR \rightarrow \cY$. Assume there exists a constant $B_\Phi>0$, such that for fixed $t \in \{0,1\}$, the per-unit expected loss functions $\lythr$ (Definition \ref{def:perunitloss}) obey $ \frac{1}{B_\Phi} \cdot  \lythr \in \cF$. We have:
+%For the hypothesis $f: \cX \times \{0,1\} \rightarrow \cY$ such that $f(x,t) = h(\Phi(x),t)$:
+\begin{align*}
+&\epsilon_{CF}(h,\Phi) \leq \nonumber \\
+&\quad (1-u)  \epsilon^{t=1}_F(h,\Phi) + u  \epsilon^{t=0}_F(h,\Phi) \nonumber \\
+&  \quad + B_\Phi \cdot \text{IPM}_\cF\left( \pt_\Phi, \pc_\Phi \right),
+\end{align*}
+where $\epsilon_{CF}$, $ \epsilon^{t=0}_F$ and $ \epsilon^{t=1}_F$ are as in Definitions \ref{def:perunitloss} and \ref{def:decompef}.
+\end{thmlem}
+
+
+\begin{thmthm}\label{thm:gen}
+Under the conditions of Lemma \ref{lem:gen}, and assuming the loss $L$ used to define $\ell_{h,\Phi}$ in Definitions \ref{def:perunitloss} and \ref{def:decompef} is the squared loss, we have:
+\begin{align}
+&\epehe(h,\Phi) \leq  \nonumber \\
+& 2\!\left(\epsilon_{CF}(h,\Phi) + \epsilon_F(h,\Phi) - 2\sigma^2_Y \right) \leq  \label{eq:thm_gen} \\
+&2\!\left(\epsilon_F^{t=0}(h,\Phi)\! +\!\epsilon_F^{t=1}(h,\Phi)\!+ \! B_\Phi  \text{IPM}_\cF \left( \pt_\Phi, \pc_\Phi \right)\! -\! 2\sigma^2_Y\right)\!, \nonumber
+\end{align}
+where $\epsilon_F$ and $\epsilon_{CF}$ are defined w.r.t. the squared loss.
+\end{thmthm}
+
+The main idea of the proof is showing that $\epehe$ is upper bounded by the sum of the expected factual loss $\epsilon_F$ and expected counterfactual loss $\epsilon_{CF}$.  However, we cannot estimate $\epsilon_{CF}$, since we only have samples relevant to $\epsilon_F$.  We therefore bound the difference $\epsilon_{CF} - \epsilon_F$ using an IPM.
+
+
+Choosing a small function family $\cF$ will make the bound tighter. However, choosing too small a family could result in an incomputable bound. For example, for the minimal choice $\cF = \{\lyxzeroh, \lyxoneh  \}$, we will have to evaluate an expectation term of $Y_1$ over $\pc_\Phi$, and of $Y_0$ over $\pt_\Phi$. We cannot in general evaluate these expectations, since by assumption when $t=0$ we only observe $Y_0$, and the same for $t=1$ and $Y_1$. In addition, for some function families there is no known way to efficiently compute the IPM distance or its gradients. In this paper we use two function families for which there are available optimization tools. The first is the family of $1$-Lipschitz functions, which leads to IPM being the Wasserstein distance \citep{villani2008optimal,sriperumbudur2012empirical}, denoted $\text{Wass}(p,q)$. The second is the family of norm-$1$ reproducing kernel Hilbert space (RKHS) functions, leading to the MMD metric \citep{gretton2012mmd,sriperumbudur2012empirical}, denoted $\text{MMD}(p,q)$. Both the Wasserstein and MMD metrics have consistent estimators which can be efficiently computed in the finite sample case \citep{sriperumbudur2012empirical}. Both have been used for various machine learning tasks in recent years \citep{gretton2009covariate,gretton2012mmd,cuturi2014fast}.
+
+
+In order to explicitly evaluate the constant $B_\Phi$ in Theorem \ref{thm:gen}, we have to make some assumptions about the elements of the problem. For the Wasserstein case these are the loss $L$, the Lipschitz constants of $p(Y_t|x)$ and $h$, and the condition number of the Jacobian of $\Phi$. For the MMD case, we make assumptions about the RKHS representability and RKHS norms of $h$ , $\Phi$, and the standard deviation of $Y_t|x$. The full details are given in the supplement, with the major results stated in Theorems 2 and 3. In all cases we obtain that making $\Phi$ smaller increases the constant $B_\Phi$ precluding trivial solutions such as making $\Phi$ arbitrarily small.
+
+
+For an empirical sample, and a \emph{family} of representations and hypotheses, we can further upper bound $\epsilon_F^{t=0}$ and $\epsilon_F^{t=1}$ by their respective empirical losses and a model complexity term using standard arguments \citep{shalev2014understanding}. The IPMs we use can be consistently estimated from finite samples \citep{sriperumbudur2012empirical}. The negative variance term $\sigma^2_Y$ arises from the fact that, following \citet{hill2011bayesian,athey2016recursive}, we define the error $\epehe$ in terms of the conditional mean functions $m_t(x)$, as opposed to fitting the random variables $Y_t$.
+
+Our results hold for any given $h$ and $\Phi$ obeying the Theorem conditions. This immediately suggest an algorithm in which we minimize the upper bound in Eq. \eqref{eq:thm_gen} with respect to $\Phi$ and $h$ and either the Wasserstein or MMD IPM, in order to minimize the error in estimating the individual treatment effect. This leads us to Algorithm \ref{alg:model} below.

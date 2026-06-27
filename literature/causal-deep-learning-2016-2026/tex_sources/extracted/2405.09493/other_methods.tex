@@ -1,0 +1,83 @@
+\subsection{Relationship With Other Approaches to First-Order Debiasing}
+\label{sec:other_methods}
+\looseness=-1 The constrained learning framework provides a unifying 
+perspective to existing approaches to first-order correction. %
+First, a variant of AIPW~\eqref{eqn:debiased} can also be thought of as a C-Learner over a very restricted class $\mc{F}$ of outcome models. For a given trained outcome model $\what{\mu}$,
+consider the constrained optimization problem~\eqref{eq:c-learner} over the model class $\mathcal F := \{\what{\mu}(X)+\epsilon: \epsilon \in \R\}$. In order to satisfy the constraint~\eqref{eq:c-learner}, we must have
+$
+\epsilon^* = 
+\left(\frac{1}{n} \sum_{i=1}^n 
+\frac{A_i}{\what{\pi}(X_i)} \right)^{-1}
+\frac{1}{n} \sum_{i=1}^n  \frac{A_i}{\what{\pi}(X_i)}(Y_i-\what\mu(X_i)),
+$
+which gives this special case of the C-Learner, %
+\begin{align}
+    \what{\psi}^{\textrm {AIPW-SN}}
+    &= \frac{1}{n} \sum_{i=1}^n \Big(\what{\mu}(X_i)
+    + \epsilon^\star\Big) %
+    = \frac{1}{n} \sum_{i=1}^n \what{\mu}(X_i) + 
+    \left(\frac{1}{n} \sum_{i=1}^n 
+    \frac{A_i}{\what{\pi}(X_i)} \right)^{-1}
+    \frac{1}{n} \sum_{i=1}^n \frac{A_i}{\what{\pi}(X_i)}(Y_i-\what\mu(X_i)). \label{eq:normalized_aipw} 
+\end{align}
+\looseness=-1 We refer to this as a \emph{self-normalized AIPW}. 
+This is the same as the AIPW~\eqref{eqn:debiased} aside from a normalization term  $\frac{1}{n}\sum_{i=1}^n \frac{A_i}{\what\pi(X_i)}$ that has expectation 1 if we use the true propensity score $\pi$ instead of $\what \pi$.
+We observe empirically (\Cref{sec:experiments}) that the self-normalized AIPW~\eqref{eq:normalized_aipw}, which can be thought of as a variant of AIPW motivated by our constrained optimization perspective, 
+enjoys better finite-sample performance than the standard AIPW~\eqref{eqn:debiased}.
+
+For general outcome variables (including unbounded continuous outcome variables), we show that a basic version of targeting~\eqref{eqn:tmle} can
+be viewed as a C-Learner over a specific function class. 
+By inspection, the first-order condition in~\eqref{eqn:targeting} is given by 
+\begin{equation}
+    \label{eqn:tmle-foc}
+    \frac{1}{n} \sum_{i=1}^n 
+    \frac{A_i}{\what{\pi}(X_i)} 
+    \left(Y_i - \what{\mu}(X_i) 
+    - \epsilon \frac{A_i}{\what{\pi}(X_i)}
+    \right) = 0.
+\end{equation}
+Thus, this version of targeting is a C-Learner where a pre-trained outcome model (for $A=1$, assuming $Y(0):=0$)
+$\what\mu(X)$ is perturbed along a specific direction to become 
+$\what{\mu}^C(X):=\what\mu(X)+\epsilon \frac{1}{\what{\pi}(X)}$.
+Reframing the constrained optimization problem~\eqref{eq:c-learner} with model class $\mathcal F := \left\{\what{\mu}(X)+\epsilon \frac{1}{\what{\pi}(X)}: \epsilon \in \R \right\}$ thus provides a new way to view this version of targeting~\eqref{eqn:tmle}. %
+
+\looseness=-1 For clarity, we do not use ``C-Learner'' to refer %
+to self-normalized AIPW \eqref{eq:normalized_aipw} or to targeting \eqref{eqn:targeting}, even though they can be thought of as C-Learners over a restricted model class. %
+
+\subsection{C-Learner is Numerically Stable, Without Additional Heuristics}
+\label{sec:c_learner_stable_comparison}
+\looseness=-1 The aforementioned approaches to first-order correction rely on adding estimated ratios 
+($A/\what \pi(X)$ for one-step estimation~\eqref{eqn:debiased})
+or fluctuating the outcome model $\what\mu$ in a specific direction (along $A/\what\pi(X)$ for targeting~\eqref{eqn:targeting})
+in order to de-bias plug-in estimators (\Cref{sec:optimality_background}).
+In contrast, C-Learner achieves asymptotic optimality without using limited model classes $\mathcal F$ %
+as in one-step estimation and targeting (\Cref{sec:other_methods}): it simply trains the nuisance parameter $\what{\mu}^C(\cdot)$ so the plug-in estimator $\frac{1}{n}\sum_{i=1}^n \what{\mu}^C(X_i)$ satisfies the criterion for asymptotic optimality in the most direct way possible, while using the entirety of the chosen model class. 
+
+
+\looseness=-1 In settings with regions of low overlap between treatment and control, the probability of treatment $\what\pi(X)$ can be very close to 0 for some values of $X$, so that $1/\what\pi(X)$ can be extremely large, causing numerical instability in one-step estimation and targeting. 
+While there are variations for both AIPW and TMLE that are more stable, e.g., by self-normalizing propensity weights, truncating $\what\pi$ to avoid extreme values in AIPW, or assuming $Y$ is bounded and modeling $Y$ as a (scaled) logistic function of $(A,X)$
+in TMLE (see Section~\ref{sec:ks}), 
+C-Learner can avoid instability simply by having this $1/\what{\pi}(X)$ appear only in the constraint in the constrained optimization, rather than an additive term to the estimator. 
+
+
+Additionally, simple plug-in estimators of outcome models from their chosen model classes 
+have been observed to be numerically stable (e.g.,~\cite{KangSc07}). 
+C-Learner appears to inherit these benefits empirically in \cref{sec:experiments}, and also in a simple theoretical low-overlap example in \Cref{sec:theory_simple}. 
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+

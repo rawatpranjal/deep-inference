@@ -1,0 +1,108 @@
+\section{Introduction}
+\label{sec:intro}
+
+\tc{edit} %
+Causal inference is the bedrock of scientific decision-making. In many settings, estimating causal effects accurately requires modeling high-dimensional and complex nuisance parameters---quantities that, while not of primary interest, must be estimated correctly to determine the causal effect.
+For example, when estimating the average treatment effect (ATE), a common approach is to train a flexible machine learning model to directly model the outcome variable as a function of the treatment assignment and other observed covariates. Then, to estimate the ATE, the trained machine learning model (nuisance parameter) is used to estimate outcomes for each unit under the treatment and under the control. The ATE is then computed by taking the average of the differences in the predicted values for each observation. This procedure is what we refer to as the naive plug-in (a.k.a. ``direct'') estimator, which entirely trusts the fitted ML model. Although straightforward and easy to communicate, such an approach has the drawback that the machine learning model is fitted to optimize prediction accuracy and does not consider the downstream causal estimation task. 
+As a result, this %
+naive plug-in estimator 
+is suboptimal and sensitive to errors in the ML model %
+~\citep{BickelKlRiWe98,ChernozhukovChDeDuHaNeRo18,VanDerLaanRo11,Kennedy22}.
+
+\looseness=-1 To improve upon the naive plug-in (direct) estimator,
+debiased methods analyze the sensitivity of the causal estimand with respect to the estimated nuisance parameter (e.g. outcome model) by taking a first-order distributional Taylor expansion, and then correct for the first-order error term due to nuisance parameter estimation~\cite{BickelKlRiWe98,pfanzagl1985contributions,ChernozhukovChDeDuHaNeRo18,VanDerLaanRo11,van2006targeted,Newey94}. As an example,
+ \emph{one-step estimation} corrects the plug-in estimator by subtracting an estimate of the first-order error term; see~\cite{Kennedy22,fisher2019} for a review and an introduction to one-step correction. 
+As another example, targeting ``fluctuates'' the outcome model in a specific way so that an estimate of the first-order error is zero~\citep{VanDerLaanRo11,van2006targeted}.  When estimating the ATE, these two approaches give rise to the well-known augmented inverse probability weighting  (AIPW) estimator~\citep{Bang2005DoublyRE} 
+and the targeted maximum likelihood  estimator (TMLE) \citep{VanDerLaanRo11,van2006targeted}, respectively. Both estimators are statistically efficient/optimal (having the lowest possible asymptotic variance, in the local asymptotic minimax sense~\citep{van2000asymptotic}) and doubly robust (converging to the true value if either the outcome model or treatment model converge to their true values~\citep{Bang2005DoublyRE}) under standard regularity assumptions. %
+
+
+
+
+While all first-order correction (``debiased'') methods enjoy standard asymptotic optimality guarantees under standard assumptions, in practice, several authors have noted a salient gap between the asymptotic and
+finite-sample performance of different estimation approaches~\citep{KangSc07, CarvalhoFeMuWoYe19}, leaving room for 
+new methodological development, and necessitating a rigorous and thorough empirical comparison. %
+AIPW and TMLE are asymptotically optimal but can produce unstable estimates, and additional heuristics and assumptions (e.g., truncating propensity scores for AIPW, or assuming bounded outcomes for TMLE) are used to mitigate this instability. 
+By contrast, plug-in estimators never require truncation but lose efficiency. In response, we offer a unified approach that combines statistical efficiency with finite‐sample stability, without additional heuristics. 
+
+
+Our framework reframes the problem of constructing a debiased ATE estimator as a constrained optimization problem.  Consider binary treatments (actions) $A$, covariates $X$, and potential outcomes $Y(1), Y(0)$ under treatment ($A=1$) and control ($A=0$), respectively. Under standard identification assumptions for the ATE, letting $(X,A,Y:=Y(A))\sim P$ for some distribution $P$, and also assuming $Y(0) := 0$ for simpler exposition, the ATE
+depends on the outcome model $\mu(X):=\E_P[Y\mid A=1,X]$:
+\begin{equation*}
+    \mbox{ATE} = \E_{P}[Y(1) - Y(0)] = \E_{P}[Y(1)]
+    = \E_P[\mu(X)]%
+    .
+\end{equation*}
+Instead of fitting $\mu(\cdot)$ to minimize prediction error (as would be done for a standard plug-in estimator), we explicitly take into account the downstream causal estimation task
+by minimizing prediction error subject to the \emph{constraint} that the first-order estimation error must be zero. For a given propensity score (treatment) model $\what{\pi}(X) \approx \E[A \mid X]$,
+we solve the following constrained learning problem over the class of outcome models $\wt \mu(\cdot)$ in the chosen model class $\mc{F}$:
+\begin{equation}
+    \label{eqn:opt}
+    \what \mu^C \in  \argmin_{\wt \mu \in \mc{F}} \Bigg\{ \mbox{PredictionError}(\wt \mu):
+            \mbox{First-order error of plug-in estimator from }\wt \mu \text{ is } 0
+        \Bigg\}
+.\end{equation}
+The resulting plug-in estimator $\frac{1}{n}\sum_{i=1}^n \what\mu^C(X_i)$ based on the constrained learning perspective~\eqref{eqn:opt} enjoys the usual fruits of first-order correction, such as semiparametric efficiency and double robustness, which we show in \Cref{sec:theory_text}.
+
+The constrained learning perspective~\eqref{eqn:opt} gives rise to a  natural and performant estimation method, which we call the ``C-Learner''. Instead of adjusting an existing nuisance parameter estimate along a pre-specified direction to attain first-order correction (e.g., as in TMLE), 
+we directly train the nuisance parameter to minimize prediction error subject to the constraint that the first-order estimation error must be zero.  As 
+we discuss in Section~\ref{sec:experiments}, we empirically observe that the C-Learner 
+outperforms basic versions of one-step estimation and targeting without additional heuristics or approximations in challenging settings where there are covariate regions with little estimated overlap between treatment and control groups, where existing methods can exhibit instability. 
+We observe C-Learner performs similarly to these versions of one-step estimation and targeting otherwise.
+
+How does the C-Learner attain stable estimates, while basic versions of one-step estimation and targeting are less stable in settings with low overlap? %
+Inverse propensity weights (i.e. the reciprocal of the probability of treatment) can be extreme in settings with low overlap; basic versions of existing first-order correction methods are sensitive to extreme inverse propensity weights, while C-Learner can be less sensitive to extreme inverse propensity weights as inverse propensity weights only appear in the constraint. More rigorously, 
+we construct a simple theoretical example with poorly-behaved inverse propensity weights in which one-step estimation and targeting estimators have infinite variance, while C-Learner has finite variance in \Cref{sec:theory_simple}. We do not claim that C-Learner is strictly superior to other debiasing methods in general; instead, we demonstrate scenarios in which C-Learner outperforms the other debiased estimators. Assumptions in this example (necessarily) differ from more standard assumptions in \Cref{sec:background} and \Cref{sec:theory_text}. 
+
+
+\looseness=-1 Our constrained learning perspective also provides a way to unify versions of existing first-order correction methods like one-step estimation and targeting (\cref{sec:other_methods}). %
+These versions of existing methods can be thought of as solving the optimization problem~\eqref{eqn:opt} with a restrictive model class given by augmenting a fitted nuisance estimator along a specific direction. For estimating the ATE (under the simplifying assumption that $Y(0):=0$), one version of one-step estimation uses an existing outcome model 
+$\what{\mu}(X)$ plus an additive constant term
+$\mathcal{F} := \{ \what{\mu}(\cdot) + \epsilon: \epsilon \in \R\}$, and one version of targeting uses an existing outcome model plus a canonical gradient-based covariate term $\mathcal{F} := \left\{ \what{\mu}(\cdot) + \epsilon \frac{1}{\what{\pi}(\cdot)}: \epsilon \in \R  \right\}$ where %
+$\what{\pi}$ is a fitted propensity score (treatment) model. See Figure~\ref{fig:intro_schematic} for an illustration.  
+In \cref{sec:theory_text}, we identify conditions under which a
+constrained learning estimator enjoys these results, and we verify that these
+one-step estimation and targeting methods also satisfy these necessary conditions. 
+\begin{figure}[t]
+    \centering
+    \vspace{-2cm}
+\includegraphics[width=0.85\linewidth]{images/cl_schematic7.pdf}
+    \caption{Schematic for how C-Learner is defined, compared to one-step estimation and targeting. $\what\mu$ is the unconstrained outcome model, which minimizes the prediction error on observed outcomes (\textcolor{gray}{gray ovals} depict level sets for prediction error). $\what\mu_{\textrm{one-step}}$ and $\what\mu_{\textrm{targeting}}$ are different projections of $\what\mu$ onto the space of outcome models for which the corresponding plug-in estimators are asymptotically optimal. $\what\mu_{\textrm{C-Learner}}$ is the outcome model that minimizes prediction error on observed outcomes, subject to the plug-in estimator being asymptotically optimal (\textcolor{teal}{teal line}).
+    }
+    \label{fig:intro_schematic}
+\end{figure}
+
+Unlike traditional one-step estimators and targeted estimators, which apply a first-order correction to a single plug-in model, our C-Learner uses the entire chosen machine-learning model class 
+$\mathcal F$
+to compute that correction. In other words, instead of fixing a plug-in model and then adjusting it, we directly optimize over 
+$\mathcal F$, which we expect to yield better finite-sample performance, which aligns with empirical observations (\Cref{sec:experiments}).
+We implement and evaluate C-Learner using outcome models $\what\mu$ that are linear models, gradient boosted trees, and neural networks as described in \cref{sec:methodology}. 
+
+
+
+
+
+
+
+
+
+\paragraph{Contributions}
+To summarize, we contribute the following: 
+\begin{enumerate}
+    \item The C-Learner (\Cref{sec:methods}), a general method to estimate causal estimands that uses constrained optimization to attain asymptotic optimality (\Cref{sec:theory_text}). 
+    \item Practical instantiations of C-Learner for three different outcome model classes: linear models, gradient boosted trees, neural networks (\Cref{sec:methodology}). 
+    \item Experiments using these three outcome model classes, on a range of settings, including with text covariates, that show C-Learner performs better than one-step estimation and targeting in settings with low overlap, and comparably otherwise (\Cref{sec:experiments}).
+    \item A theoretical scenario for low-overlap where one-step estimation and targeting have infinite variance while C-Learner has finite variance (\Cref{sec:theory_simple}). %
+\end{enumerate}
+
+
+
+\paragraph{Related Works} We defer a discussion of one-step estimation and targeting to Section~\ref{sec:background}. We defer a discussion of balancing estimators, which also achieve asymptotic optimality and have a connection to a ``dual'' version of C-Learner, to Section~\ref{sec:balance}.
+Here, we discuss related works outside of one-step estimation, targeting, and balancing estimators. 
+Machine learning approaches for nuisance estimation have received a lot of attention \citep{athey2016recursive,athey2018approximate,athey2019generalized,oprescu2019orthogonal,hahn2019bayesian,wager2018estimation}. %
+These approaches can naturally be combined with first-order correction methods like one-step estimation %
+and targeting, %
+with recent work~\citep{shi2019adapting,chernozhukov2022riesznet} incorporating these ideas directly into model training through novel objectives and architectures. 
+Like other first-order correction methods, C-Learner is orthogonal to and can also integrate innovations in nuisance estimation approaches; for example, in \cref{sec:ihdp_nn}, 
+we demonstrate how C-Learner can effectively use Riesz representers learned by RieszNet~\citep{chernozhukov2022riesznet}. 
+
+

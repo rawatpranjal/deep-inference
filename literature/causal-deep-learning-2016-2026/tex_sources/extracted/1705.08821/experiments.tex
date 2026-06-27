@@ -1,0 +1,100 @@
+Evaluating causal inference methods is always challenging because we usually lack ground-truth for the causal effects. Common evaluation approaches include creating synthetic or semi-synthetic datasets, where real data is modified in a way that allows us to know the true causal effect or real-world data where a randomized experiment was conducted. Here we compare with two existing benchmark datasets where there is no need to model proxies, IHDP~\citep{hill2011bayesian} and Jobs~\citep{lalonde1986evaluating}, often used for evaluating individual level causal inference. In order to specifically explore the role of proxy variables, we create a synthetic toy dataset, and introduce a new benchmark based on data of twin births and deaths in the USA.
+
+For the implementation of our model we used Tensorflow~\citep{abadi2016tensorflow} and Edward~\citep{tran2016edward}. For the neural network architecture choices we closely followed~\cite{shalit2016estimating}; unless otherwise specified we used 3 hidden layers with ELU~\citep{clevert2015fast} nonlinearities for the approximate posterior over the latent variables $q(\*Z|\*X, \*t, \*y)$, the generative model $p(\*X|\*Z)$ and the outcome models $p(\*y|\*t,\*Z), q(\*y|\*t,\*X)$. For the treatment models $p(\*t|\*Z),q(\*t|\*X)$ we used a single hidden layer neural network with ELU nonlinearities. Unless mentioned otherwise, we used a 20-dimensional latent variable $\*z$ and used a small weight decay term for all of the parameters with $\lambda = .0001$. Optimization was done with Adamax~\citep{kingma2014adam} and a learning rate of $0.01$, which was annealed with an exponential decay schedule. We further performed early stopping according to the lower bound on a validation set. To compute the outcomes $p(\*y|\*X, do(\*t=1))$ and $p(\*y|\*X, do(\*t=0))$ we averaged over 100 samples from the approximate posterior $q(\*Z|\*X) = \sum_{\*t} \int q(\*Z|\*t,\*y,\*X)q(\*y|\*t,\*X)q(\*t|\*X) d\*y$.
+
+Throughout this section we compare with several baseline methods. $LR1$ is logistic regression, $LR2$ is two separate logistic regressions fit to treated ($t=1$) and control ($t=0$). TARnet is a feed forward neural network architecture for causal inference \citep{shalit2016estimating}. 
+
+\subsection{Benchmark datasets}
+For the first benchmark task we consider estimating the individual and population causal effects on a benchmark dataset introduced by~\cite{hill2011bayesian}; it is constructed from data obtained from the Infant Health and Development Program (IHDP). Briefly, the confounders $\*x$ correspond to collected measurements of the children and their mothers used during a randomized experiment that studied the effect of home visits by specialists on future cognitive test scores. The treatment assignment is then ``de-randomized'' by removing from the treated set children with non-white mothers; for each unit a treated and a control outcome are then simulated, thus allowing us to know the ``true'' individual causal effects of the treatment. 
+We follow~\cite{johansson2016learning,shalit2016estimating} and use 1000 replications of the simulated outcome, along with the same train/validation/testing splits. To measure the accuracy of the individual treatment effect estimation we use the Precision in Estimation of Heterogeneous Effect (PEHE)~\citep{hill2011bayesian}, $\text{PEHE} = \frac{1}{N}\sum_{i=1}^{N}((y_{i1} - y_{i0}) - (\hat{y}_{i1} - \hat{y}_{i0}))^2$, where $y_1, y_0$ correspond to the true outcomes under $t=1$ and $t=0$, respectively, and $\hat{y}_1, \hat{y}_0$ correspond to the outcomes estimated by our model. For the population causal effect we report the absolute error on the Average Treatment Effect (ATE). The results can be seen at Table~\ref{tab:ihdp}. As we can see, CEVAE has decent performance, comparable to the Balancing Neural Network (BNN) of~\cite{johansson2016learning}. 
+
+\begin{table}[htb!]
+\begin{minipage}{.51\linewidth}
+\centering
+\caption{Within-sample and out-of-sample mean and standard errors for the metrics for the various models at the IHDP dataset.}\label{tab:ihdp}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{lcccc}
+\toprule
+Method & $\sqrt{\epsilon^{\text{within-s.}}_\text{PEHE}}$ & $\epsilon^{\text{within-s.}}_{\text{ATE}}$ & $\sqrt{\epsilon^{\text{out-of-s.}}_\text{PEHE}}$  & $\epsilon^{\text{out-of-s.}}_{\text{ATE}}$ \\\midrule
+OLS-1 & 5.8$\pm$.3 & .73$\pm$.04 & 5.8$\pm$.3 & .94$\pm$.06\\
+OLS-2 & 2.4$\pm$.1 & .14$\pm$.01 & 2.5$\pm$.1 & .31$\pm$.02\\
+BLR & 5.8$\pm$.3 & .72$\pm$.04 & 5.8$\pm$.3 & .93$\pm$.05 \\
+k-NN & 2.1$\pm$.1 & .14$\pm$.01 & 4.1$\pm$.2 & .79$\pm$.05\\
+TMLE & 5.0$\pm$.2 & .30$\pm$.01 & - & - \\
+BART & 2.1$\pm$.1 & .23$\pm$.01 & 2.3$\pm$.1 & .34$\pm$.02 \\
+RF & 4.2$\pm$.2 & .73$\pm$.05 & 6.6$\pm$.3 & .96$\pm$.06 \\
+CF & 3.8$\pm$.2 & .18$\pm$.01 & 3.8$\pm$.2 & .40$\pm$.03 \\
+BNN & 2.2$\pm$.1 & .37$\pm$.03 & 2.1$\pm$.1 & .42$\pm$.03 \\
+CFRW & .71$\pm$.0 & .25$\pm$.01 & .76$\pm$.0 & .27$\pm$.01\\\midrule
+CEVAE & 2.7$\pm$.1 & .34$\pm$.01& 2.6$\pm$.1 & .46$\pm$.02\\
+\bottomrule
+\end{tabular}%
+\end{adjustbox}
+\end{minipage}\hfill
+\begin{minipage}{.45\linewidth}
+\centering
+\caption{Within-sample and out-of-sample policy risk and error on the average
+treatment effect on the treated (ATT) for the various models on the Jobs dataset.}\label{tab:jobs}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{lcccc}
+\toprule
+Method & $R^{\text{within-s.}}_{pol}$ & $\epsilon^{\text{within-s.}}_{\text{ATT}}$ & $R^{\text{out-of-s.}}_{pol}$ & $\epsilon^{\text{out-of-s.}}_{\text{ATT}}$\\\midrule
+LR-1 & .22$\pm$.0 & .01$\pm$.00 & .23$\pm$.0 & .08$\pm$.04\\
+LR-2 & .21$\pm$.0 & .01$\pm$.01 & .24$\pm$.0 & .08$\pm$.03\\
+BLR & .22$\pm$.0 & .01$\pm$.01 & .25$\pm$.0 & .08$\pm$.03 \\
+k-NN & .02$\pm$.0 & .21$\pm$.01 & .26$\pm$.0 & .13$\pm$.05\\
+TMLE & .22$\pm$.0 & .02$\pm$.01 & - & - \\
+BART & .23$\pm$.0 & .02$\pm$.00 & .25$\pm$.0 & .08$\pm$.03 \\
+RF & .23$\pm$.0 & .03$\pm$.01 & .28$\pm$.0 & .09$\pm$.04 \\
+CF & .19$\pm$.0 & .03$\pm$.01 & .20$\pm$.0 & .07$\pm$.03 \\
+BNN & .20$\pm$.0 & .04$\pm$.01 & .24$\pm$.0 & .09$\pm$.04 \\
+CFRW &.17$\pm$.0 & .04$\pm$.01 & .21$\pm$.0 & .09$\pm$.03\\\midrule
+CEVAE & .15$\pm$.0 & .02$\pm$.01 & .26$\pm$.0 & .03$\pm$.01\\
+\bottomrule
+\end{tabular}%
+\end{adjustbox}
+\end{minipage}
+\end{table}
+
+For the second benchmark we consider the task described at~\cite{shalit2016estimating} and follow closely their procedure. It uses a dataset obtained by the study of~\cite{lalonde1986evaluating,smith2005does}, which concerns the effect of job training (treatment) on employment after training (outcome). Due to the fact that a part of the dataset comes from a randomized control trial we can estimate the ``true'' causal effect. Following~\cite{shalit2016estimating} we report the absolute error on the Average Treatment effect on the Treated (ATT), which is the $\mathbb{E}\left[ITE(\*X)|\*t=1\right]$. For the individual causal effect we use the policy risk, that acts as a proxy to the individual treatment effect. The results after averaging over 10 train/validation/test splits can be seen at Table~\ref{tab:jobs}. As we can observe, CEVAE is competitive with the state-of-the art, while overall achieving the best estimate on the out-of-sample ATT.
+
+
+\subsection{Synthetic experiment on toy data}
+
+To illustrate that our model better handles hidden confounders we experiment on a toy simulated dataset where the marginal distribution of $\*X$ is a mixture of Gaussians, with the hidden variable $\*Z$ determining the mixture component. We generate synthetic data by the following process:
+\begin{align}\label{eq:toygen}
+\*z_i \sim \text{Bern}\left(0.5\right); & \qquad \*x_i | \*z_i \sim \mathcal{N}\left(\*z_i, \sigma^2_{z_1} \*z_i + \sigma^2_{z_0} (1 - \*z_i)\right) \nonumber\\
+\*t_i |\*z_i \sim \text{Bern}\left(0.75 \*z_i + 0.25 (1 - \*z_i)\right); & \qquad  \*y_i |\*t_i,\*z_i \sim \text{Bern}\left(\text{Sigmoid}\left(3(\*z_i +2 (2\*t_i - 1))\right)\right),
+\end{align}
+where $\sigma_{z_0} = 3$, $\sigma_{z_1} = 5$ and $\text{Sigmoid}$ is the logistic sigmoid function. This generation process introduces hidden confounding between $\*t$ and $\*y$ as $\*t$ and $\*y$ depend on the mixture assignment $\*z$ for $\*x$. Since there is significant overlap between the two Gaussian mixture components we expect that methods which do not model the hidden confounder $z$ will not produce accurate estimates for the treatment effects. We experiment with both a binary $z$ for CEVAE, which is close to the true model, as well as a 5-dimensional continuous $z$ in order to investigate the robustness of CEVAE w.r.t. model misspecification. We evaluate across samples size $N \in \{1000,3000,5000,10000,30000\}$ and provide the results in Figure~\ref{fig:toy1}.  We see that no matter how many samples are given, $LR1$, $LR2$ and TARnet are not able to improve their error in estimating ATE directly from the proxies. On the other hand, CEVAE achieves significantly less error. When the latent model is correctly specified (CEVAE bin) we do better even with a small sample size; when it is not (CEVAE cont) we require more samples for the latent space to imitate more closely the true binary latent variable.
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.6\columnwidth]{figures/toy_exp_var35_ver2.pdf}
+\caption{Absolute error of estimating ATE on samples from the generative process \eqref{eq:toygen}. CEVAE bin and CEVAE cont are CEVAE with respectively binary or continuous 5-dim latent $z$. See text above for description of the other methods.}
+\label{fig:toy1}
+\end{figure}
+
+\subsection{Binary treatment outcome on Twins}
+We introduce a new benchmark task that utilizes data from twin births in the USA between 1989-1991 \citep{almond2005costs} \footnote{Data taken from the denominator file at http://www.nber.org/data/linked-birth-infant-death-data-vital-statistics-data.html}. The treatment $\*t=1$ is being born the heavier twin whereas, the outcome corresponds to the mortality of each of the twins in their first year of life. Since we have records for both twins, their outcomes could be considered as the two potential outcomes with respect to the treatment of being born heavier. We only chose twins which are the same sex. Since the outcome is thankfully quite rare (3.5\% first-year mortality), we further focused on twins such that both were born weighing less than $2kg$. We thus have a dataset of $11984$ pairs of twins. The mortality rate for the lighter twin is $18.9\%$, and for the heavier $16.4\%$, for an average treatment effect of $-2.5\%$. For each twin-pair we obtained 46 covariates relating to the parents, the pregnancy and birth: mother and father education, marital status, race and residence; number of previous births; pregnancy risk factors such as diabetes, renal disease, smoking and alcohol use; quality of care during pregnancy; whether the birth was at a hospital, clinic or home; and number of gestation weeks prior to birth. 
+
+In this setting, for each twin pair we observed both the case $\*t=0$ (lighter twin) and $\*t=1$ (heavier twin). In order to simulate an observational study, we selectively hide one of the two twins; if we were to choose at random this would be akin to a randomized trial. In order to simulate the case of hidden confounding with proxies, we based the treatment assignment on a single variable which is highly correlated with the outcome: \texttt{GESTAT10}, the number of gestation weeks prior to birth. It is ordinal with values from $0$ to $9$ indicating birth before $20$ weeks gestation, birth after $20$-$27$ weeks of gestation and so on \footnote{The partition is given in the original dataset from NBER.}. 
+We then set $ \*t_i |\*x_i, \*z_i \sim \text{Bern}\left(\sigma(w_o^\top \*x +w_h (\*z/10-0.1))\right)$, $w_o \sim \mathcal{N}(0,0.1 \cdot I)$, $w_h \sim \mathcal{N}(5,0.1)$, where $\*z$ is \texttt{GESTAT10} and $\*x$ are the 45 other features.
+
+We created proxies for the hidden confounder as follows: We coded the 10 \texttt{GESTAT10}  categories with one-hot encoding, replicated 3 times. We then randomly and independently flipped each of these 30 bits. We varied the probabilities of flipping from $0.05$ to $0.5$,  the latter indicating there is no direct information about the confounder. We chose three replications following the well-known result that three independent views of a latent feature are what is needed to guarantee that it can be recovered \citep{kruskal1976more,allman2009identifiability,anandkumar2014tensor}. We note that there might still be proxies for the confounder in the other variables, such as the incompetent cervix covariate which is a known risk factor for early birth.
+Having created the dataset, we focus our attention on two tasks: Inferring the mortality of the unobserved twin (counterfactual), and inferring the average treatment effect. We compare with TARnet, LR1 and LR2. We vary the number of hidden layers for TARnet and CEVAE (\emph{nh} in the figures). We note that while TARnet with 0 hidden layers is equivalent to $LR2$, CEVAE with 0 hidden layers still infers a latent space and is thus different. The results are given respectively in Figures \ref{fig:twin1} (higher is better) and \ref{fig:twin2} (lower is better).
+
+For the counterfactual task, we see that for small proxy noise all methods perform similarly. This is probably due to the gestation length feature being very informative; for $LR1$, the noisy codings of this feature form 6 of the top 10 most predictive features for mortality, the others being sex (males are more at risk), and 3 risk factors: incompetent cervix, mother lung disease, and abnormal amniotic fluid.
+For higher noise, TARnet, $LR1$ and $LR2$ see roughly similar degradation in performance;  CEVAE, on the other hand, is much more robust to increasing proxy noise because of its ability to infer a cleaner latent state from the noisy proxies. Of particular interest is CEVAE $nh=0$, which does much better for counterfactual inference than the equivalent $LR2$, probably because $LR2$ is forced to rely directly on the noisy proxies instead of the inferred latent state. 
+For inference of average treatment effect, we see that at the low noise levels CEVAE does slightly worse than the other methods, with CEVAE $nh=0$ doing noticeably worse. However, similar to the counterfactual case, CEVAE is significantly more robust to proxy noise, achieving quite a low error even when the direct proxies are completely useless at noise level $0.5$.
+
+\begin{figure*}[htb!]
+\centering
+\hspace*{\fill}%
+    \subfigure[Area under the curve (AUC) for predicting the mortality of the unobserved twin in a hidden confounding experiment; higher is better. \label{fig:twin1}]{\includegraphics[width=.45\textwidth]{figures/twins_gest_3_20reps.pdf}}\hfill%
+    \subfigure[Absolute error ATE estimate; lower is better. Dashed black line indicates the error of using the naive ATE estimator: the difference between the average treated and average control outcomes. \label{fig:twin2}]{\includegraphics[width=.45\textwidth]{figures/twins_gest_3_ateres_20reps.pdf}}
+ \hspace*{\fill}%
+ \caption{Results on the Twins dataset. $LR1$ is logistic regression, $LR2$ is two separate logistic regressions fit on the treated and control. ``nh'' is number of hidden layers used. TARnet with $nh=0$ is identical to $LR2$ and not shown, whereas CEVAE with $nh=0$ has a latent space component.}
+ \label{fig:twins}
+ \vskip -10pt
+\end{figure*}

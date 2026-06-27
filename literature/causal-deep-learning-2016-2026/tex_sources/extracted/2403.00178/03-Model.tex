@@ -1,0 +1,134 @@
+
+
+\begin{figure*}[htbp]
+ \centering
+ \includegraphics[width=0.9\textwidth]{fig/framework_new.pdf}
+ \vspace{-1em}
+  \caption{Overall Framework of \model. The encoder first computes the latent initial states. Then the treatment-induced coupled ODE functions predict the continuous trajectories over time. Treatment representations learned through the fusing module are incorporated into the ODE functions to enable counterfactual prediction. Finally, the decoder outputs the predicted dynamics. Treatment and interference balancing losses are designed to ensure unbiased counterfactual predictions.}\label{fig:framework}
+   \vspace{-1em}
+\end{figure*}
+
+\section{The Proposed Model: \model} 
+
+
+ 
+
+In this section, we present Causal Graph ODE (\model) to predict continuous counterfactual outcomes for multi-agent dynamical systems with evolving interaction edges and dynamic multi-treatment effects. 
+Following the framework of GraphODEs~\cite{LG-ODE,huang2021coupled,anonymous2023cfgode,ndcn,poli2019graph}, \model~adopts the encoder-ODE generative model-decoder architecture described in Sec.~\ref{sec:graphode} to capture the continuous interaction among agents. As nodes and edges are jointly evolving, we utilize two coupled ODE functions~\cite{huang2021coupled} for the evolution of nodes and edges respectively. Contrary to GraphODEs, \model~ can perform causal reasoning by injecting treatment effects into the ODE functions, which we call {\it treatment-induced coupled graph ODE}. The multi-treatment effects are captured by a novel treatment fusing module that assigns temporal weights to the treatments using an attention mechanism.
+As time-dependent confounders can result in a biased distribution of treatment assignments and imbalanced interferences due to the evolving graph structure, \model~utilizes two adversarial learning losses to ensure unbiased estimations of counterfactual outcomes. The overall framework is depicted in Figure~\ref{fig:framework}. We now discuss each module in detail.
+
+
+
+\subsection{Spatial-Temporal Initial State Encoder}
+
+
+The encoder of~\model~infers the posterior distributions  from the historical observations and then samples the latent initial states from them. It follows the architecture described in \cite{huang2021coupled}. As the evolution of different nodes is mutually influenced, we calculate the initial states for all nodes simultaneously considering their interactions over time. The initial states of edges are derived from the initial states of nodes.
+
+\textbf{Dynamic Node Representation Learning.} We construct a graph to represent the spatial-temporal structure of multi-agent dynamical systems, with each node corresponding to an agent's observation at a particular timestamp.
+%\ZH{no reference here. put the figure in appendix and rewrte the order of these sentences.} 
+There are two types of edges: spatial edges at the same timestamp and temporal edges across different timestamps. The spatial edges are formed according to the adjacency matrices, denoted as $w_{i(t)\rightarrow j(t)}$. For the temporal edges, we only consider edges from an agent's own previous observations to later observations, denoted as $w_{i(t)\rightarrow i(t')}$, where~$t' = t+1$.
+% as illustrated in Figure~\ref{fig:encoder_flow} in which we have temporal edges between consecutive observations. 
+
+The latent representations of observations are learned from this spatial-temporal graph through an attention mechanism approach. The propagation among $L$ GNN layers is depicted in Equation\eqref{eq:encode_attention}.
+\begin{align}\label{eq:encode_attention}
+\bm{h}_{i\left(t^{\prime}\right)}^l&=\bm{h}_{i\left(t^{\prime}\right)}^l+\sigma\left(\sum_{j(t) \in \mathcal{N}_{i\left(t^{\prime}\right)}} e_{j(t) \rightarrow i\left(t^{\prime}\right)}^l \times \bm{W}_v \hat{\bm{h}}_{j(t)}^{l-1}\right),\nonumber \\
+e_{j(t) \rightarrow i\left(t^{\prime}\right)}^l&=w_{j(t) \rightarrow i\left(t^{\prime}\right)} \times \alpha_{j(t) \rightarrow i\left(t^{\prime}\right)}^l, \nonumber \\ 
+\alpha_{j(t) \rightarrow i\left(t^{\prime}\right)}^l&=\left(\bm{W}_k \hat{\bm{h}}_{j(t)}^{l-1}\right)^T\left(\bm{W}_q \bm{h}_{i\left(t^{\prime}\right)}^{l-1}\right) \cdot \frac{1}{\sqrt{d}}, \\ 
+\hat{\bm{h}}_{j(t)}^{l-1}&=\bm{h}_{j(t)}^{l-1}+\mathrm{TE}\left(t-t^{\prime}\right), \nonumber \\ 
+\operatorname{TE}(\Delta t)_{2 i}&=\sin \left(\frac{\Delta t}{10000^{2 i / d}}\right), \operatorname{TE}(\Delta t)_{2 i+1}=\cos \left(\frac{\Delta t}{10000^{2 i / d}}\right).  \nonumber   
+\end{align}
+Here, $\bm{h}_{i(t)}^{l}$ represents the agent $i$ at time $t$ from layer $l$. The attention score $e_{j(t) \rightarrow i\left(t^{\prime}\right)}^l$ is defined as the product of edge weights $w_{j(t) \rightarrow i\left(t^{\prime}\right)}$ and affinity score $\alpha_{j(t) \rightarrow i\left(t^{\prime}\right)}^l$, which is computed using the representations of the sender and receiver nodes. Additionally, we incorporate temporal embedding, denoted as $\mathrm{TE}$, into the sender node's representation to establish temporal distinction. Then, the final representation is obtained from the $L$ layer as $\bm{h}_{i(t)} = \bm{h}^L_{i(t)}$.
+
+\textbf{Sequence Representation Learning.} Then, we employ self-attention to compute the sequence representation of observed temporal information for each node, where $\hat{\bm{h}}_{i(t)} = \bm{h}_{i(t)} + \text{TE}(t)$.
+\begin{equation}
+    \bm{u}_i = \frac{1}{N} \sum_{t=1}^T (\bm{a}_i^T \hat{\bm{h}}_{i(t)} \hat{\bm{h}}_{i(t)}), \bm{a}_i = \text{tanh}\left(\left(\frac{1}{N} \sum_{t=1}^T \hat{\bm{h}}_{i(t)}  \right)\bm{W}_a\right).
+\end{equation}
+
+Finally, the mean and variance of the posterior distribution is obtained through a neural network $f_{\text{ddist}}$ from the sequence representation $\bm{u}_i$.
+\begin{align*}
+    \bz_i^0\sim q_\phi(\bz_i^0 | \cH^0)=\cN(\bmu_{z_i^0}, \sigma_{\bz_i^0}^2),~ \bmu_{\bz_i^0},\sigma_{\bz_i^0} = f_{\text{dist}}(\bu_i).
+\end{align*}
+
+Next, the latent initial state for an edge is given by $\bz_{i\rightarrow j}^0 = f_{\text{edge}}([\bz_i^0, \bz_j^0])$,
+where $f_{\text{edge}}$ is parameterized by a neural network and $[,]$ is concatenation operation.
+
+\subsection{Treatment Fusing}
+To conduct causal inference with~\model, we propose to inject the dynamic effects of multiple treatments into the ODE function. Treatments can have time-varying effects in multi-agent dynamical systems and they can occur simultaneously, resulting in a combined effect.  To model such complex behaviors, we propose a novel treatment fusing module that assigns temporal weights to multiple treatments through an attention mechanism. The temporal weight of treatment at timestamp $t$ is dependent on both the start time of each treatment and the occurrence of other treatments as shown in Eqn~\eqref{eq:treatment_representation}. Let $\bm{e}_k\in\mathbb{R}^K$ be the one-hot representation of treatment $k$. We first add it with the temporal encoding TE\cite{huang2021coupled, attention} to account for the time elapsed since the start of the treatment $t^\prime$. Here $\mathbf{A}_{ik}^{t}\in \{0,1\}$ is an indicator showing whether treatment $k$ would be applied to agent $i$ at timestamp $t$. Therefore the computed treatment representation $\hat{\bo}_{ik}^{t}$ becomes zero when $\mathbf{A}_{ik}^{t} = 0$, to ensure computational efficiency. A contraction matrix $\mathbf{W}_q$ is then used to transform this sparse representation into a more compact form.
+
+\begin{equation}\label{eq:treatment_representation}
+\begin{aligned}
+& \hat{\bo}_{ik}^{t}=\mathbf{A}_{ik}^t \be_k+\mathrm{TE}\left(t-t^{\prime}\right)\ind[\mathbf{A}_{ik}^t = 1],\quad \bo_{ik}^{t}  = \mathbf{W}_q \hat{\bo}_{ik}^{t}, \\
+& \operatorname{TE}(\Delta t)_{2 i}=\sin \left(\Delta t / M^{2 i / d}\right), \\
+&\operatorname{TE}(\Delta t)_{2 i+1}=\cos \left(\Delta t / M^{2 i / d}\right),M=10000.
+% \bo_{i,k}^t & = \bW_{k}  
+% \bA_{i}^{t} \be_k, \quad \bo_i^t ~& = \sum_{k=1}^K a_k \bo^t_{i,k}.
+\end{aligned}
+\end{equation}
+
+To account for the combined effect of simultaneous treatments, we compute the combined treatment representation as a weighted sum of all in-effect treatments at timestamp $t$ (Eqn~\ref{eq:weighted_sum}). We first compute an attention vector $m_i^t$ as the tanh-transformed average of all the treatment representations, $\hat{\bo}_{ij}^{t}$. Each treatment's weight is derived from the dot product of its representation and $m_i^t$, thereby integrating each treatment's influence into $\bo_i^t$.
+\begin{equation}
+\label{eq:weighted_sum}
+\begin{aligned}
+\bo_i^t &= \frac{1}{K} \sum_{k} \left({\bm{m}_i^t}^\top \hat{\bo}_{ik}^{t} \hat{\bo}_{ik}^{t}\right), \bm{m}_i^t = \text{tanh}\left(\left(\frac{1}{K} \sum_{k} \bo_{ik}^{t}  \right)\mathbf{W}_m\right)  .  
+\end{aligned}
+\end{equation}
+{The fusing operation has a time complexity of $O(K)$ if having K treatments and therefore is able to scale up to larger systems.}
+
+
+
+
+\subsection{Treatment-Induced GraphODE}
+We use two coupled ODEs to predict the latent trajectories for nodes and edges respectively,  accounting for their co-evolution~\cite{huang2021coupled}. We incorporate the learned treatment representations into the ODEs to enable counterfactual predictions in the future.
+Specifically, the co-evolution of nodes and edges is depicted in Eqn~\ref{eq:ODEs}. % which we directly adopt from~\cite{CG-ODE}. 
+{The co-evolution depends on all historical information implicitly as $\Zb_t$ embeds the trajectories up to time $t$.} $\tilde{\mathbf{W}}_A^t=\mathbf{D}^{-1} \mathbf{W}_A^t$ is the normalized adjacency matrix and $\mathbf{D}$ is the diagonal degree matrix defined as $\mathbf{D}_{ii} = \sum_j {\mathbf{W}_A^t}_{ij}$. $f_e,f_{\text{self}},f_{\text {edge2value }}$ are all implemented as Multi-Layer Perceptrons (MLPs). To incorporate the treatment effect into the function, we use a linear transformation $\mathbf{W} $ to merge the latent states of nodes $\mathbf{Z}^t$ and the treatment representation $\bm{O}^t$. In this way, the latent trajectories of agents are affected not only by their own past trajectories and treatments but also by the trajectories and treatments of their interacting agents.
+\begin{equation}\label{eq:ODEs}
+\begin{aligned}
+&\frac{\mathrm d \mathbf{Z}^t}{\mathrm d t}=\sigma\left(\tilde{\mathbf{W}}_A^t \mathbf{W}[\mathbf{Z}^t,\mathbf{O}^t]\right)-\mathbf{Z}^t+\mathbf{Z}^0,\\
+& \frac{\mathrm d \bz_{i \rightarrow j}^t}{\mathrm d t}=f_e\left(\left[\bz_i^t, \bz_j^t\right]\right)+f_{\text {self }}\left(\bz_{i \rightarrow j}^t\right), \\ 
+&{\mathbf{W}_A^t}_{ij}=f_{\text {edge2value }}\left(\bz_{i \rightarrow j}^t\right), \quad \tilde{\mathbf{W}}_A^t=\mathbf{D}^{-1} \mathbf{W}_A^t.\end{aligned}
+\end{equation}
+
+
+
+\subsection{Outcome Prediction}
+Given the treatment representations, the ODE functions, the latent initial states for nodes and edges,  and the latent trajectories for all agents can be determined using any black-box ODE solver.
+ Finally, we compute the predicted trajectories for each agent and their interactions based on the decoding likelihoods in Eqn~\eqref{eq:generative}, where $f_{\text{decN}}$ and $f_{\text{decE}}$ are node and edge decoding functions respectively. They output the means of the normal distributions $ p(\bm{y}_{i}^{t} | \bm{z}_{i}^{t})$ and $p(\bm{w}_{i\rightarrow j}^{t} | \bm{z}_{i}^{t})$, which we treat as the predicted values from our model.
+\begin{equation}
+\begin{aligned}
+     \bm{y}_i^{t} \sim p(\bm{y}_{i}^{t} | \bm{z}_{i}^{t}) = f_{\text{decN}}(\bm{z}_{i}^{t}),~\bm{w}_{i\rightarrow j}^{t} \sim p(\bm{w}_{i\rightarrow j}^{t} | \bm{z}_{i}^{t}) = f_{\text{decE}}(\bm{z}_{i}^{t}).
+\end{aligned}
+    \label{eq:generative}
+\end{equation}
+We implemented all of our decoders using two-layer fully connected neural networks. The node feature decoder's input dimension matches the latent state dimension $d$, while the output dimension is one, reflecting our outcome of interest. The edge decoder's input dimension is $2d$ and the output dimension is 1. The treatment decoder also has an input dimension equal to the latent state's dimension $d$. However, its output dimension matches the number of distinct treatments, predicting the probability of each treatment being chosen. Lastly, the interference decoder's input dimension is the sum of the latent state dimension and the treatment embedding dimension, i.e. $2d$. Its output dimension mirrors the number of treatment options. For all decoders, the latent hidden dimension is half of their respective input dimensions.
+
+We calculate the reconstruction loss of model predictions for nodes $\hat Y_i^t$ and edges $ \hat w_{i\rightarrow j}^t $ as: 
+\begin{align*}
+    L^{\left< Y \right>} = \frac{1}{N}\frac{1}{T} \sum_t \|\mathbf{Y}^t - \hat{\mathbf{Y}}^t\|^2_2,~
+    L^{\left< W \right>} = \frac{1}{N^2}\frac{1}{T}  \sum_t \|\mathbf{W}_{A}^t - \hat{\mathbf{W}}_{A}^t\|^2_F.
+\end{align*}
+
+\subsection{Domain Adversarial Learning}
+In observational data, treatment assignments are not randomized but are biased based on time-varying confounder values. This can lead to increased variance and bias in counterfactual estimation~\cite{seedat2022continuous}. In multi-agent dynamical systems, unbalanced interference from neighboring agents further exacerbates this effect and alters the state of each agent. To obtain an unbiased counterfactual prediction, we need to ensure that the distribution of latent representation trajectories is invariant to treatments and interference~\cite{anonymous2023cfgode}. This guarantees that the treatments cannot be inferred from the latent trajectory representations and that the interference is not predictable when the treatment is combined with the latent representation.
+
+To achieve this, we incorporate two adversarial learning losses into the optimization objective function and use gradient reversal layers for the implementation.
+
+
+\textbf{Treatment Balancing} The treatment combinations $\hat{\mathbf{A}}^t$ can be predicted using  a decoder from the latent state $\bz_i^t$. Formally, $\hat{\mathbf{A}}_{i\cdot}^t = \Phi_{A}(r(\bz_i^t))$, where $\Phi_A$ is a neural network attempting to recover treatments from the latent state $\bz_i^t$, and the gradient reversal layer, denoted by $r$, reverses the sign of gradient during back-propagation. 
+The treatment balancing can be expressed as the maximization of the following loss term through the construction of min-max games:
+\begin{align*}
+    L^{\left< A \right> } = - \frac{1}{N}\frac{1}{T}\frac{1}{K}\sum_{i=1}^N\sum_{t=1}^T\sum_{k=1}^{K} \sum_{j\in\{0,1\}} \ind[(\mathbf{A}^t_{ik} =j)]  \log ( \Phi^{j,k}_A(r(\bz_i^t))),
+\end{align*}
+where $\Phi^{j,k}_A$ represents the logits of $d_A(\cdot)$ for predicting $j$ on $k$-th treatment. 
+Note that we achieve treatment balancing by letting the latent representations $\bm{z}_i^t$ not be predictable for each individual treatment. This is because the representation of multiple treatments is essentially a linear combination of individual treatments. If each individual treatment is not predictable based on $\bm{z}_i^t$, then it is also impossible to use such representation to predict when multiple treatments occur together.
+
+
+\textbf{Interference Balancing} Similar to treatment balancing, the interference prediction can be represented as $\hat{\mathbf{G}}_i^t = \Phi_G(r([Z_i^t, A_i^t]))$, where $d_G$ denotes a neural network designed to estimate interference. As interference is a continuous variable, we employ continuous domain adversarial training to accomplish interference balancing. By incorporating a gradient reversal layer, interference balancing can be achieved by minimizing the following loss term:
+\begin{align*}
+    L^{\left< G\right>} = \frac{1}{N}\frac{1}{T}\frac{1}{K}\sum_{i=1}^N\sum_{t=1}^T \|\Phi_{G}(r([\bz_i^t, \bo_i^t])) - \mathbf{G}_i^t\|_2^2.
+\end{align*}
+
+\textbf{Overall Loss} The overall training objective is defined as the weighted summation of node reconstruction loss, edge reconstruction loss, treatment balancing loss, and interference balancing loss. Since we follow the VAE framework, we also incorporate a KL divergence loss to add regularization towards the sampled initial states, which is defined as: $L_{KL} = \mathrm{KL}\left[\prod_{i=1}^N q_\phi\left(\bz_i^0 \mid \cH^0\right) \| p\left(\mathbf{Z}^0\right)\right]$.
+Therefore, the overall training loss is formalized as:
+\begin{align*}
+    L = L^{\left< Y \right>} + \lambda L^{\left< W \right>} + \alpha L^{\left< A \right> } + \beta L^{\left< G\right>} + \gamma L_{KL}.
+\end{align*}

@@ -1,0 +1,43 @@
+Understanding the causal effect of an intervention $\*t$ on an individual with features $\*X$ is a fundamental problem across many domains. Examples include understanding the effect of medications on a patient's health, or of teaching methods on a student's chance of graduation. With the availability of large datasets in domains such as healthcare and education, there is much interest in developing methods for learning individual-level causal effects from observational data \citep{pearl2015detecting,wager2015estimation,johansson2016learning,peysakhovich2016combining}. 
+
+
+The most crucial aspect of inferring causal relationships from observational data is confounding. A variable which affects both the intervention and the outcome is known as a \emph{confounder} of the effect of the intervention on the outcome. On the one hand, if such a confounder can be measured, the standard way to account for its effect is by ``controlling'' for it, often through covariate adjustment or propensity score re-weighting \citep{morgan2014counterfactuals}. On the the other hand, if a confounder is hidden or unmeasured, it is impossible in the general case (i.e. without further assumptions) to estimate the effect of the intervention on the outcome \citep{pearl2009causality}. For example, socio-economic status can affect both the medication a patient has access to, and the patient's general health. Therefore socio-economic status acts as confounder between the medication and health outcomes, and without measuring it we cannot in general isolate the causal effect of medications on health measures. Henceforth we will denote observed potential confounders\footnote{Including observed covariates which do not affect the intervention or outcome, and therefore are not truly confounders.} by $\*X$, and unobserved confounders by $\*Z$. 
+
+
+In most real-world observational studies we cannot hope to measure all possible confounders. For example, in many studies we cannot measure variables such as personal preferences or most genetic and environmental factors. An extremely common practice in these cases is to rely on so-called ``proxy variables'' \cite[Ch. 11]{montgomery2000measuring,angrist2008mostly,maddala1992introduction}. For example, we cannot measure the socio-economic status of patients directly, but we might be able to get a proxy for it by knowing their zip code and job type. One of the promises of using big-data for causal inference is the existence of myriad proxy variables for unmeasured confounders. 
+
+How should one use these proxy variables? The answer depends on the relationship between the hidden confounders, their proxies, the intervention and outcome \citep{kuroki2011measurement,miao2016identifying}. Consider for example the causal graphs in Figure~\ref{fig:hid1}: it's well known \citep{griliches1986errors,fuller1987measurement,greenland2008bias,kuroki2011measurement,pearl2012measurement} that it is often \emph{incorrect} to treat the proxies $\*X$ as if they are ordinary confounders, as this would induce bias. See the Appendix for a simple example of this phenomena. The aforementioned papers give methods which are guaranteed to recover the true causal effect when proxies are observed. However, the strong guarantees these methods enjoy rely on strong assumptions. In particular, it is assumed that the hidden confounder is either categorical with known number of categories, or that the model is linear-Gaussian. 
+
+\begin{figure}[t]
+ \centering
+ 	\begin{tikzpicture}[scale=0.8, transform shape]
+       \node [latent] (Z) {$\*Z$};
+       \node [obs, above=of Z, xshift= 40pt] (T) {$\*t$};
+       \node [obs, above=of T, xshift= -40pt] (Y) {$\*y$};	
+       \node [obs, above=of Z, xshift= -40pt] (X) {$\*X$};
+       \edge {T}{Y};
+       \edge {Z}{T};
+       \edge {Z}{Y};    
+       \edge {Z}{X};
+ 	\end{tikzpicture}
+    \caption{Example of a proxy variable. $\*t$ is a treatment, e.g. medication; $\*y$ is an outcome, e.g. mortality. $\*Z$ is an unobserved confounder, e.g. socio-economic status; and $\*X$ is noisy views on the hidden confounder $\*Z$, say income in the last year and place of residence.}
+    \vskip -10pt
+    \label{fig:hid1}    
+\end{figure}
+
+In practice, we cannot know the exact nature of the hidden confounder $\*Z$: whether it is categorical or continuous, or if categorical how many categories it includes. Consider socio-economic status (SES) and health. Should we conceive of SES as a continuous or ordinal variable? Perhaps SES as confounder is comprised of two dimensions, the economic one (related to wealth and income) and the social one (related to education and cultural capital). $\*Z$ might even be a mix of continuous and categorical, or be high-dimensional itself. This uncertainty makes causal inference a very hard problem even with proxies available.
+We propose an alternative approach to causal effect inference tailored to the {\em surrogate-rich} setting when many proxies are available: estimation of a latent-variable model where we simultaneously discover the hidden confounders and infer how they affect treatment and outcome. Specifically, we focus on (approximate) maximum-likelihood based methods.
+
+Although in many cases learning latent-variable models are computationally intractable \citep{thiesson1998learning,arora2005learning}, the machine learning community has made significant progress in the past few years developing computationally efficient algorithms for latent-variable modeling. These include methods with provable guarantees, typically based on the method-of-moments (e.g. \citet{anandkumar2012method}); as well as robust, fast, heuristics such as variational autoencoders (VAEs) \citep{kingma2013auto,rezende2014stochastic}, based on stochastic optimization of a variational lower bound on the likelihood, using so-called recognition networks for approximate inference.
+
+Our paper builds upon VAEs. This has the disadvantage that little theory is currently available to justify when learning with VAEs can identify the true model. However, they have the significant advantage that they make substantially weaker assumptions about the data generating process and the structure of the hidden confounders. Since their recent introduction, VAEs have been shown to be remarkably successful in capturing latent structure across a wide-range of previously difficult problems, such as modeling images~\citep{gregor2015draw}, volumes~\citep{rezende2016unsupervised}, time-series~\citep{chung2015recurrent} and fairness~\citep{louizos2015variational}.
+
+We show that in the presence of noisy proxies, our method is more robust against hidden confounding, in experiments where we successively add noise to known-confounders. Towards that end we introduce a new causal inference benchmark using data about twin births and mortalities in the USA. We further show that our method is competitive on two existing causal inference benchmarks. 
+Finally, we note that our method does not currently deal with the related problem of selection bias, and we leave this to future work.
+
+
+
+
+
+
+

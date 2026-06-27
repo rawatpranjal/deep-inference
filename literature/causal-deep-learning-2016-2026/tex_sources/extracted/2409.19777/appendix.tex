@@ -1,0 +1,279 @@
+\section{Notes on the numerical experiments}
+\label{supp_numerical}
+
+\subsection{MADNet architecture}
+
+To ensure a fair evaluation, our proposed MADNet architecture emulates that of the RieszNet \citep{Chernozhukov2022} (see Figure \ref{fig:sharedmlps} for a schematic of the multi-headed architecture). MADNet uses a shared network of width 200 and depth 3 followed by three branches: 2 outcome networks (one per binary treatment) each of width 100 and depth 2 and another of depth zero, i.e. a linear combination of the final shared representation layer that is our $\hat{\beta}_\perp$ prediction. The constraint weight hyperparameter was set to $\Tilde{\lambda}=5$, the weight mixing parameter was set to $\rho=1$, and Exponential Linear Unit (ELU) activation functions were used throughout. Finally, outcomes $Y$ were scaled by their sample standard deviation prior to training, with predictions rescaled to the original scale using the same constant standard deviation estimate.
+
+\textbf{Ablation study}: We compared the performance of the MADNet proposal across learner architectures, by conducting an ablation study wherein the multi-headed architecture was replaced with a fully connected MLP architecture. In particular, we used a standard feedforward network of width 200 and depth 4 along with the same hyperparameters outlined above. Results, reported in Table~\ref{tab:repro-results}, indicate that the multi-headed architecture leads to a modest reduction in mean absolute error (MAE) in all but the MADNet (IPW) estimator, and that MADNet estimators tend to outperform their RieszNet counterparts using both architectures (in terms of reduced MAE).
+
+\textbf{Hyperparameter sensitivity}: We examine sensitivity of our proposal to the penalization strength by running the MADNet with the $\tilde{\lambda} = 1$, and other parameters unchanged. Results, reported in Table~\ref{tab:hyperparam-sensitivity} show slightly worse performance (increased MAE and increased Median absolute error), compared to results in Table~\ref{tab:repro-results}, where $\tilde{\lambda} = 5$. This suggests that a high degree of weight should be given to satisfying the moment constraint.
+
+\subsection{MADNet training details} \label{sec:training-deets}
+
+Numerical experiments were run on an Apple M2 Max chip with 32GB of RAM. The MADNet training procedure was also borrowed from \citet[Appendix A1]{Chernozhukov2022}, which itself was borrowed from \citet{Shi2019}. Minor modifications are outlined below. The dataset was split into a training dataset (80\%) and validation dataset (20\%), with estimation performed on the entire dataset. The training followed a two stage procedure outlined below.
+
+\paragraph{ATE benchmarks}
+
+\begin{enumerate}
+    \item Fast training: batch size: 64, learning rate: 0.0001, maximum number of epochs: 100, optimizer: Adam, early stopping patience: 2, L2 weight decay: 0.001
+    \item Fine-tuning: batch size: 64, learning rate: 0.00001, maximum number of epochs: 600, optimizer: Adam, early stopping patience: 40, L2 weight decay: 0.001
+\end{enumerate}
+
+\paragraph{ADE benchmarks}
+
+\begin{enumerate}
+    \item Fast-training: batch size: 64, learning rate: 0.001, maximum number of epochs: 100, optimizer: Adam, early stopping patience: 2, L2 weight decay: 0.001
+    \item Fine-tuning: batch size: 64, learning rate: 0.0001, maximum number of epochs: 300, optimizer: Adam, early stopping patience: 20, L2 weight decay: 0.001
+\end{enumerate}
+
+The differences between the original implementations and ours are:
+
+\begin{itemize}
+    \item For ADE moment estimation, RieszNet uses a finite difference approximation to differentiate the forward pass with respect to the treatment $a$. However our implementation uses automatic differentiation provided by JAX. One of the advantages of JAX is that the ADE can be straightforwardly expressed as \texttt{jax.grad(f)(a, x)}.
+    \item On top of the early stopping callback, the original RieszNet and DragonNet implementations additionally use a learning rate plateau schedule that halves the learning rate when the validation loss metric has stopped improving over a short patience of epochs (shorter than the stopping patience). Whilst we implement the same two-stage training with early stopping, we use a constant learning rate in each of the fast-training and fine-tuning phases.
+    \item L2 regularization is implemented differently between RieszNet and DragonNet. DragonNet use a regularizer to apply a penalty on the layer's kernel whilst RieszNet uses an additive L2 regularization term in their loss function \citep[Equation~5]{Chernozhukov2022}. However, recent work shows that L2 regularization and weight decay regularization are not equivalent for adaptive gradient algorithms, such as Adam \citep{loshchilovDecoupledWeightDecay2019}. For this reason, we use Adam with weight decay regularization (provided by \texttt{optax.adamw}).
+    \item We use a larger learning rate (0.9) for the constant additive bias parameters associated with the MLP outputs for the outcome, i.e. $f_{w,2}$ and $f_{w,3}$.
+\end{itemize}
+
+
+\begin{table}[hbt!]
+    \centering
+    \caption{Full reproduction results for our own implementation of each learner/estimator. Here + SRR, refers to estimator which use the outcome model $\tilde{g}$ described in \cite{Chernozhukov2022}.}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{lllrrr}
+    \toprule
+     &  &  & Mean Absolute Error (MAE) & Median Absolute Error & Standard Error in MAE \\
+    Dataset & Estimator & Architecture &  &  &  \\
+    \midrule
+    \multirow[t]{18}{*}{BHP} & \multirow[t]{2}{*}{MADNet (DR)} & Fully connected & 0.417 & 0.394 & 0.021 \\
+     &  & Multiheaded & 0.391 & 0.346 & 0.019 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{MADNet (Direct)} & Fully connected & 0.512 & 0.427 & 0.029 \\
+     &  & Multiheaded & 0.471 & 0.424 & 0.026 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{MADNet (IPW)} & Fully connected & 0.407 & 0.352 & 0.023 \\
+     &  & Multiheaded & 0.474 & 0.404 & 0.026 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (DR + SRR)} & Fully connected & 0.447 & 0.370 & 0.024 \\
+     &  & Multiheaded & 0.428 & 0.355 & 0.023 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (DR)} & Fully connected & 0.447 & 0.372 & 0.024 \\
+     &  & Multiheaded & 0.428 & 0.353 & 0.023 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (Direct + SRR)} & Fully connected & 0.771 & 0.637 & 0.041 \\
+     &  & Multiheaded & 0.724 & 0.617 & 0.042 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (Direct)} & Fully connected & 0.733 & 0.619 & 0.039 \\
+     &  & Multiheaded & 0.692 & 0.585 & 0.040 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (IPW + SRR)} & Fully connected & 0.477 & 0.432 & 0.025 \\
+     &  & Multiheaded & 0.449 & 0.384 & 0.025 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (IPW)} & Fully connected & 0.477 & 0.432 & 0.025 \\
+     &  & Multiheaded & 0.449 & 0.384 & 0.025 \\
+    \cmidrule(lr){1-6}
+    \multirow[t]{24}{*}{IHDP} & DragonNet (DR + SRR) & Multiheaded & 0.101 & 0.085 & 0.003 \\
+    \cmidrule(lr){2-6}
+     & DragonNet (DR) & Multiheaded & 0.100 & 0.084 & 0.002 \\
+    \cmidrule(lr){2-6}
+     & DragonNet (Direct + SRR) & Multiheaded & 0.124 & 0.098 & 0.004 \\
+    \cmidrule(lr){2-6}
+     & DragonNet (Direct) & Multiheaded & 0.123 & 0.098 & 0.004 \\
+    \cmidrule(lr){2-6}
+     & DragonNet (IPW + SRR) & Multiheaded & 0.262 & 0.233 & 0.006 \\
+    \cmidrule(lr){2-6}
+     & DragonNet (IPW) & Multiheaded & 0.262 & 0.233 & 0.006 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{MADNet (DR)} & Fully connected & 0.096 & 0.079 & 0.003 \\
+     &  & Multiheaded & 0.094 & 0.076 & 0.002 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{MADNet (Direct)} & Fully connected & 0.527 & 0.383 & 0.018 \\
+     &  & Multiheaded & 0.504 & 0.367 & 0.016 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{MADNet (IPW)} & Fully connected & 0.680 & 0.263 & 0.037 \\
+     &  & Multiheaded & 0.719 & 0.277 & 0.039 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (DR + SRR)} & Fully connected & 0.119 & 0.091 & 0.004 \\
+     &  & Multiheaded & 0.109 & 0.088 & 0.003 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (DR)} & Fully connected & 0.119 & 0.090 & 0.004 \\
+     &  & Multiheaded & 0.109 & 0.089 & 0.003 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (Direct + SRR)} & Fully connected & 0.135 & 0.099 & 0.006 \\
+     &  & Multiheaded & 0.126 & 0.102 & 0.004 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (Direct)} & Fully connected & 0.135 & 0.105 & 0.004 \\
+     &  & Multiheaded & 0.118 & 0.099 & 0.003 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (IPW + SRR)} & Fully connected & 0.690 & 0.304 & 0.035 \\
+     &  & Multiheaded & 0.665 & 0.300 & 0.036 \\
+    \cmidrule(lr){2-6}
+     & \multirow[t]{2}{*}{RieszNet (IPW)} & Fully connected & 0.690 & 0.304 & 0.035 \\
+     &  & Multiheaded & 0.665 & 0.300 & 0.036 \\
+    \bottomrule
+    \end{tabular}
+    }
+    \label{tab:repro-results}
+\end{table}
+
+\begin{table}[hbt!]
+    \centering
+    \caption{Numerical experiment results for the Multiheaded MADNet procedure with $\tilde{\lambda}=1$.}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{llrrr}
+    \toprule
+     &  & Mean Absolute Error (MAE) & Median Absolute Error & Standard Error in MAE \\
+    Dataset & Estimator &  &  &  \\
+    \midrule
+    \multirow[t]{3}{*}{BHP} & MADNet (DR) & 0.407 & 0.370 & 0.021 \\
+     & MADNet (Direct) & 0.479 & 0.415 & 0.025 \\
+     & MADNet (IPW) & 0.544 & 0.459 & 0.031 \\
+    \cmidrule(lr){1-5}
+    \multirow[t]{3}{*}{IHDP} & MADNet (DR) & 0.098 & 0.077 & 0.003 \\
+     & MADNet (Direct) & 0.519 & 0.382 & 0.016 \\
+     & MADNet (IPW) & 0.712 & 0.283 & 0.038 \\
+    \bottomrule
+    \end{tabular}
+    }
+    \label{tab:hyperparam-sensitivity}
+\end{table}
+
+
+\subsection{Naive Lagrangian optimization}
+
+We consider the basic differential multiplier method (BDMM), as described by Platt et al. \citep{Platt1987}. The authors introduce a so-called damping term $\delta \geq 0$ to the Lagrangian in \eqref{pop_lagrangian} to obtain the Lagrangian
+\begin{align*}
+    \Lagrangian_\delta(f, \lambda) \equiv \E\left[\{\beta(Z) - f(Z)\}^2\right] + \lambda h(f) + \delta h^2(f),
+\end{align*}
+with \eqref{pop_lagrangian} recovered by setting $\delta = 0$. Note that when the moment constraint is satisfied, i.e.$h(f) = 0$, then $\Lagrangian_\delta$ does not depend on $\delta$. In Figure \ref{fig:damping-plot} we see how Naively performing gradient ascent on $\lambda$ and gradient descent over $f$ results in oscillatory behavior. Similar behavior is also observed in the literature on adversarial learning, see e.g. \citep{Schafer2019, Mokhtari2020}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{plots/damping_plot.png}
+    \caption{
+    Top row: Low damping coefficients in the basic differential multiplier method (BDMM) \citep{Platt1987} lead to oscillatory behavior around the saddle point solution when the optimisation problem is formulated as an equality constrained Lagrangian. Bottom row: Using the inequality constrained Lagrangian approach described in the main paper results in more stable training and constraint satisfaction. A single dataset from the IHDP data is used to showcase this behavior over 200 epochs.
+    }
+    \label{fig:damping-plot}
+\end{figure}
+
+\section{Short notes and proofs}
+
+\subsection{First-order remainder under the standard theory}
+\label{proof:first-order}
+Claim: $\E[\hat{\varphi}(W) - \Psi] = -\langle \hat{\mu} - \mu, \hat{\alpha} - \alpha \rangle$ where $\hat{\varphi}(W) = m(\hat{\mu}, W) + \hat{\alpha}(Z)\{Y - \hat{\mu}(Z)\}$.
+
+Proof:
+\begin{align*}
+    & \E[ m(\hat{\mu}, W) + \hat{\alpha}(Z)\{Y - \hat{\mu}(Z)\}  - \Psi ] \\
+    = & \E[ m(\hat{\mu}, W) + \hat{\alpha}(Z)\{\mu(Z) - \hat{\mu}(Z)\}  - m(\mu, W) ] \\
+    = & \E[ m(\hat{\mu} - \mu, W) - \hat{\alpha}(Z)\{ \hat{\mu}(Z) - \mu(Z)\} ] \\
+    = & \langle \hat{\mu} - \mu, \alpha \rangle - \langle \hat{\mu} - \mu, \hat{\alpha} \rangle  \\
+    = & -\langle \hat{\mu} - \mu, \hat{\alpha} - \alpha \rangle.
+\end{align*}
+
+\subsection{Second-order remainder under the standard theory}
+Claim: If $\hat{\mu}$ and $\hat{\alpha}$ are consistent estimators for $\mu$ and $\alpha$ obtained from an independent sample, and there exists a constant $M$ such that $\alpha^2(Z) < M$ and $\Var(Y|Z) < M$ almost surely, then $G_n[\hat{\varphi}(W) - \varphi(W)] = o_p(1)$.
+
+Proof:
+\begin{align*}
+    G_n[\hat{\varphi}(W) - \varphi(W)]=
+    &+ G_n[m(\hat{\mu} - \mu, W)] \\
+    &- G_n\left[\{\hat{\alpha}(Z) - \alpha(Z)\}\{\hat{\mu}(Z) - \mu(Z)\}\right] \\
+    &- G_n\left[\alpha(Z)\{\hat{\mu}(Z) - \mu(Z)\}\right] \\
+    &+ G_n\left[\{\hat{\alpha}(Z) - \alpha(Z)\}\{Y - \mu(Z)\}\right] 
+\end{align*}
+By the central limit theorem, these empirical processes are $o_p(1)$ when the following expressions are $o_p(1)$
+\begin{align*}
+    &\E\left[m^2(\hat{\mu} - \mu, W)\right]\\
+    &\E\left[\{\hat{\alpha}(Z) - \alpha(Z)\}^2\{\hat{\mu}(Z) - \mu(Z)\}^2\right] \\
+    &\E\left[\alpha^2(Z)\{\hat{\mu}(Z) - \mu(Z)\}^2\right]\\
+    &\E\left[\{\hat{\alpha}(Z) - \alpha(Z)\}^2\{Y - \mu(Z)\}^2\right]
+\end{align*}
+The first two terms are $o_p(1)$ by consistency of $\hat{\alpha}$ and $\hat{\mu}$, for the final two terms
+\begin{align*}
+    \E\left[\alpha^2(Z)\{\hat{\mu}(Z) - \mu(Z)\}^2\right] &< M ||\hat{\mu} - \mu||^2 \\
+    \E\left[\{\hat{\alpha}(Z) - \alpha(Z)\}^2\Var(Y|Z)\right] &< M ||\hat{\alpha} - \alpha||^2
+\end{align*}
+hence, these are also $o_p(1)$ by consistency.
+
+Remark: The requirement for estimator independence can be relaxed if one makes Donsker class assumptions instead.
+
+% \subsection{First-order remainder for moment-constrained learning TMLE estimators}
+% Since TMLE estimators are agnostic to proportionality constants in the RR, we consider \eqref{von_miesz} for the uncentred influence function
+% \begin{align*}
+%     \hat{\varphi}^*(W) = m(\hat{\mu}^*, W) + \frac{h(\beta)}{||\beta - \beta_\perp||^2}\{\beta(Z) - \hat{\beta}_\perp(Z)\}\{Y - \hat{\mu}^*(Z)\}, 
+% \end{align*}
+% and $\hat{\psi} = \hat{\Psi}^{(\text{TMLE})} = h_n(\hat{\mu}^*)$.
+% Claim: 
+% \begin{align*}
+% \E[\hat{\varphi}^*(W) - \hat{\Psi}^{(\text{TMLE})}] &= \frac{h(\beta)}{||\beta - \beta_\perp||^2} \langle \hat{\mu}^* - \mu, \hat{\beta}_\perp - \beta_\perp \rangle.
+% % &= C \langle \hat{\mu} - \mu, \hat{\beta}_\perp - \beta_\perp \rangle + C \langle \hat{\mu}^* - \hat{\mu}, \hat{\beta}_\perp - \beta_\perp \rangle. \\
+% % &= C \langle \hat{\mu} - \mu, \hat{\beta}_\perp - \beta_\perp \rangle + \left(\frac{\E_n [\{Y - \hat{\mu}(Z)\}\{\beta(Z) - \hat{\beta}_\perp(Z)\}]}{\E_n [\{\beta(Z) - \hat{\beta}_\perp(Z)\}]}\right)\frac{C}{\hat{C}_n} \langle \hat{\alpha}, \hat{\beta}_\perp - \beta_\perp \rangle. \\
+% % &= C \langle \hat{\mu} - \mu, \hat{\beta}_\perp - \beta_\perp \rangle + \left(\frac{\E_n [\{Y - \hat{\mu}(Z)\}\hat{\alpha}(Z)]}{h_n(\beta)}\right)\frac{C}{\hat{C}_n} \langle \hat{\alpha}, \hat{\beta}_\perp - \beta_\perp \rangle. \\
+% \end{align*}
+
+% Proof: This result follows immediately from \eqref{new_ident_1} is applied to the result in Section \ref{proof:first-order} with $\hat{\mu}$ replaced with $\hat{\mu}^*$ and
+% \begin{align*}
+%     \hat{\alpha}(Z) = \frac{h(\beta)}{||\beta - \beta_\perp||^2}\{\beta(Z) - \hat{\beta}_\perp(Z)\}.
+% \end{align*}
+
+
+\subsection{Proof of Theorem \ref{main_theorem}}
+\label{main_theorem_proof}
+
+Consider \eqref{von_miesz} with $\hat{\psi} = h_n(\hat{\mu}^*)$ and $\hat{\varphi}(W) = m(\hat{\mu}^*, W) + k\{\beta(Z) - \hat{\beta}_\perp(Z)\}\{Y - \hat{\mu}^*(Z)\}$, where we use the shorthand
+\begin{align*}
+    k = \frac{h(\beta)}{||\beta - \beta_\perp||^2}
+\end{align*}
+so that, by \eqref{new_ident_1}, $\alpha(Z) = k\{\beta(Z) - \beta_\perp(Z)\}$ and $\varphi(W) = m(\mu, W) + k\{\beta(Z) - \beta_\perp(Z)\}\{Y - \mu(Z)\}$.
+Under this parameterization, the plug-in bias on the right hand side of \eqref{von_miesz} is
+\begin{align*}
+    \sqrt{n} \mathbb{E}_n[\hat{\varphi}(W) - \hat{\psi}]= \sqrt{n} k \mathbb{E}_n[\{\beta(Z) - \hat{\beta}_\perp(Z)\}\{Y - \hat{\mu}^*(Z)\}] = 0
+\end{align*}
+Applying the result in Supplement \ref{proof:first-order}, the first-order remainder on the right hand side of \eqref{von_miesz} is
+\begin{align*}
+    \sqrt{n}\E[\hat{\varphi}(W) - \Psi] = \sqrt{n} k \langle \hat{\mu}^* - \mu, \hat{\beta}_\perp - \beta_\perp \rangle = o_p(1)
+\end{align*}
+Finally the second-order remainder on the right hand side of \eqref{von_miesz} is
+\begin{align*}
+    G_n \left[\hat{\varphi}(W) - \varphi(W)\right] &= G_n[m(\hat{\mu}^* - \mu, W)] \\
+    &+ k G_n\left[\{\hat{\beta}_\perp(Z) - \beta_\perp(Z)\}\{\hat{\mu}^*(Z) - \mu(Z)\}\right] \\
+    &- k G_n\left[\{\beta(Z) - \beta_\perp(Z)\}\{\hat{\mu}^*(Z) - \mu(Z)\}\right] \\
+    &-k G_n\left[\{\hat{\beta}_\perp(Z) - \beta_\perp(Z)\}\{Y - \mu(Z)\}\right] 
+\end{align*}
+which is $o_p(1)$.
+
+We have shown that plug-in bias, first-order remainder and second-order remainder in \eqref{von_miesz} are each $o_p(1)$, hence $h_n(\hat{\mu}^*)$ is RAL.
+
+\subsection{Sufficiency of learning conditional on the unscaled RR}
+\label{proof_of_suff}
+Claim: $\Psi = h(\eta)$, where
+\begin{align*}
+    \eta(z) \equiv \E[Y|\beta(Z) - \beta_\perp(Z) = \beta(z) - \beta_\perp(z)].
+\end{align*}
+Proof:
+\begin{align*}
+    \Psi &= \E[Y \alpha(Z)] \\
+    &= \frac{h(\beta) \E[Y \{\beta(Z) - \beta_\perp(Z)\}]}{||\beta - \beta_\perp||} \\
+    &= \frac{h(\beta) \E[\eta(Z) \{\beta(Z) - \beta_\perp(Z)\}]}{||\beta - \beta_\perp||} \\
+    &= \E[\eta(Z) \alpha(Z)]
+\end{align*}
+where in the third step we apply the law of iterated expectation.
+
+\subsection{Proof of orthogonality representation}
+\label{proof_of_ortho}
+
+Claim: Letting $\mu_\perp = \argmin_{f\in \mathcal{C}^{\perp}} ||\mu - f||$
+\begin{align*}
+    \mu(z) = \mu_{\perp}(z) + \frac{\Psi}{h(\beta)} \{\beta(z) - \beta_{\perp}(z)\}.
+\end{align*}
+
+Proof:
+Note that $\mathcal{C}^\perp = \{f\in \mathcal{H} \mid  \langle f, \alpha \rangle = 0 \}$ then by Hilbert's projection theorem, $\mu_\perp$ exists, with
+\begin{align*}
+    \mu_\perp(z) \equiv \mu(z) - \frac{\langle \mu, \alpha \rangle}{||\alpha||^2} \alpha(z) 
+    \quad\iff\quad \mu(z) = \mu_\perp(z) + \frac{\Psi}{h(\alpha)} \alpha(z) 
+\end{align*}
+Where we use $\langle \mu, \alpha \rangle = \Psi$ and $||\alpha||^2 = h(\alpha)$. Applying \eqref{new_ident_1} completes the proof.
+

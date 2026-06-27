@@ -1,0 +1,198 @@
+\documentclass{article}
+%\usepackage{./styles/iclr2021_conference}
+
+
+\usepackage{natbib}
+\setcitestyle{authoryear,round,citesep={;},aysep={,},yysep={;}}
+\usepackage[margin=15mm]{geometry}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}
+\usepackage{wrapfig}
+\usepackage{comment}
+\definecolor{mydarkred}{rgb}{0.6,0,0}
+\definecolor{mydarkgreen}{rgb}{0,0.6,0}
+\usepackage[colorlinks,
+linkcolor=mydarkred,
+citecolor=mydarkgreen]{hyperref}
+
+\usepackage{caption}
+\usepackage{subcaption}
+
+\usepackage{./styles/mydef}
+%\usepackage{./styles/color-edit} 
+\setlength\textfloatsep{10pt}
+\setlength\abovecaptionskip{3pt}
+%\addauthor{ag}{red}
+%\addauthor{ss}{green}
+%\addauthor{yc}{blue}
+%\addauthor{nf}{purple}
+%\addauthor{ad}{magenta}
+%\addauthor{lx}{cyan}
+
+% \DeclareMathOperator{argmin}
+
+\usepackage{tikz}
+
+% Tikz settings optimized for causal graphs.
+% Just copy-paste this part
+\usetikzlibrary{shapes,decorations,arrows,calc,arrows.meta,fit,positioning}
+\tikzset{
+    -Latex,auto,node distance =1 cm and 1 cm,semithick,
+    state/.style ={circle, draw, minimum width = 0.7 cm},
+    point/.style = {circle, draw, inner sep=0.04cm,fill,node contents={}},
+    bidirected/.style={Latex-Latex,dashed},
+    el/.style = {inner sep=2pt, align=left, sloped}
+}
+
+
+
+
+\bibliographystyle{abbrvnat}
+%\bibpunct{[}{]}{,}{n}{,}{,}
+%\setcitestyle{numbers,open={[},close={]}}
+
+
+
+\title{Learning Deep Features in Instrumental Variable Regression}
+\author{
+Liyuan Xu \\
+Gatsby Unit\\
+\texttt{liyuan.jo.19@ucl.ac.uk}
+\and
+Yutian Chen\\
+DeepMind\\
+\texttt{yutianc@google.com}
+\and
+Siddarth Srinivasan\\
+University of Washington\\
+\texttt{sidsrini@cs.washington.edu}
+\and
+Nando de Freitas\\
+DeepMind\\
+\texttt{nandodefreitas@google.com}
+\and
+Arnaud Doucet\\
+DeepMind\\
+\texttt{arnauddoucet@google.com}
+\and
+Arthur Gretton\\
+Gatsby Unit\\
+\texttt{arthur.gretton@gmail.com}
+}
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+%\iclrfinalcopy % Uncomment for camera-ready version, but NOT for submission.
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Instrumental variable (IV) regression is a standard strategy for learning causal relationships between confounded treatment and outcome variables from observational data by using an instrumental variable, which affects the outcome only through the treatment.
+%, which is conditionally independent of the outcome given the treatment.
+In classical IV regression, learning proceeds in two stages: stage 1 performs linear regression from the instrument to the treatment; and stage 2 performs linear regression from the treatment to the outcome, conditioned on the instrument.
+We propose a novel method, {\it deep feature instrumental variable regression (DFIV)},
+to address the case where relations between instruments, treatments, and outcomes may be nonlinear.
+In this case, deep neural nets are trained to define informative nonlinear features on the instruments and treatments.
+We propose an alternating training regime for these features to ensure good end-to-end performance when composing stages 1 and 2, thus obtaining highly flexible feature maps in a computationally efficient manner.
+DFIV outperforms recent state-of-the-art methods on challenging IV benchmarks, including settings involving high dimensional image data. DFIV also exhibits competitive performance in off-policy policy evaluation for reinforcement learning, which can be understood as an IV regression task.
+
+\end{abstract}
+
+\section{Introduction} \label{sec:intro}
+\input{Introduction/introduction.tex}
+
+%\section{Related Work} \label{sec:relate_work}
+%\input{Introduction/related_work.tex}
+
+\section{Preliminaries} \label{sec:preliminary}
+%In this section, we formally introduce IV regression and review the 2SLS method.
+\subsection{Problem Setting of Instrumental Variable Regression} \label{sec:problem_setting}
+\input{Problem/problem_setting.tex}
+\subsection{Two Stage Least Squares Regression}\label{sec:KIV}
+\input{Problem/linear_2sls.tex}
+
+%\section{Method} \label{sec:Method}
+%\input{Method/method_intro.tex}
+
+%\subsection{Learning Adaptive Features} \label{sec:adaptive-feature}
+%\input{Method/adaptive_feature.tex}
+
+\section{DFIV Algorithm}\label{sec:algorithm}
+\input{Method/method.tex}
+% \subsection{Hyper-Parameter Tuning}\label{sec:hyper-param}
+% \input{Method/hyper-param.tex}
+
+
+\section{Experiments} \label{sec:experiment}
+\input{Experiment/experiment.tex}
+\subsection{Demand Design Experiments}
+\input{Experiment/demand.tex}
+\subsection{dSprites Experiments}
+\input{Experiment/high_dim.tex}
+\subsection{Off-Policy Policy Evaluation Experiments}
+\input{Experiment/ope.tex}
+
+\section{Conclusion}
+\input{Conclusion/conclusion.tex}
+
+\bibliography{reference}
+
+\appendix
+\newpage
+
+%\section{Comparison Between Feature Map Learning and Feed-Forward Network} %\label{sec:learning-comparison}
+%\input{Appendix/feature_map_learning.tex}
+
+\section{Hyper-Parameter Tuning}\label{sec:hyper-param}
+\input{Appendix/hyper-param.tex}
+
+\section{Consistency of DFIV}\label{sec:consistency}
+\input{Appendix/consistency_new.tex}
+
+\section{2SLS algorithm with observable confounders}
+\label{sec:observable-confounder}
+\input{Appendix/existing_confounder.tex}
+
+\section{Application of 2SLS and DFIV to Off-Policy Policy Evaluation}
+\label{sec:ope-2sls}
+\input{Appendix/ope_2sls.tex}
+\section{Experiment Details and Additional Results}
+\label{sec:data-generation-process}
+\subsection{Details of Demand Design Experiments} \label{sec:data-generation-process-demand}
+\input{Appendix/low_dim_generation_process.tex}
+\subsection{Effect Estimation in Demand Design Experiments} \label{sec:demand-causal-experiments}
+\input{Appendix/demand_causal_experiments.tex}
+\subsection{Data Generation Process in dSprites Experiments}
+\input{Appendix/high_dim_generation_process.tex} \label{sec:data-generation-process-dsprite}
+\subsection{Instability of DeepGMM in dSprites Experiments}
+\input{Appendix/deepgmm_instability.tex} \label{sec:deep-gmm-instability}
+\subsection{MNIST Experiments}
+\input{Appendix/mnist_experiment.tex} \label{sec:mnist_experiment}
+\subsection{OPE Experiment Details}
+\input{Appendix/ope_experiment_details.tex} \label{sec:ope_experiment_details}
+
+\section{Failure of Joint Optimization} \label{sec:joint}
+\input{Appendix/z_tuning.tex}
+
+\newpage
+\section{Network Structures and Hyper-Parameters} \label{sec:net-and-hypers}
+\input{Appendix/net_structure.tex}
+\end{document}

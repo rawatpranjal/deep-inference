@@ -1,0 +1,211 @@
+\section{Method}
+In this section, we first give a formal definition of the notations used throughout the paper, then present the proposed framework for estimating ITE.
+\subsection{Preliminary}
+Let $X_t\in\mathcal{X}_t$ be the time-dependent covariates of the observational data at time stamp $t$ such that $X_t=\{x^{(1)}_{t}, x^{(2)}_{t},...,x^{(n)}_{t}\}$, where $x^{(i)}_{t}$ denotes the covariates for $i$-th patient, $n$ denotes the number of patients, and $\mathcal{X}_t$ denotes the time-dependent feature space. The static features (e.g., demographic information), do not change overtime are also considered as observed covariates. We use $C\in\mathcal{C}$ represent the static features for all the patients. At each time stamp $t$, the treatment assignments are denoted as $A_{t}=\{a^{(1)}_{t},a^{(2)}_{t},...,a^{(n)}_{t}\}$, where $A_{t}\in\mathcal{A}$, $a^{(i)}_{t}$ denotes the treatments assigned to $i$-th patient. In the case of the binary treatment setting, i.e., $a^{i}_{t}=\{0, 1\}$, where $1$ is considered as "treated" while $0$ as "control", we are interested in estimating the effect of the treatment assigned until time stamp $T$ on the outcomes $Y_{T+\tau}\in\mathcal{Y}$, observed at time stamp $T+\tau$, where $\tau$ is the prediction window. Note that in observational data, a patient can only belong to one group (i.e., either treated or control group), thus the outcome from the other group is always missing and referred to counterfactual. To represent the historical sequential data before time stamp $t$, we use the notation $\overline{X}_{t}=\{X_{1},X_{2},...,X_{t-1}\}$ to denote the history of covariates observed before time stamp $t$, and $\overline{A}_{t}$ refers to the history of treatment assignments. Combining all covariates and treatments, we define $\tilde{H}^{(i)}_{t}=\{\overline{x}^{(i)}_{t},\overline{a}^{(i)}_{t}\}\cup\{c^{(i)}\}$ as all the historical data collected before time stamp $t$. The observational data for $i$-th patient can be represented using the notations defined above as: $\mathcal{D}^{(i)}=\{x^{(i)}_{t},a^{(i)}_{t}\}^{T}_{t=1}\cup\{c^{(i)},y^{(i)}_{a,T+\tau}\}$. We summarize the notations we used in this paper in Table \ref{tab:notations}.
+
+\begin{table}[t]
+\caption{Notations}
+\label{tab:notations}
+    \centering
+    {\renewcommand{\arraystretch}{1.1}%
+    \begin{tabular}{ll}\hline
+    Notation    &   Definition  \\\hline
+    $\mathcal{X}$     &   The space of time-varying covariates \\
+    $\mathcal{C}$   &   The space of static covariates   \\
+    $\mathcal{A}$   &   The set of treatment options of interest   \\
+    $\mathcal{Y}$   &   The space of potential outcomes  \\
+    $X_{t}$ &   The time-varying covariates of all patients at time $t$  \\
+    $\mathcal{Z}$   &   The space of hidden confounders \\
+    $x^{(i)}_{t}$   &   The time-varying covariates of $i$-th patient at time $t$  \\
+    $C$   &   The static covariates of all patients \\
+    $c^{(i)}$ &   The static covariates of $i$-th patient \\
+    $A_{t}$ &   The treatment assigned at time $t$  \\
+    $a^{(i)}_{t}$   &   The treatment assigned for $i$-th patient at time $t$  \\
+    $Y_{T+\tau}$    &   The factual (observed) outcomes at time $T+\tau$ \\
+    $Y_{1,T+\tau}/\hat{Y}_{1,T+\tau}$   &   
+    \begin{tabular}[c]{@{}l@{}}The observed/predicted outcome at time $T+\tau$ when \\ receive treatment\end{tabular}\\
+    $y^{(i)}_{1,T+\tau}/\hat{y}^{(i)}_{1,T+\tau}$   &   
+    \begin{tabular}[c]{@{}l@{}}The observed/predicted outcomes of $i$-th patient at \\ time $T+\tau$ when $a^{(i)}=1$\end{tabular}\\
+    $Y_{0,T+\tau}/\hat{Y}_{0,T+\tau}$   &  
+    \begin{tabular}[c]{@{}l@{}} The observed/predicted outcome at time $T+\tau$ when \\ not receive the treatment\end{tabular}\\
+    $y^{(i)}_{0,T+\tau}/\hat{y}^{(i)}_{0,T+\tau}$   &   
+    \begin{tabular}[c]{@{}l@{}} The observed/predicted outcomes of $i$-th patient at \\ time $T+\tau$ when $a^{(i)}=0$\end{tabular}\\
+    $e^{(i)}/\hat{e}^{(i)}$ &   The true/predicted ITE of $i$-th patient at time $t$  \\
+    $\overline{(\cdot)}_{t}$ &   The historical covariates collected before time $t$   \\ 
+    $Z_t$   &   The learned hidden confounders at time $t$  \\
+    $z^{(i)}_{t}$   &   The learned hidden confounders for patient $i$ at time $t$ \\
+    $\tilde{H}^{(i)}_{t}$   &      
+    \begin{tabular}[c]{@{}l@{}} The historical data consists of
+    $\{\overline{x}^{(i)}_{t},\overline{a}^{(i)}_{t}\}\cup\{c^{(i)}\}$ \\ for $i$-th patient\end{tabular}\\
+    $T$ &   The number of time stamps (observation window)    \\
+    $\tau$  &   The length of prediction window \\
+    $n$ &   The number of patients in the dataset\\
+    \hline
+    \end{tabular}}
+\vspace{-10pt}
+\end{table}
+
+We follow the well-adopted potential outcome framework and its variation that considers the time-varying treatment assignments when estimating the causal effect on the outcomes. The potential outcome $y^{(i)}_{a,T+\tau}$ of $i$-th patient given the historical treatment can be formulated as $y^{(i)}_{a,T+\tau}=\mathbb{E}[y|x^{(i)}_{t},\mathcal{H}^{(i)}_t,a=a^{(i)}]$, where $a^{(i)}$ equals to 1 if the treatment is assigned at time $\{1,2..,T\}$, otherwise 0. Then the individual treatment effect (ITE) on the temporal observational data is defined as follows:
+\begin{small}
+\begin{equation}
+    e^{(i)}=\mathbb{E}[y^{(i)}_{1,T+\tau}|x^{(i)}_{t},a^{(i)}_{t},\tilde{H}^{(i)}_{t}]-\mathbb{E}[y^{(i)}_{0,T+\tau}|x^{(i)}_{t},a^{(i)}_{t},\tilde{H}^{(i)}_{t}]
+\end{equation}
+\end{small}
+Here, the observed outcome $y^{(i)}_{a,T+\tau}$ under treatment $a$ is called factual outcome, while the unobserved one $y^{(i)}_{1-a,T+\tau}$ is the counterfactual outcome. In observational data, only the factual outcomes are available, while the counterfactual outcomes can never been observed. 
+
+\vspace{-5pt}
+\subsection{Assumptions}
+Our estimation of ITE is based on the the following important assumptions \cite{hernan2010causal}, and we further extend the assumptions in our scenario (i.e., time-varying observational data). 
+\begin{assumption}[Consistency]\label{as:consistency}
+The potential outcome under treatment history $\overline{A}$ equals to the observed outcome if the actual treatments history is $\overline{A}$.
+\end{assumption}
+
+\begin{assumption}[Positivity]\label{as:positivity}
+For any patient $i$, if the the probability $\mathbb{P}(\overline{a}^{(i)}_{t-1},\overline{x}^{(i)}_{t}, c^{(i)})\neq0$, then the probability of receiving treatment $0$ or $1$ is positive, i.e., $0<\mathbb{P}(\overline{a}^{(i)}_{t},\overline{x}^{(i)}_{t}, c^{(i)})<1$, for all $\overline{a}^{(i)}_{t}$.   
+\end{assumption}
+Besides these two assumptions, many existing work are based on \textit{strong ignorability} assumption:
+\begin{assumption}[Strong Ignorability]\label{as:ignorability}
+Given the observed historical covariates $\overline{x}^{(i)}_t$ and static covariates $c^{(i)}$ of $i$-th patient, the potential outcome variables $y^{(i)}_{1,T+\tau}$, $y^{(i)}_{0,T+\tau}$ are independent of the treatment assignment, i.e., $(y^{(i)}_{1,T+\tau},y^{(i)}_{0,T+\tau})\independent a^{(i)}_{t}|\overline{x}^{(i)}_t,c^{(i)}$
+\end{assumption}
+
+
+This assumption holds only if there exist no hidden confounders. However, this condition is hard to guarantee in practice especially in real-world observational data. In this paper, we relax such strict assumption by introducing that there exist potential hidden confounders. Our proposed method can learn the representations of the hidden confounders and eliminate the bias between the treatment assignments and outcomes at each time stamp. The learned representations (denoted by $Z_{t}\in\mathcal{Z}$) can be leveraged for inferring the unobserved confounders and regarded as the substitutes of hidden confounders. Thus, we extend the \textit{strong ignorability} assumption by considering the existing of hidden confounders $Z_{t}$ at each time stamp $t$, which influence the treatment assignment $A_t$ and potential outcomes $Y_{T+\tau}$. Given the hidden confounders $Z_{t}$, the potential outcome variables are independent of the treatment assignment at each time stamp. 
+
+\vspace{-5pt}
+\subsection{Proposed Method}
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/model4.pdf}
+\vspace{-5pt}
+\caption[]{The framework of \model. \model contains three main modules: representation learning module, balancing module and prediction module. At each time stamp $t$, the model takes the current covariates ($X_t$, $C$), treatment assignments $A_t$, along with the hidden variables $Z_{t-1}$ as input for learning representations of confounder $Q_t$. The historical information is modeled via a gated recurrent unit (GRU) and aggregated through an attention layer. Then, we use the learned representations of confounding variables for treatment prediction at each time stamp and final outcome prediction after time $T$.}
+\vspace{-10pt}
+\label{model}
+\end{figure*}
+According to the aforementioned assumptions, we present a novel method that utilizes current variables as well as the historical data to learn the representations of the hidden confounders and estimate the individual treatment effect (ITE) for all patients. The overall framework of the proposed method is illustrated in Fig. \ref{model}. We will illustrate the details of each module in the following subsections.
+
+\subsection{Representation Learning Module}
+% To learn the representations of hidden confounders at each time stamp, we encode the information of current covariates and all historical data (i.e., previous covariates and treatment assignments). 
+As the initial feature vectors are always high-dimensional and sparse in the case of real-world data, we first convert the initial features $x^{(i)}_t\in\mathbb{R}^{d_x}$ of each patient into a lower-dimensional and continuous data representations $u^{(i)}_t\in\mathbb{R}^{d_u}$, where $d_u$ is the dimension of the embedded feature vectors, using a liner embedding layer. That is, we define:
+\begin{equation}
+\label{eq:embedding}
+    u^{(i)}_t=W_{emb}x^{(i)}_t
+\end{equation}
+where $W_{emb}\in\mathbb{R}^{d_{u}\times d_{x}}$ is the embedding matrix. Simply, the liner embedding layer can be alternatively replaced by other more complex embedding method such as multi-layer perceptron (MLP) \cite{pal1992multilayer}, which is also widely used in learning representation of EMR data \cite{choi2016multi}. 
+
+The representation of hidden confounders $z^{(i)}_t$ is learned through a GRU layer to capture the inherent characteristics of time-varying observational data (i.e., dependency between each time unit and sparsity). The current information $u^{(i)}_t$, treatment assignments $a^{(i)}_t$, last time stamp hidden confounders $z^{(i)}_{t-1}$ and last output hidden state of GRU $h^{(i)}_{t-1}$ are regarded as the input to the GRU. For the convenience of future prediction task, we concatenate the current information $u^{(i)}_t$ and last time stamp hidden confounders $z^{(i)}_{t-1}$ into a new variable $q^{(i)}_t$ as follows,
+\begin{equation}
+\label{eq:hidden-representation-confounding}
+    q^{(i)}_t=g([u^{(i)}_t,z^{(i)}_{t-1}])
+\end{equation}
+where $g(\cdot)$ denotes the function for learning the hidden confounders (typically a MLP layer is used for generating the representations), $[\cdot,\cdot]$ denotes the concatenation of two vectors.
+
+We elaborate the the architecture of GRU as follows,
+\begin{equation}
+\label{eq:gru}
+\begin{aligned}
+    f_t &=\sigma_{g}(W_{f}[q^{(i)}_t,c^{(i)}_t,a^{(i)}_t]+V_{f}h_t+b_{f})\\
+    r_{t} &=\sigma_{g}(W_{r}[q^{(i)}_t,c^{(i)}_t,a^{(i)}_t]+V_{r}h_t+b_{r})\\
+    h^{\prime}_t &=\Phi_{h}(W_{h}[q^{(i)}_t,c^{(i)}_t,a^{(i)}_t]+V_{f}(r_{t}\odot h_{t-1})+b_{h})\\
+    h_t &=f_t\odot h_{t-1}+(\textbf{1}-f_t)\odot h^{\prime}_t
+\end{aligned}
+\end{equation}
+where $\sigma_{g}$ is sigmoid function, $\Phi_{h}$ is hyperbolic tangent function, $\odot$ denotes element-wise product operation, $W_{f}$, $W_{r}$, $W_{h}\in\mathbb{R}^{d_{h}\times (d_{q}+d_{c}+1)}$, $V_{f}$, $V_{r}\in\mathbb{R}^{d_{h}\times d_{h}}$, $b_{f}$, $b_{r}\in\mathbb{R}^{d_h}$ are parameters matrices and vectors to learn. $f_t$ denotes the update gate vector, $r_t$ denotes reset gate vector and $h_t$ denotes the hidden output vector. The output vectors are further aggregated via a attention layer for automatically focusing on important historical time stamp. We can use various methods to calculate the attention energies between the each previous hidden state $h_{s}$ and current state $h_t$, e.g., dot product $h^{\top}_t h_{s}$, linear attention $h^{\top}_t W_{\alpha} h_{s}$. In this paper, we calculate the attention weight $\alpha_{t,s}$ using a method that concatenates each previous hidden state with the current state, and the product of two states. That is,
+\begin{equation}
+\label{eq:attention}
+\begin{aligned}
+    \alpha_{t,s} &=\text{score}(h_t, h_s)=\Phi(W_{\alpha}[h_t,h_s,h_t\odot h_s])\\
+    \mathbf{\alpha}_t &=\text{softmax}(\alpha_{t,1},\alpha_{t,2},\dots,\alpha_{t,t-1})
+\end{aligned}
+\end{equation}
+where $\Phi$ is hyperbolic tangent function, $W_\alpha\in\mathbb{R}^{3d_h\times d_h}$ is learnable parameter matrix. Using the generated attention energies, we can calculate the context vector $o_t$ for each patient up to $t$ time stamp as follows,
+\begin{equation}
+\label{eq:context-vector}
+    o_t=\sum_{s=1}^{t-1}\alpha_{t,s}h_s
+\end{equation}
+We further concatenate the context vector with the current hidden state to generate the current representations $z_t$ up to time $t$:
+\begin{equation}
+\label{eq:hidden-confounding}
+    z_t=\Phi(W_{z}[h_t,o_t])
+\end{equation}
+where $W_z\in\mathbb{R}^{2d_{h}}$ is a learnable parameter matrix.
+
+
+% Here, the hidden confounders $Q_t$ does not include the current treatment information $C_t$ as it only encode the covariates obtained before the treatment assignments. The current treatments $C_t$ contribute to the historical representations $Z_t$ that will be leveraged to build next time stamp hidden confounders $Q_{t+1}$.
+
+\subsection{Prediction Module}
+After obtaining the hidden confounding representations, we leverage them for treatment prediction at each time stamp and final outcome prediction during the following prediction window.
+
+\subsubsection{Global Max Pooling}
+As the time sequence increases, basic RNN model may forget earlier information due to its long-term dependency. Thus, we adopt a global max-pooling operation over the concatenation of all outputs of $q^{(i)}_t$ vectors. As shown in Fig. \ref{model}, the output of max-pooling layer $q^{(i)}_m$ are further used for treatment prediction and potential outcome prediction.
+
+\subsubsection{Treatment prediction}
+We predict the treatment assignments for the patient at each time stamp regarding the $q^{(i)}_m$ and static demographic features $c^{(i)}$ as input, and the real treatment $a^{(i)}_t$ as the target label. The predicted treatments $\hat{a}^{(i)}_t$ are obtained through a fully-connected layer with sigmoid function as the last layer,
+\begin{equation}
+\label{eq:pred_a}
+\hat{a}_t = \text{sigmoid}(W_{a}[q_{m},c]+b_{a})
+\end{equation}
+where $W_{a}\in\mathbb{R}^{d_{q}+d_{c}}$ and $b_{a}\in\mathbb{R}$ are learnable parameters, $\hat{a}^{(i)}_t$ denotes the the probability of receiving treatment based on the potential confounders of patient $i$ at time $t$. Typically, the predicted results can also be referred as propensity score \cite{rosenbaum1983central} that $\hat{a}^{(i)}_t=\mathbb{P}(a^{(i)}_{t}=1|u^{(i)}_{t},z^{(i)}_{t-1})$.
+
+As we consider the binary treatment in this paper, we use a cross-entropy loss for the treatment prediction over all patients and all time stamps as follows,
+\begin{small}
+\begin{equation}
+\label{eq:treatment-pred-loss}
+    \mathcal{L}_a=-\frac{1}{N}\frac{1}{T}\sum_{i=1}^{N}\sum_{t=1}^{T}(a^{(i)}_t\log{\hat{a}^{(i)}_t}+(1-a^{(i)}_t)\log{(1-\hat{a}^{(i)}_t)})
+\end{equation}
+\end{small}
+
+\subsubsection{Outcome prediction}
+We finally adopt a potential outcome prediction network to estimate the the outcome $\hat{y}^{(i)}_{t,T+\tau}$ by taking the hidden representations $q^{(i)}_{t}$ from each time stamp as input. Here, to fully utilize the time series information, we use a max-pooling layer to aggregate all hidden representations. Let $g(\cdot)$ denotes the function learned from outcome prediction network. Then we have,
+\begin{equation}
+\label{eq:outcome-pred}
+    \hat{y}^{(i)}_{t,T+\tau}=g(q^{(i)}_{m}, a^{(i)}=t)
+\end{equation}
+where we estimate the potential outcome for each patient given each treatment assignment situation. Here, we use MLPs to model the function $g(\cdot)$. We minimize the factual loss function as follows,
+\begin{equation}
+\label{eq:outcome-pred-loss}
+    \mathcal{L}_y=\frac{1}{N}\sum_{i=1}^{N}w^{(i)}_a(\hat{y}^{(i)}_{t, T+\tau}-y^{(i)}_{t, T+\tau})^{2}
+\end{equation}
+where $w^{(i)}_a$ is to re-weight the population for adjusting confounders. We introduce the computation of $w^{(i)}_a$ in the following section.
+
+\subsection{Balancing Module}
+The predicted probability of receiving treatment is further leveraged for generating weights for each individual to balance the confounding. We compute the weights using inverse
+probability of treatment weighting (IPTW) and extend to dynamic setting as follows,
+\begin{equation}
+\label{eq:weighting}
+w^{(i)}_t=\frac{\text{Pr}(A)}{\hat{a}^{(i)}_t}+\frac{(1-\text{Pr}(A))}{(1-\hat{a}^{(i)}_t)}  
+\end{equation}
+where $\text{Pr}(A)$ denotes the probability of being in treated group and $\hat{a}^{(i)}_t$ is the predicted probability of receiving treatment given the current observed data and historical information. We take average of weights computed at each time stamp denoted as $w^{(i)}_a$. 
+
+
+\subsection{Loss Function}
+The total loss function for the proposed method is defined as,
+\begin{equation}
+    \mathcal L=\mathcal{L}_y + \gamma \mathcal{L}_a + \lambda \lVert W \rVert_{2}
+\end{equation}
+where $\mathcal{L}_y$ is the factual prediction loss between estimated and observed factual outcomes, $\mathcal{L}_a$ is the loss from treatment prediction, $\gamma$, $\lambda$ are parameters to balance the loss function. The last term is $L_2$ regularization on model parameters $W$. The training process of \model is presented in Algorithm \ref{algorithm}.
+
+\begin{algorithm}
+	\caption{\model Model}
+	\label{algorithm}
+	\textbf{Input}: data of $i$-th patient: time-varying covariates $x^{(i)}_t$, static covariates $c$, treatment assignments $a^{(i)}_t$;\\
+	\textbf{Output}: potential outcome $y^{(i)}_{T+\tau}$;
+	\begin{algorithmic}[1]
+    	\State Randomly initialize embedding matrix $W_{emb}$ for time-varying covariates, GRU parameters $W_f$, $W_r$, $W_h$, $V_f$, $V_r$, $b_f$, $b_r$, attention parameters $W_{\alpha}$;
+    	\Repeat
+    	\For{covariate v in $x^{(i)}_t$}
+    	\State Obtain the embedding of v using Eq. (\ref{eq:embedding});
+    	\State Obtain $q^{(i)}_t$ using Eq. (\ref{eq:hidden-representation-confounding});
+    	\State Input the $q^{(i)}_t$ and $a^{(i)}_{t}$ into GRU and obtain $h^{(i)}_{t}$ using Eq. (\ref{eq:gru});
+    	\State Compute the attention weights using Eq. (\ref{eq:attention}); (\ref{eq:context-vector})\;
+    	\State Obtain $z^{(i)}_{t}$ using Eq. (\ref{eq:hidden-confounding})\;
+    	\EndFor
+    	\State Predict the treatment $\hat{a}^{(i)}_{t}$ using Eq. (\ref{eq:pred_a});
+    	\State Compute the weights for each patient using Eq. (\ref{eq:weighting})
+    	\State Calculate the treatment prediction loss using Eq. (\ref{eq:treatment-pred-loss});
+    	\State Predict the potential outcome $\hat{y}^{(i)}_{T+\tau}$ using Eq. (\ref{eq:outcome-pred});
+    	\State Calculate the outcome prediction loss using Eq. (\ref{eq:outcome-pred-loss});
+    	\State Update parameters according to gradient of mean loss;
+    	\Until{convergence}
+	\end{algorithmic} 
+\end{algorithm} 
+

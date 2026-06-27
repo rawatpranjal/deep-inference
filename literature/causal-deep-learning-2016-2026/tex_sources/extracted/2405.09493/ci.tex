@@ -1,0 +1,56 @@
+
+
+\section{Point Estimates and Confidence Intervals} %
+\label{sec:ci}
+We define point estimates and calculate variance for the estimators considered in the experiments. These are used to calculate estimator error, confidence intervals, and coverage in the experiments. 
+First, we combine folds: for all $X_i$ in $P_n$, if $X_i$ is in the $k$th fold, then let
+$\what \pi_n(X_i):=\what \pi_{-k,n}(X_i)$. 
+We do the same for $\what \mu, \what \mu^C$. 
+This way, we construct $\what \pi_n, \what \mu_n, \what \mu^C_n$ over all of the available data, $P_n$, and where nuisance parameters are only evaluated on data separate from training.
+
+\subsection{Direct Method}
+The direct method estimator (naive plug-in of the outcome model) is given by %
+\begin{equation}
+    \what{\psi}_{n}^{\text{direct}} = \frac{1}{K}\sum_{k=1}^{K} \what{\psi}_{k,n}^{\text{direct}} 
+    = \frac{1}{K}\sum_{k=1}^{K}  P_{k,n}[\what{\mu}_{-k,n}(X)]
+    = \frac{1}{n}\sum_{i=1}^n \what \mu_n(X_i).
+\end{equation}
+Let $\var_n$ denote the empirical variance, calculated on the sample $P_n$. Then %
+\begin{align*}
+    \Var(\what{\psi}_{n}^{\text{direct}}) = \frac{1}{n}\Var_P(\what\mu_{n}(X)) 
+    \asymp \frac{1}{n}\Var_{n}(\what\mu_{n}(X)),
+\end{align*}
+which we use to estimate the variance of the direct method estimator.
+
+\subsection{Inverse Propensity Weighting (IPW)}
+Under similar notation, the inverse probability weighting method gives the estimator
+$$
+\what{\psi}_{n}^{\text{IPW}} = \frac{1}{K}\sum_{k=1}^{K} \what{\psi}_{n}^{\text{IPW}} 
+    = \frac{1}{K}\sum_{k=1}^{K} P_{k,n} \left[ \frac{AY}{\what\pi_{-k,n}(X)} \right]
+    =\frac{1}{n}\sum_{i=1}^n \frac{A_iY_i}{\what \pi_n(X_i)}
+$$
+The variance of the estimator is given by
+\begin{align*}
+    \Var_P(\what{\psi}_{n}^{\text{IPW}}) = \frac{1}{n}\Var_P\left(\frac{AY}{\what\pi_{n}(X)} \right) 
+    \asymp \frac{1}{n}\var_{n}\left(\frac{AY}{\what\pi_{n}(X)} \right).
+\end{align*}
+
+\subsection{Self-Normalized IPW}\label{sec:ci_nAIPW}
+Consider $\what \pi$. Then the self-normalized IPW estimator (a.k.a. Hajek estimator) is
+$$\what \psi_{\text{IPW-SN}}=\frac{ \frac{1}{n}\sum_{i=1}^n \frac{A_iY_i}{\what\pi_n(X_i)} }{ \frac{1}{n}\sum_{i=1}^n \frac{A_i}{\what\pi_n(X_i)} }.$$
+Let $\wt \pi_n(X) = \what\pi_n(X) \cdot \frac{1}{n}\sum \frac{A_i}{\what\pi_n(X_i)}$
+so that 
+$$\what \psi_{\text{IPW-SN}}= \frac{1}{n}\sum_{i=1}^n \frac{A_iY_i}{\wt\pi_n(X_i)}.$$
+Similar to before, the variance of the estimator is given by
+\begin{align*}
+    \Var_P(\what{\psi}_{k,n}^{\text{IPW-SN}}) = \frac{1}{n}\Var_P\left(\frac{AY}{\wt\pi_{n}(X)} \right) 
+    \asymp \frac{1}{n}\var_{n}\left(\frac{AY}{\wt \pi_{n}(X)} \right).
+\end{align*}
+
+\subsection{Any De-Biased Method}
+This applies to the AIPW, self-normalized AIPW, TMLE and C-Learner. 
+These are first-order corrected (de-biased) and have asymptotic variance as described in Theorem~\ref{thm:asymp}. We thus calculate the empirical variance of the plug-in in Theorem~\ref{thm:asymp}. 
+
+
+
+

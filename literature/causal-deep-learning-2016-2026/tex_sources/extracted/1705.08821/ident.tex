@@ -1,0 +1,30 @@
+Throughout this paper we assume the causal model in Figure~\ref{fig:hid1}. For simplicity and compatibility with prior benchmarks we assume that the treatment $\*t$ is binary, but our proposed method does not rely on that. We further assume that the joint distribution $p\left(\*Z,\*X,\*t,\*y\right)$ of the latent confounders $\*Z$ and the observed confounders $\*X$ can be approximately recovered solely from the observations $\left(\*X,\*t,\*y\right)$. While this is impossible if the hidden confounder has no relation to the observed variables, there are many cases where this is possible, as mentioned in the introduction.
+For example, if $\*X$ includes three independent views of $\*Z$ \citep{anandkumar2012method,hsu2012spectral,goodman1974exploratory,allman2009identifiability}; if $\*Z$ is categorical and $\*X$ is a Gaussian mixture model with components determined by $\*X$ \citep{anandkumar2014tensor};  or if $\*Z$ is comprised of binary variables and $\*X$ are so-called ``noisy-or'' functions of $\*Z$ \citep{jernite2013discovering,tengyu_noisyor16}. Recent results show that certain VAEs can recover a very large class of latent-variable models \citep{tran2015variational} as a minimizer of an optimization problem; the caveat is that the optimization process is not guaranteed to achieve the true minimum even if it is within the capacity of the model, similar to the case of classic universal approximation results for neural networks.
+
+\subsection{Identifying individual treatment effect}
+Our goal in this paper is to recover the individual treatment effect (ITE), also known as the conditional average treatment effect (CATE), of a treatment $\*t$, as well as the average treatment effect (ATE):
+\begin{align*}%\label{eq:defite}
+ITE(x) := \E\left[\*y |\*X=x, do(\*t=1)\right] - \E\left[\*y |\*X=x, do(\*t=0)\right], 
+\quad \quad ATE := \mathbb{E}[ITE(x)] 
+\end{align*}
+Identification in our case is an immediate result of Pearl's back-door adjustment formula \citep{pearl2009causality}:
+
+\begin{theorem}
+If we recover $p\left(\*Z,\*X,\*t,\*y\right)$ then we recover the ITE under the causal model in Figure~\ref{fig:hid1}.
+\end{theorem}
+\begin{proof}
+We will prove that $p\left(\*y |\*X, do(\*t=1)\right)$ is identifiable under the premise of the theorem. The case for $\*t=0$ is identical, and the expectations in the definition of ITE above  readily recovered from the probability function. ATE is identified if ITE is identified.
+We have that:
+\begin{align}
+&p\left(\*y |\*X, do(\*t=1)\right) =  
+\int_{\*Z} p\left(\*y|\*X,do(\*t=1),\*Z\right)p\left(\*Z|\*X,do(\*t=1)\right) \, d\*Z \stackrel{(i)}{=} \nonumber \\
+&\int_{\*Z} p\left(\*y|\*X,\*t=1,\*Z\right)p\left(\*Z|\*X\right) \, d\*Z , \label{eq:ident}
+\end{align}
+
+where equality (i) is by the rules of \emph{do}-calculus applied to the causal graph in Figure~\ref{fig:hid1} \citep{pearl2009causality}. This completes the proof since the quantities in the final expression of Eq.~\eqref{eq:ident} can be identified from the distribution $p\left(\*Z,\*X,\*t,\*y\right)$  which we know by the Theorem's premise.
+\end{proof}
+Note that the proof and the resulting estimator in Eq.~\eqref{eq:ident} would be identical whether there is or there is not an edge from $\*X$ to $\*t$. This is because we intervene on $\*t$.
+Also note that for the model in Figure~\ref{fig:hid1}, $\*y$ is independent of $\*X$ given $\*Z$, and we obtain:
+$p\left(\*y |\*X, do(\*t=1)\right) =\int_{\*Z}p\left(\*y|\*t=1,\*Z\right)p\left(\*Z|\*X\right) \, d\*Z.$
+In the next section we will show how we estimate  $p\left(\*Z,\*X,\*t,\*y\right)$ from observations of $(\*X,\*t,\*y)$.
+

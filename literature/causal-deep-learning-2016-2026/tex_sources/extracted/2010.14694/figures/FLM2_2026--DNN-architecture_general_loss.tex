@@ -1,0 +1,75 @@
+			\def\layersep{2cm}
+			\begin{tikzpicture}[shorten >=1pt,->,draw=black!50, node distance=\layersep]
+			    \tikzstyle{every pin edge}=[<-,shorten <=1pt]
+			    \tikzstyle{neuron}=[circle, fill=black!25, minimum size=20pt, inner sep=0pt]
+			    \tikzstyle{input neuron}=[neuron,  minimum size=25pt, fill=blue!50];
+			    \tikzstyle{hidden neuron}=[neuron, fill=gray!50];
+			    \tikzstyle{parameter neuron}=[neuron, minimum size=40pt, fill=green!50];
+			    \tikzstyle{output neuron}=[neuron, minimum size=25pt, fill=red!50];
+			
+			    \tikzstyle{annot} = [text width=4em, text centered]
+			
+			    % Draw the input layer nodes	
+				\node[input neuron] (I-1) at (0,-1.8) {$x_1$};
+%				\node[input neuron] (I-2) at (0,-2) {$x_2$};
+				\node[input neuron] (I-2) at (0,-3) {};
+				\node[input neuron] (I-3) at (0,-4.2) {$x_{\dx}$};
+				
+			    % Draw the hidden layer nodes
+			    \foreach \name / \y in {1,...,6}
+			        \path[yshift=0.5cm]
+			            node[hidden neuron] (Ha-\name) at (\layersep,-\y cm) {};
+			
+			    % Draw the hidden layer nodes
+			    \foreach \name / \y in {1,...,6}
+			        \path[yshift=0.5cm]
+			            node[hidden neuron,right of=Ha-\name] (Hb-\name) at (\layersep,-\y cm) {};
+			
+				 % Draw the parameter layer nodes
+				\node[yshift=15pt, parameter neuron, right of=Hb-2] (P-1) { \ $\that_1(\bx)$ \ };
+				\node[parameter neuron, right of=I-2, xshift=4cm] (P-2) { \  \ };
+				\node[yshift=-15pt, parameter neuron, right of=Hb-5] (P-3) { \ $\that_{\dtheta}(\bx)$ \ };
+			 
+			 
+			
+			    % Draw the model layer nodes
+			    \node[output neuron, right of=Hb-2, xshift=\layersep] (Y) { \ $\by$ \ };
+   			    \node[output neuron, right of=Hb-5, xshift=\layersep] (T) { \ $\bt$ \ };
+			    \node[output neuron, pin={[pin edge={->}]right:$\ell\big(\by,\bt, \bthat(\bx)\big) $}, right of=I-2, xshift=6cm] (O) {$\ell$};
+			
+			    % Connect every node in the input layer with every node in the
+			    % hidden layer.
+			    \foreach \source in {1,...,3}
+			        \foreach \dest in {1,...,6}
+			            \path (I-\source) edge (Ha-\dest);
+			            
+			    % Connect hidden layers.
+			    \foreach \source in {1,...,6}
+			        \foreach \dest in {1,...,6}
+			            \path (Ha-\source) edge (Hb-\dest);            
+			            
+			            
+			    % Connect every node in the hidden layer with two nodes in the parameter theta layer
+			    \foreach \source in {1,...,6}
+			        \foreach \dest in {1,2,3}
+			            \path (Hb-\source) edge (P-\dest);
+			
+			    % Connect every node in the parameter layer with the output layer
+			%    \foreach \source in {1,2}
+			%        \path (P-\source) edge (O);
+			        
+				\path (P-1) edge (O);
+				\path (P-2) edge (O);
+				\path (P-3) edge (O);
+				\path (Y) edge (O);
+				\path (T) edge (O);
+				
+			    % Annotate the layers
+			    \node[annot,above of=Ha-1, xshift=\layersep/2, node distance=1cm] {Hidden layers};
+			    \node[annot,above of=Ha-1, node distance=1cm] (hal) {};
+			    \node[annot,above of=Hb-1, node distance=1cm] (hbl) {};
+			    \node[annot,left of=hal] {Inputs};
+			    \node[annot,right of=hbl] (pl) {Parameter layer};
+			    \node[annot,right of=pl] {Model layer};
+			
+			\end{tikzpicture}

@@ -1,0 +1,179 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2018
+
+% ready for submission
+%\usepackage{nips_2018} % For anonymous submission %%PA.5.17: we need this one for submission (otherwise we get automatically rejected...)
+%\usepackage[preprint]{nips_2018} % For arxiv
+%\usepackage[final]{nips_2018} % For final submission
+
+% to compile a preprint version, e.g., for submission to arXiv, add
+% add the [preprint] option:
+% \usepackage[preprint]{nips_2018}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+\usepackage[preprint]{nips_2018}
+
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2018}
+
+\usepackage{rotating} % for rotating the tables to fit in
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+%\usepackage{natbib}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+%\usepackage{algorithm2e}
+%\usepackage{algorithmic}
+\usepackage{float}% http://ctan.org/pkg/float
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{placeins}
+
+\allowdisplaybreaks[4]
+
+% ----------------------------------------------------------------------------------------
+% algorithmic environment
+%\usepackage[noend]{algpseudocode}
+\usepackage{placeins}
+%\usepackage{showlabels}
+\usepackage{algorithm}
+%\usepackage{algpseudocode}
+
+\usepackage{etoolbox}
+\usepackage{xr}
+\externaldocument{../X_learner_PNAS_main/X-Learner_PNAS-main}
+
+\makeatletter  % needed for pseudocode
+\def\BState{\State\hskip-\ALG@thistlm}
+\makeatother
+
+\makeatletter
+\AfterEndEnvironment{algorithm}{\let\@algcomment\relax}
+\AtEndEnvironment{algorithm}{\kern2pt\hrule\relax\vskip3pt\@algcomment}
+\let\@algcomment\relax
+\newcommand\algcomment[1]{\def\@algcomment{\footnotesize#1}}
+
+\renewcommand\fs@ruled{\def\@fs@cfont{\bfseries}\let\@fs@capt\floatc@ruled
+	\def\@fs@pre{\hrule height.8pt depth0pt \kern2pt}%
+	\def\@fs@post{}%
+	\def\@fs@mid{\kern2pt\hrule\kern2pt}%
+	\let\@fs@iftopcapt\iftrue}
+\makeatother
+% ----------------------------------------------------------------------------------------
+
+\newtheorem{assumption}{Assumption}
+
+\title{Transfer Learning for Estimating Causal Effects using Neural Networks}
+% CAUSAL NEURAL NETWORKS means something pretty different to most of the AI community. 
+% So we should find a way to word things that is not too sensationalist. 
+
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+
+
+\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\author{
+	Sören R. Künzel\thanks{These authors contributed equally to this work.} \\
+%	Statistics\\
+	UC Berkeley\\
+	\texttt{srk@berkeley.edu} \\
+	\And
+	Bradly C. Stadie\samethanks \\
+%	Statistics\\
+	UC Berkeley\\
+	\texttt{bstadie@berkeley.edu} \\
+	\And	
+	Nikita Vemuri \\
+%	EECS\\
+	UC Berkeley \\
+%	\texttt{nikitavemuri@berkeley.edu } \\
+	\AND
+	Varsha Ramakrishnan \\
+%	EECS\\
+	UC Berkeley \\
+%	\texttt{vio@berkeley.edu} \\
+	\And
+	Jasjeet S. Sekhon \\ % BCS: JAS AND I DISCUSSED AND AGREED ON THIS 							        ORDER
+%	Poli.\ Sci. and Statistics\\
+	UC Berkeley \\
+	\texttt{sekhon@berkeley.edu} \\
+	\And
+    Pieter Abbeel \\
+%	EECS\\
+	UC Berkeley \\
+	\texttt{pabbeel@cs.berkeley.edu} \\
+}
+
+\begin{document}
+	\maketitle
+	\begin{abstract}
+		\input{0-abstract}
+	\end{abstract}
+	
+	\input{1-Introduction}
+	
+	\input{2-NotationAndPriorWork}
+	
+    \input{4-SimulationStudy}
+		% TODO:  
+		% BENCHMARKS: We will need to benchmark our estimators with the following estimators: X-RF, 
+		% S-RF, T-RF, Wager's R learner, S-NN, T-NN, Y-NN, Y*-NN, Only Multi Head, Only Raptile for T
+		% EXPERIMENTS:
+		% 		1.) Design a new simulation study which is very similar to the actual experiment
+		% 		2.) Reproduce the study suggested by Nie and Wager
+		%		3.) Design an experiment which shows how powerful it can be to have a big set of people 
+		% 			 which are neither in the control nor in the treated group
+		% It might also be good to not take experiments other people have done, and create experiments
+		% which are very closely related to those experiments. (e.g., Demystifying Double Robustness, 2007
+		% , section 1.4)
+		%
+		% CONCLUSIONS we want to draw from these experiments are and should be somehow emphasized 
+		% and shown in the experiments are: (We might find that not all of these conculsions are actually true, 
+		% but this is what I would expect to be true based on what we have seen so far.)
+		% 		a) Neural Networks for heterogenenous treatment effect estimation is a very powerful and
+		% 			flexible "base-learner" in other words X-Neural Networks does better than X-RF
+		% 		b) Transferlearning for causal inference can significanly improve the prediciton performance
+		% 		c) (Maybe) Show that Jases suggestion to match known quantities (e.g., average similar to the 
+		% 			ATE) will protect us from some forms of overfitting
+		%		d) Raptlie helps, Multihead helps, but the combination of the two helps the most
+
+	\input{6-ConclusionAndDiscussion}
+
+	\clearpage
+	
+	\bibliographystyle{apalike}
+	\bibliography{main.bbl}
+	
+    \clearpage
+
+    \appendix
+    \clearpage
+    \input{X-2-MNIST_Simulation.tex}
+    \input{X-5-GOTV.tex}
+    \input{X-3-YvsX.tex}
+	\clearpage
+    \input{X-6-CATE-estimators.tex}
+	\input{X-1_5-Algorithms.tex}
+    \clearpage
+	\input{X-4-GOTV-tables.tex}
+	
+\end{document}

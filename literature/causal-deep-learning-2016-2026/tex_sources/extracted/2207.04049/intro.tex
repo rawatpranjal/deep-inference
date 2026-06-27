@@ -1,0 +1,210 @@
+\section{Introduction}\label{sec:intro}
+% % \begin{figure*}[t]
+% % \centering
+% %      \includegraphics[width=.8\textwidth,height=1.2in]{figs/Interference.pdf}
+% %      \vspace{-0.15in}
+% %       \caption{High-order interference in hypergraphs.}
+% %       \vspace{-0.1in}
+% %       \label{fig:interference}
+% % \end{figure*}
+% \begin{figure}
+% \begin{subfigure}[b]{0.2\textwidth}
+%         \centering
+%         \includegraphics[height=1.2in]{figs/interference-hyper.pdf}
+%         \caption{Ordinary graph}
+%     \end{subfigure}
+%   \begin{subfigure}[b]{0.26\textwidth}
+%         \centering
+%         \includegraphics[height=1.2in]{figs/hypergraph_cropped.pdf}
+%         \caption{Hypergraph}
+%     \end{subfigure}
+%     \vspace{-3mm}
+%   \caption{Examples of interference on an ordinary graph and a hypergraph. Consider five individuals $u_1,...,u_5$ with physical contact relations. Each hyperedge in (b) denotes a social gathering event (represented with a circle), while (a) describes the ordinary graph projected from the hypergraph in (b). Each black line in (a) denotes an edge. The arrows denote interference from different individuals to $u_1$. Interference in (a) is pairwise, while high-order interference exists inside each hyperedge in (b).}
+%   \label{fig:interference}
+% \vspace{-3mm}
+% \end{figure}
+
+\begin{figure}
+\begin{subfigure}[b]{0.5\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figs/illustration-hypergraph.pdf}
+\caption{Hypergraph}\label{fig:hypergraph}
+\end{subfigure}
+\qquad
+\begin{subfigure}[b]{0.3\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figs/illustration-ordinary-graph-no-interference.pdf}
+\caption{Ordinary graph}\label{fig:ordinary-graph}
+\end{subfigure}
+\\
+\begin{subfigure}[b]{\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figs/illustration-high-order-interference.pdf}
+\caption{First, second, and third-order interferences with $u_1$.}
+\label{fig:high-order-interference}
+\end{subfigure}
+\vspace{-5mm}
+\caption{(a) An illustrative example of group interactions on a hypergraph, where each circle represents a hyperedge (group); (b) An ordinary graph projected from this hypergraph; (c) Illustration of interferences with $u_1$ from its neighbors on the hypergraph. Note interference on (b) is pairwise (first-order only) while higher-order interference exists on the original hypergraph (a).
+}
+\vspace{-2mm}
+\label{fig:interference}
+\end{figure}
+
+
+% Hypergraphs
+{Group interactions among individuals exist in a wide range of scenarios, %web-based platforms,
+e.g., massive gathering events, day-to-day group chats on WhatsApp or WeChat, and workplace interactions on Microsoft Teams or Slack channels. }%group communications on online forums. 
+Although the conventional pairwise graph definition covers a vast number of applications (e.g., person-to-person physical contact networks or social networks \cite{brandes2013social}), it fails to capture the complete information of these group interactions (where each interaction may involve more than two individuals) \cite{bai2021hypergraph,feng2019hypergraph,yadati2018hypergcn}. The notion of the  \textit{hypergraph} can thus be introduced to address this limitation. 
+Consider a hypergraph example that individuals are connected via in-person social events, each gathering event can be represented as a \textit{hyperedge} (Fig.~\ref{fig:hypergraph}). Each hyperedge can connect an arbitrary number of individuals, in contrast to an ordinary edge which connects exactly two nodes  (Fig.~\ref{fig:ordinary-graph}). 
+%Consider a hypergraph example in which people are connected via group chats on a digital platform, where each group can be represented as a \textit{hyperedge} (Fig.~\ref{fig:hypergraph}). Each hyperedge connects an arbitrary number of individuals, in contrast to an ordinary edge which can only connect exactly two nodes (Fig.~\ref{fig:ordinary-graph}). 
+
+% Graphs exist in a wide range of scenarios, such as social networks \cite{brandes2013social}, road networks \cite{coclite2005traffic}, and biological networks \cite{alm2003biological}, to name a few. Recently, machine learning on graphs is progressing at an astounding rate, especially powered by effective graph neural networks \cite{kipf2016semi,velivckovic2017graph}. In these studies, machine learning can benefit from the additional relational information in graphs. 
+% However, in many scenarios, the relations among different individuals can not be fully represented by ordinary graphs \cite{bai2021hypergraph,feng2019hypergraph,yadati2018hypergcn}. 
+% For example, consider a government investigating pandemic infection through physical contact. Many graph based methods model the contact network with an ordinary graph, where each node represents an individual, and each edge between two individuals stands for the physical contact between them. 
+% Nevertheless, such relational information can often go beyond pairwise and exist in a high-order structure, e.g., individuals often participate in different social gathering events. 
+% %For example, consider a company investigating employees with social connections among them, many graph based machine learning methods model the social connections with an ordinary graph, where each node represents an employee, and each edge between two employees stands for the social connection between them.
+% %Nevertheless,  social connections can often go beyond pairwise and exist in a high-order structure, e.g., employees often participate in different groups such as project teams or certain departments. 
+% These high-order relations can be naturally represented with \textit{hyperedges}, which can connect arbitrary number of nodes, while ordinary edges can only connect exactly two nodes. A \textit{hypergraph} is a generalization of a graph which contains hyperedges. Hypergraphs are ubiquitous in real world, such as mass gathering in pandemics, co-authors of publications in research communities, and project groups in companies.
+
+% Prediction on hypergraph -> causal
+While many studies have been devoted to utilizing such a generalized hypergraph structure to facilitate machine learning tasks \cite{bai2021hypergraph,feng2019hypergraph,yadati2018hypergcn,zhang2019hyper}, the majority were still executed at the statistical correlation level, e.g., 
+{ predicting the COVID-19 infection risk on each individual (node) by capturing the \textit{correlations} between one's demographic information (node features), in-person group gathering history (hypergraph structure) and the infection outcomes (node labels).}
+%predicting a user' product purchase interests by capturing the correlations between the user's profile (node features), group chat memberships (hypergraph structure), and historical purchase behavior (node labels).
+%node classification by capturing the correlations between node features, hypergraph structure, and node labels.
+A critical limitation here is the lack of \textit{causality}, which is particularly important for understanding the impact of a policy intervention { (e.g., wearing face covering) on an outcome of interest (e.g., COVID-19 infection).} %(e.g., advertisement placement) or a product feature change on web applications. 
+{ For individuals connected as in Fig.~\ref{fig:hypergraph}, one may ask ``how would each individual's face covering practice (treatment) \textit{causally} influence their infection risk (outcome)?''} 
+%For individuals connected as in Fig.~\ref{fig:hypergraph}, a marketer may ask, for example, how would showing an advertisement to each individual (treatment) \textit{causally} influence their conversion outcome (e.g., product purchase)?
+Such a causal inference task requires constructing the counterfactual state of the same individual by holding all other possible factors constant except the treatment variable of interest. This is a particularly hard problem on hypergraph data, since the outcome of each individual is not only affected by their own confounding factors 
+(e.g., one's health conditions and vaccine status) 
+but also interfered by other individuals on the hypergraph
+{ (e.g., face covering practice of other individuals who may physically contact the target individual through a gathering event).}
+%(e.g., ad placements on other individuals who may pass the promotion information through group chats to the target individual). 
+
+In this paper, we focus on learning causal effects on hypergraphs. We are specifically interested in estimating the individual treatment effect (ITE) under hypergraph interference from observational data. Our study is motivated by the following gaps:  
+(i) \textit{Empirical constraints of randomized experiments.} One of the most reliable approaches for treatment effect estimation is randomized controlled trials (RCTs). Nevertheless, running RCTs is often expensive, impractical, even unethical \cite{goldstein2018ethical}, and they are especially difficult on graphs due to the dependencies among connected nodes \cite{ugander2013graph}.
+%These empirical constraints hence motivate us to study causality from observational data.
+(ii)  \textit{High-order interference on hypergraphs.} Our work focuses on the problem of ITE estimation, which aims to estimate the causal effect of a certain treatment (e.g., face covering practice) on an outcome (e.g., COVID-19 infection) for each individual. The classic ITE estimation is based on the Stable Unit Treatment Value (SUTVA) assumption \cite{fisher1936design,splawa1990application} that there is no interference \cite{tchetgen2012causal,hudgens2008toward} (i.e., spillover effect) among instances {(also referred to as \textit{units} in causal inference literature)}. That means the outcomes for any instance are not influenced by the treatment assignment of other instances. This assumption can be impractical in the real-world, thus resulting in flawed causal effect estimations, especially on graphs  where the interference among instances are ubiquitous \cite{ahluwalia2001moderating,yilmaz2002geographic,zeng2019exploration}. There have been many efforts addressing this problem \cite{aronow2017estimating,basse2018analyzing,imai2020causal,kohavi2013online,tchetgen2012causal,ugander2013graph,yuan2021causal,ma2021causal}, but most assume the interference only exists in a pairwise way on ordinary graphs (as shown in Fig.~\ref{fig:ordinary-graph}). This pairwise interference notion is insufficient to characterize the high-order interference that exists on hypergraphs. 
+%As the example shown in Fig.~\ref{fig:interference}, in a social gathering event, an individual's ($u_1$) infection risk can be affected by the \textit{first-order} interference from other individuals ($u_2\rightarrow u_1$ and $u_3\rightarrow u_1$) as well as the \textit{high-order} interference from the interactions among other individuals (the interaction between $u_2$ and $u_3$ may also act on their possibilities of extracting and spreading the virus; consequently, $u_1$'s infection risk can be affected by this second-order interaction effect, i.e., $u_2\times u_3 \rightarrow u_1$). 
+As shown in Fig.~\ref{fig:high-order-interference}, within a {gathering event} (hyperedge) between $u_1$, $u_2$ and $u_3$, an individual's ($u_1$) {infection outcome} can be affected by the \textit{first-order} interference from other individuals ($u_2\rightarrow u_1$ and $u_3\rightarrow u_1$) as well as the \textit{high-order} interference from the interactions among other individuals (the interaction between $u_2$ and $u_3$ may also act on influencing the exposure of the virus to $u_1$; consequently, $u_1$'s {infection risk} can be affected by this second-order interaction effect, i.e., $u_2\times u_3 \rightarrow u_1$). 
+Notice that the number of such high-order interference items grows combinatorially as the size of a hyperedge increases, leading to a significant information gap between the original hypergraph and the projected pairwise ordinary graph (which accounts for the first-order interference only). This demands techniques capable of modeling high-order interference, but to the best of our knowledge, very little work has been done in this area.
+    
+%\end{itemize}
+% Due to the ever-increasing availability of hypergraph data in various domains, a family of recent studies \cite{bai2021hypergraph,feng2019hypergraph,yadati2018hypergcn,zhang2019hyper} have explored to effectively utilize hypergraph structure to facilitate machine learning tasks. However, most of these tasks are in a statistical level, e.g., node classification by capturing the correlations between node features, hypergraph structure and node labels. But these studies lack any perspective of \textit{causality}. 
+%For example, a company may investigate how much each employee's social media usage would causally influence (rather than be correlated with) their collaboration frequency. 
+%For example, a government may investigate how much each individual's travel history would causally influence (rather than be correlated with) their infection risk. 
+%To tackle such tasks, causal inference approaches should be used to determine causality. Individual treatment effect (ITE) estimation is one of the most important task in causal inference, which aims to estimate the causal effect of a certain treatment (e.g., travel history) on an outcome (e.g., infection risk) for each individual/instance. In this paper, we focus on ITE estimation on hypergraphs. The gold standard of treatment effect estimation is randomized controlled trials (RCTs). However, conducting RCTs is often impractical, expensive or even unethical \cite{goldstein2018ethical} in real world, and it is especially difficult in graph data due to the complicated interactions among connected nodes  \cite{ugander2013graph}. Considering this, many works (including this work) conduct ITE estimation directly from observational data.
+
+% interference (vs simple graph)
+
+
+% ITE estimation and interference
+%Individual treatment effect (ITE) estimation has recently attracted significant attention in various research communities, including recommender system \cite{sun2015causal}, pandemics \cite{chernozhukov2021causal}, and economics \cite{varian2016causal}. ITE estimation aims to estimate the causal effect of a certain treatment (e.g., work social media usage) on an outcome (e.g., number of work collaborations) for each individual/instance (e.g., a user). 
+
+% Most of the existing works of ITE estimation \cite{CFR,CEVAE,netDeconf} are based on the Stable Unit Treatment Value (SUTVA) assumption \cite{fisher1936design,splawa1990application} that there is no interference (i.e., spillover effect) among instances, i.e., the potential outcomes for any instance are not influenced by the treatment assignment of other instances. 
+% However, the interference among instances are ubiquitous in real world, especially in graph data \cite{ahluwalia2001moderating,yilmaz2002geographic,zeng2019exploration}. 
+% % For example, in a social network, the post of an employee may influence their colleagues' collaboration frequencies.
+% For example, in a contact network, the travel history of an individual may influence the infection risk of others who contacted with them. 
+% Ignoring the interference may result in biased causal effect estimation results.
+% % Existing works on pairwise/networks
+% There have been many efforts \cite{aronow2017estimating,basse2018analyzing,imai2020causal,kohavi2013online,tchetgen2012causal,ugander2013graph,yuan2021causal,ma2021causal} to handle the existence of interference. However, most of them \cite{rakesh2018linked,ma2021causal} assume that interference only exists in a pairwise way in ordinary graphs, as shown in Fig.~\ref{fig:interference} (a). 
+% %Traditional methods would model the relations among individuals as pairs of individuals \cite{rakesh2018linked} or edges between a pair of nodes (individuals) in an ordinary graph \cite{ma2021causal}. %In the previous example, when estimating the causal effect of social media usage on the number of collaborations for each user with social connections among them, many methods model the social network as a simple graph, where each node represents a user, and an edge between two users exists when there is social connection between them. These methods consider the spillover effect as the casual influence from an individuals’ treatment to the outcomes of its direct neighbors in the network. 
+% Nevertheless, in myriads of real-world scenarios, interference could also go beyond pairwise. %For example, % in social media, employees often participate in different groups (e.g., a project team or a certain department).
+% %As the example shown in Fig.~\ref{fig:interference}, in different project groups of employees, the post of an employee on social media may elicit aggregated effects (e.g., group discussion) inside the group, and the aggregated effects can causally affect the collaboration frequencies of other employees inside the group. 
+% As the example shown in Fig.~\ref{fig:interference}, in a social gathering event, the behavior of an individual may elicit complicated effects (e.g., decrease people's vigilance) inside the whole event, and in consequence, causally affect the infection risk of other individuals participated in the event. 
+% Such interference can be referred as high-order interference. 
+% High-order interference may exist in many real-world scenarios, such as pandemic viral infections through mass gathering. 
+% To the best of our knowledge, however, little work has been done in this area.
+
+% Challenges: confounders, how to capture high-order interference
+%Considering the aforementioned scenarios, it would be more reasonable to model the spillover effect here as the global casual influence from an individual’s treatment to the outcomes of all the other individuals who are in a same group. In the previous example, each group can be naturally modeled as a hypergraph containing each participated user as a node. In this work, we address the problem of individual treatment effect estimation based on the existence of high-order interference in a given hypergraph. 
+
+% In this work, we address the problem of ITE estimation under high-order interference in hypergraphs. This task suffers from several fundamental challenges: 1) there may exist confounders --- confounders are variables which causally affect both the treatment and outcome. Without effective ways to control for the confounders, the causal effect estimation results would be biased; 2) the interference in high-order interactions is much more complicated than pairwise interactions, it is challenging to utilize the high-order relational knowledge to model the high-order interference.
+
+In this paper, we propose a novel framework--- \textbf{C}ausal \textbf{I}nference under \textbf{S}pillover Effects in \textbf{Hyper}graphs (\textit{\mymodel})---to model high-order interference. At a high-level, 
+% Our framework
+% To address the above challenges, we propose a novel framework --- \textit{\mymodel} to conduct causal effect estimation under spillover effect in hypergraph. Generally, 
+this framework controls for the confounders and models high-order interference based on representation learning, then estimates the outcomes based on the learned representations. More specifically: (i) \emph{Controlling for Confounders.} Our framework is based on the widely accepted unconfoundedness assumption \cite{rubin1980randomization}, i.e., the confounders are contained in the observed features. With this assumption, we leverage representation learning techniques to capture and control for confounders from the features of each individual. Note as shown in previous works \cite{CFR}, the discrepancy between confounder distributions in the treatment group 
+%(the group with individuals which are treated) 
+and the control group 
+%(the group with individuals which are controlled, i.e., not treated) 
+can lead to biases in causal effect estimations. Therefore, we also propose to use a representation balancing technique to mitigate the discrepancy between these two distributions.
+(ii) \emph{Modeling High-order Interference.} Modeling high-order relationships can be challenging due to the complexity of enumerating multi-way interactions among nodes within each hyperedge. Historically, one may need to simplify the original hypergraph and approximate it through a series of projected ordinary graphs \cite{yoon2020much}. This obstacle is fortunately unblocked by the recent advances of hypergraph neural networks \cite{bai2021hypergraph,yadati2018hypergcn}. We extend this line of techniques to model interference by learning interference representations for each node. To learn the interference representations, the learned confounder representations and the treatment assignment are propagated via hypergraph convolution and attention operations. 
+(iii) \emph{Outcome Prediction.} Based on the learned representations of confounders and interference, we predict the potential outcomes corresponding to different treatment assignments for each individual.
+% More specifically, this framework is based on the unconfoundedness assumption \cite{rubin1980randomization}, i.e., the confounders are contained in the observed features. To control for the confounders, \mymodel~ learns the representation from the features of each individual. To model the high-order interference among different individuals, we first model the interactions among individuals with a hypergraph. In this hypergraph, each relation among individuals is modeled as a hyperedge, which can encode more high-order relational information to reflect the interaction among individuals than pairwise edges in ordinary graphs. We then model the high-order interference by utilizing the relational information in the hypergraph. Specifically, we use an interference modelling component in the framework, and encode the learned confouner representations, treatment assignment, and hypergraph structure into a latent representation space to model the high-order interference. Based on the above learned representations of confounders and interference, we predict the potential outcomes corresponding to different treatment assignment for each individual.  The ITE estimation is conducted for each individual based on the potential outcome predictions. Besides, previous works \cite{CFR} have shown that the discrepancy between distributions of confounders in the treatment group (the group with individuals which are treated) and the control group (the group with individuals which are controlled, i.e., not treated) can lead to biases in causal effect estimation, therefore, we adopt a representation balancing technique to minimize the discrepancy between these two distributions and thus mitigate the estimation biases. 
+Overall, the main contributions of this work can be summarized as follows:
+
+\begin{itemize}
+    \item %\textbf{Problem formulation.} 
+    We formalize the problem of ITE estimation under high-order interference on hypergraphs. To the best of our knowledge, it is the first work for this problem.%to formally model high-order interference on observational data.
+    \item %\textbf{Framework design.} 
+    We propose a novel framework \mymodel~ for the studied problem. \mymodel~ models confounders and high-order interference via representation learning and hypergraph neural networks.
+    %the problem of ITE esitimation under high-order interference in hypergraph. This framework captures the confounders and model the interference through representation learning. 
+    \item %\textbf{Experimental evaluation.} 
+    We validate the effectiveness of the proposed framework through extensive experiments and provide in-depth analysis on how it acts on different nodes and hyperedges.
+    %We conduct extensive experiments to evaluate the proposed framework. The experimental results show that \mymodel~ outperforms the state-of-the-art baselines under different scenarios of high-order interference.
+\end{itemize}
+
+
+
+%in the social gathering events under COVID-19 epidemic, consider the vaccination of each individual as the treatment. The outcome here can be regarded as if those health individuals will be infected after such events.
+
+
+% example: go beyond pairwise
+
+% unconvincing to model as a simple graph
+%Traditional approach tends to model a physical contact network between the participants, and consider the spillover effect as the casual influence from an individuals’ treatment to the outcomes of its direct neighbors in the network. Nevertheless, in such social gathering event, if one or some participants carry COVID-19 virus, it would be unconvincing to model the pairwise physical contact as the potential way of virus spreading for at least two reasons. First, in such social events, people tend to gather together in groups rather than in a pairwise manner; second, even if people join pairwise gathering, virus can spread in different ways, covering a wider area and even affecting the health of all participants. 
+% so we model as a hypergraph
+%Considering both of the mentioned perspectives, it would be more reasonable to model the spillover effect here as the global casual influence from an individual’s treatment to the outcomes of all the other individuals who are in a same gathering event. At the same time, the confounder representations of each individual also bear similar global influence from different gathering events. Such gathering events between participants can be naturally modeled as a hypergraph. In such a hypergraph, nodes still represent individuals, while hyperedges can be regarded as different gathering events, where different participants could be involved. 
+% corresponding approach
+
+
+%\noindent{\textbf{Challenges.}} 1) Confounder learning from in high-order relational knowledge; 2) Interference in high-order interaction is more complicated than pairwise interaction; %3) How to model the 
+
+% \section{Problem Definition}
+% We provide the formal problem definition in this section.
+% \begin{definition}
+% Suppose a set of individuals $\mathcal{V}=\{v_i\}_{i=1}^n$ are connected via hyperedges $\mathcal{E}=\{\mathbf{e}_k\}_{k=1}^m$, together these form a \textbf{hypergraph} $\mathcal{H}=\{\mathcal{V},\mathcal{E}\}$ with $n$ nodes and $m$ hyperedges, where each hyperedge can associate any number of nodes. 
+% \end{definition}
+% The observational data is denoted as $\{\mathbf{X}, \mathcal{H}, \mathbf{T}, \mathbf{Y}\}$. Let $\mathbf{X}$ be the instance attributes (features), such that $\mathbf{X} =\{\mathbf{x}_i\}_{i=1}^n$, where $\mathbf{x}_i $ represents the features of the $i$-th instance (e.g., features of each employee), $n$ denotes the number of instances. $\mathbf{T}=\{t_i\}_{i=1}^n$ denotes the set of treatment assignment for all the nodes, here $t_i\in\{0,1\}, \forall i\in[n]$. $\mathbf{Y}=\{y_i\}_{i=1}^n$ denotes the set of observed outcomes of all the nodes. 
+% %We have the hypergraph $\mathcal{H}=\{\mathcal{V},\mathcal{E}\}$, where $\mathcal{V}$ is the set of nodes, and each node here corresponds to an instance, $|\mathcal{V}|=n$.  $\mathcal{E}=\{e_i| i=1,...,m\}$ is the set of all hyperedges. Each $e_i$ is a hyperedge that connects multiple nodes, and $m$ is the total number of hyperedges. 
+% % We denote the \textit{potential outcome} of instance $i$ under treatment $t_i$ and exposure variable $\mathbf{s}_i$ by $y_i(t_i, \mathbf{s}_i)$. 
+% We denote the \textit{potential outcomes} (i.e., the outcomes which would be realized under a certain treatment) \cite{rubin1980randomization} of instance $i$ under treatment $t_i=1$ and $t_i=0$  by $y_i^1$ and $y_i^0$ in this setting, respectively. 
+% Notice that for each node $i$, only one of the two potential outcomes (the one corresponds to the treatment assignment $t_i$) can be observed in the observational data. 
+% Specifically, $y_i^{t_i}=\Phi_Y(t_i, \mathbf{x}_i, \mathbf{T}_{-i}, \mathbf{X}_{-i}, \mathbf{H})$, where the subscript ${-i}$ denotes all of other nodes except $i$. $\mathbf{H}\in\mathbb{R}^{n\times m}$ is an incidence matrix which describes the hypergraph structure of $\mathcal{H}$. $\mathbf{H}_{i,e}=1$ if node $i$ is in hyperedge $e$, otherwise $\mathbf{H}_{i,e}=0$. 
+% $\Phi_Y(\cdot)$ is an unknown transformation which maps each node's treatment assignment, features and the other nodes' information on the hypergraph to the ground-truth potential outcomes of node $i$.  
+% Although $\Phi_Y(\cdot)$ here takes all the nodes on the hypergraph as input, the outcome of each node $i$ is usually be influenced only by its neighboring nodes (nodes which share same hypergraphs with $i$). 
+% For example, in Fig.~\ref{fig:interference}(b), the neighboring nodes of node $u_1$ include $\{u_2,u_3\}$ and $\{u_4,u_5\}$.
+% %Here $\mathbf{s}_i$ represents a summary (e.g., mean) of neighboring treatments $\{t_j| j \in \mathcal{N}_e, \forall~e \in \mathcal{E}_i\}$), 
+% In this paper, $\mathcal{E}_i$ denotes the set of hyperedges which contains node $i$, and $\mathcal{N}_e$ denotes the nodes in hypergraph $e$. 
+% %For example, in Fig.~\ref{fig:interference}(b), the exposure variable for the node $u_1$ summarizes the treatments of two sets of neighboring nodes $\{u_2,u_3\}$ and $\{u_4,u_5\}$. 
+
+% Given above preliminaries, %additional observed features of each individual $\mathbf{X}=\{\mathbf{x}_i\}$, 
+% we are ready to provide the formal definition of the individual treatment effect.
+
+% \begin{definition}
+% For each node $i$, the \textbf{individual treatment effect} (ITE) %under exposure $\mathbf{s}_i$ 
+% is defined by the difference between potential outcomes corresponding to  $t_i=1$ and $t_i=0$:
+% \begin{equation}
+%     \tau_i=y_i^1-y_i^0 = \mathbb{E}[\Phi_Y(1,\mathbf{x}_i,\mathbf{T}_{-i},\mathbf{X}_{-i},\mathbf{H}) - \Phi_Y(0,\mathbf{x}_i,\mathbf{T}_{-i},\mathbf{X}_{-i},\mathbf{H}].
+%     \label{eq:ite}
+% \end{equation}
+% % \begin{equation}
+% %     \tau_i=\tau(\mathbf{x}_i, \mathbf{s}_i) = \mathbb{E}[y_i(t_i=1, \mathbf{s}_i) - y_i(t_i=0, \mathbf{s}_i)| \mathbf{x}_i].
+% %     \label{eq:ite}
+% % \end{equation}
+% \end{definition}
+
+% Meanwhile, we introduce the notion of spillover effect to assess the interference on hypergraphs.
+% \begin{definition}
+% The \textbf{spillover effect} of node $i$ under its treatment  $t_i$ and other nodes' treatment assignment $\mathbf{T}_{-i}$ is defined as:
+% % \begin{equation}
+% %     \delta(\mathbf{x}_i, t_i, \mathbf{s}_i=\mathbf{s}) = \mathbb{E}[y_i(t_i, \mathbf{s}_i=\mathbf{s}) - y_i(t_i, \mathbf{s}_i=0)| \mathbf{x}_i].
+% %     \label{eq:spillover}
+% % \end{equation}
+% \begin{equation}
+%     \delta_i = \mathbb{E}[\Phi_Y(t_i,\mathbf{x}_i,\mathbf{T}_{-i},\mathbf{X}_{-i},\mathbf{H}) - \Phi_Y(t_i,\mathbf{x}_i,\mathbf{0},\mathbf{X}_{-i},\mathbf{H})].
+%     \label{eq:spillover}
+% \end{equation}
+% \end{definition}
+
+% In this paper, given the observed data $\{\mathbf{X}, \mathcal{H}, \mathbf{T}, \mathbf{Y}\}$, we aim to estimate the ITE defined in Eq.~\ref{eq:ite} for each node in $\mathcal{H}$ with the existence of high-order interference defined in Eq.~\ref{eq:spillover}.

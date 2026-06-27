@@ -1,0 +1,106 @@
+\begin{figure}[ht]
+    \centering
+     \begin{subfigure}[b]{0.22\textwidth}
+         \includegraphics[width=\textwidth]{figures/synthetic/synth_outcome.png}
+         \caption{Observed Outcome}
+         \label{fig:synthetic_data_outcome}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/synth_treat.png}
+         \caption{Observed Treatment}
+         \label{fig:synthetic_data_treatment}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/synth_capo.png}
+         \caption{CAPO functions}
+         \label{fig:synthetic_data_capo}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.22\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/synth_apo.png}
+         \caption{APO function}
+         \label{fig:synthetic_data_apo}
+    \end{subfigure}
+    
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/causal/capo-lamb-1.00-causal.png}
+         \caption{$\Lambda$=1.0}
+         \label{fig:capo_causal_1}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/causal/capo-lamb-1.11-causal.png}
+         \caption{$\Lambda$=1.1}
+         \label{fig:capo_causal_2}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/causal/capo-lamb-1.22-causal.png}
+         \caption{$\Lambda$=1.2}
+         \label{fig:capo_causal_3}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.3\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/causal/capo-lamb-1.65-causal.png}
+         \caption{$\Lambda$=1.6}
+         \label{fig:capo_causal_4}
+    \end{subfigure}
+    \caption{
+        \Cref{fig:synthetic_data_outcome,fig:synthetic_data_treatment,fig:synthetic_data_capo,fig:synthetic_data_apo}: 
+        Synthetic data and ground truth functions.
+        \Cref{fig:capo_causal_1,fig:capo_causal_2,fig:capo_causal_3,fig:capo_causal_4}
+        Causal uncertainty under hypothesized $\Lambda$ values. 
+        Solid lines are ground truth; thick solid lines where the true $\lambda^*$ is within the range of hypothesized $\Lambda$, thin solid lines otherwise. 
+        The dotted lines are the estimated CAPO. Shaded regions are estimated CMSM intervals.
+    }
+    \label{fig:synthetic_data}   
+    \vspace{-2em}
+\end{figure}
+\subsection{Synthetic}
+\Cref{fig:synthetic_data} presents the synthetic dataset (additional details about the SCM are given in \Cref{app:synthetic}).
+\Cref{fig:synthetic_data_outcome} plots the observed outcomes, $\y$, against the observed confounding covariate, $\mathrm{x}$.
+Each datapoint is colored by the magnitude of the observed treatment, $\tf$.
+The binary unobserved confounder, $\hu$, induces a bi-modal distribution in the outcome variable, $\y$, at each measured value, $\mathrm{x}$.
+\Cref{fig:synthetic_data_treatment} plots the assigned treatment, $\tf$, against the observed confounding covariate, $\mathrm{x}$.
+We can see that the coverage of observed treatments, $\tf$, varies for each value of $\mathrm{x}$.
+For example, there is uniform coverage at $\mathrm{X}=1$, but low coverage for high treatment values at $\mathrm{X}=0.1$, and low coverage for low treatment values at $\mathrm{X}=2.0$.
+\Cref{fig:synthetic_data_capo} plots the true CAPO function over the domain of observed confounding variable, $\mathrm{X}$, for several values of treatment ($\mathrm{T}=0.0$, $\mathrm{T}=0.5$, and $\mathrm{T}=1.0$).
+For lower magnitude treatments, $\tf$, the CAPO function becomes more linear, and for higher values, we see more effect heterogeneity and attenuation of the effect size as seen from the slope of the CAPO curve for $\mathrm{T}=0.5$ and $\mathrm{T}=1.0$.
+\Cref{fig:synthetic_data_apo} plots the the APO function over the domain of the treatment variable $\mathrm{T}$.
+
+\textbf{Causal Uncertainty}
+We want to show that in the limit of large samples (we set $n$ to $100k$), the bounds on the CAPO and APO functions under the CMSM include the ground truth when the CMSM is correctly specified.
+That is, when $1 / \Lambda \leq \lambda^*(\tf, \mathrm{x}, \hu) \leq \Lambda$, for user specified parameter $\Lambda$, the estimated intervals should cover the true CAPO or APO.
+This is somewhat challenging to demonstrate as the true density ratio $\lambda^*(\tf, \mathrm{x}, \hu)$ (\cref{eq:true_lambda}), varies with $\tf$, $\mathrm{x}$, and $\hu$.
+\Cref{fig:capo_causal_1,fig:capo_causal_2,fig:capo_causal_3,fig:capo_causal_4} work towards communicating this.
+In \Cref{fig:capo_causal_1}, we see that each predicted CAPO function (dashed lines) is biased away from the true CAPO functions (solid lines). We use thick solid lines to indicate cases where $1 / \Lambda \leq \lambda^*(\tf, \mathrm{x}, \hu) \leq \Lambda$, and thin solid lines otherwise. Therefore thick solid lines indicate areas where we expect the causal intervals to cover the true functions.
+Under the erroneous assumption of ignorability ($\Lambda=1$), the CMSM bounds have no width.
+In \Cref{fig:capo_causal_2}, we see that as we relax our ignorability assumption ($\Lambda=1.1$) the intervals (shaded regions) start to grow.
+Note the thicker orange line: this indicates that for observed data described by $\mathrm{X} > 0.5$ and $\Tf=0.5$, the actual density ratio is in the bounds of the CMSM with parameter $\Lambda=0.5$.
+We see that our predicted bounds cover the actual CAPO function for these values.
+We see our bounds grow again in \Cref{fig:capo_causal_3} when we increase $\Lambda$ to 1.2.
+We see that more data points have $\lambda^*$ values that lie in the CMSM range and that our bounds cover the actual CAPO function for these values. 
+In \Cref{fig:capo_causal_4} we again increase the parameter of the CMSM. We see that the bounds grow again, and cover the true CAPO functions for all of the data that satisfy $1 / \Lambda \leq \lambda^*(\tf, \mathrm{x}, \hu) \leq \Lambda$.
+
+\begin{wrapfigure}{r}{0.61\textwidth}
+% \begin{figure}[t]
+    \vspace{-1em}
+    \centering
+    \begin{subfigure}[b]{.24\textwidth}
+        \includegraphics[width=\textwidth]{figures/synthetic/statistical/apo-lamb-1.65.png}
+        \caption{APO Function}
+        \label{fig:statcaus_apo}   
+    \end{subfigure}
+    \begin{subfigure}[b]{0.36\textwidth}  
+        \includegraphics[width=\textwidth]{figures/synthetic/statistical/capo-lamb-1.65.png}
+        \caption{CAPO Functions}
+        \label{fig:statcaus_capo} 
+    \end{subfigure}
+    \caption{Statistical and causal uncertainty, $\alpha$ is statistical significance level for the bootstrap. see  \Cref{fig:synthetic_data} for other details.}
+    \label{fig:statcaus}
+    \vspace{-1em}
+\end{wrapfigure}
+% \end{figure}
+\textbf{Statistical Uncertainty}
+Now we relax the infinite data assumption and set $n=1000$.
+This decrease in data will increase the estimator error for the CAPO and APO functions.
+So the estimated functions will not only be biased due to hidden confounding, but they may also be erroneous due to finite sample variance.
+We show this in Figure \ref{fig:statcaus_capo} where the blue dashed line deviates from the actual blue solid line as $\mathbf{x}$ increases beyond $1.0$.
+However, \Cref{fig:statcaus_capo} shows that under the correct CMSM, the uncertainty aware confidence intervals, \cref{sec:uncertainty}, cover the actual CAPO functions for the range of treatments considered.
+\Cref{fig:statcaus_apo} demonstrates that this holds for the APO function as well.

@@ -1,0 +1,63 @@
+\subsection{Low-rank and SMITE}
+
+\textit{Comment from Alejandro Murua: We do not necessarily study low rank approximations of the matrix of weights. For this you will need indeed to get bounds on the distance between the estimated function and the approximation function. In Statistics, usually we just measure the statistical difference between two models (and not the distance between the two models). So instead of thinking of a reduced approximation of the weight matrix, we might just think of a model with a lower-rank matrix of weights. This in general will lead to a non-parametric estimator with lower variance and hopefully, only slightly increased bias. In this setup, methods to measure the statistical difference between the full model and the reduced model should be applied for each dataset. This is in contrast to the general approximation theory, where bounds on the approximation error over all possible datasets need to be found.}
+
+
+We are interested in determining how complex the network ought to be to theoretically guarantee that the network would approximate an unknown target function $f$ up to a given accuracy $\epsilon > 0$. To measure the accuracy, we need a norm $\norm{\cdot}$ on some normed linear space. We work with $L_2$ norm.
+
+We focus on a feed-forward neural network with one fully-connected hidden layer. Here the input layer (with $n$ neurons) and the hidden layer (with $m$ neurons) are assumed to be fully connected with a weight matrix $\mathbf W \in \real^{n \times m}$ with rank at most $p \leq \mathrm{min}(n,m)$. The domain for the input vector $\x$ is the $n$-dimensional hypercube $I^n = [0, 1]^n$, and the output layer only contains one neuron. The neural network can be expressed as 
+
+$$\hat y = \hat f(\x\mid \mathbf  W) = \sum_{j=1}^m \alpha_j h(\mathbf w_j^\top\x + \beta_j) = \boldsymbol{\alpha} h(\x \mathbf{W} + \boldsymbol{\beta}).$$ 
+
+Here $h(\cdot)$ is the activation function, $\mathbf w_j \in \real^n$ denotes the $j$-th column of the weight matrix $\mathbf W$, and $\alpha_j, \beta_j \in \real$ for $j = 1, \ldots, m$. Suppose $p$ is the rank of the matrix $\mathbf W$. We can denote it $\mathbf W_p$ and define the following trained model
+
+$$\hat y_p = \boldsymbol{\alpha} h(\x \mathbf{W_p} + \boldsymbol{\beta}).$$ 
+
+
+Let $r < p$ be an integer and define 
+
+$$\hat y_r = \boldsymbol{\alpha} h(\x \mathbf{\hat W_r} + \boldsymbol{\beta}),$$
+
+be the prediction from the model where $\mathbf{W_p}$ has been approximated with $\mathbf{\hat W_r}$ of rank $r$, that is, $\mathbf{\hat W_r} = \mathbf{\hat U \hat \Sigma_r \hat V^{\top}}$ where $\mathbf{\hat{U}, \hat{\Sigma_r}, \hat{V}\t} \in \real^{n\times r}, \real^{r\times r}, \real^{r \times m}$. This approximates the original weights $\mathbf W_p$ into reconstructed approximated weights $\mathbf{\hat{W_r}}$. 
+
+The truncation process always keeps the first $r$ rows of $\mathbf U$ and columns of $\mathbf V\t$. The number of non-zero parameters in the truncated SVD is $r( n + m + 1)$. The compression ratio is the ratio between parameters after and before the decomposition which is calculated as $r( n + m + 1)/( nm )$. In addition, the weight matrix does not need to be reconstructed during inference where the input $\x$ can be directly multiplied with $\mathbf{\hat{U}, \hat{\Sigma_r}, \hat{V}\t}$ matrices, which takes lesser computation than direct multiplication of $\hat{\mathbf W_r}$ and $\x$. Therefore, we have the following development
+
+\begin{align*}
+\norm{ \hat y_p - \hat y_r }_2 &= \norm{\boldsymbol{\alpha} h(\x \mathbf{W_p} + \boldsymbol{\beta}) - \boldsymbol{\alpha} h(\x \mathbf{\hat W_r} + \boldsymbol{\beta})}_2  \\
+&\leq \norm{\boldsymbol{\alpha}}_2 \norm{h(\x \mathbf{W_p} + \boldsymbol{\beta}) - h(\x \mathbf{\hat W_r} + \boldsymbol{\beta})}_2\\
+&\leq \norm{\boldsymbol{\alpha}}_2 \norm{\x \mathbf{W_p} - \x \mathbf{\hat W_r}}_2 ~ \text{because $h(\cdot)$ is $1$-Lipschitz continuous}\\
+&\leq \norm{\boldsymbol{\alpha}}_2 \norm{\x}_2 \norm{\mathbf{W_p} - \mathbf{\hat W_r}}_2\\
+&\leq \norm{\boldsymbol{\alpha}}_2 \norm{\x}_2 \sigma_{r+1} ~ \text{by Eckart-Young Theorem \citep{eckart1936approximation}}\\
+&\leq \Big( \sum_{j=1}^m \alpha_j ^ 2 \Big)^{1/2}  \sqrt{n} \sigma_{r+1}
+\end{align*}
+
+where $\sigma_{r+1}$ is the $(r+1)$th singular value of $\mathbf{W_p}$.
+
+
+
+
+
+%\begin{table}[!ht]
+%    \centering
+%    \caption{Comparison of models complexity (TO, IE). The metric used is the adjusted Qini coefficient.}
+%    \label{tab:low_rank_results}
+%    \begin{tabular}{l|l|ccccc}
+%        Scenarios &$m$ & 1 & 2 & 3 & 4 & 5\\
+%        \hline
+%        {\it TO$_{\hat\alpha,(p+1)\times m + m\times(2p+1)}$} & $1$ &  &  & & & $\bf 3.21$\\
+%        & $2$ &  &  & & & $3.07$\\
+%        & $8$ &  &  & & & $3.05$\\
+%        & $16$ &  &  & & & $3.00$\\
+%        & $32$ &  &  & & & $3.03$\\
+%        & $64$ &  &  & & & $2.99$\\
+%        \hline
+%        {\it IE$_{(p+1)\times m  + m\times(2p+1)}$} & $1$ &  &  & & &  $3.14$\\
+%        & $2$ &  &  & & &  $\bf 3.15$\\
+%        & $8$ &  &  & & &  $\bf 3.15$\\
+%        & $16$ &  &  & & &  $3.04$\\
+%        & $32$ &  &  & & &  $3.03$\\
+%        & $64$ &  &  & & &  $3.09$\\
+%               \hline
+%    \end{tabular}
+%\end{table}
+

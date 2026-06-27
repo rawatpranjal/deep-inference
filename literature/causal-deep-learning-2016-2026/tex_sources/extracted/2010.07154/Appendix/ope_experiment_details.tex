@@ -1,0 +1,63 @@
+\subsubsection{BSuite tasks}
+\label{sec:app_bsuite_tasks}
+
+We provide a brief description below of the three behavior suite (BSuite) reinforcement learning tasks in \citet{osband2019behaviour}:
+\begin{enumerate}
+    \item Catch: A 10x5 Tetris-grid with single block falling per column. The agent can move left/right in the bottom row to ‘catch’ the block. Illustrated in Figure~\ref{fig:bsuite_catch}.
+    \item Mountain Car: The agent drives an underpowered car up a hill~\citep{moore1990efficient}. Illustrated in Figure~\ref{fig:bsuite_mountain_car}.
+    \item Cartpole: The agent can move a cart left/right on a plane to keep a balanced pole upright~\citep{barto1983neuronlike}. Illustrated in Figure~\ref{fig:bsuite_cartpole}.
+\end{enumerate}
+
+\begin{figure}[tbph!]
+     \centering
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{Appendix/Catch.png}
+         \caption{Catch}
+         \label{fig:bsuite_catch}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{Appendix/Mountain_Car.png}
+         \caption{Mountain Car}
+         \label{fig:bsuite_mountain_car}
+     \end{subfigure}
+     \hfill
+     \begin{subfigure}[b]{0.3\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{Appendix/Cartpole.png}
+         \caption{Cartpole}
+         \label{fig:bsuite_cartpole}
+     \end{subfigure}
+        \caption{Three BSuite tasks. Figures are from \citet{osband2019behaviour}.}
+        \label{fig:bsuite}
+\end{figure}
+
+All tasks have a real-valued state space $\mathcal{S}\subseteq \mathcal{R}^{D}$ and a discrete action space $\mathcal{A}=\{0, 1, 2, \dots, A-1\}$. The state dimension and number of actions are provided in Table~\ref{tab:bsuite_dims}.
+
+\begin{table}
+    \centering
+    \begin{tabular}{lccc}
+         &  \textbf{Catch} &\textbf{Mountain Car} & \textbf{Cartpole} \\ \hline
+        $D$ & 50 & 3 & 6\\
+        $A$ & 3 & 3 & 3
+    \end{tabular}
+    \caption{Dimensions of BSuite tasks}
+    \label{tab:bsuite_dims}
+\end{table}
+
+\subsubsection{Fitted Q Evaluation}
+\label{sec:app_fqe}
+Fitted Q Evaluation (FQE)~\citep{le2019batch} is a simple variant of the Fitted Q Iteration (FQI) algorithm~\citep{ernst2005tree}. Instead of learning the Q function of an optimal policy as FQI, FQE estimates the Q function of a fixed policy $\pi$. It is an iterative algorithm with randomly initialized the Q function parameters $\theta_0$. At iteration $k\geq 1$ with the current estimate of Q function $Q^{\pi}(s, a|\theta_{k-1})$, it updates parameters $\theta_k$ by solving the following regression problem using a least squares approach:
+
+\begin{align}\label{eq:fqe}
+    r + \gamma Q^{\pi}(s',a'|\theta_{k-1}) =& Q^{\pi}(s,a|\theta_{k}) \\
+       &+ \gamma \left(Q^{\pi}(s',a'|\theta_{k-1})- \expect[s'\sim P(\cdot|s,a), a'\sim \pi(\cdot | s')]{Q^{\pi}(s',a'|\theta_{k-1})}\right) \nonumber \\
+       &+r-\expect[r\sim R(\cdot | s, a,s')]{r} \nonumber,
+\end{align}
+where the regression function to estimate is $Q^{\pi}(s,a|\theta_{k})$, the observed outcome is the term on the LHS of \eqref{eq:fqe} and the residual is the sum of terms in the second and third lines of  \eqref{eq:fqe}. Comparing the equation above with (\ref{eq:SCMforRL}), FQE reformulates the regression problem and moves the confounded part in the treatment of (\ref{eq:SCMforRL}), that is $\gamma Q^\pi(s', a')$, to the outcome. The regression problem at each iteration is therefore not confounded any more. If FQE converges, it finds a solution of the following equation
+\begin{align}
+    Q^{\pi}(s,a|\theta) = P(\expect[r|s,a]{r} + \gamma \expect[s', a'|s,a]{Q^{\pi}(s',a'|\theta)})\,,
+\end{align}
+where $P(\cdot)$ is the $L_2$ projection operator that maps a function of $(s, a)$ onto the (parameterized) $Q$ function space.

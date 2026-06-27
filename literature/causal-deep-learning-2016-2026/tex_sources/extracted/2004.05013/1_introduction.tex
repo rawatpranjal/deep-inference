@@ -1,0 +1,37 @@
+Estimating \emph{Individual Treatment Effect} (ITE) from observational data is central in many application domains. For instance in healthcare, where the treatment is a proper medical treatment and the desired effect is the recovery of the patient. Being able to target accurately and demonstrably the population responding to a treatment has strong beneficial consequences in terms of public health by boosting personalized medicine. That would indeed allow a precise distribution of drugs to the profile of patients they can address, whereas at present, such drug may be prohibited because it does not demonstrate a positive effect at the whole population level through the lens of current standard testings.
+In the vein of the Rubin's causality framework~\cite{Rubin_1974,Imbens1997}, we cast this counterfactual learning problem as an inference problem with incomplete data. We consider $X$ the $\mathcal{X}$-valued random variable ($\mathcal{X}\subseteq {\mathbb{R}}^d$) representing the features of an individual and $T$ the treatment assignment binary indicator stating whether the treatment was assigned ($T=1$) or not ($T=0$).
+We denote $Y_i(1)$ the binary outcome that would be observed if we assigned the treatment to individual $i$ and $Y_i(0)$ the one that would be observed if we did not (e.g. $Y_i(1) = 1$ meaning that an effect was observed after treating individual $i$).
+ITE of individual $X_i=x$ is defined as the conditional mean difference in potential outcomes,
+$\tau(x)=\mathbb{E}[Y_i(1)-Y_i(0)\given X_i=x]$.
+The fundamental problem is that for any individual $i$, we only observe the \emph{factual outcome} $Y_i(t)$ corresponding to the outcome of the assignment, whereas the \emph{counterfactual} $Y_i(1-t)$ remains unknown~\cite{Imbens1997}.
+As summarized in Table~\ref{tab:Behaviors-probabilities}, from each couple $Y_i=\{Y_i(0),Y_i(1)\}$, called the \emph{potential outcome}, we can define four mutually exclusive categories of response to the treatment~\cite{Wasserman2004}:
+%listed in Table \ref{tab:Behaviors-probabilities}:
+responders who display a positive outcome only when treated, anti-responders who display a positive outcome only when they are \emph{not} treated, doomed and survivors, who respectively never and always display a positive outcome. 
+
+ \begin{table*}[!ht]
+  \centering
+\resizebox {12cm} {!} {
+\begin{tabular}{ c | c  |c  |c }
+  Responder (R) & Doomed (D)  & Survivor (S) & Anti-responder (A) \\
+ \hline 
+ $\{Y(1)=1,Y(0)=0\}$ & $\{Y(1)=0,Y(0)=0\}$ & $\{Y(1)=1,Y(0)=1\}$ & $\{Y(1)=0,Y(0)=1\}$ \\
+%Y(0) & 0 & 0 & 1 & 1\\
+\end{tabular}
+    }
+\caption{Potential outcome of each causal population 
+%(and their numbers as insection~\ref{sec:paramModel})
+}
+ \label{tab:Behaviors-probabilities}
+\end{table*}
+
+Based on this typology of behaviors, we write the counterfactual learning problem as a parametric estimation of latent variables constrained by the causal groups properties. In this holistic approach, not only do we efficiently evaluate the ITE, but we are able to identify under mild assumptions the causality classes.
+%, that is a novelty in the literature.
+
+
+
+
+
+
+
+
+

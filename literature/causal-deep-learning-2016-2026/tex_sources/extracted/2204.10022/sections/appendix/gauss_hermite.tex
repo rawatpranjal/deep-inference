@@ -1,0 +1,42 @@
+\section{Approximating integrals using Gauss-Hermite quadrature}
+\label{app:gauss-hermite}
+Gauss-Hermite quadrature is a numerical method to approximate indefinite integrals of the following form: $\int_{-\infty}^{\infty}\exp{(-\y^2)f(\y)d\y}$.
+In this case,
+\begin{equation*}
+    \int_{-\infty}^{\infty}\exp{(-\y^2)f(\y)d\y} \approx \sum_{i=1}^{m}g_i f(\y),
+\end{equation*}
+where $m$ is the number of samples drawn. The $\y_i$ are the roots of the physicists Hermite polynomial $H^*_{m}(\y)(i=1, 2, \dots, m)$ and the weights are given by
+\begin{equation*}
+    g_i = \frac{2^{m-1}m!\sqrt{\pi}}{m^2[H^*_{m-1}(\y_k)]^2}
+\end{equation*}
+This method can be used to calculate the expectation of a function, $h(y)$, with respect to a Gaussian distributed outcome $p(\y) = \mathcal{N}(\y \mid \mu, \sigma^2)$ through a change of variables, such that,
+\begin{equation}
+    \label{eq:gauss-hermite}
+    \begin{split}
+        \E_{p(\y)}[h(\y)] &= \int_{-\infty}^{\infty} \frac{1}{\sqrt{\pi}}\exp{\left( -\y^2 \right)} h\left( \sqrt{2}\sigma \y + \mu \right) d\y   \\
+        &\approx \frac{1}{\sqrt{\pi}} \sum_{i=1}^{m}g_i h\left( \sqrt{2}\sigma \y + \mu \right).
+    \end{split}
+\end{equation}
+\begin{definition}
+\label{def:gh-integral-estimator}
+{\normalfont Gauss-Hermite quadrature integral estimator when $p(\y | \tf, \x, \params)$ is a parametric Gaussian density estimator, $\mathcal{N}(\y \mid \mut(\x, \tf; \params), \sigmat^{2}(\x, \tf; \params))$}:
+    \begin{equation*}
+        I_{G}(h(\y)) \coloneqq \frac{1}{\sqrt{\pi}} \sum_{i=1}^{m} g_i h\left( \sqrt{2}\sigmat^{2}(\x, \tf; \params) \y + \mut(\x, \tf; \params) \right)
+    \end{equation*}
+\end{definition}
+Alternatively, when the density of the outcome is modelled using a $n_{\y}$ component Gaussian mixture, $p(\y) = \sum_{j=1}^{n_{\y}} \pi_{j} \mathcal{N}(\y \mid \mu_j, \sigma_{j}^2)$
+\begin{equation*}
+    \label{eq:gauss-hermite-mix}
+    \begin{split}
+        \E_{p(\y)}[h(\y)]
+        &= \frac{1}{\sqrt{\pi}} \sum_{j=1}^{n_{\y}} \pi_{j} \int_{-\infty}^{\infty} \exp{\left( -\y^2 \right)} h\left( \sqrt{2}\sigma_j \y + \mu_{j} \right) d\y, \\
+        &\approx \frac{1}{\sqrt{\pi}} \sum_{j=1}^{n_{\y}} \pi_{j} \sum_{i=1}^{m}g_i h\left( \sqrt{2}\sigma_j \y + \mu_j \right).
+    \end{split}
+\end{equation*}
+\begin{definition}
+\label{def:gh-mix-integral-estimator}
+{\normalfont Gauss-Hermite quadrature integral estimator for expectations when $p(\y | \tf, \x, \params)$ is a parametric Gaussian Mixture Density, $\sum_{j=1}^{n_{\y}} \pitilde_{j}(\x, \tf; \params) \mathcal{N}\left(\y \mid \mut_{j}(\x, \tf; \params), \sigmat^{2}_j(\x, \tf; \params)\right)$:}
+    \begin{equation*}
+        I_{GM}(h(\y)) \coloneqq \frac{1}{\sqrt{\pi}} \sum_{j=1}^{n_{\tf}} \pitilde_{j}(\x, \tf; \params) \sum_{i=1}^{m} g_i h\left( \sqrt{2}\sigmat_j(\x, \tf; \params) \y + \mut_{j}(\x, \tf; \params) \right)
+    \end{equation*}
+\end{definition}

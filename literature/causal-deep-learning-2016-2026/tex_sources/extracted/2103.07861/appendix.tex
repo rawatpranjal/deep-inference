@@ -1,0 +1,1165 @@
+\subsection{On the consistency of $\bar{\mu}$ and $\bar{\pi}$} \label{apxsec: consistency}
+We show that adding targeted regularization does not affect the limit of $\hat{\mu}$ and $\hat{\pi}$ in large sample asymptotics. That is, the limit of $\hat{\mu}$ and $\hat{\pi}$ using loss (\ref{eq:targeted_reg}) will be the same as using loss (\ref{eq:loss_without_tr}).
+
+Denote
+\begin{align*}
+\P\ell(\mu^{\text{NN}},\pi^{\text{NN}}) & =\P\left[(y-\mu^{\text{NN}})^{2}+\alpha\log\pi^{\text{NN}}(t\mid\x)\right],\\
+\P_{n}\ell(\mu^{\text{NN}},\pi^{\text{NN}}) & =\frac{1}{n}\sum_{i=1}^{n}\left[(y_{i}-\mu^{\text{NN}}(t_{i},\x_{i}))^{2}+\alpha\pi^{\text{NN}}(t_{i}\mid\x_{i})\right].
+\end{align*}
+
+\begin{lemma}\label{lemma_appendix:ell}
+Suppose that $(\mu',\pi')$ is the minimizer of loss $\P\ell(\mu^{\text{NN}},\pi^{\text{NN}})$
+and $(\hat{\mu},\hat{\pi},\hat{\epsilon}_{n})$ is the minimizer of
+$\mathcal{L}_{\text{FTR}}$, then we have
+$$\P\ell(\hat{\mu},\hat{\pi})-\P\ell(\mu',\pi') = o(1)+\O_{p}(n^{-1/2}).$$
+\end{lemma}
+\begin{proof}
+We have
+\begin{align*}
+\P\ell(\hat{\mu},\hat{\pi})-\P\ell(\mu',\pi') & \le\P_{n}\ell(\hat{\mu},\hat{\pi})-\P_n\ell(\mu',\pi')+\left|\left(\P-\P_{n}\right)\ell(\hat{\mu},\hat{\pi})\right|+\left|\left(\P-\P_{n}\right)\ell(\mu',\pi')\right|\\
+ & \overset{(a)}{\le}\P_{n}\ell(\hat{\mu},\hat{\pi})-\P\ell(\mu',\pi')+\O_{p}(n^{-1/2})\\
+ & =\left(\P_{n}\ell(\hat{\mu},\hat{\pi})+\beta_{n}\mathcal{R}_{\text{FTR}}[\hat{\mu},\hat{\pi},\hat{\epsilon}_{n}]\right)-\left(\P\ell(\mu',\pi')+\beta_{n}\mathcal{R}_{\text{FTR}}[\mu',\pi',0]\right)+\O_{p}(n^{-1/2})\\
+ & +\beta_{n}\left(\mathcal{R}_{\text{FTR}}[\mu',\pi',0]-\mathcal{R}_{\text{FTR}}[\hat{\mu},\hat{\pi},\hat{\epsilon}_{n}]\right)\\
+ & \overset{(b)}{\le}\beta_{n}\left(\mathcal{R}_{\text{FTR}}[\mu',\pi',0]-\mathcal{R}_{\text{FTR}}[\hat{\mu},\hat{\pi},\hat{\epsilon}_{n}]\right)+\O_{p}(n^{-1/2})\\
+ & \le\beta_{n}\mathcal{R}_{\text{FTR}}[\mu',\pi',0]+\O_{p}(n^{-1/2})\\
+ & \overset{(c)}{=}o(1)+\O_{p}(n^{-1/2}),
+\end{align*}
+where $(a)$ follows from uniform concentration inequality using the fact that $\mu^{\text{NN}},\pi^{\text{NN}}$
+is uniformly bounded, $\text{Rad}_{n}(\mathcal{Q}),\text{Rad}_{n}(\mathcal{U})=\O(n^{-1/2})$
+and the Lipschitz constant of $\log(x)$ is bounded when $x\in[1/c,c]$
+for some finite $c$. $(b)$ follows from the fact that $(\hat{\mu},\hat{\pi},\hat{\epsilon}_{n})$
+is the minimizer of the empirical risk (with FTR). $(c)$ follows from the fact that
+\begin{align*}
+\mathcal{R}[\mu',\pi',0] & =\frac{1}{n}\sum_{i=1}^{n}\left(y_{i}-\mu'\right)^{2}\\
+ & =\E\left(y-\mu'\right)^{2}+\O_{p}(n^{-1/2})\\
+ & =\E(V^{2})+\E(\mu-\mu')^{2}+\O_{p}(n^{-1/2})\\
+ & =\O(1).
+\end{align*}
+\end{proof}
+
+Now we prove that 
+\begin{equation}\label{eq_appendix:unique_minimizer}
+\left\Vert \hat{\mu}-\mu'\right\Vert _{L^{2}}+\left\Vert \hat{\pi}-\pi'\right\Vert _{L^{2}}=o_{p}(1).    
+\end{equation}
+For simplicity, we ignore the unidentifiability
+of neural network parameterization and assume $(\mu',\pi')$ is the
+unique minimizer in the sense that for any $\epsilon>0$, there exists
+$\eta(\epsilon)>0$ such that 
+\begin{equation}\label{eq_appendix:unique}
+\inf_{\left\Vert \mu^{\text{NN}}-\mu'\right\Vert _{L^{2}}+\left\Vert \pi^{\text{NN}}-\pi'\right\Vert _{L^{2}}>\epsilon}\left[\P\ell(\mu^{\text{NN}},\pi^{\text{NN}})-\P\ell(\mu',\pi')\right]>\eta(\epsilon).
+\end{equation}
+
+If Equation (\ref{eq_appendix:unique_minimizer}) is not true, then there exists $s>0$ such that for any $N>0$, there exists $n>N$ such that $\left\Vert \hat{\mu}-\mu'\right\Vert _{L^{2}}+\left\Vert \hat{\pi}-\pi'\right\Vert _{L^{2}}\ge s$. From Lemma \ref{lemma_appendix:ell}, we know that 
+$\P\ell(\hat{\mu},\hat{\pi})-\P\ell(\mu',\pi')\le\eta(s)$ when $n$ is sufficiently large. Thus, there exists $n_0$ such that
+$$\left\Vert \hat{\mu}-\mu'\right\Vert _{L^{2}}+\left\Vert \hat{\pi}-\pi'\right\Vert _{L^{2}}\ge s,\quad
+\P\ell(\hat{\mu},\hat{\pi})-\P\ell(\mu',\pi')\le\eta(s),
+$$
+which contradicts (\ref{eq_appendix:unique}).
+
+
+\subsection{Technical Proofs}
+In this section, we prove the two main theorems  (Theorem \ref{thm:doubly_robust} and Theorem \ref{thm:Gamma_consistency_spline}) and give some additional results which are mentioned briefly in the main text. 
+
+
+\subsubsection{Notations and Definitions}
+We denote $\delta_{t_0}$ as the Dirac measure centered on $t_0$ and recall that $\delta(\cdot)$ denotes the Dirac delta function. 
+We use $a_n\lesssim b_n$ to denote that $a_n\le Cb_n$ for some $C>0$ for all sufficiently large $n$.
+We denote $\vecI_n=(1,1,\cdots,1)^T\in\R^n$. For any function $f$ and function spaces $\F_1,\F_2$, we write $\F_1+\F_2=\{f_1+f_2:f_1\in\F_1,f_2\in\F_2\}$,  $\F_1\F_2=\{f_1f_2:f_1\in\F_1,f_2\in\F_2\}$, $f\F=\{fh:h\in\F\}$, $f\circ\F=\{f\circ h:h\in\F\}$, and $\F^{a}=\{f^{a}:f\in\F\},\,\forall a\in\R$.
+
+We define 
+$$\check\epsilon_n(\cdot) = {\P\left[(Y-\hat\mu_n)/\hat\pi_n\mid T=\cdot\right]}/{\P\left[\hat\pi_n^{-2}\mid T=\cdot\right]},
+$$ 
+where $(\hat\mu_n,\hat\pi_n,\hat\epsilon_n)$ is the minimizer of loss (\ref{eq:targeted_reg}). We denote $\hat \epsilon_n(\cdot)=\sum_{k=1}^{K}\hat \alpha_k\varphi_k(\cdot)$ as the spline regression estimator of $\epsilon(\cdot)$. With some slight abuse of notation, we denote
+%$U_i=Y_i-\E\left[Y_i\mid \X_i,T_i\right]$.
+$$\vpk(t)=\left(\varphi_1(t),\varphi_2(t),\cdots,\varphi_{K_n}(t)\right)^T\in\R^{K_n},$$ $$B_n=\left(\vpk(t_1),\cdots,\vpk(t_n)\right)^T\in\R^{n\times K_n}.$$ 
+We define
+$$\Pi_n=\text{diag}\left(\hat\pi_n(t_1\mid\x_1), \hat\pi_n(t_2\mid\x_2), \cdots, \hat\pi_n(t_n\mid\x_n)\right),$$
+$$\tilde\Pi_n=\text{diag}\left(
+\left[\P\left(\hat\pi_n^{-2}(T\mid\X)\mid T=t_1\right)\right]^{-1/2}, \cdots, 
+\left[\P\left(\hat\pi_n^{-2}(T\mid\X)\mid T=t_n\right)\right]^{-1/2}\right).$$
+We define
+$$\Zn=(z_1,z_2,\cdots,z_n)^T\in\R^n\quad\text{where}\quad z_i=\frac{y_i-\hat \mu_n(t_i,\x_i)}{\hat\pi_n(t_i\mid\x_i)},$$
+$$\tilde\Zn=(\tilde z_1,\tilde z_2,\cdots,\tilde z_n)^T\in\R^n\quad\text{where}\quad\tilde z_i=\P\left(\frac{Y-\hat \mu_n(T,\X)}{\hat\pi_n(T\mid\X)}\mid T=t_i\right).$$ 
+Notice that
+$$\hat{\bm\alpha}=\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\Zn,$$
+and we denote
+$$\tilde{\bm\alpha}=\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\Pi_n^{-2}\tilde\Pi_n^2\tilde\Zn.$$
+
+
+\subsubsection{Useful Lemmas}
+This section gives lemmas which are used in our proofs of main theorems. 
+
+Recall that Theorem \ref{thm:doubly_robust} consists of two parts: the efficient influence function of $\psi(t_0)$ and its double robustness. Notice that $\psi(t_0)$ can be written as a special case of a more general parameter $\Gamma=\int_{\mathcal{T}}\gamma(t;\P_T)\psi(t)d\P_T(t)$ (see Remark \ref{remark:Gamma}). Here $\gamma(t;\P_T)$ is a function of $t$ which depends on the probability measure $\P_T$. For brevity we also write $\gamma(t):=\gamma(t;\P_T)$ when the corresponding $\P_T$ is the true probability measure of treatment $T$. The following Lemma gives the efficient influence function of $\Gamma$.
+\begin{lemma}\label{thm:EIF}
+The efficient influence function for $\Gamma$ is
+\begin{equation*} 
+\begin{split}
+    \zeta(Y,\X,T,\pi,\mu,\Gamma)=&\,\gamma(T)\xi(Y,\X,T,\pi,\mu)-\Gamma+\int_{\mathcal{\mathcal{T}}}\mu(t,\X)\text{\ensuremath{\gamma(t)}}d\P_T(t)+\frac{\gamma'_{\varepsilon}(T)}{l'_{\varepsilon}(T;0)}\int_{\mathcal{X}}\mu(T,\x)d\P(\x)
+    \\&-\int_{\mathcal{T}}\int_{\mathcal{X}}\gamma(t)\mu(t,x)d\P(x)d\P_T(t)-\E_T\left[\frac{\gamma'_{\epsilon}(T)}{l'_{\epsilon}(T;0)}\int_{\mathcal{X}}\mu(T,\x)d\P(\x)\right],
+\end{split}
+\end{equation*}
+where $\xi(Y,\X,T,\pi,\mu,\Gamma)=\frac{Y-\mu(T,\X)}{\pi(T\mid\X)}\int_{\mathcal{X}}\pi(T\C\x)d\P(\x)+\int_{\mathcal{X}}\mu(T,\x)d\P(\x)$, $\gamma_{\varepsilon}'(t)=\frac{d\gamma(t\,;\,\P_{T,\varepsilon})}{d\varepsilon}\mid_{\varepsilon=0}$, $\ell_{\varepsilon}'(t\,;\,0)=\frac{\partial\log \P_{T,\varepsilon}(t)}{\partial\varepsilon}\mid_{\varepsilon=0}$ and $\P_{T,\varepsilon}$ is a parametric submodel with parameter $\varepsilon\in\R$ and $\P_{T,0}(\cdot)=\P_T(\cdot)$.
+\end{lemma}
+
+\begin{remark}\label{remark:Gamma}
+Setting $\gamma(\cdot)=\frac{d\delta_{t_0}(\cdot)}{d\P_T(\cdot)}$, we get $\Gamma=\psi(t_0)$.
+Setting $\gamma(\cdot)=1$, we get $\Gamma=\int_{\mathcal{T}}\psi(t)d\P_T(t)$, which is the average outcome under a randomized trial and is a quantity of interest in its own right \citep{kennedy2017non}. Setting $\gamma(\cdot)=\frac{d\delta_{1}(\cdot)}{d\P_T(\cdot)}-\frac{d\delta_{0}(\cdot)}{d\P_T(\cdot)}$, we get $\Gamma=\psi(1)-\psi(0)$, which is the average treatment effect under binary treatment setting. 
+\end{remark}
+
+Recall that in Theorem \ref{thm:Gamma_consistency_spline}, $\hat\epsilon_n$ is the spline regression estimator of $\epsilon$. In order to establish the convergence rate of our final estimator $\hat\psi$, we need to establish the convergence rate of  $\hat \epsilon_n$ first.
+\begin{lemma}\label{lemma_appendix}
+Under assumptions in Theorem \ref{thm:Gamma_consistency_spline}, we have
+$$\|\hat \epsilon_n-\check\epsilon_n\|_{L^2}=\O_p\left(n^{-1/3}\sqrt{\log n}\right).$$
+\end{lemma}
+\begin{remark}
+For fixed objective function, the convergence rate of the B-spline estimator to the truth is a standard result \citep{huang2004polynomial, huang2003local}, which is $\O_p(n^{-2/5})$ when choosing $K_n\asymp n^{-1/5}$. However, Lemma \ref{lemma_appendix} gives a uniform bound on a class of functions in order to deal with the fact that $\hat\pi_n$ and $\hat\mu_n$ are NOT fixed and dependent on the observations. The bound is thus of a larger order $n^{-1/3}\sqrt{\log n}$ when choosing the optimal $K_n\asymp n^{-1/6}$.
+\end{remark}
+
+\begin{lemma}\label{lemma:eigenvalue}
+Under assumption in Theorem \ref{thm:Gamma_consistency_spline}, there exist positive constants $M_1$ and $M_2$ such that except on an event whose probability tends to zero, all the eigenvalues of $\left(K_n/n\right)B_n^T\Pi_n^{-2}B_n$ fall between $M_1$ and $M_2$, and consequently, $\left(K_n/n\right)B_n^T\Pi_n^{-2}B_n$ is invertible.
+\end{lemma}
+
+\begin{lemma}\label{lemma:complexity}
+Assume $\|\F_1\|_{\infty}<\infty$ and $\|\F_2\|_{
+\infty}<\infty$, we have
+$$
+\Rad(\F_1\F_2)
+\leq 
+\frac{1}{2}(\Rad(\F_1)+\Rad(\F_2))(\|\F_1\|_{\infty}+\|\F_2\|_{\infty}).
+$$
+\end{lemma}
+
+\subsubsection{Proof of Theorem \ref{thm:doubly_robust}}
+\begin{proof}
+Denote $\gamma(t;\P_T)=\frac{d\delta_{t_0}(t)}{d\P_T(t)}$.
+Then the efficient influence function $\zeta_{t_0}$ of $\psi(t_0)$ is obtained by plugging the definition of $\gamma(t;\P_T)$ in Lemma \ref{thm:EIF} and some simplifications using 
+\begin{equation}\label{appendix_eq:gamma_epsilon}
+    \frac{\gamma'_{\varepsilon}(t; \P_T)}{l'_{\varepsilon}(t;0)}=-\gamma(t; \P_T).
+\end{equation}
+
+
+
+\iffalse
+\begin{equation}\label{eq_appendix:doubly_robust_final}
+    \begin{split}
+        &\P\zeta_{t_0}(Y,\X,T,\hat\pi,\hat \mu,\Gamma)
+        \\=\,\, &\P\left(\gamma(T;\hat \P_T)\frac{Y-\hat \mu(T,\X)}{\hat \pi(T\C \X)}\hat\pi(T)+\gamma(T;\hat \P_T)\int_{\mathcal{X}}\hat \mu(T,\x)d\P(\x)\right)
+        -\int_{\mathcal{T}}\gamma(t;\P_T)\psi(t)d\P_T(t)
+        \\&+\P\left(\int_{\mathcal{T}}\hat \mu(t,\X)\gamma(t;\hat \P_T)d\hat \P_T(t)\right)
+        +\P\left(\frac{\gamma'_{\varepsilon}(T;\hat \P_T)}{l'_{\varepsilon}(T;0)}\int_{\mathcal{X}}\hat \mu(T,\x)d\P(\x)\right)
+        -\int_{\mathcal{T}}\int_{\mathcal{X}}\gamma(t;\hat \P_T)\hat \mu(t,\x)d\P(\x)d\hat \P_T(t)
+        \\&-\int_{\mathcal{T}}\frac{\gamma'_{\varepsilon}(t;\hat \P_T)}{l'_{\varepsilon}(t;0)}\int_{\mathcal{X}}\hat \mu(t,\x)d\P(\x)d\hat \P_T(t)
+        \\\stackrel{(a)}{=}\,\,&
+        \P_T\left[\gamma(T;\hat \P_T)\P_{\X|T}\left(\frac{\mu(T,\X)-\hat \mu(T,\X)}{\hat \pi(T\C \X)}\hat\pi(T)\right)\right]
+        +\P_T\left(\gamma(T;\hat \P_T)\int_{\mathcal{X}}\hat \mu(T,\x)d\P(\x)\right)
+        \\&-\int_{\mathcal{T}}\gamma(t;\P_T)\psi(t)d\P_T(t) 
+        +\int_{\mathcal{T}}\gamma(t;\hat \P_T)\int_{\mathcal{X}}\hat \mu(t,\x)d\P(\x)d\hat \P_T(t)
+        -\P\left(\gamma(T;\hat \P_T)\int_{\mathcal{X}}\hat \mu(T,\x)d\P(\x)\right)
+        \\\stackrel{(b)}{=}\,\,&
+        \int_{\mathcal{T}}\gamma(t;\hat \P_T)\int_{\mathcal{X}}\frac{\pi(t\C \x)/\pi(t)}{\hat\pi(t\C \x)/\hat\pi(t)}\left(\mu(t,\x)-\hat \mu(t,\x)\right)d\P(\x)d\P_T(t)
+        \\&
+        -\int_{\mathcal{T}}\gamma(t; \P_T)\int_{\mathcal{X}}\mu(t,\x)d\P(\x)d\P_T(t)
+        +\int_{\mathcal{T}}\gamma(t; \hat \P_T)\int_{\mathcal{X}}\hat \mu(t,\x)d\P(\x)d\hat \P_T(t)
+        \\\stackrel{(c)}{=}\,\,&
+        \int_{\mathcal{T}}\int_{\mathcal{X}}\left(\frac{\pi(t\C \x)}{\hat\pi(t\C \x)}-1\right)\left(\mu(t,\x)-\hat \mu(t,\x)\right)d\P(\x)d\delta_{t_0}(t)
+        \\=\,\,&
+        \int_{\mathcal{X}}\left(\frac{\pi(t_0\C \x)}{\hat\pi(t_0\C \x)}-1\right)\left(\mu(t_0,\x)-\hat \mu(t_0,\x)\right)d\P(\x)
+    \end{split}
+\end{equation}
+\fi
+
+So here we only need to prove that the efficient influence function is doubly robust. We have
+\begin{equation}\label{eq_appendix:doubly_robust_final}
+    \begin{split}
+        &\P\zeta_{t_0}(Y,\X,T,\hat\pi,\hat \mu,\Gamma)
+        \\=\,\, &
+        \P\left(\delta(T-t_{0})\frac{Y-\hat\mu(T,\X)}{\hat\pi(T\mid\X)}+\hat\mu(t_{0},\X)-\psi(t_{0})\right) 
+        \\\stackrel{(a)}{=}\,\, &
+        \int\pi(\x)\pi(t\mid\x)\delta(t-t_0)\frac{\mu(t,\x)-\hat\mu(t,\x)}{\hat\pi(t\mid\x)}dxdt+\int\hat\mu(t_0,\x)\pi(\x)d\x-\int\mu(t_0,\x)\pi(\x)d\x
+        \\\stackrel{(b)}{=}\,\,&
+        \int_{\mathcal{X}}\left(\frac{\pi(t_0\C \x)}{\hat\pi(t_0\C \x)}-1\right)\left(\mu(t_0,\x)-\hat \mu(t_0,\x)\right)d\P(\x),
+    \end{split}
+\end{equation}
+where (a) follows from iterated expectation, (b) follows from $\pi(\x\mid t)=\pi(t\mid\x)\pi(\x)/\pi(t)$.
+From the last line of Equation (\ref{eq_appendix:doubly_robust_final}), it is obvious that the desired conclusions hold.
+\end{proof}
+
+
+
+\subsubsection{Proof of Theorem \ref{thm:Gamma_consistency_spline}}
+
+\begin{proof}
+
+First, from condition (i), we have
+\begin{equation}\label{eq_appendix:thm2_eq1}
+\begin{split}
+&\left\|\hat\epsilon(\cdot)\int_{\mathcal{X}}\frac{1}{\hat\pi(\cdot\mid\X)}d\P_n(\X)-\P\left[\delta(T-\cdot)\frac{Y-\hat \mu(T,\X)}{\hat \pi(T\C\X)}\right]\right\|_{L^2}
+\\=&\left\|\hat\epsilon(\cdot)\int_{\mathcal{X}}\frac{1}{\hat\pi(\cdot\mid\X)}d\P_n(\X)-\pi(\cdot)\P\left(\frac{Y-\hat \mu_n(\X,T)}{\hat\pi_n(\X,T)}\mid T=\cdot\right)\right\|_{L^2}
+\\\leq&
+\left\|(\hat\epsilon(\cdot)-\check\epsilon(\cdot))\int_{\mathcal{X}}\frac{1}{\hat\pi(\cdot\mid\X)}d\P_n(\X)\right\|_{L^2}+\left\|\check\epsilon(\cdot)\left(\int_{\mathcal{X}}\frac{1}{\hat\pi(\cdot\mid\X)}d\P_n(\X)-\pi(\cdot)\P\left(\frac{1}{\hat\pi^2(\cdot\mid\X)}\mid T=\cdot\right)\right)\right\|_{L^2}
+\\\stackrel{}{\lesssim}&
+\left\|\hat\epsilon-\check\epsilon\right\|_{L^2}
++\left\|\check\epsilon(\cdot)\left(\int_{\mathcal{X}}\frac{1}{\hat\pi(\cdot\mid\X)}d\left(\P_n-\P\right)(\X)\right)
++\check\epsilon(\cdot)\left(\int_{\mathcal{X}}\frac{1}{\hat\pi(\cdot\mid\X)}d\P(\X)-\pi(\cdot)\P\left(\frac{1}{\hat\pi^2(\cdot\mid\X)}\mid T=\cdot\right)\right)\right\|_{L^2}
+\\\stackrel{}{\lesssim}&
+\left\|\hat\epsilon-\check\epsilon\right\|_{L^2}
++\left\|\check\epsilon(\cdot)\left(\int_{\mathcal{X}}\frac{1}{\hat\pi(\cdot\mid\X)}d\left(\P_n-\P\right)(\X)\right)\right\|_{L^2}
+\\&+\left\|\P\left(\frac{\mu(\X,T)-\hat \mu_n(\X,T)}{\hat\pi_n(\X,T)}\mid T=\cdot\right)\int_{\mathcal{X}}\frac{\hat\pi(\cdot\mid\X)-\pi(\cdot\mid\X)}{\hat\pi(\cdot\mid\X)}\frac{1}{\hat\pi(\cdot\mid\X)}d\P(\X)\right\|_{L^2}
+\\\stackrel{(a)}{=}& \O_p\left(n^{-1/3}\sqrt{\log n}+r_1(n)r_2(n)\right).
+\end{split}
+\end{equation}
+where $(a)$ follows from Lemma \ref{lemma_appendix}, which says
+$
+\left\|\hat \epsilon_n-\check\epsilon_n\right\|_{L^2}
+=\O_p(n^{-1/3}\sqrt{\log n}).
+$
+
+From generalization bound and condition (iv), we know
+\begin{equation*}
+    \sup_{t_0\in[0,1]}\left|\frac{1}{n}\sum_{i=1}^{n}\hat \mu_n(x_{i,}t_0)-\P \hat \mu_n(X,t_0)\right|
+    =\sup_{t_0\in[0,1]}|\P_n\hat g_{t_0}(X)-\P \hat g_{t_0}(X)|
+    =\O_p(n^{-1/2}).
+\end{equation*}
+Thus,
+\begin{equation}\label{eq_appendix:consistency_eq2}
+\left\|\frac{1}{n}\sum_{i=1}^{n}\hat \mu_n(x_{i,}\cdot)-\P \hat \mu_n(X,\cdot)\right\|_{L^2}. 
+=\O_p(n^{-1/2})
+\end{equation}
+Recall that Theorem \ref{thm:doubly_robust} says that if $\sup_{t\in[0,1]}\sup_{\X\in\mathcal{X}}|\hat\pi_n(t\mid\X)-\pi(t\mid\X)|=\O_p(r_1(n))$, $\sup_{t\in[0,1]}\sup_{\X\in\mathcal{X}}|\hat\mu_n(t,\X)-Q(t,\X)|=\O_p(r_2(n))$, then
+\begin{equation}\label{eq_appendix:consistency_eq3}
+    \sup_{t_0\in[0,1]}\left|\P \left[\delta(T-t_0)\frac{Y-\hat\mu_n(T,\X)}{\hat\pi_n(T\C\X)}+\hat\mu_n(t_0,\X)\right]-\psi(t_0)\right|=\O_p(r_1(n)r_2(n)).
+\end{equation}
+%Notice that $\sup_{t_0\in[0,1]}|\frac{1}{n}\sum_{i=1}^{n}Q(x_{i,}t_0)-\E Q(X,t_0)|=O_p(n^{-1/2})$. 
+
+Combining Equation (\ref{eq_appendix:thm2_eq1}), Equation (\ref{eq_appendix:consistency_eq2}) and Equation (\ref{eq_appendix:consistency_eq3}), using triangle inequality, we have
+$$
+\left\|\hat\epsilon(\cdot)\int_{\mathcal{X}}\frac{1}{\hat\pi(\cdot\mid\x)}d\P_n(\x)+\frac{1}{n}\sum_{i=1}^{n}\hat \mu_n(x_i,\cdot)-\psi(\cdot)\right\|_{L^2}
+=\O_p(n^{-1/3}\sqrt{\log n}+r_1(n)r_2(n)).
+$$
+So if we set 
+\begin{equation*}
+\begin{split}
+        \hat\psi(t_0)
+        =\hat\epsilon(t_0)\int_{\mathcal{X}}\frac{1}{\hat\pi(t_0\mid\x)}d\P_n(\x)+\frac{1}{n}\sum_{i=1}^{n}\hat \mu_n(x_i,t_0)
+=\frac{1}{n}\sum_{i=1}^{n}\left(\hat \mu(\x_i,t_0)+ \frac{\hat\epsilon(t_0)}{\hat\pi(t_0\mid\x_i)}\right)
+\end{split}
+\end{equation*}
+we have
+$$
+\|\hat\psi-\psi\|_{L^2}=\O_p\left(n^{-1/3}\sqrt{\log n}+r_1(n)r_2(n)\right).
+$$
+\end{proof}
+
+\iffalse
+\begin{corollary}\label{corollary:EIF_integrated}
+If $\gamma(t;\P_T)=1$, we have $\Gamma=\int_{\mathcal{T}}\psi(t)d\P_T(t)$ which is the average outcome under a randomized trial and is a quantity of interest in its own right (\cite{kennedy2017non}). By plugging in $\gamma(t;\P_T)$ we get the same efficient influence function for $\Gamma$ as in \cite{kennedy2017non}. 
+%\begin{equation*} 
+%\begin{split}
+%    \zeta(Y,\X,T,\pi,Q,\Gamma)=&\,\frac{Y-Q(T,\X)}{\pi(T\mid\X)}\int_{\mathcal{X}}\pi(T\mid\X)dP(\X)+\int_{\mathcal{X}}Q(T,X)dP(X)-\Gamma
+%    \\&+\int_{\mathcal{\mathcal{T}}}Q(t,\X)d\P_T(t)-\int_{\mathcal{T}}\int_{\mathcal{X}}Q(t,x)dP(x)d\P_T(t)
+%\end{split}
+%\end{equation*}
+\end{corollary}
+
+\begin{corollary}
+When $T\in\{0,1\}$, we get $\Gamma=\psi(1)-\psi(0)$ by setting $\gamma(t;\P_T)=\frac{d\delta_1}{d\P_T}-\frac{d\delta_0}{d\P_T}$.
+\end{corollary}
+\fi
+
+
+\subsubsection{Proof of Lemma \ref{thm:EIF}}\label{appendix_proof:EIF_single}
+\begin{proof}
+The proof follows \cite{kennedy2017non}. Denote
+\[
+\Gamma(\varepsilon)=\int_{\mathcal{T}}\gamma_{\varepsilon}(t)\int_{\mathcal{X}}\int_{\mathcal{Y}}y\pi(y\mid\x,t;\varepsilon)\pi(\x;\varepsilon)\pi(t;\varepsilon)dyd\x dt,
+\]
+where we write $\gamma_{\varepsilon}(\cdot):=\gamma(\cdot\,;\P_{T,\varepsilon})$ for brevity.
+Then, by definition, the efficient influence function for $\Gamma$ is the
+unique function $\zeta(Y,\X,T)$ such that 
+\begin{equation}\label{eq_appendix:EIF_target}
+\Gamma'_{\varepsilon}(0)=\E\left(\zeta(Y,\X,T)\ell'_{\varepsilon}(Y,\X,T;0)\right)
+\end{equation}
+where $\ell'_{\varepsilon}(y,\x,t;0)=\frac{d\log\P_{Y,\X,T,\varepsilon}(y,\x,t)}{d\varepsilon}\mid_{\varepsilon=0}$, $\P_{Y,\X,T,\varepsilon}(y,\x,t)$ is a parametric submodel with parameter $\varepsilon\in\mathbb{R}$, and $\P_{Y,\X,T,0}(y,\x,t)=\P_{Y,\X,T}(y,\x,t)$,
+and $\Gamma'_{\epsilon}(0)=d\Gamma(\varepsilon)/d\varepsilon \mid_{\varepsilon=0}$. We have
+\begin{align*}
+\Gamma'_{\varepsilon}(0)  =&\int_{\mathcal{T}}\gamma(t)\int_{\mathcal{X}}\int_{\mathcal{Y}}y\left[\pi_{\varepsilon}'(y\mid\x,t;0)\pi(\x)+\pi(y\mid\x,t)\pi'_{\varepsilon}(\x;0)\right]\pi(t)dyd\x dt
+\\
+ & +\int_{\mathcal{T}}\gamma_{\varepsilon}(t)\int_{\mathcal{X}}\int_{\mathcal{Y}}y\pi(y\mid\x,t;\epsilon)\pi(\x;\varepsilon)\pi'_{\varepsilon}(t;0)dyd\x dt
+\\&+\int_{\mathcal{T}}\gamma'_{\varepsilon}(t)\int_{\mathcal{X}}\int_{\mathcal{Y}}y\pi(y\mid\x,t;\varepsilon)\pi(\x;\varepsilon)\pi(t;\varepsilon)dyd\x dt
+ \\
+=&\,\,I_{1}+I_{2}+I_3.
+\end{align*}
+From $\ell_{\varepsilon}'(y\mid\x,t;0)=\pi'_{\varepsilon}(y\mid\x,t;0)/\pi(y\mid\x,t;0)$ and definition of $\psi(t)$, we have
+\begin{align*}
+I_{1} & :=\int_{\mathcal{T}}\gamma(t)\int_{\mathcal{X}}\int_{\mathcal{Y}}y\left[\ell'_{\varepsilon}(y\mid\x,t;0)\pi(y\mid\x,t)\pi(\x)+\pi(y\mid\x,t)\ell'_{\varepsilon}(\x;0)\pi(\x)\right]\pi(t)dyd\x dt\\
+ & =\int_{\mathcal{T}}\gamma(t)\left[\E_{\X}\E_{Y|\X,T}\left(y\ell'_{\varepsilon}(y\mid\x,t;0)\right)+\E_{\X}\left(\mu(\x,t)\ell'_{\epsilon}(\x;0)\right)\right]\pi(t)dt,
+\\
+I_{2} &:=\int_{\mathcal{T}}\gamma(t)\psi(t)\pi'_{\varepsilon}(t;0)dt
+ =\int_{\mathcal{T}}\gamma(t)\psi(t)\ell'_{\varepsilon}(t;0)\pi(t)dt,
+\\
+I_3&:=\int_{\mathcal{T}}\gamma'_{\varepsilon}(t)\psi(t)\pi(t;0)dt.
+\end{align*}
+Thus, we have
+\begin{align}\label{eq_appendix:lemma1_gamma}
+\Gamma'_{\varepsilon}(0)  =&\int_{\mathcal{T}}\left[\gamma(t)\E_{\X}\E_{Y|\X,T}\left(y\ell'_{\epsilon}(y\mid\x,t;0)\right)+\E_{\X}\left(\mu(\x,t)\ell'_{\epsilon}(\x;0)\right)+\gamma(t)\psi(t)\ell'_{\epsilon}(t;0)+\gamma'_{\epsilon}(t)\psi(t)\right]\pi(t)dt.
+\end{align}
+Meanwhile, for the right hand size term $\E_{\X,T,Y}\left(\zeta(Y,\X,T)\ell'_{\varepsilon}(Y,\X,T;0)\right)$ in Equation (\ref{eq_appendix:EIF_target}),
+from 
+$$\ell'_{\varepsilon}(Y,\X,T;0)=\ell'_{\varepsilon}(Y|\X,T;0)+\ell'_{\varepsilon}(\X,T;0),$$
+where $\ell'_{\varepsilon}(Y|\X,T;0)$ and $\ell'_{\varepsilon}(\X,T;0)$ are defined similar to $\ell'_{\varepsilon}(Y,\X,T;0)$, we know that
+\begin{equation}\label{eq_appendix:log_likelihood_decomp}
+\E_{\X,T,Y}\left(\zeta(Y,\X,T)\ell'_{\varepsilon}(Y,\X,T;0)\right)=\E_{\X,T,Y}\left(\zeta(Y,\X,T)\ell'_{\varepsilon}(Y|\X,T;0)\right)+\E_{\X,T,Y}\left(\zeta(Y,\X,T)\ell'_{\varepsilon}(\X,T;0)\right).    
+\end{equation}
+Now we bound each term in Equation (\ref{eq_appendix:log_likelihood_decomp}) separately.
+Recall that
+\begin{equation*} 
+\begin{split}
+    \zeta(Y,\X,T,\pi,\mu)
+    =&\,\gamma(T)\frac{Y-\mu(T,\X)}{\pi(T\mid\X)}\int_{\mathcal{X}}\pi(T\mid\x)d\P(\x)+\gamma(T)\int_{\mathcal{X}}\mu(T,\x)d\P(\x)-\Gamma
+    \\&+\int_{\mathcal{\mathcal{T}}}\mu(t,\X)\text{\ensuremath{\gamma(t)}}d\P_T(t)+\frac{\gamma'_{\varepsilon}(T)}{l'_{\varepsilon}(T;0)}\int_{\mathcal{X}}\mu(T,\x)d\P(\x)
+    \\&-\int_{\mathcal{T}}\int_{\mathcal{X}}\gamma(t)\mu(t,x)dp(x)d\P_T(t)-\E_T\left[\frac{\gamma'_{\varepsilon}(T)}{l'_{\varepsilon}(T;0)}\int_{\mathcal{X}}\mu(T,\x)d\P(\x)\right].
+\end{split}
+\end{equation*}
+Thus, for the first term in Equation (\ref{eq_appendix:log_likelihood_decomp}), we have
+\begin{equation}\label{appendix_eq:EIF_RHS1}
+\begin{split}
+& \E_{\X,T,Y}\left(\zeta(Y,\X,T)\ell'_{\varepsilon}(Y|\X,T;0)\right)\\
+=&\E_{\X,T}\left[\E_{Y|\X,T}\left(\zeta(Y,\X,T)\ell'_{\varepsilon}(Y|\X,T;0)\right)\right]\\
+\stackrel{(a)}{=} & \E_{\X,T}\E_{Y|\X,T}\left[\left(\gamma(T)\frac{Y}{\pi(T\mid\X)}\int_{\mathcal{X}}\pi(T\mid\x)d\P(\x)\right)\ell'_{\varepsilon}(Y|\X,T;0)\right]\\
+\stackrel{(b)}{=} & \int_{T\times\mathcal{X}}\left[\gamma(t)\frac{\E_{Y|\x,t}\left[Y\ell'_{\varepsilon}(Y|\x,t;0)\right]}{\pi(t\mid\x)}\left(\int_{\mathcal{X}}\pi(t\mid\x)d\P(\x)\right)p(\x)\pi(t\mid\x)\right]dtd\x\\
+\stackrel{}{=} & \int_{\mathcal{\mathcal{T\times\mathcal{X}}}}\gamma(t)\E_{Y|\x,t}\left[Y\ell'_{\varepsilon}(Y|\x,t;0)\right]p(t)p(\x)dtd\x\\
+\stackrel{}{=} & \int_{\mathcal{\mathcal{T}}}\gamma(t)\E_{\x}\left[\E_{Y|\x,t}\left[Y\ell'_{\varepsilon}(Y|\x,t;0)\right]\right]p(t)dt,
+\end{split}
+\end{equation}
+where $(a)$ follows from the fact that $\E_{Y|\X,T}\left(\ell'_{\epsilon}(Y|\X,T;0)\right)=0$,
+$(b)$ uses law of iterated expectations.
+
+For the second term in Equation (\ref{eq_appendix:log_likelihood_decomp}), we have
+\begin{equation}\label{appendix_eq:EIF_RHS2}
+\begin{split}
+ & \E_{\X,T,Y}\left(\zeta(Y,\X,T)\ell'_{\varepsilon}(\X,T;0)\right)
+ \\
+\stackrel{(a)}{=} & \E_{\X,T,Y}\left[\left(\gamma(T)\frac{Y-\mu(T,\X)}{\pi(T\mid\X)}\int_{\mathcal{X}}\pi(T\mid\x)d\P(\x)\right)\ell'_{\varepsilon}(\X,T;0)\right]
+\\
+ & +\E_{\X,T}\left(\gamma(T)\int_{\mathcal{X}}\mu(T,\x)d\P(\x)+\frac{\gamma'_{\varepsilon}(T)}{l'_{\varepsilon}(T;0)}\int_{\mathcal{X}}\mu(T,\x)d\P(\x)\right)\left(\ell'_{\varepsilon}(\X|T;0)+\ell'_{\varepsilon}(T;0)\right)
+ \\
+ & +\E_{\X,T}\left[\left(\int_{\mathcal{\mathcal{T}}}\mu(t,\X)\text{\ensuremath{\gamma(t)}}d\P(t)\right)\left(\ell'_{\varepsilon}(T|\X;0)+\ell'_{\varepsilon}(\X;0)\right)\right]
+ \\
+ &+\E_{\X,T}\left[\left(-\int_{\mathcal{T}}\gamma(t)\psi(t)d\P(t)-\E_T\left[\frac{\gamma'_{\varepsilon}(T)}{l'_{\varepsilon}(T;0)}\int_{\mathcal{X}}\mu(T,\x)d\P(\x)\right]-\Gamma\right)\left(\ell'_{\varepsilon}(T,\X;0)\right)\right]
+ \\
+\stackrel{(b)}{=} & \E_{T}\left[\gamma(T)\int_{\mathcal{X}}\mu(T,\x)d\P(\x)\ell'_{\varepsilon}(T;0)\right]+\E_{T}\left[\frac{\gamma'_{\varepsilon}(T)}{l'_{\varepsilon}(T;0)}\int_{\mathcal{X}}\mu(T,\x)d\P(\x)\ell_{\varepsilon}'(T;0)\right]
+\\
+&+\E_{\X}\left[\int_{\mathcal{\mathcal{T}}}\mu(t,\X)\text{\ensuremath{\gamma(t)}}d\P(t)\ell'_{\varepsilon}(\X;0)\right]
+\\
+\stackrel{(c)}{=} & \int_{\mathcal{T}}\gamma(t)\psi(t)\ell'_{\varepsilon}(t;0)p(t)dt+\int_{\mathcal{T}}\E_{\X}\left[\mu(t,\X)\ell'_{\varepsilon}(\X;0)\right]\gamma(t)d\P(t)
++\int_{\mathcal{T}}\gamma'_{\varepsilon}(t)\psi(t)p(t)dt 
+\end{split}
+\end{equation}
+where $(a)$ follows from the fact that  $$\ell'_{\varepsilon}(\X,T;0)=\ell'_{\varepsilon}(\X|T;0)+\ell'_{\varepsilon}(T;0)=\ell'_{\varepsilon}(T|\X;0)+\ell'_{\varepsilon}(\X;0),$$
+(b) follows from the fact that 
+$$\E_{Y|\X,T}Y=\mu(T,\X),\quad \E_{T|\X}\ell'_{\varepsilon}(T|\X;0)=\E_{\X|T}\ell'_{\varepsilon}(\X|T;0)=\E_{\X,T}\ell'_{\varepsilon}(\X,T;0)=0$$
+and law of iterated expectations, $(c)$
+follows from the definition of $\psi(t)=\int_{\mathcal{X}}\mu(t,\x)d\P(\x)$.
+
+Comparing Equation (\ref{appendix_eq:EIF_RHS1}), Equation (\ref{appendix_eq:EIF_RHS2}) against Equation (\ref{eq_appendix:lemma1_gamma}), we immediately get $$\Gamma'_{\varepsilon}(0)=\E_{\X,T,Y}\left(\zeta(Y,\X,T)\ell'_{\varepsilon}(Y,\X,T;0)\right),$$
+which implies that $\zeta(Y,\X,T)$ is indeed an efficient influence
+function of $\Gamma$.
+\end{proof}
+
+
+
+
+
+
+
+
+\iffalse
+\subsection{Proof of Theorem \ref{thm:EIF_multidimensional}}
+\begin{proof}
+For multi-dimensional $\bm\Gamma$, the efficient influence function is the unique function $\bm\zeta$ that satisfies 
+\[
+\left[\frac{d\Gamma_q}{d\epsilon_k}\C_{\epsilon_k=0}\right]_{q,k=1,\cdots,p}
+=\E\left(\bm{\zeta}(Y,\X,T)\left(\ell'_{\bm\epsilon}(Y,\X,T;0)\right)^T\right).
+\]
+Notice that 
+$$\left[\frac{d\Gamma_q}{d\epsilon_k}\C_{\epsilon_k=0}\right]_{q,k=1,\cdots,p}\in\R^{p\times p}$$
+$$
+\bm{\zeta}(Y,\X,T,\pi,Q)=\left(\zeta_1(Y,\X,T,\pi,Q),\zeta_2(Y,\X,T,\pi,Q),\cdots,\zeta_p(Y,\X,T,\pi,Q)\right)^T\in\R^{p\times 1}
+$$
+$$
+\ell'_{\bm\epsilon}(Y,\X,T;0)=\left(\ell'_{\epsilon_1}(Y,\X,T;0),\ell'_{\epsilon_2}(Y,\X,T;0),\cdots,\ell'_{\epsilon_p}(Y,\X,T;0)\right)^T\in\R^{p\times 1}
+$$
+It suffices to prove that for any $q,k$,
+$$\frac{d\Gamma_q}{d\epsilon_k}\C_{\epsilon_k=0}
+=\E \left[\zeta_q(Y,\X,T,\pi,Q)\ell'_{\epsilon_k}(Y,\X,T;0)\right]$$ 
+From Theorem \ref{thm:EIF}, $\zeta_q(Y,\X,T;0)$ is the efficiently influence function of $\Gamma_q$ and thus, $\frac{d\Gamma_q}{d\epsilon}\C_{\epsilon=0}=\E \zeta_q(Y,\X,T,\pi,Q)\ell'_{\epsilon}(Y,\X,T;0)$. Notice that here $\epsilon$ is a dummy variable and we can replace it by $\epsilon_k$ and get the desired result.
+\end{proof}
+\fi
+
+
+
+\iffalse
+\subsection{Proof of Theorem \ref{thm:functional_TMLE_doubly_robust}}
+\begin{proof}
+Recall that $\hat\psi(t)=\E_{\X}\left[\hat\mu(t,\X)+\hat\epsilon_{t}\frac{\delta_{T}(t)}{\hat \pi(T\C\X)}\right]$.
+Notice that the optimizer of the function $\bm\epsilon(\cdot)$ satisfies $\hat{\bm\epsilon}=\arg\min_{\bm\epsilon}\text{pen}(\bm\epsilon)=\int_{t_0\in\mathcal{T}}\arg\min_{\epsilon_{t_0}}\text{pen}(t_0,\epsilon_{t_0})\pi(t_0)dt_0$. Thus, we have $\hat\epsilon(t_0)=\arg\min_{\epsilon_{t_0}}\text{pen}(t_0,\epsilon_{t_0})$, which implies that for any $t_0$,
+\begin{equation}\label{eq:function_TMLE_derivative}
+    0=\frac{\partial\text{pen}(t_0,\epsilon_{t_0})}{\partial \epsilon_{t_0}}=-2\E\zeta(Y,\X,T;\hat\pi,\hat\mu^{\text{treg}}_{t_0},\hat\psi(t_0))
+\end{equation}
+where $\hat\mu^{\text{treg}}_{t_0}(T,\X)=\hat\mu(T,\X)+\hat\epsilon_{t_0}\frac{\delta_{T}(t_0)}{\hat \pi(T\C\X)}$. Combined with Equation \eqref{eq:function_TMLE_derivative}, we know from Theorem \ref{thm:doubly_robust} that if either (1) $\hat\mu^{\text{treg}}_{t_0}=Q$ or (2) $\hat \pi=\pi$,  we have $\hat\psi(t_0)=\psi(t_0)$. Thus, we know that if either $\hat\pi=\pi$ or $\hat\mu^{\text{treg}}_{t_0}=Q$ for any $t_0$, we have $\hat\psi(\cdot)=\psi(\cdot)$. Notice that $\hat\mu^{\text{treg}}_{t_0}=Q$ for any $t_0$ is equivalent to $\hat\mu=Q$ and $\epsilon_{t_0}=0$ for all $t_0$. And $\hat\mu=Q$ and $\epsilon_{t_0}=0$ for all $t_0$ is also equivalent to $\hat\mu=Q$, because when $\hat\mu=Q$, $\hat\epsilon_{t_0}=0$ is the minimizer of $\text{pen}(t_0,\epsilon_{t_0})$. Thus, we can say that if either $\hat\pi=\pi$ or $\hat\mu=Q$, we have $\hat\psi=\psi$.
+\end{proof}
+
+\subsection{Proof of Theorem \ref{thm:Gamma_consistency}}
+\begin{proof}
+Consider any fixed $t_k^*$ such that assumptions (1)-(4) are satisfied. Then optimizing loss \eqref{eq:targeted_reg} yields
+
+\[
+\epsilon(t_{k}^{*})=\frac{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})\frac{y_{i}-Q(x_{i},t_{i})}{\pi(x_{i},t_{i})}}{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})}
+\]
+
+Notice that it is exactly the Nadaraya-Watson kernel estimator for $z=m(t)+\epsilon'$ with
+\[
+z_{i}=\frac{y_{i}-Q(x_{i},t_{i})}{\pi(x_{i},t_{i})}
+\]
+ and $m(t_{k}^{*})=\E\left(z_{i}\mid t_{k}^{*}\right)=\E_{x_{i}}\frac{\E_{Y}\left(Y\mid X=x_{i,}T=t_{k}^{*}\right)-Q(x_{i},t_{k}^{*})}{\pi(x_{i},t_{k}^{*})}$.
+From property of Nadaraya-Watson kernel estimator, we know from Theorem 5.65 of \cite{wasserman2006all} that 
+\[
+|\epsilon(t_k^*)-\epsilon^{*}(t_k^*)|=O_p(n^{-2/5})
+\]
+where $\epsilon^{*}(t_k^*)=\E\left[\frac{Y-Q(X,T)}{\pi(X,T)}\delta(T-t_k^*)\right]$.
+
+Theorem \ref{thm:doubly_robust} indicates that
+if $\pi(x,t_k^*)-p(t_k^*\mid x)=O(n^{-a})$ and $Q^{tr}(x,t_k^*)-\E(Y\mid X=x,T=t_k^*)=O(n^{-b})$, then
+$$
+\epsilon^*(t_k^*)+\E Q^{tr}(t_k^*,\X)-\Gamma_{t_k^*}=O_p(n^{-(a+b)})
+$$
+Notice that $|\frac{1}{n}\sum_{i=1}^{n}Q(x_{i,}t_{k}^{*})-\E Q(X,t_{k}^{*})|=O_p(n^{-1/2})$. Thus, we have 
+\[
+\frac{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})\frac{y_{i}-Q^{tr}(x_{i},t_{i})}{\pi(x_{i},t_{i})}}{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})}+\frac{1}{n}\sum_{i=1}^{n}Q^{tr}(x_{i,}t_{k}^{*})-\Gamma_{t_{k}^{*}}=\O_{p}(n^{-2/5}+n^{-1/2}+n^{-a-b}).
+\]
+We get the desired conclusion by setting
+$$
+\widehat{\Gamma_{t_{k}^{*}}}
+=
+\frac{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})\frac{y_{i}-Q^{tr}(x_{i},t_{i})}{\pi(x_{i},t_{i})}}{\sum_{i=1}^{n}K(\frac{t_{i}-t_{k}^{*}}{h})}+\frac{1}{n}\sum_{i=1}^{n}Q^{tr}(x_{i,}t_{k}^{*})
+=\frac{1}{n}\sum_{i=1}^{n}Q^{tr}(x_{i,}t_{k}^{*})
+$$
+\end{proof}
+\fi
+
+
+
+\subsubsection{Proof of Lemma \ref{lemma_appendix}}
+\begin{proof}
+This proof follows from \cite{huang2004polynomial}.
+Let us start with the following decomposition:
+\[
+\|\hat{\epsilon}_n-\check\epsilon_n\|_{L^2}
+\leq
+\|\check\epsilon_n-\tilde{\epsilon}_n\|_{L^2}+\|\hat{\epsilon}_n-\tilde{\epsilon}_n\|_{L^2}
+\]
+where $\tilde \epsilon_n=\left(\vpk(t)\right)^T\tilde{\bm\alpha}$. The first term $\|\check\epsilon_n-\tilde{\epsilon}_n\|_{L^2}$ is
+the bias and the second term $\|\hat{\epsilon}_n-\tilde{\epsilon}_n\|_{L^2}$
+is the variance.
+
+\paragraph{Bound on bias term}
+Let $\bmalpha\in\R^{K_n}$ be such that $\|\left(\bmalpha\right)^T\vpk-\check\epsilon_n\|_{\infty}=\inf_{f\in\mathcal{B}_{K_n}}\|f-\check\epsilon_n\|_{\infty}$. Then we have
+\begin{equation*}
+\begin{split}
+\|\check\epsilon_n-\tilde{\epsilon}_n\|_{L^2}
+&=\|\check\epsilon_n-\left(\bmalpha\right)^T\vpk+\left(\bmalpha\right)^T\vpk-\tilde{\epsilon}_n\|_{L^2}
+\\&\leq \|\check\epsilon_n-\left(\bmalpha\right)^T\vpk\|_{L^2}+\|\left(\bmalpha\right)^T\vpk-\tilde\epsilon_n\|_{L^2}.
+\end{split}
+\end{equation*}
+By definition of $\bmalpha$ and properties of B-spline space, we have a bound on the first term 
+$$\|\check\epsilon_n-\left(\bmalpha\right)^T\vpk\|_{L^2}=\O_p\left(\rho_n\right),$$
+where $\rho_n=\inf_{f\in\text{Span}\{\bm\varphi^{K_n}\}}\sup_{t\in[0,1]}|\check\epsilon_n(t)-f(t)|$.
+Notice that the second term can also be bounded:
+\begin{equation}\label{eq_appendix:bias_first_eq}
+\begin{split}
+&\|\left(\bmalpha\right)^T\vpk-\tilde\epsilon_n\|_{L^2}
+\\\overset{(a)}{\asymp}&\|\bmalpha-\tilde{\bm\alpha}\|_2/\sqrt{K_n}
+\\=&\|\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\Pi_n^{-2}\left(B_n\bmalpha-\tilde\Pi_n^{2}\tilde{\boldsymbol{Z}}_n\right)\|_{2}/\sqrt{K_n}
+\\\overset{(b)}{\asymp}&\frac{K_n}{n}\|B_n^T\Pi_n^{-2}\left(B_n\bmalpha-\tilde\Pi_n^{2}\tilde{\boldsymbol{Z}}_n\right)\|_2/\sqrt{K_n}
+\\\overset{(c)}{\asymp}&\frac{\sqrt{K_n}}{n}\rho_n\sqrt{\vecI^T\Pi_n^{-2}B_n^TB_n\Pi_n^{-2}\vecI}
+\\\asymp&\frac{\sqrt{K_n}}{n}\rho_n\sqrt{\sum_{k=1}^{K_n}\left(\sum_{i=1}^n\frac{\varphi_k(t_i)}{\hat\pi_n(t_i\mid\x_i)}\right)^2}
+\\\overset{(d)}{\asymp}&\sqrt{K_n}\rho_n\sqrt{\sum_{k=1}^{K_n}\left(\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\right)^2},
+\end{split}
+\end{equation}
+where (a) follows from properties of B-spline basis functions, (b) follows from Lemma \ref{lemma:eigenvalue}, (c) follows from properties of B-spline space such that $\left\|B_n\bmalpha-\tilde\Pi_n^{2}\tilde{\boldsymbol{Z}}_n\right\|_{\infty}=\O_p(\rho_n)$  because $\left(\check\epsilon_n(t_1),\check\epsilon_n(t_1),\cdots,\check\epsilon_n(t_1)\right)^T=\tilde\Pi_n^{2}\tilde{\boldsymbol{Z}}_n$, (d) is from the upper and lower boundedness of $\hat\pi_n$.
+Following proof of Lemma A.6 of \cite{huang2004polynomial}, for any $a>[\E\varphi_k(T)]^2K_n$, we have
+\begin{equation*}
+\begin{split}
+&{\Pr}\left(\sum_{k=1}^{K_n}\left(\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\right)^2>a\right)
+\\\overset{(a)}{\leq}&\sum_{k=1}^{K_n}\Pr\left(\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\right|>\sqrt{\frac{a}{K_n}}\right)
+\\\leq&\sum_{k=1}^{K_n}\Pr\left(\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)-\E\varphi_k(T)\right|+\left|\E\varphi_k(T)\right|>\sqrt{\frac{a}{K_n}}\right)
+\\\leq&\sum_{k=1}^{K_n}\Pr\left(\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)-\E\varphi_k(T)\right|>\sqrt{\frac{a}{K_n}}-\left|\E\varphi_k(T)\right|\right)
+\\\overset{(b)}{\leq}& %C_3K_n^3\exp{\left\{-C_4\frac{n}{K_n}\frac{(\sqrt{aK_n}-K_n\E\varphi_k(T))^2}{1+(\sqrt{aK_n}-K_n\E\varphi_k(T))}\right\}}
+2K_n\exp\left\{-2n\left(\sqrt{a/K_n}-|\E\varphi_k(T)|\right)^2\right\},
+\end{split}
+\end{equation*}
+where (a) uses union bound, (b) follows from Hoeffding's Inequality for bounded random variables. Since $\E\varphi_k(T)\asymp 1/K_n$, we can pick $a=2[\E\varphi_k(T)]^2K_n\asymp 1/K_n$ and thus, $\sum_{k=1}^{K_n}\left(\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\right)^2=\O_p\left(\frac{1}{K_n}\right)$. Plugging into Equation (\ref{eq_appendix:bias_first_eq}), we get
+$$
+\|\left(\bmalpha\right)^T\vpk-\tilde\epsilon_n\|_{L^2}
+=\O_p\left(\rho_n\right),
+$$
+Thus, we can bound the bias term
+\[
+\|\check\epsilon_n-\tilde{\epsilon}_n\|_{L^2}
+=\O_p\left(\rho_n\right).
+\]
+
+
+\paragraph{Bound on variance term}
+From properties of B-spline space, we have
+\begin{equation*}
+\begin{split}
+&\|\hat\epsilon_n-\tilde\epsilon_n\|_{L^2}
+\lesssim
+\|\hat{\bm\alpha}-\tilde{\bm\alpha}\|_2/\sqrt{K_n}.
+\end{split}
+\end{equation*}
+Notice that
+\begin{align}
+&\left\|\hat{\bm\alpha}-\tilde{\bm\alpha}\right\|_2
+=\left\|\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\left(\Zn-\Pi_n^{-2}\tilde\Pi_n^2\tilde\Zn\right)\right\|_2\nonumber
+\\=&\left\|\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\left(\Zn-\tilde\Zn+\tilde\Zn-\Pi_n^{-2}\tilde\Pi_n^2\tilde\Zn\right)\right\|_2\nonumber
+\\\leq&\left\|\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\left(\Zn-\tilde\Zn\right)\right\|_2
++\left\|\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\left(\tilde\Zn-\Pi_n^{-2}\tilde\Pi_n^2\tilde\Zn\right)\right\|_2 \label{eq_appendix:variance}
+\end{align}
+
+Control of the first term in Equation (\ref{eq_appendix:variance}): denote $\bm\delta=(\delta_1,\cdots,\delta_n)^T:=\Zn-\tilde\Zn$,  then we have
+\begin{equation}\label{eq_appendix:variance_eq1}
+\begin{split}
+&\left\|\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\left(\Zn-\tilde\Zn\right)\right\|^2_2
+=\left(\Zn-\tilde\Zn\right)^TB_n\left(B_n^T\Pi_n^{-2}B_n\right)^{-2}B_n^T\left(\Zn-\tilde\Zn\right)
+\\\overset{(a)}{\asymp}&\frac{K_n^2}{n^2}\bm\delta^T B_n B_n^T\bm\delta
+=\frac{K_n^2}{n^2}\left\|\sum_{i=1}^n\vpk(t_i)\delta_i\right\|_2^2
+=\frac{K_n^2}{n^2}\sum_{k=1}^{K_n}\left(\sum_{i=1}^n\varphi_k(t_i)\delta_i\right)^2
+\\\leq &K_n^2\sum_{k=1}^{K_n}\sup_{\hat{\pi},\hat\mu}\left(\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\delta_i\right)^2
+\end{split}
+\end{equation}
+where (a) is from Lemma \ref{lemma:eigenvalue}. By definition we know
+\begin{equation*}
+\begin{split}
+\delta_i
+&=\frac{y_i-\hat \mu_n(\x_i,t_i)}{\hat\pi(t_i\mid\x_i)}-\P\left(\frac{Y-\hat \mu_n(\X,T)}{\hat\pi(T\mid\X)}\mid T=t_i\right)
+\\&=\frac{\mu(\x_i,t_i)-\hat \mu_n(\x_i,t_i)}{\hat\pi(t_i\mid\x_i)}-\P\left(\frac{\mu(\X,T)-\hat \mu_n(\X,T)}{\hat\pi(T\mid\X)}\mid T=t_i\right)+\frac{v_i}{\hat\pi(t_i\mid\x_i)}
+\\&=u_i+\tilde v_i,
+\end{split}
+\end{equation*}
+where $u_i=\frac{\mu(\x_i,t_i)-\hat \mu_n(\x_i,t_i)}{\hat\pi(t_i\mid\x_i)}-\P\left(\frac{\mu(\X,T)-\hat \mu_n(\X,T)}{\hat\pi(T\mid\X)}\mid T=t_i\right)$, $\E \left(u_i\mid t_i\right)=0$ and $\tilde v_i=\frac{v_i}{\hat\pi(t_i\mid\x_i)}$, $\E\left(\tilde v_i\mid t_i,\x_i\right)=0$.
+Thus, from union bound, we have
+\begin{align}
+&\Pr\left(\sum_{k=1}^{K_n}\sup_{\hat{\pi},\hat\mu}\left(\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\delta_i\right)^2>a\right) \nonumber
+\\\leq&
+\sum_{k=1}^{K_n} \Pr\left(\sup_{\hat{\pi},\hat\mu}\left(\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\delta_i\right)^2>\frac{a}{K_n}\right) \nonumber
+\\=&
+\sum_{k=1}^{K_n} \Pr\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\delta_i\right|>\sqrt{\frac{a}{K_n}}\right) \nonumber
+\\=&\sum_{k=1}^{K_n} \Pr\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)(u_i+\tilde v_i)\right|>\sqrt{\frac{a}{K_n}}\right)\nonumber
+\\=&\sum_{k=1}^{K_n} \Pr\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i) u_i\right|>\frac{1}{2}\sqrt{\frac{a}{K_n}}\right)
++
+\sum_{k=1}^{K_n} \Pr\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde v_i\right|>\frac{1}{2}\sqrt{\frac{a}{K_n}}\right).
+\label{eq_appendix:Kn_delta}
+\end{align}
+%\end{equation}
+
+From Lemma \ref{lemma:complexity}, we know that
+\begin{equation*}
+\begin{split}
+\Rad((\mathcal{Q}+\mu)\mathcal{U}^{-1})
+&\leq \frac{1}{2}(\|\mathcal{Q}\|_{\infty}+\|\mathcal{U}^{-1}\|_{\infty})\left( \Rad(\mathcal{Q})+\Rad(\mathcal{U}^{-1})\right)
+\\&\overset{(a)}\leq
+\frac{1}{2}(\|\mathcal{Q}\|_{\infty}+\|\mathcal{U}^{-1}\|_{\infty})\left( \Rad(\mathcal{Q})+\max\left(\frac{c^2}{2},\frac{2}{(c-1/c)^2}\right)\Rad(\mathcal{U}-\frac{1}{2c})+\frac{2c}{n}\right)
+\\&=
+\O(n^{-1/2}),
+\end{split}
+\end{equation*}
+where (a) follows from plugging $h:x\mapsto \frac{1}{x-1/2c}+2c$ in Theorem 12(4) in \cite{bartlett2002rademacher}.
+Similarly, write $\mathcal{A}=(\mathcal{Q}+\mu)\mathcal{U}^{-1}$, from Lemma \ref{lemma:complexity}, we have
+\begin{equation*}
+\begin{split}
+&\Rad(\varphi_k\mathcal{A})
+\leq 
+\frac{1}{2}(\|\varphi_k\|_{\infty}+\|\mathcal{A}\|_{\infty})(\Rad(\varphi_k)+\Rad(\mathcal{A}))
+=
+\O(n^{-1/2}).
+\end{split}
+\end{equation*}
+
+Thus, we bound the first term of (\ref{eq_appendix:Kn_delta}) using 
+\begin{align}\label{eq_appendix:uniformbound_qiang}
+\Pr\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i) u_i\right|>\frac{1}{2}\sqrt{\frac{a}{K_n}}\right)
+\stackrel{(a)}{\lesssim}
+\frac{\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i) u_i\right|\right)}{\frac{1}{2}\sqrt{\frac{a}{K_n}}}
+\overset{(b)}{\asymp} \sqrt{\frac{K_n}{an}},
+\end{align}
+where (a) follows Markov Inequality,
+and (b) follows from the definition of Rademacher complexity.
+
+We bound the second term of Equation (\ref{eq_appendix:Kn_delta}) using union bound: for any $M_n>0$,
+\begin{equation}\label{eq_appendix:tildeepsilon}
+\begin{split}
+&\Pr\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde v_i\right|>\frac{1}{2}\sqrt{\frac{a}{K_n}}\right)
+\\\overset{}{\leq}& \Pr\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde v_i\I(|v_i|> M_n)\right|>\frac{1}{4}\sqrt{\frac{a}{K_n}}\right)
++
+\Pr\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde v_i\I(|v_i|\leq M_n)\right|>\frac{1}{4}\sqrt{\frac{a}{K_n}}\right).
+\end{split}
+\end{equation}
+We have from Markov Inequality that
+\begin{equation}\label{eq_appendix:tildev_bounded}
+\begin{split}
+&\Pr\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde v_i\I(|v_i|\leq M_n)\right|>\frac{1}{4}\sqrt{\frac{a}{K_n}}\right)
+\\\lesssim&\frac{\E\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)/\hat\pi(t_i\mid\x_i)v_i\I(|v_i|\leq M_n)\right|}{\sqrt{a/K_n}}
+\stackrel{(a)}{\lesssim}
+\sqrt{\frac{K_n}{an}}M_n,
+\end{split}
+\end{equation}
+where (a) follows from Lemma \ref{lemma:complexity}.
+Also we have
+\begin{equation}\label{eq_appendix:tildev_unbounded}
+\begin{split}
+&\Pr\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde v_i\I(|v_i|> M_n)\right|>\frac{1}{4}\sqrt{\frac{a}{K_n}}\right)  
+\\\lesssim&
+\frac{\E\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde v_i\I(|v_i|> M_n)\right|}{\sqrt{a/K_n}}
+\\\leq&
+\frac{\E\sup_{\hat{\pi},\hat\mu}\frac{1}{n}\sum_{i=1}^n\frac{\varphi_k(t_i)}{\hat\pi(t_i\mid\x_i)}|v_i|\I(|v_i|> M_n)}{\sqrt{a/K_n}}
+\\\lesssim&
+\frac{\E\left[|v|\I(|v|> M_n)\right]}{\sqrt{a/K_n}}
+\\\overset{(a)}{=}&
+\frac{\int_{0}^{\infty}\left(1-F_W(w)\right)dw-\int_{-\infty}^0F_W(w)dw}{\sqrt{a/K_n}}
+\\=&
+\frac{\int_{0}^{\infty}\P(|v|\geq\max(M_n,w))dw}{\sqrt{a/K_n}}
+\\\overset{(b)}{\lesssim}&
+\frac{\int_0^{\infty}e^{-\sigma[\max(M_n,w)]^2}dw}{\sqrt{a/K_n}}
+\\\leq&
+\frac{\int_0^{\infty}e^{-\sigma[M_n+w]^2}dw}{\sqrt{a/K_n}}
+\\\overset{(c)}{\lesssim}&
+\frac{e^{-\sigma M^2}\sqrt{K_n}}{M_n}\frac{1}{\sqrt{a}},
+\end{split}
+\end{equation}
+where (a) uses the formula $\E W=\int_0^{\infty}(1-F(w))dw-\int_{-\infty}^0F(w)dw$ and we set $W=|v|\I(|v|> M)$, (b) utilizes the fact that $v$ follows sub-Gaussian distribution, (c) uses Mills ratio.
+
+Plugging Equation (\ref{eq_appendix:uniformbound_qiang}), (\ref{eq_appendix:tildev_bounded}), (\ref{eq_appendix:tildev_unbounded}) into (\ref{eq_appendix:Kn_delta}), and taking $M\asymp\sqrt{\log n}$, $a\asymp \frac{K_n\log n}{n}$, we get
+\begin{equation}
+\sum_{k=1}^{K_n}\sup_{\hat{\pi},\hat\mu}\left(\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\delta_i\right)^2
+=\O_p\left(\frac{K_n\log n}{n}\right)
+\end{equation}
+which, when plugging back into Equation (\ref{eq_appendix:variance_eq1}), gives
+\begin{align}\label{eq_appendix:variance_eq1_rate}
+\left\|\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\left(\Zn-\tilde\Zn\right)\right\|_2
+=\O_p\left(\sqrt{\frac{K_n^3\log n}{n}}\right).
+\end{align}
+
+Control of the second term in Equation (\ref{eq_appendix:variance}):
+Notice that each coordinate of $\tilde\Zn-\Pi_n^{-2}\tilde\Pi_n^2\tilde\Zn$ is bounded, thus using similar arguments as that of Equation (\ref{eq_appendix:uniformbound_qiang}), we know that
+\begin{align}\label{eq_appendix:variance_eq2_rate}
+\left\|\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\left(\tilde\Zn-\Pi_n^{-2}\tilde\Pi_n^2\tilde\Zn\right)\right\|_2
+=\O_p\left(\sqrt{\frac{K_n^3\log n}{n}}\right).
+\end{align}
+Combining Equation (\ref{eq_appendix:variance_eq1_rate}) and (\ref{eq_appendix:variance_eq2_rate}) into (\ref{eq_appendix:variance}), we know that
+\begin{align*}
+\|\hat{\bm\alpha}-\tilde{\bm\alpha}\|_2   
+=\O_p\left(\sqrt{\frac{K_n^3\log n}{n}}\right),
+\end{align*}
+and thus,
+\begin{align}
+\|\hat\epsilon_n-\tilde\epsilon_n\|_{L^2}
+=\O_p\left(\sqrt{\frac{K_n^2\log n}{n}}\right).
+\end{align}
+Combining the rate on bias and variance term, we get
+$$
+\|\hat{\epsilon}_n-\check\epsilon_n\|_{L^2}
+=\O_p\left(\rho_n+\sqrt{\frac{K_n^2\log n}{n}}\right)
+\stackrel{(a)}{=}\O_p\left(K_n^{-2}+\frac{K_n\sqrt{\log n}}{\sqrt{n}}\right),
+$$
+where (a) follows from assumption (iii), giving
+$$
+\|\hat{\epsilon}_n-\check\epsilon_n\|_{L^2}
+=\O_p\left(n^{-1/3}\sqrt{\log n}\right),
+$$
+when taking $K_n\asymp n^{1/6}$.
+\end{proof}
+
+
+
+
+\iffalse
+Thus,
+\begin{align}
+&\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\delta_i\right|\right)
+\nonumber
+\\\leq&
+\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)u_i\right|\right)
++
+\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde\epsilon_i\right|\right)
+\nonumber
+\\\leq &
+\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)u_i\right|\right)
++
+\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde\epsilon_i\I(\varphi_k(t_i)\tilde\epsilon_i\geq M_1\,\text{or}\,\varphi_k(t_i)\tilde\epsilon_i\leq -M_2)\right|\right)
+\nonumber
+\\&+
+\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde\epsilon_i\I(-M_2<\varphi_k(t_i)\tilde\epsilon_i< M_1)\right|\right)
+\nonumber
+\\\leq&
+\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)u_i\right|\right)
++
+\E\left(\frac{1}{n}\sum_{i=1}^n\sup_{\hat{\pi},\hat\mu}\left|\varphi_k(t_i)\tilde\epsilon_i\I(\varphi_k(t_i)\tilde\epsilon_i\geq M_1\,\text{or}\,\varphi_k(t_i)\tilde\epsilon_i\leq -M_2)\right|\right)
+\nonumber
+\\&+
+\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde\epsilon_i\I(-M_2<\varphi_k(t_i)\tilde\epsilon_i< M_1)\right|\right)
+\nonumber
+\\\leq&
+\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)u_i\right|\right)
++
+\E\left(\left|\epsilon_i|\I(|\epsilon_i|\geq M_4\right|\right)
++
+\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde\epsilon_i\I(-M_2<\varphi_k(t_i)\tilde\epsilon_i< M_1)\right|\right)
+\nonumber
+\\\overset{(a)}{\lesssim}&
+\frac{M_4}{\sqrt{n}}
++
+\frac{\E\left(\left|\epsilon_i|^{2+b}\I(|\epsilon_i|\geq M_4\right|\right)}{M_4^{1+b}}
+\asymp
+\frac{M_4}{\sqrt{n}}+\frac{1}{M_4^{1+b}}
+\end{align}
+where $M_1,M_2,M_3,M_4$ are positive s.t. $M_3=M_1+M_2$, $\E\left[\varphi_k(t_i)\tilde\epsilon_i\I(-M_2<\varphi_k(t_i)\tilde\epsilon_i< M_1)\right]=0$, $M_4=\min(M_1/C_1,M_2/C_1)\asymp n^{1/(4+2b)}$. Here (a) uses {\color{red}Rademacher condition}, the boundedness of $u_i$, $\tilde\epsilon_i\I(-M_2<\varphi_k(t_i)\tilde\epsilon_i< M_1)$, $\varphi_k(t_i)$ and Lemma C.1(5) of \cite{liu2018stein}, and generalization bound.
+Then the following inequality follows:
+
+
+
+And we can bound the second term of \eqref{eq_appendix:varphidelta}:
+\begin{equation*}
+\begin{split}
+&\P\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde\epsilon_i\right|>\frac{a}{2}\right)
+\\\leq& \P\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde\epsilon_i\I(\varphi_k(t_i)\tilde\epsilon_i\geq M_1\,\text{or}\,\varphi_k(t_i)\tilde\epsilon_i\leq -M_2)\right|>\frac{a}{2}\right)
+\\&+\P\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde\epsilon_i\I(-M_2<\varphi_k(t_i)\tilde\epsilon_i< M_1)\right|>\frac{a}{2}\right)
+\\\overset{(a)}{\lesssim}&
+\frac{\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde\epsilon_i\I(\varphi_k(t_i)\tilde\epsilon_i\geq M_1\,\text{or}\,\varphi_k(t_i)\tilde\epsilon_i\leq -M_2)\right|\right)}{a}
+\\&+\frac{\E\left(\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\tilde\epsilon_i\I(-M_2<\varphi_k(t_i)\tilde\epsilon_i< M_1)\right|\right)}{a}
+\\\overset{(b)}{\lesssim}&
+\frac{1}{a\sqrt{n}}+\frac{\E\left(\frac{1}{n}\sum_{i=1}^n\sup_{\hat{\pi},\hat\mu}\left|\varphi_k(t_i)\tilde\epsilon_i\I(\varphi_k(t_i)\tilde\epsilon_i\geq M_1\,\text{or}\,\varphi_k(t_i)\tilde\epsilon_i\leq -M_2)\right|\right)}{a}
+\\\lesssim&
+\frac{1}{a\sqrt{n}}+\frac{\E\left(\left|\epsilon_i|\I(|\epsilon_i|\geq M_4\right|\right)}{a}
+\\\leq&
+\frac{1}{a\sqrt{n}}+\frac{\E\left(\left|\epsilon_i|^{2+b}\I(|\epsilon_i|\geq M_4\right|\right)}{aM_4^{1+b}}
+\\\lesssim&
+\frac{1}{a\sqrt{n}}+\frac{1}{aM_4^{1+b}}
+\end{split}
+\end{equation*}
+where $M_1,M_2,M_3,M_4$ are positive constants s.t. $M_3=M_1+M_2$, $\E\left[\varphi_k(t_i)\tilde\epsilon_i\I(-M_2<\varphi_k(t_i)\tilde\epsilon_i< M_1)\right]=0$, $M_4=\min(M_1/C_1,M_2/C_1)$. Here (a) uses Markov Inequality, (b) follows similar arguments as \eqref{eq_appendix:uniformbound_qiang}. 
+
+If we let $a(n)=\sqrt{\frac{\log n}{nK_n^2}}$, $M_4(n)=\O\left(\frac{n\log n}{K_n}\right)$ we have
+\begin{align*}
+\sup_{\hat{\pi},\hat\mu}\left|\frac{1}{n}\sum_{i=1}^n\varphi_k(t_i)\delta_i\right|
+=\O\left(\rho_n\right)
+\end{align*}
+which, when plugging into \eqref{eq_appendix:variance_eq1}, gives
+\begin{align}
+\sup_{\hat{\pi},\hat\mu}\|\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\left(\Zn-\tilde\Zn\right)\|_2=\O\left(K_n\sqrt{K_n}\rho_n\right)
+\end{align}
+
+From Condition (2) of Theorem \ref{thm:doubly_robust}, we have
+$$
+\E \sup_{\hat{\pi},\hat\mu}\varphi_k^2(t_i)\delta_i^2\leq \frac{C}{K_n}
+$$
+and since our data $(X_i,Y_i,T_i)$ are i.i.d, we have
+$$
+\E\varphi_k(t_i)\varphi_k(t_j)\delta_i\delta_j=0
+$$
+Thus, we have
+\begin{equation*}
+\begin{split}
+&\|\left(B_n^T\Pi_n^{-2}B_n\right)^{-1}B_n^T\left(\Zn-\tilde\Zn\right)\|^2_2
+\lesssim \frac{K_n^2}{n^2}\left(K_n n\frac{1}{K_n}+K_n(n^2-n)\frac{1}{K_n^2}\right)
+=\frac{K_n^2}{n}
+\end{split}
+\end{equation*}
+And thus,
+\begin{equation*}
+\begin{split}
+&\|\hat\epsilon_n-\tilde\epsilon_n\|_{L^2}
+\lesssim\sqrt{\frac{K_n}{n}}=\rho_n
+\end{split}
+\end{equation*}
+Combining the bias and variance term, we have
+$$
+\|\hat\epsilon_n-\epsilon_n\|_{L^2}\lesssim \rho_n
+$$
+\[
+\bar{h}_{\hat{\pi}}(t)=\hat{m}_n(t)-\tilde{m}_n(t)=\left(\tildevpk(t)\right)^{T}\left(\tbn^{T}\tbn/n\right)^{-1}\tbn/n\left(\frac{U_{i}}{\hat{\pi}(T_{i}\mid\boldsymbol{X}_{i})}\right)_{i}
+\]
+Notice that $\bar h_{\hat\pi}$ only depends on $\hat\pi$.
+Write $\left(\frac{U_{i}}{\hat{\pi}(T_{i}\mid\boldsymbol{X}_{i})}\right)_{i}=e_{\hat{\pi}}$.
+By the mean value theorem, for any $t,t^{*}\in\mathcal{T}$, we have
+\begin{align*}
+\sup_{\hat{\pi}}\left|\hpi(t)-\hpi(t^{*})\right| & =\sup_{\hat{\pi}}\left|\left(\tildevpk(t)-\tildevpk(t^{*})\right)^{T}\left(\tbn^{T}\tbn/n\right)^{-1}\tbn e_{\hat{\pi}}/n\right|\\
+ & =\sup_{\hat{\pi}}\left|\left(t-t^{*}\right)^{T}\bigtriangledown\tildevpk(t^{**})^{T}\left(\tbn^{T}\tbn/n\right)^{-1}\tbn^{T}\epi/n\right|\\
+ & \leq C_{\bigtriangledown}n^{w_{1}}\left(K\right)^{w_{2}}\|t-t^{*}\|\times\|\left(\tbn^{T}\tbn/n\right)^{-1}\|\times\sup_{\hat{\pi}}\|\tbn^{T}\epi/n\|
+\end{align*}
+where $t^{**}\in(t,t^{*})$ and $C_{\bigtriangledown},w_1,w_2$ are some constants.
+Notice that $\|\left(\tbn^{T}\tbn/n\right)^{-1}\|=\O_{p}(1)$ (Lemma 2.1 of \citep{chen2015optimal}, with its assumptions satisfied by i.i.d. data and B-spline from remark of assumption 4 in \citep{chen2015optimal}) and
+$\sup_{\hat{\pi}}\|\tbn^{T}\epi/n\|=\O_{p}(\sqrt{K/n})$ because
+$\hat{\pi}$ is uniformly lower bounded away from 0 and Markov Inequality. Thus,
+\[
+\lim\sup_{n\rightarrow\infty}\P\left(C_{\bigtriangledown}\|\left(\tbn^{T}\tbn/n\right)^{-1}\|\times\sup_{\hat{\pi}}\|\tbn^{T}\epi/n\|>\bar{M}\right)=0
+\]
+for any fixed $\bar{M}>0$. Let $\En$ denote the event on which $C_{\bigtriangledown}\|\left(\tbn^{T}\tbn/n\right)^{-1}\|\times\sup_{\hat{\pi}}\|\tbn^{T}\epi/n\|\leq\bar{M}$
+and observe that $\P\left(\En^{c}\right)=o(1)$. On $\En$, for any
+$C\geq1$, finite positive numbers $\eta_{1}=\eta_{1}(C)$ and $\eta_{2}=\eta_{2}(C)$
+can be chosen such that
+\[
+C_{\bigtriangledown}n^{w_{1}}\left(K\right)^{w_{2}}\|t-t^{*}\|\times\|\left(\tbn^{T}\tbn/n\right)^{-1}\|\times\sup_{\hat{\pi}}\|\tbn^{T}\epi/n\|\leq C\sqrt{K\log n/n}
+\]
+whenever $\left|t-t^{*}\right|\leq\eta_{1}n^{-\eta_{2}}$. Let $\Sn$
+be the smallest subset of $\Dn=\left\{ T_{1,}T_{2,}\cdots,T_{n}\right\} $
+such that for each $t\in\Dn$, there exists a $t_{n}^*\in\Sn$ with
+$|t_{n}^*-t|\leq\eta_{1}n^{-\eta_{2}}$. For any $t\in\Dn$, let $t_{n}^*(t)$
+denote the $t_{n}^*\in\Sn$ closest to $t$. Then on $\En$ we have
+for any $t\in\Dn$,
+\[
+\sup_{\hat{\pi},t}\left|\hpi(t)-\hpi(t_{n}^*(t))\right|\leq C\sqrt{K\log n/n}
+\]
+
+We have
+\begin{align*}
+\P\left(\sup_{\hat{\pi}}\|\hpi\|_{\infty}\geq4C\sqrt{K\log n/n}\right) & \leq\P\left(\left\{ \sup_{\hat{\pi}}\|\hpi\|_{\infty}\geq4C\sqrt{K\log n/n}\right\} \cap\En\right)+\P\left(\En^{c}\right)\\
+ & \leq\P\left(\left\{ \sup_{\hat{\pi}}\sup_{t}\left|\hpi(t)-\hpi(t_{n}^*(t))\right|\geq2C\sqrt{K\log n/n}\right\} \cap\En\right)\\
+ & \,\,\,+\P\left(\left\{ \sup_{\hat{\pi}}\max_{t_{n}^*\in\En}\left|\hpi(t_{n}^*)\right|\geq2C\sqrt{K\log n/n}\right\} \cap\En\right)+\P\left(\En^{c}\right)\\
+ & \stackrel{(a)}{=}\P\left(\left\{ \sup_{\hat{\pi}}\max_{t_{n}^*\in\En}\left|\hpi(t_{n}^*)\right|\geq2C\sqrt{K\log n/n}\right\} \cap\En\right)+o(1)
+\end{align*}
+where (a) uses the fact that $\P\left(\En^{c}\right)=o(1)$.
+
+Let $\An$ denote the event on which $\|\left(\tbn^{T}\tbn/n\right)-I_{K}\|\leq1/2$
+and observe that $\P\left(\An^{c}\right)=o(1)$ because $\|\tbn^{T}\tbn/n-I_{K}\|=o_{p}(1)$.
+Let $\{\An\}$ denote the indicator function of $\An$, let $\{M_{n}:n\geq1\}$
+be an increasing sequence diverging to $+\infty$, and define
+\[
+U_{1,i,n}^{\hat{\pi}}\doteq U_{i}/\hat{\pi}\left(T_{i}\mid X_{i}\right)\left\{ \left|U_{i}/\hat{\pi}\left(T_{i}\mid X_{i}\right)\right|\leq M_{n}\right\} -\E\left[U_{i}/\hat{\pi}\left(T_{i}\mid X_{i}\right)\left\{ \left|U_{i}/\hat{\pi}\left(T_{i}\mid X_{i}\right)\right|\leq M_{n}\right\} \right]
+\]
+\[
+U_{2,i,n}^{\hat{\pi}}\doteq U_{i}/\hat{\pi}\left(T_{i}\mid X_{i}\right)-U_{1,i,n}^{\hat{\pi}}
+\]
+\[
+G_{i,n}(t_{n})\doteq\vpk(t_{n})^{T}\left(\tbn^{T}\tbn/n\right)^{-1}\vpk(T_{i})\{\An\}
+\]
+
+From $\P\left(A\cap B\right)\leq\P\left(A\right)$ and $\P\left(A\right)\leq\P\left(A\cap B\right)+\P\left(B^{c}\right)$,
+we have
+\begin{align*}
+ & \P\left(\left\{ \sup_{\hat{\pi}}\max_{t_{n}^*\in\En}\left|\hpi(t_{n}^*)\right|\geq2C\sqrt{K\log n/n}\right\} \cap\En\right)\\
+\leq & \P\left(\left\{ \sup_{\hat{\pi}}\max_{t_{n}^*\in\Sn}\left|\hpi(t_{n}^*)\right|\geq2C\sqrt{K\log n/n}\right\} \right)\\
+\leq & \P\left(\left\{ \sup_{\hat{\pi}}\max_{t_{n}^*\in\Sn}\left|\hpi(t_{n}^*)\right|\geq2C\sqrt{K\log n/n}\right\} \cap\An\right)+\P\left(\An^{c}\right)\\
+\leq & \left|\Sn\right|\times\max_{t_{n}^*\in\Sn}\P\left(\left\{ \sup_{\hat{\pi}}\left|\frac{1}{n}\sum_{i=1}^{n}G_{i,n}(t_{n}^*)U_{1,i,n}^{\hat{\pi}}\right|\geq C\sqrt{K\log n/n}\right\} \cap\An\right)\\
+ & +\P\left(\left\{ \sup_{\hat{\pi}}\max_{t_{n}^*\in\Sn}\left|\frac{1}{n}\sum_{i=1}^{n}G_{i,n}(t_{n}^*)U_{2,i,n}^{\hat{\pi}}\right|\geq C\sqrt{K\log n/n}\right\} \cap\An\right)+\P\left(\An^{c}\right)
+\end{align*}
+
+Now let us control the term $\left|\Sn\right|\times\max_{t_{n}^*\in\Sn}\P\left(\left\{ \sup_{\hat{\pi}}\left|\frac{1}{n}\sum_{i=1}^{n}G_{i,n}(t_{n}^*)U_{1,i,n}^{\hat{\pi}}\right|\geq C\sqrt{K\log n/n}\right\} \cap\An\right)$.
+We have
+\[
+\sup_{\hat{\pi}}\left|\frac{1}{n}G_{i,n}(t_{n}^*)U_{1,i,n}^{\hat{\pi}}\right|\leq\sup_{\hat{\pi}}\frac{1}{n}\left|G_{i,n}(t_{n}^*)\right|M_{n}\lesssim\frac{KM_{n}}{n}
+\]
+because $\|\tildevpk\|=\O_p(\sqrt{K})$ and $\|\tbn\tbn/n\|=\O_p(1)$ from \cite{chen2015optimal}.
+Thus,
+\begin{align*}
+ & \E\left[\sup_{\hat{\pi}}\left[\left(\frac{1}{n}\sum_{i=1}^{n}G_{i,n}(t_{n}^*)U_{1,i,n}^{\hat{\pi}}\right)^{2}\right]\right]\\
+= & \frac{1}{n^{2}}\E\left[\sup_{\hat{\pi}}\left(U_{1,i,n}^{\hat{\pi}}\right)^{2}\vpk(t_{n}^*)^{T}\left(\tbn^{T}\tbn/n\right)^{-1}\vpk(T_{i})\vpk(T_{i})^{T}\{\An\}\left(\tbn^{T}\tbn/n\right)^{-1}\vpk(t_{n}^*)\right]\\
+\\
+= & \frac{1}{n^{2}}\sum_{i=1}^{n}\E\left[\E\sup_{\hat{\pi}}\left[\left(U_{1,i,n}^{\hat{\pi}}\right)^{2}\mid T_{i}\right]\vpk(t_{n}^*)^{T}\left(\tbn^{T}\tbn/n\right)^{-1}\vpk(T_{i})\vpk(T_{i})^{T}\{\An\}\left(\tbn^{T}\tbn/n\right)^{-1}\vpk(t_{n}^*)\right]\\
+\lesssim & \frac{1}{n^{2}}\sum_{i=1}^{n}\E\left[\vpk(t_{n}^*)^{T}\left(\tbn^{T}\tbn/n\right)^{-1}\vpk(T_{i})\vpk(T_{i})^{T}\{\An\}\left(\tbn^{T}\tbn/n\right)^{-1}\vpk(t_{n}^*)\right]\\
+= & \frac{1}{n}\vpk(t_{n}^*)^{T}\E\left[\left(\tbn^{T}\tbn/n\right)^{-1}\vpk(T_{i})\vpk(T_{i})^{T}\{\An\}\left(\tbn^{T}\tbn/n\right)^{-1}\right]\vpk(t_{n}^*)\lesssim\frac{K}{n}
+\end{align*}
+Then, from Berstein's Inequality, we have
+\begin{align*}
+ & \left|\Sn\right|\times\max_{t_{n}\in\Sn}\P\left(\left\{ \sup_{\hat{\pi}}\left|\frac{1}{n}\sum_{i=1}^{n}G_{i,n}(t_{n}^*)U_{1,i,n}^{\hat{\pi}}\right|\geq C\sqrt{K\log n/n}\right\} \cap\An\right)\\
+\leq & n^{\eta_{2}}\max_{t_{n}^*\in\Sn}\text{exp}\left\{ -\frac{C^{2}K\log n/n}{\E\sup_{\hat{\pi}}\left[\left(\frac{1}{n}\sum_{i=1}^{n}G_{i,n}(t_{n}^*)U_{1,i,n}^{\hat{\pi}}\right)^{2}\right]}\right\} \\
+\lesssim & n^{\eta_{2}}\text{exp}\left\{ -\frac{C^{2}K\log n/n}{C_{1}K/n+C_{2}KM_{n}/n\times C\sqrt{K\log n/n}}\right\} 
+\end{align*}
+which vanishes asymptotically for sufficiently large $C$ if $M_{n}=\O\left(\sqrt{\frac{n/\log n}{K}}\right)$.
+
+Second, let us control the term $\P\left(\left\{ \sup_{\hat{\pi}}\max_{t_{n}^*\in\Sn}\left|\frac{1}{n}\sum_{i=1}^{n}G_{i,n}(t_{n})U_{2,i,n}^{\hat{\pi}}\right|\geq C\sqrt{K\log n/n}\right\} \cap\An\right)$.
+From Markov's Inequality, we have
+\begin{align*}
+ & \P\left(\left\{ \sup_{\hat{\pi}}\max_{t_{n}^*\in\Sn}\left|\frac{1}{n}\sum_{i=1}^{n}G_{i,n}(t_{n}^*)U_{2,i,n}^{\hat{\pi}}\right|\geq C\sqrt{K\log n/n}\right\} \right)\\
+\leq & \frac{\E\sup_{\hat{\pi}}\max_{t_{n}\in\Sn}\left|\frac{1}{n}\sum_{i=1}^{n}G_{i,n}(t_{n}^*)U_{2,i,n}^{\hat{\pi}}\right|}{C\sqrt{K\log n/n}}\\
+\lesssim & \frac{K\E\sup_{\hat{\pi}}\left|\frac{1}{n}\sum_{i=1}^{n}U_{2,i,n}^{\hat{\pi}}\right|}{C\sqrt{K\log n/n}}\\
+\leq & \frac{K\E\sup_{\hat{\pi}}\frac{1}{n}\sum_{i=1}^{n}\left|U_{i}/\hat{\pi}\left(T_{i}\mid X_{i}\right)\right|\left\{ \left|U_{i}/\hat{\pi}\left(T_{i}\mid X_{i}\right)\right|>M_{n}\right\} }{C\sqrt{K\log n/n}}\\
+\leq & \frac{K\E\frac{1}{n}\sum_{i=1}^{n}\left|U_{i}/c_{1}\right|\left\{ \left|U_{i}\right|>M_{n}c_{1}\right\} }{C\sqrt{K\log n/n}}\\
+\lesssim & \sqrt{Kn/\log n}\frac{\E\left[\left|U_{i}\right|^{2+\delta}\left\{ \left|U_{i}\right|\geq M_{n}\right\} \right]}{M_{n}^{1+\delta}}\stackrel{(b)}{=}o(1)
+\end{align*}
+where (b) holds if $\sqrt{Kn/\log n}=\O\left(M_{n}^{1+\delta}\right)$.
+And it is satisfied for $M_{n}^{1+\delta}\asymp\sqrt{Kn/\log n}$,
+under which case the condition $M_{n}=\O\left(\sqrt{\frac{n/\log n}{K}}\right)$
+with $K\asymp\left(n/\log n\right)^{1/(2q+1)}$ is satisfied. And
+in this case, $M_{n}$ is indeed has $M_{n}\rightarrow\infty$. Thus
+$$
+\sup_{\hat{\pi},\hat\mu}\|\hat{m}_n-\tilde{m}_n\|_{\infty}
+=\sup_{\hat{\pi}}\|\hpi\|_{\infty}
+\leq 
+\sup_{\hat{\pi},t}\left|\hpi(t)-\hpi(t_{n}^*(t))\right|
++
+\sup_{\hat{\pi}}\|\hpi\|_{\infty}
+=\O_p\left(\left(n/\log n\right)^{-q/(2q+1)}\right)
+$$
+\fi 
+
+
+\subsubsection{Proof of Lemma \ref{lemma:eigenvalue}}
+\begin{proof}
+Suppose the SVD decomposition of $B_n=U\Lambda V^T$ where $U\in\R^{n\times n}$, $\Lambda\in\R^{n\times K_n}$, $V\in\R^{K_n\times K_n}$. From Lemma A.3 of \cite{huang2004polynomial}, we know that all diagonal elements of $\left(K_n/n\right)\Lambda^T\Lambda$ fall between some positive constants. Notice that the eigenvalues of $\left(K_n/n\right)B_n^T\Pi_n^{-2}B_n$ are the diagonal elements of $\left(K_n/n\right)\Lambda^T\Pi_n^{-2}\Lambda$. From the upper and lower boundedness of $\hat\pi_n$, we can get the desired conclusion. 
+\end{proof}
+
+
+
+%\begin{proof}
+\iffalse
+We use $\hat\mu_n$, $\hat\pi_n$ to emphasize that the estimator $\hat\mu,\,\hat\pi$ are based on $n$ samples.
+Define $Z_{n,i}=\frac{Y_i-\hat\mu_n(T_i,X_i)}{\hat \pi_n(T_i\mid X_i)}$ and write $\bm{Z}_n=(Z_{n,1}, Z_{n,2},\cdots,Z_{n,n})^T$. Consider the following nonparametric regression problem 
+$$
+Z_{n,i}=m_n(T_i)+\epsilon_{n,i}
+$$
+where $m_n(t)=\E \left[\frac{Y-\hat\mu_n(T,\X)}{\hat\pi_n(T\mid\X)}\mid T=t\right]$. 
+Let $\hat m_n(t)=\vpk(t)^T(B_n^TB_n)^{-1}B_nZ_n$ be the estimated $m_n$ using spline regression.
+Write $\tilde{B}_n=B_n\left(\E \vpk(t)\bm\vpk(t)^T\right)^{-1/2}$. %and $\bm e_n=(\epsilon_{n,1},\cdots,\epsilon_{n,n})$.
+
+First, we give a bound on $\sup_{t_0}|\hat m_n(t_0)-\tilde m_{n}(t_0)|$, where $\tilde m_n=\vpk(t_0)^T\left(\E \vpk(t)\bm\vpk(t)^T\right)^{-1/2}\E\vpk(T)\Zn$ is the projection of $m_n$ onto $\mathcal{B}_{K}$ under the population measure. 
+
+We have
+\begin{equation}\label{eq_appendix:consistency_term1}
+    \begin{split}
+        &\sup_{t_0}\left|\hat m_n(t_0)-\tilde m_n(t_0)\right|
+        =\sup_{t_0}\left|\vpk(t_0)^T\hbb-\vpk(t_0)^T\left[\E\vpk(t)\vpk(t)^T\right]^{-1}\E\vpk(T)\frac{Y-\hqn(T,\X)}{\hpin(T\mid\X)}\right|
+        \\&=\left|\vpk(t_0)^T\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\left[\left[\E\vpk(t)\vpk(t)^T\right]^{1/2}\hbb-\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\E\vpk(T)\frac{Y-\hqn(T,\X)}{\hpin(T\mid\X)}\right]\right|
+        \\&\leq \sup_{t_0}\left\|\vpk(t_0)^T\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\right\|_2
+        \\&\times
+        \left\|\left[\E\vpk(t)\vpk(t)^T\right]^{1/2}\hbb-\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\E\vpk(T)\frac{Y-\hqn(T,\X)}{\hpin(T\mid\X)}\right\|_2
+    \end{split}
+\end{equation}
+From the assumption that $T\in[0,1]$ and $\vpk\in\mathcal{B}^{K}$, we have
+\begin{equation}\label{eq_appendix:consistency_term1_add1}
+    \begin{split}
+        \sup_{t_0}\left\|\vpk(t_0)^T\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\right\|_2
+        \leq
+        \sup_{t_0}\left\|\vpk(t_0)\right\|\sqrt{\lambda_{max}\left(\left(\E\vpk(T)\vpk(T)^T\right)^{-1}\right)}
+        =\O(\sqrt{K})
+    \end{split}
+\end{equation}
+Also, write $\tildevpk=\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\vpk$, then
+\begin{equation}\label{eq_appendix:consistency_term1_add2}
+    \begin{split}
+        &\left\|\left[\E\vpk(t)\vpk(t)^T\right]^{1/2}\hbb-\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\E\vpk(T)\frac{Y-\hqn(T,\X)}{\hpin(T\mid\X)}\right\|_2
+        \\
+        =&\left\|\left(\tbn^T\tbn\right)^{-1}\tbn^T\Zn-\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\E\vpk(t)\Zn\right\|_2
+        \\
+        =&\left\|\left(\tbn^T\tbn/n\right)^{-1}\tbn^T/n\Zn-\tbn^T/n\Zn+\tbn^T/n\Zn-\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\E\vpk(t)\Zn\right\|_2
+        \\
+        =&\left\|\left(\left(\tbn^T\tbn/n\right)^{-1}-I_k\right)\tbn^T/n\Zn\right\|_2
+        \\&+\left\|\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\E_n\vpk(T)\frac{Y-\hqn(T,\X)}{\hpin(T\mid\X)}-\left[\E\vpk(t)\vpk(t)^T\right]^{-1/2}\E\vpk(T)\frac{Y-\hqn(T,\X)}{\hpin(T\mid\X)}\right\|_2
+        \\
+        \leq&\left\|\left(\tbn^T\tbn/n\right)^{-1}-I_k\right\|_2\times\left\|\tbn^T/n\Zn\right\|_2
+        \\&+\left\|\E_n\tildevpk(T)\frac{U}{\hpin(T\mid\X)}
+        +\E_n\tildevpk(T)\frac{Q(T_i,\X_i)-\hqn(T_i,\X_i)}{\hpin(T_i\mid\X_i)}-\E\tildevpk(T)\frac{Q(T_i,\X_i)
+        -\hqn(T_i,\X_i)}{\hpin(T_i\mid\X_i)}\right\|_2
+        \\
+        \stackrel{(a)}{\leq}&\O_p\left(\sqrt{\frac{K\log K}{n}}\right)\left[\left\|\tbn^T/n\left(\frac{U_i}{\hpin(T_i\mid\X_i)}\right)_i\right\|_2
+        +\left\|\tbn^T/n\right\|_2\times\left\|\frac{Q(T_i,\X_i)-\hqn(T_i,\X_i)}{\hpin(T_i\mid\X_i)}\right\|_2\right]
+        \\&+\left\|\E_n\tildevpk(T)\frac{U}{\hpin(T\mid\X)}\right\|_2
+        \\&+\left\|\E_n\tildevpk(T)\frac{Q(T_i,\X_i)-\hqn(T_i,\X_i)}{\hpin(T_i\mid\X_i)}-\E\tildevpk(T)\frac{Q(T_i,\X_i)
+        -\hqn(T_i,\X_i)}{\hpin(T_i\mid\X_i)}\right\|_2
+        \\
+        \stackrel{(b)}{=}&\O_p\left(\sqrt{\frac{K\log K}{n}}\right)\left[\O_p\left(\sqrt{\frac{K}{n}}\right)+\O_p\left(r_2(n)\sqrt{\frac{K}{n}}\right)\right]
+        +\O_p\left(r_2(n)\sqrt{\frac{K\log K}{n}}\right)
+        \\
+        =&\O_p\left(n^{-q/(2q+1)}\right)
+    \end{split}
+\end{equation}
+where inequality (a) uses Lemma 2.1 in \cite{chen2015optimal}, which says that $\left\|\left(\tbn^T\tbn/n\right)^{-1}-I_k\right\|_2=\O_p(\sqrt{\frac{K\log K}{n}})$ under the i.i.d. assumption and  assumption (6). And  inequality (b) follows from the fact that
+$$\left\|\tbn^T/n\right\|_2=\O_p\left(\frac{1}{\sqrt{n}}\right)$$ 
+$$\left\|\left(\frac{U_i}{\hpin(T_i\mid\X_i)}\right)_i\right\|_2=\O_p(\sqrt{n})\quad\left(\text{assumption (5), (2)}\right)$$
+$$\sup_{T}|Q(T,\X)-\hqn(T,\X)|=\O_p(r_2(n))$$ 
+$$\left\|\E_n\tildevpk(T)\frac{U}{\hpin(T\mid\X)}\right\|_2
+=\O_p\left(\left\|\tilde B_n^T/n\right\|_2\left\|\left(\frac{U_i}{\hat\pi(T_i\mid\X_i)}\right)\right\|_2\right)
+=\O_p\left(\sqrt{\frac{K}{n}}\right)$$ 
+which uses Bernstein Inequality on each coordinate and then union bound to combine all coordinates.
+$$\left\|\E_n\tildevpk(T)\frac{Q(T_i,\X_i)-\hqn(T_i,\X_i)}{\hpin(T_i\mid\X_i)}-\E\tildevpk(T)\frac{Q(T_i,\X_i)-\hqn(T_i,\X_i)}{\hpin(T_i\mid\X_i)}\right\|_2=\O_p\left(\sqrt{\frac{K\log K}{n}}\right)$$ 
+which uses generalization bound on each coordinate and then union bound to combine all coordinates.
+
+Plugging Equation \eqref{eq_appendix:consistency_term1_add1} and \eqref{eq_appendix:consistency_term1_add2} into \eqref{eq_appendix:consistency_term1}, we get
+$$
+\sup_{t_0}\left|\hat m_n(t_0)-\tilde m_n(t_0)\right|
+=\O_p\left(n^{-q/(2q+1)}\right)
+$$
+
+From the i.i.d. assumption, assumption (1), (2), and (3), we have from \cite{devore1993constructive} that 
+$$\sup_{t_0}\left|\tilde m_n(t_0)-m_n(t_0)\right|
+=\O((K)^{-q})
+=\O_p\left(n^{-q/(2q+1)}\right)$$ 
+\fi
+
+\subsubsection{Proof of Lemma \ref{lemma:complexity}}
+\begin{proof}
+Write $\F_3=\F_1+\F_2, \F_4=\F_1-\F_2$. Notice that
+$\F_1\F_2=\{f_1f_2:f_1\in\F_1,f_2\in\F_2\}=\{\frac{1}{4}(f_1+f_2)^2-\frac{1}{4}(f_1-f_2)^2:f_1\in\F_1,f_2\in\F_2\}=\frac{1}{4}\F_3^2-\frac{1}{4}\F_4^2$. Let $h:x\mapsto x^2$, from Theorem 12(4) of \cite{bartlett2002rademacher} we know that
+$$
+\Rad(\F_3\F_3)=
+\Rad(h\circ\F_3)
+\leq
+2\|\F_3\|_{\infty}\Rad(\F_3).
+$$
+Thus,
+\begin{equation*}
+\begin{split}
+&\Rad(\F_1\F_2)
+\\=&\Rad(\frac{1}{4}\F_3^2-\frac{1}{4}\F_4^2)
+\\\leq&\Rad(\frac{1}{4}\F_3^2)+\Rad(-\frac{1}{4}\F_4^2)
+\\\leq&\frac{1}{4}\Rad(\F_3^2)+\frac{1}{4}\Rad(\F_4^2)
+\\\leq&\frac{1}{2}\|\F_3\|_{\infty}\Rad(\F_3)+\frac{1}{2}\|\F_4\|_{\infty}\Rad(\F_4)
+\\\leq&\frac{1}{2}(\|\F_3\|_{\infty}+\|\F_4\|_{\infty})(\Rad(\F_3)+\Rad(\F_4)).
+\end{split}
+\end{equation*}
+\end{proof}
+
+
+
+
+
+
+
+\subsection{Additional Results}
+This section formally states and proves the efficient influence function of a multidimensional vector, which is briefly mentioned in the main text.
+Suppose $\bm \Gamma=\left(\Gamma_1,\Gamma_2,\cdots,\Gamma_d\right)^T\in\R^d$ where
+\[
+\Gamma_j=\int_{\mathcal{T}}\gamma^{(j)}\left(t;\P_{T}\right)\int_{\mathcal{X}}\int_{\mathcal{Y}}yp(y\mid\x,t)p(\x)p(t)dyd\x dt. 
+\]
+Then we have the following theorem:
+\begin{thm}\label{thm:EIF_multidimensional}
+The efficient influence function for the $d$-dimensional vector $\bm\Gamma$ 
+is
+\begin{equation*}
+    \bm{\zeta}(Y,\X,T,\pi,\mu,\bm\Gamma)=\left(\zeta_1(Y,\X,T,\pi,\mu,\Gamma_1),\zeta_2(Y,\X,T,\pi,\mu,\Gamma_2),\cdots,\zeta_d(Y,\X,T,\pi,\mu,\Gamma_d)\right)^T\in\R^d
+\end{equation*}
+where $\zeta_j(Y,\X,T,\pi,\mu,\Gamma_j)$ is the efficient influence function for $\Gamma_j$, $j=1,2,\cdots,d$.
+\end{thm}
+
+\begin{proof}
+Define $\bm\Gamma(\bm\varepsilon):=\left(\Gamma_1(\bm\varepsilon),\Gamma_2(\bm\varepsilon),\cdots,\Gamma_d(\bm\varepsilon)\right)^T\in \mathbb{R}^d$
+where for $i=1,2,\cdots,d$,
+\[
+\Gamma_i(\bm\varepsilon)=\int_{\mathcal{T}}\gamma^{(i)}\left(t;\P_{T,\bm\varepsilon}\right)\int_{\mathcal{X}}\int_{\mathcal{Y}}yp(y\mid\x,t;\bm\varepsilon)p(\x;\bm\varepsilon)p(t;\bm\varepsilon)dyd\x dt.
+\]
+Define
+$
+\ell(Y,\X,T;\bm\varepsilon)=\log \P_{Y,\X,T;\bm\varepsilon}$
+where $\P_{Y,\X,T;\bm\varepsilon}$ is a parametric submodel with parameter $\bm\varepsilon\in\mathbb{R}^d$ and $\P_{Y,\X,T;\bm 0}=\P_{Y,\X,T}$.
+Then, the efficient influence function $\bm\zeta$ is defined as the unique function such that
+$$
+\E \left[\bm\zeta\left(\frac{d \ell}{d\bm\varepsilon}\mid_{\bm\varepsilon=\bm 0}\right)^T\right]=\frac{d\bm\Gamma(\bm\varepsilon)}{d\bm\varepsilon}\mid_{\bm\varepsilon=\bm 0}
+$$
+i.e.,
+$$
+\E\left[\zeta_i\frac{d\ell}{d\varepsilon_j}\mid_{\bm\varepsilon=\bm 0}\right]=\frac{d\Gamma_i}{d\varepsilon_j}\mid_{\bm\varepsilon=\bm 0},\quad
+\forall i,j=1,2,\cdots,d
+$$
+Notice that the efficient influence function $\zeta_i(Y,\X,T,\pi,\mu,\Gamma_i)$ for $\Gamma_i$ does not depend on $\bm\varepsilon$. Thus for each $i,j=1,2,\cdots,d$, the above equation can be proved using similar arguments as that in Section \ref{appendix_proof:EIF_single}.
+\end{proof}
+
+\subsection{Experimental Details} \label{apxsec: exp}
+
+\subsubsection{Network Structure} For all methods, we implement the conditional density estimator as a neural network with two hidden fully connected layers, each consisting of 50 hidden
+units using ReLU activation. Hidden feature $\z$ is defined as the latent representation extracted after the second ReLU activation. We set the number of grids $B=10$. \iffalse
+To be specific, we choose
+\[
+f_{\w_{1}}(\x)=\text{ReLU}\left(\w_{1,2}^{\top}\left(\text{ReLU}(\w_{1,1}^{\top}\x)\right)\right)
+\quad
+\text{and}
+\quad
+\pi^{\text{NN}}(\x)=\text{softmax}(\w_{2}^{\top}f_{\w_{1}}(\x)),\ \ \w_{2}\in\R^{50\times100}
+\]
+where $\w_{1,2}\in\R^{d_{\x}\times50}$, $\w_{1,2}\in\R^{50\times50}$
+and $d_{\x}$ is the number of features. 
+\fi
+The estimation of $\pi(t\mid\x)$ is computed as introduced in Section \ref{sec:structure}.
+Following \cite{schwab2019learning}, we use 5 blocks for Dragonnet and DRNet. Structure of prediction head for each block is the same as the prediction head $\mu$ for VCNet, except that Dragonnet and DRNet do not use treatment-dependent weights. %And in this way all the network has same complexity, i.e., the number of parameters.
+In VCNet, the prediction head for $\mu(t,\x)$ is a neural network with two hidden
+fully connected layers stacking over the hidden feature $\z$. Each hidden layer
+consists of 50 hidden units with ReLU activation.
+\iffalse
+\begin{align*}
+Q_{\th}(\x,t)  =\th_{3}^{\top}(t)\circ\text{ReLU}\left(\th_{2}^{\top}(t)\left(\text{ReLU}(\th_{1}^{\top}(t)\z)\right)\right)
+\quad
+\text{where}
+\quad
+\z  =f_{\w_{1}}(\x).
+\end{align*}
+Here $\th_{1}(t),\th_{2}(t)\in\R^{50,50}$ and $\th_{3}(t)\in\R^{50}$.
+\fi
+We use B-spline with degree two and two knots placed at $\{1/3,2/3\}$ (altogether 5 basis). In this way, all methods have the same complexity, i.e., the number of parameters. 
+We also tried different structures and found the relative performance of different methods to be similar. Thus,
+all reported results below are based on this structure. All networks are trained for 800 epochs.
+
+\subsubsection{Parameter Setting}
+For each dataset we tune parameters based on 20 runs. In each run we simulate data, randomly split into training and testing, and use AMSE on testing data for evaluation.
+We tune the following parameters. 
+For all methods: network learning rate $\text{lr}\in\{0.05,0.005,0.001,0.0005,0.0001\}$ and
+$\alpha\in\{1,0.5\}$.
+For TR: learning rate for $\epsilon(t)$: $\text{lr}_{\epsilon}\in\{0.001,0.0001\}$, $\beta\in\{20,10,5\}\times n^{-1/2}$. 
+We found that performance is not sensitive to $\alpha$. 
+In estimator of $\epsilon(t)$, we use B-spline with degree 2 and tune the number of knots across $\{5,10,20\}$ (all equally spaced at $[0,1]$).
+For TMLE and doubly robust estimator: we tune parameters of B-spline in the same way as in TR version. 
+During tuning, all networks are trained for 800 epochs.
+
+\subsubsection{Statistical baselines}
+We implement Causal forest  \citep{wager2018estimation} using R package `grf' \citep{tibshirani2018package}, BART using R package `bartMachine' \citep{kapelner2016package}, and GPS using R package `causaldrf' \citep{galagate2015package}. 
+We tune the paramters of each method on each dataset using 20 separate tuning sets, including the number of trees for BART, the number of trees and minimum node size for causal forest, and the number of knots for GPS. The other hyper-parameters are set to the default value of the R packages.
+%1. all improve via conditional density estimator; 2. TRnet, 5 blocks and thus same network complexity as ours; 3. Drnet 5 blocks with network complexity slightly larger than ours due the concatenate of $t$. Also introduce doubly robust/TMLE
+
+
+%20 for tuning and 100 repeats for final evaluation.
+
+\subsubsection{Dataset}
+\paragraph{Synthetic Dataset}
+We generate data as follows: $
+x_j \overset{\text{i.i.d.}}{\sim} \text{Unif}[0,1]$, where $x_j$ is the $j$-th dimension of $\x\in\mathbb{R}^6$, and
+\begin{align*}
+\widetilde{t}\mid\x = & \,\frac{10\sin(\max(x_{1},x_{2},x_{3}))+\max(x_{3},x_{4},x_{5})^{3}}{1+(x_{1}+x_{5})^{2}}+\sin(0.5x_{3})(1+\exp(x_{4}-0.5x_{3}))\\
+& \,+x_{3}^{2}+2\sin(x_{4})+2x_{5}-6.5+\mathcal{N}(0,0.25),\\
+y\mid\x,t = &\, \cos(2\pi(t-0.5))\left(t^{2}+\frac{4\max(x_{1},x_{6})^{3}}{1+2x_{3}^{2}}\sin(x_{4})\right)+\mathcal{N}(0,0.25),
+\end{align*}
+where $t=(1+\exp(-\tilde t))^{-1}$. Notice that $\pi(t\mid\x)$ only
+depends on $x_{1},x_{2},x_{3},x_{4},x_{5}$ while $Q(t,\x)$ only
+depends on $x_{1},x_{3},x_{4},x_{6}$. As discussed in \cite{shi2019adapting}, this allows us to observe the improvement using VCNet when noise covariates exist. Results are reported in Table \ref{table:experiment}.
+
+\paragraph{IHDP}
+The original semi-synthetic IHDP dataset from \cite{hill2011bayesian} contains binary treatments with 747 observations on 25 covariates. To allow comparison on continuous treatments, we randomly generate treatment and response using: 
+\begin{align*}
+\widetilde{t} \mid\x=&\,\frac{2x_{1}}{(1+x_{2})}+\frac{2\max(x_{3},x_{5},x_{6})}{0.2+\min(x_{3},x_{5},x_{6})}+2\tanh\left(5\frac{\sum_{i\in S_{\text{dis},2}}\left(x_{i}-c_{2}\right)}{\left|S_{\text{dis},2}\right|}\right)-4+\mathcal{N}(0,0.25),\\
+%t = & \,\rho\left(\widetilde t\right)\\
+y\mid\x,t =&\,\frac{\sin(3\pi t)}{1.2-t}\left(\tanh\left(5\frac{\sum_{i\in S_{\text{dis},1}}\left(x_{i}-c_{1}\right)}{\left|S_{\text{dis},1}\right|}\right)+\frac{\exp(0.2(x_{1}-x_{6}))}{0.5+5\min(x_{2},x_{3},x_{5})}\right)+\mathcal{N}(0,0.25),
+\end{align*}
+where $t=(1+\exp(-\tilde t))^{-1}$,
+$S_{\text{con}}=\{1,2,3,5,6\}$ is the index set of continuous
+features, 
+$
+S_{\text{dis},1} =\{4,7,8,9,10,11,12,13,14,15\}$,
+$S_{\text{dis},2} =\{16,17,18,19,20,21,22,23,24,25\}
+$ and $S_{\text{dis},1}\cup S_{\text{dis},2}=[25]-S_{\text{con}}$.
+Here $c_{1}=\E\frac{\sum_{i\in S_{\text{dis},1}}x_{i}}{\left|S_{\text{dis},1}\right|}$,
+$c_{2}=\E\frac{\sum_{i\in S_{\text{dis},2}}x_{i}}{\left|S_{\text{dis},2}\right|}$.
+Notice that all continuous features are useful for $\pi(t\mid\x)$ and
+$Q(t,\x)$ but only $S_{\text{dis},1}$ is useful for $Q$ and
+only $S_{\text{dis},2}$ is useful for $\pi$. 
+Following \cite{hill2011bayesian}, covariates are standardized with mean 0 and standard deviation 1 and the generated treatments are normalized to lie between $[0,1]$. Results are summarized in Table \ref{table:experiment}.
+%$T\C \X\sim \mathcal{B}(\lambda,1-\lambda)$ where $\lambda=\frac{e^{}}{}$ and $Y\C T,\X\sim N((2\times(x_1+0.5)^2+0.5x_2+0.5x_3+0.5x_4+T)\times T,1)$. 
+
+\paragraph{News}
+The News dataset consists of 3000 randomly sampled news items from the NY Times corpus \citep{newman2008bag}, which was originally introduced as a benchmark in the binary treatment setting \citep{johansson2016learning}. We generate the treatment and outcome in a similar way as \citet{bica2020estimating}. We first generate $\boldsymbol{v}'_{1}$, $\boldsymbol{v}'_{2}$ and
+$\boldsymbol{v}'_{3}$ from $\mathcal{N}(\boldsymbol{0},\boldsymbol{1})$
+and then set $\boldsymbol{v}_{i}=\boldsymbol{v}'_{i}/\left\Vert \boldsymbol{v}'_{i}\right\Vert _{2}$
+for $i=\{1,2,3\}$. Given $\boldsymbol{x}$, we generate $t$ from
+$\text{Beta}\left(2,\left|\frac{\boldsymbol{v}_{3}^{\top}\x}{2\boldsymbol{v}_{2}^{\top}\x}\right|\right)$.
+And we generate the outcome by 
+\begin{align*}
+y' & \mid\boldsymbol{x},t=\exp\left(\frac{\boldsymbol{v}_{2}^{\top}\x}{\boldsymbol{v}_{3}^{\top}\x}-0.3\right),\\
+y & \mid\boldsymbol{x},t=2\left(\max(-2,\min(2,y'))+20\boldsymbol{v}_{1}^{\top}\boldsymbol{x}\right)*\left(4\left(t-0.5\right)^{2}*\sin\left(\frac{\pi}{2}t\right)\right)+\mathcal{N}(0,0.5).
+\end{align*}

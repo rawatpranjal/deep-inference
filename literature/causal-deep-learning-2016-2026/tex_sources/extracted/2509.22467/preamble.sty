@@ -1,0 +1,764 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{preamble}
+
+\RequirePackage{kvoptions}
+
+\DeclareStringOption[british]{babel}
+\DeclareBoolOption{savespace}
+\DeclareStringOption[0]{version}
+\DeclareBoolOption{verbose}
+\DeclareBoolOption{shorthands}
+\DeclareBoolOption{nonatbib}
+\DeclareBoolOption{nomargins}
+\DeclareBoolOption{hidecontent}
+\DeclareBoolOption{hidemsgs}
+\DeclareBoolOption{debug}
+
+\ProcessKeyvalOptions*
+
+% Bibliography management
+\ifpreamble@nonatbib
+\else
+    \PassOptionsToPackage{square, comma, sort&compress, numbers}{natbib}
+    \RequirePackage{natbib}
+    
+    \renewcommand{\bibname}{References}
+    \renewcommand{\bibsection}{\subsubsection*{\bibname}}
+
+    \let\cite\undefined  % using cite is a bad practice, use \citet or \citep instead
+     % For natbib
+    % See https://tex.stackexchange.com/questions/397867/formatting-for-back-references-in-bibliography-using-natbib
+    \PassOptionsToPackage{backref=page}{hyperref}
+    \RequirePackage{hyperref}
+    \renewcommand\backreftwosep{ and }
+    \renewcommand\backrefsep{, }
+    \renewcommand*{\backrefalt}[4]{%
+        \ifcase #1%
+        \or (Cited in page~#2.)%
+        \else (Cited in pages~#2.)%
+        \fi%
+    }
+\fi
+
+% Allow utf-8 input
+\PassOptionsToPackage{utf8}{inputenc}
+\RequirePackage{inputenc} 
+
+\PassOptionsToPackage{\preamble@babel}{babel}
+\RequirePackage{babel}
+
+% Microtypography
+\RequirePackage{microtype}      
+
+% strikethrough words
+\PassOptionsToPackage{normalem}{ulem}
+\RequirePackage{ulem}
+
+\RequirePackage{nicefrac}       % Compact symbols for 1/2, etc.
+\RequirePackage{mathtools}      % amsmath with fixes and additions
+\RequirePackage{stackengine}    % <> symbols with subtext
+
+\PassOptionsToPackage{separate-uncertainty=true}{siunitx}
+\RequirePackage{siunitx}        % for proper typesetting of numbers and units
+\DeclareSIUnit\px{px}  % pixels
+
+\RequirePackage{xurl}            % Simple URL typesetting
+%\def\UrlBreaks{\do\/\do-\do\_}  % to break long URLs
+
+\PassOptionsToPackage{final,breaklinks=true,hyphens}{hyperref}    
+\RequirePackage{hyperref}       % link references
+\RequirePackage{etoolbox}
+%\patchcmd{\BR@backref}{\newblock}{\newblock(page~}{}{}
+%\patchcmd{\BR@backref}{\par}{)\par}{}{}
+\RequirePackage[noabbrev,capitalize,nameinlink]{cleveref}   % Automatic 
+
+\RequirePackage{booktabs}       % Professional-quality tables
+\RequirePackage{longtable}
+\RequirePackage{multirow}       % Helper package for organizing tables
+\RequirePackage{tabularx}       % Tables
+\RequirePackage{rotating}
+\RequirePackage{makecell}       % More for tables
+% \RequirePackage{arydshln}       % Dashed lines in tables
+
+\RequirePackage{ragged2e}       % Justification
+\RequirePackage{paralist}       % Compact lists
+\PassOptionsToPackage{shortlabels}{enumitem}
+\RequirePackage{enumitem}
+\RequirePackage{xargs}          % Use more than one optional parameter in a new commands
+
+\RequirePackage{ifdraft}        % if statement draft or final
+\RequirePackage{xcolor,colortbl} 
+
+\PassOptionsToPackage{final,pdftex}{graphicx}      % Ensure figures always shown
+\RequirePackage{graphicx}      % Ensure figures always shown
+\setkeys{Gin}{width=\linewidth,totalheight=\textheight,keepaspectratio,draft=false} % Improves figure scaling
+\RequirePackage{standalone}
+\RequirePackage{caption}        % Needed for Subcaptions
+\RequirePackage{subcaption}     % Subcaptions
+\RequirePackage{wrapfig}        % for wrapping figres
+\RequirePackage{subcaption}
+
+\RequirePackage{lipsum}
+
+\RequirePackage{listings}
+
+\PassOptionsToPackage{newfloat,frozencache=true,cachedir=minted-cache}{minted}
+\RequirePackage{minted}
+\newenvironment{code}{\captionsetup{type=listing}}{}
+\SetupFloatingEnvironment{listing}{name=Source Code}
+
+
+\RequirePackage{enumitem}
+\newlist{inlinelist}{enumerate*}{1}
+\setlist*[inlinelist,1]{%
+	label=(\roman*),
+}
+
+% Robustify bfseries so that we can use it with siunitx
+\renewrobustcmd{\bfseries}{\fontseries{b}\selectfont}
+
+% If space constrained
+\ifpreamble@savespace
+	% redefine enumerate env for closer spacing
+	\setlist[enumerate]{topsep=0pt,itemsep=-0.3ex,partopsep=1ex,parsep=1ex,leftmargin=15pt}
+	\setlist[itemize]{topsep=0pt,itemsep=-0.3ex,partopsep=1ex,parsep=1ex,leftmargin=15pt}
+	
+	% Remove space around section headings.
+	\PassOptionsToPackage{compact}{titlesec}
+	\RequirePackage{titlesec}
+	\titlespacing{\section}{0pt}{2ex}{1ex}
+	\titlespacing{\subsection}{1pt}{1ex}{0ex}
+	\titlespacing{\subsubsection}{0pt}{0.5ex}{0ex}
+	
+	% change paragraph format to be with a dot
+% 	\renewcommand{\paragraph}[1]{{\textbf{#1.}}}
+% 	\newcommand{\paragraphQ}[1]{{\textbf{#1?}}}
+	
+	% reduce the space between paragraphs
+    % \setlength{\parskip}{3pt plus 2pt}
+    \setlength{\parskip}{2pt plus 2pt}
+\fi
+
+%%%%%%%%%%%% If you want to add a TOC for appendices %%%%%%%%%%%%
+\RequirePackage[toc,page,header]{appendix}
+\ifdraft{}{
+	\PassOptionsToPackage{nohints}{minitoc}
+}
+\RequirePackage{minitoc}	
+
+\AtBeginDocument{%
+	\setcounter{tocdepth}{2}
+
+	% Make the "Part I" text invisible
+	\renewcommand\thepart{}
+	\renewcommand\partname{}
+}
+
+\RequirePackage{amsfonts}       % Blackboard math symbols
+\RequirePackage{fontawesome5}       % Fontawesome icons
+\RequirePackage{amssymb}        % Math Symbols
+\RequirePackage{amsmath}        % Math
+\RequirePackage{cases}          % Cases in math
+\RequirePackage{amsthm}         % Theorems
+\RequirePackage{thmtools}       % Tools for theorems
+\RequirePackage{mathtools}      % More math commands
+\RequirePackage{bm}             % Bold math
+\RequirePackage{dsfont}         % indicator funciton
+\RequirePackage{pgf,pgffor}     % to plot graphs
+%\RequirePackage[vlined]{algorithm2e}
+% \RequirePackage[linesnumbered,ruled,vlined]{algorithm2e}
+\RequirePackage{algorithm,algpseudocode}
+
+
+\allowdisplaybreaks         % allow break in equation
+
+% Fix interference of parfill option of parskip package with amsmath environments.
+\begingroup
+\@for\theoremstyle:=theorem,corollary,lemma,model,definition,remark,plain\do{%
+	\expandafter\g@addto@macro\csname th@\theoremstyle\endcsname{%
+		\setlength\thm@preskip\parskip
+		\setlength\thm@postskip\parskip%{0pt}
+		\addtolength\thm@preskip\parskip
+	}%
+}
+\endgroup
+
+% New column types for tables
+\RequirePackage{array}   % for \newcolumntype macro
+\newcolumntype{L}{>{$}l<{$}} % math-mode version of "l" column type
+\newcolumntype{C}{>{$}c<{$}} % math-mode version of "c" column type
+\newcolumntype{R}{>{$}r<{$}} % math-mode version of "r" column type
+
+
+% Introduce a simple command to define and refer to acronyms and defintions anywhere in the text
+\RequirePackage{xifthen}
+\RequirePackage{suffix}
+\newcounter{mylabelcounter}
+
+\newcommand{\acdef}[2][]{%
+	\ifthenelse{\equal{#1}{}}{%
+		\refstepcounter{mylabelcounter}#2%
+		\immediate\write\@auxout{%
+			\string\newlabel{ac:#2}{{1}{\thepage}{{\unexpanded{#2}}}{mylabelcounter.\number\value{mylabelcounter}}{}}%
+		}%
+	}{%
+		\refstepcounter{mylabelcounter}#2 (#1)%
+		\immediate\write\@auxout{%
+			\string\newlabel{ac:#1}{{1}{\thepage}{{\unexpanded{#1}}}{mylabelcounter.\number\value{mylabelcounter}}{}}%
+		}%
+	}%
+}
+\WithSuffix\newcommand\acdef*[2]{%
+    \refstepcounter{mylabelcounter}#2%
+    \immediate\write\@auxout{%
+        \string\newlabel{ac:#1}{{1}{\thepage}{{\unexpanded{#1}}}{mylabelcounter.\number\value{mylabelcounter}}{}}%
+    }%
+}
+
+\newcommand\ac[1]{\nameref{ac:#1}\xspace}
+\WithSuffix\newcommand\ac*[1]{{\hypersetup{linkcolor=black}\nameref{ac:#1}\xspace}}
+
+\newcommand{\numberthis}{\addtocounter{equation}{1}\tag{\theequation}} % add number to align* line
+
+% Restatable theorems
+\RequirePackage{thm-restate}
+\newtheorem{lem}{Lemma}
+\newtheorem{thm}{Theorem}
+\newtheorem{prop}{Proposition}
+\newtheorem{corr}{Corollary}
+% Environments
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem*{theorem*}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem*{lemma*}{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem*{proposition*}{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem*{corollary*}{Corollary}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+\newtheorem*{remark*}{Remark}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem*{definition*}{Definition}
+\newtheorem{property}{Property}
+\newtheorem*{property*}{Property}
+\newtheorem{example}{Example}
+\newtheorem*{example*}{Example}
+\newtheorem{assumption}{Assumption}
+\newtheorem*{assumption*}{Assumption}
+
+\newenvironment{sketch}{\textit{Proof sketch.}\xspace}{\hfill$\square$}
+
+% marks
+\RequirePackage{pifont}
+\newcommand{\cmark}{\ding{51}} % check mark
+\newcommand{\xmark}{\ding{55}} % x mark
+\newcommand{\minusmark}{-} % minus mark
+
+
+% To repeat environments with desired number
+\newtheorem{manualpropinner}{Proposition}
+\newenvironment{manualprop}[1]{%
+	\renewcommand\themanualpropinner{#1}%
+	\manualpropinner
+}{\endmanualpropinner}
+
+\newtheorem{manualthminner}{Theorem}
+\newenvironment{manualthm}[1]{%
+	\renewcommand\themanualthminner{#1}%
+	\manualthminner
+}{\endmanualthminner}
+
+% Symbols
+\newcommand{\R}{\mathbb{R}}   % Real numbers
+\newcommand{\C}{\mathbb{C}}   % Complex numbers
+\newcommand{\N}{\mathbb{N}}   % Natural numbers
+
+% Special math commands
+\newcommand*\diff{\mathop{}\!\mathrm{d}}
+\newcommand{\defeq}{\vcentcolon=}
+\newcommand{\eqdef}{=\vcentcolon}
+\newcommand{\f}[2]{\operatorname{#1}\lpa[,]{#2}}
+\newcommand{\sd}[1]{\, \mathrm{d} #1}     % Straight 'd'
+\newcommand{\pa}[1]{\negthinspace\left(#1\right)}      % Parenthesis
+\newcommand{\br}[1]{\negthinspace\left[#1\right]}      % Brackets
+\newcommand{\set}[1]{\negthinspace\left\{#1\right\}}     % Set
+\newcommand{\sci}[1]{\text{e-}#1}         % scientific notation with
+\newcommand{\scip}[1]{\text{e}#1}         % scientific notation with
+\newcommand{\cond}{\mid}               % Conditioning
+\newcommand{\vardot}{\,\cdot\,}           % Dot for a variable
+\newcommand{\dirac}[1]{\delta_{#1}\br{\uppercase{#1}}}     % Dirac delta
+\newcommand{\iidsim}{\overset{\raisebox{-2pt}{\smash{\text{\tiny i.i.d.}}}}{\sim}}    % Compact \sim with iid above it
+\newcommand{\dsim}{\overset{\raisebox{-2pt}{\smash{\text{\tiny d}}}}{\sim}}    % Compact \sim with d above it for distributed
+\newcommand{\deq}{\stackrel{\text{d}}{=}}    % equal in distribution
+\newcommand{\aseq}{\stackrel{\text{a.s.}}{=}}    % equal almost surely
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}      % ceil
+
+% Delimited Lists
+\def\my@concat #1,#2\@eolst{%
+	\ifx\relax#2\relax
+	#1
+	\else
+	#1\my@delim
+	\my@concat #2\@eolst%
+	\fi}
+
+\newcommand\lbr[2][;\,]{%
+	\global\def\my@delim{#1}%
+	\br{\my@concat #2,\relax\noexpand\@eolst%
+}}
+
+\newcommand\lpa[2][,\,]{%
+	\global\def\my@delim{#1}%
+	\pa{\my@concat #2,\relax\noexpand\@eolst%
+}}
+
+\newcommand\lset[2][,\,]{%
+	\global\def\my@delim{#1}%
+	\set{\my@concat #2,\relax\noexpand\@eolst%
+}}
+
+% Linear algebra
+\newcommand{\vect}[1]{\bm{\mathrm{#1}}}  % Matrix (does not uppercase greeks)
+\newcommand{\mat}[1]{\bm{\uppercase{#1}}}  % Matrix (does not uppercase greeks)
+\newcommand{\vcat}[1]{\lbr[;]{#1}}               % Vertical concatenation
+\newcommand{\hcat}[1]{\lbr[,]{#1}}               % Horizontal concatenation
+\renewcommand{\det}[1]{\operatorname{det}\pa{#1}}% Deterimant
+\DeclareMathOperator{\Tr}{Tr}
+% \newcommand{\T}{\text{\textsf{T}}}        % Transpose
+
+% Operators
+\DeclareMathOperator*{\minimize}{minimize}
+\DeclareMathOperator*{\maximize}{maximize}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\op}[2]{\operatorname{#1}\lbr[;]{{#2}}}
+% \newcommand{\E}[2]{\operatorname{E}_{#1}\lbr[,]{{#2}}}
+\newcommand{\hE}[2]{\hat{\operatorname{E}}_{#1}\lbr[,]{{#2}}}
+% \newcommand{\KL}[1]{\operatorname{D}_{\text{KL}}\lbr[\middle\|]{#1}}
+\newcommand{\KL}[1]{\operatorname{KL}\lbr[\middle\|]{#1}}
+\newcommand{\MI}[2]{\op{I}{ #1  ;  #2}}
+\renewcommand{\H}[1]{\op{H}{#1}}
+\newcommand{\CH}[2]{\op{H}{ #1 \cond  #2}}
+\newcommand{\preimage}[2]{#1^{\leftarrow}\pa{\{#2\}}}
+\newcommand{\image}[2]{#1^{\rightarrow}\pa{#2}}
+\newcommand{\indin}[2]{\mathds{1}\br{#1 \in #2}}  % indicator in
+\newcommand{\indeq}[2]{\mathds{1}\br{#1=#2}} % indicator for equal
+\newcommand{\Risk}[2]{\op{R}{ #1 \cond  #2}}
+\newcommand{\hRisk}[2]{\hat{\op{R}{#1 \cond  #2 ; \mathcal{D}}}}
+
+\def\subrangle#1{\stackengine{5pt}{}{$\!\scriptstyle #1$}{U}{l}{F}{F}{L}}
+
+\newcommand{\range}[2][]{{\ifx&#1&1, 2, \dots, #2\else#1_1, #1_2,\dots, #1_{#2}\fi}}
+% \newcommand{\seq}[3]{\left\{#1_{#2}\right\}_{\ifx&#3&\else #2=1\fi}^{#3}}  % inside, subindex, maximum
+% \newcommand{\seq}[3]{\left\{\range[#1]{#3}\right\}}  % inside, subindex, maximum
+\newcommand{\tovec}[2]{\expandafter\irow{\range[#1]{#2}}}  % inside, subindex
+\newcommand{\seq}[2]{\expandafter\irow[\seqaux]{\range[#1]{#2}}}  % inside, subindex, maximum
+
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}%
+%\newcommand{\norm}[2][]{{\left|\left|#2\right|\right|}_{#1}}
+\DeclarePairedDelimiterX{\norm}[1]{\lVert}{\rVert}{#1}
+
+
+% derivatives
+\renewcommand{\d}{\operatorname{d}}
+\newcommand{\pd}[2][]{\frac{\partial #1}{\partial #2}}
+\newcommand{\spd}[2][]{\partial^{#1}_{#2}}
+
+% Stat
+%\newcommand{\rv}[1]{\mathrm{\uppercase{#1}}} % does not upper case greeks
+\newcommand{\rv}[1]{\uppercase{#1}}
+\newcommand{\hrv}[1]{\hat{\rv{#1}}}
+\newcommand{\trv}[1]{\Tilde{\rv{#1}}}
+\newcommand{\indep}{{\,\perp\!\!\!\perp\,}} %independence/conditional independence
+\newcommand{\notindep}{{\,\not\!\perp\!\!\!\perp\,}} %% not conditional independence
+\newcommand{\aeeq}{\stackrel{\text{a.e.}}{=}}    % equal in distribution
+
+\DeclareMathOperator{\Normal}{\mathcal{N}}
+
+\DeclarePairedDelimiterX{\infdivx}[2]{[}{]}{%
+	#1 \delimsize\|\, #2%
+}
+
+% \DeclareMathOperator{\KLoperator}{D_{KL}}
+\DeclareMathOperator{\KLoperator}{KL}
+\newcommand{\KLop}[2]{\KLoperator\infdivx{#1}{#2}}  % TODO compare with \KL
+\DeclareMathOperator{\entropy}{H}
+
+% Abbreviations
+\RequirePackage{xspace}
+
+\DeclareRobustCommand\onedot{\futurelet\@let@token\@onedot}
+\def\@onedot{\ifx\@let@token.\else.\null\fi\xspace}
+
+
+
+\creflabelformat{equation}{#2#1#3}  % remove the parentheses from equations
+
+
+\def\iid{i.i.d\onedot}
+\def\etc{etc\onedot}
+
+\ifpreamble@shorthands
+	% Cleverref environments
+	% Short
+	
+	% S symbols for sections
+	\crefformat{section}{\S#2#1#3}  % TODO put back colour
+	\crefmultiformat{section}{\S\S#2#1#3}{ and~#2#1#3}{, #2#1#3}{, and~#2#1#3}
+
+	\crefformat{algorithm}{Alg.~#2#1#3}
+		
+	\crefname{thm}{Thm.}{Thms.}
+	\Crefname{thm}{Thm.}{Thms.}
+	\crefname{lem}{Lemma}{Lemmas}
+	\Crefname{lem}{Lemma}{Lemmas}
+	\crefname{proposition}{Prop.}{Props.}
+	\Crefname{proposition}{Prop.}{Props.}
+	\crefname{definition}{Def.}{Defs.}
+	\Crefname{definition}{Def.}{Defs.}
+	\crefname{property}{Property}{Properties}
+	\Crefname{property}{Property}{Properties}
+	\crefname{example}{Example}{Examples}
+	\Crefname{example}{Example}{Examples}
+	\crefname{theorem}{Thm.}{Theorems}
+	\Crefname{theorem}{Thm.}{Theorems}
+	\crefname{corollary}{Cor.}{Corols.}
+	\Crefname{corollary}{Cor.}{Corols.}
+	\crefname{equation}{Eq.}{Eqs.}
+	\Crefname{equation}{Eq.}{Eqs.}
+	\crefname{assumption}{Ass.}{Assumps.}
+	\Crefname{assumption}{Ass.}{Assumps.}
+%	\crefname{section}{Sec.}{Secs.}
+%	\Crefname{section}{Sec.}{Secs.}
+	\crefname{figure}{Fig.}{Figs.}
+	\Crefname{figure}{Fig.}{Figs.}
+	\crefname{table}{Tab}{Tabs}
+	\Crefname{table}{Tab}{Tabs}
+	\crefname{appendix}{App.}{Apps.}
+	\Crefname{appendix}{App.}{Apps.}
+
+
+	\def\eg{e.g\onedot}
+	\def\Eg{E.g\onedot}
+	\def\ie{i.e\onedot}
+	\def\Ie{I.e\onedot}
+	\def\cf{c.f\onedot}
+	\def\Cf{C.f\onedot}
+	\def\vs{vs\onedot}
+	\def\etal{et al\onedot}
+	\def\wrt{w.r.t\onedot}
+	\def\st{s.t\onedot}
+	\renewcommand{\ae}{a.e\onedot}
+%	\def\tvi{t.v.i\onedot}
+    \def\aka{a.k.a\onedot}
+    \newcommand\wlogg{w.l.o.g\onedot}
+\else
+	% Long
+	\crefname{listing}{Source Code}{Source Codes}
+	\Crefname{listing}{Source Code}{Source Codes}
+	\crefname{theorem}{Theorem}{Theorems}
+	\Crefname{theorem}{Theorem}{Theorems}
+	\crefname{lemma}{Lemma}{Lemmas}
+	\Crefname{lemma}{Lemma}{Lemmas}
+	\crefname{proposition}{Prop.}{Props.}
+	\Crefname{proposition}{Proposition}{Propositions}
+	\crefname{definition}{Definition}{Definitions}
+	\Crefname{definition}{Definition}{Definitions}
+	\crefname{property}{Property}{Properties}
+	\Crefname{property}{Property}{Properties}
+	\crefname{example}{Example}{Examples}
+	\Crefname{example}{Example}{Examples}
+	\crefname{cor}{Corollary}{Corollaries}
+	\Crefname{cor}{Corollary}{Corollaries}
+	\crefname{equation}{Equation}{Equations}
+	\Crefname{equation}{Equation}{Equations}
+	\crefname{assumption}{Assumption}{Assumptions}
+	\Crefname{assumption}{Assumption}{Assumptions}
+	\crefname{section}{Section}{Sections}
+	\Crefname{section}{Section}{Sections}
+	\crefname{figure}{Figure}{Figures}
+	\Crefname{figure}{Figure}{Figures}
+	\crefname{table}{Table}{Tables}
+	\Crefname{table}{Table}{Tables}
+	\crefname{appendix}{Appendix}{Appendices}
+	\Crefname{appendix}{Appendix}{Appendices}
+	
+	\def\eg{for example\xspace}
+	\def\Eg{For example\xspace}
+	\def\ie{that is\xspace}
+	\def\Ie{That is\xspace}
+	\def\cf{compare\xspace}
+	\def\Cf{Compare\xspace}
+	\def\vs{versus\xspace}
+	\def\etal{and others\xspace}
+	\def\wrt{with respect to\xspace}
+	\def\st{such that\xspace}
+	\renewcommand{\ae}{almost everywhere\xspace}
+%	\def\tvi{t.v.i\xspace}
+    \def\aka{also known as\xspace}
+    \def\wlogg{without loss of generality\xspace}
+\fi
+
+\WithSuffix\newcommand\eg*{for example\xspace}
+\WithSuffix\newcommand\Eg*{For example\xspace}
+\WithSuffix\newcommand\ie*{that is\xspace}
+\WithSuffix\newcommand\Ie*{That is\xspace}
+\WithSuffix\newcommand\cf*{compare\xspace}
+\WithSuffix\newcommand\Cf*{Compare\xspace}
+\WithSuffix\newcommand\vs*{versus\xspace}
+\WithSuffix\newcommand\etal*{and others\xspace}
+\WithSuffix\newcommand\wrt*{with respect to\xspace}
+\WithSuffix\newcommand\st*{such that\xspace}
+\WithSuffix\newcommand\ae*{almost everywhere\xspace}
+\WithSuffix\newcommand\aka*{also known as\xspace}
+\WithSuffix\newcommand\wlogg*{without loss of generality\xspace}
+
+% Placeholders
+\newcommand{\needcite}[1][]{\textbf{\color{red} [cite\ifstrempty{#1}{}{~{#1}}]}\xspace}
+
+\newcommand{\placeholder}{[\textcolor{red}{Placeholder}]\xspace}
+%\newcommand{\tocite}{[\textcolor{red}{To Cite}]\xspace}
+\let\tocite\needcite
+\newcommand{\toappx}{[\textcolor{red}{Appx}]\xspace}
+\newcommand{\tofill}{[\textcolor{red}{Fill}]\xspace}
+\newcommand{\torun}{[\textcolor{red}{To Run}]\xspace}
+\newcommand{\done}{[\textcolor{gray}{Done}]\xspace}
+\newcommand{\tofig}{[\textcolor{red}{Fig}]\xspace}
+\newcommand{\totable}{[\textcolor{red}{Table}]\xspace}
+\newcommand{\anonymous}{[\textcolor{blue}{anonymous}]\xspace}
+\newcommand{\codeurl}{\url{https://github.com/aalmodovares/causalkans}\xspace}
+\newcommand{\tofinish}[1][]{[\textcolor{red}{TODO:~\ifstrempty{#1}{Bla, bla, bla...}{{#1}}}]\xspace}
+
+
+
+% Miniscule font size
+
+\ifcase \@ptsize \relax% 10pt
+\newcommand{\miniscule}{\@setfontsize\miniscule{4}{5}}% \tiny: 5/6
+\or% 11pt
+\newcommand{\miniscule}{\@setfontsize\miniscule{5}{6}}% \tiny: 6/7
+\or% 12pt
+\newcommand{\miniscule}{\@setfontsize\miniscule{5}{6}}% \tiny: 6/7
+\fi
+
+
+
+% Add labeled todo-notes and comments
+\ifpreamble@debug
+	\PassOptionsToPackage{textsize=scriptsize}{todonotes} 
+    % \RequirePackage{sidenotes}
+    % \RequirePackage{xparse}
+
+    % \setlength{\marginparwidth}{2cm}
+
+    % Define TODO lists
+    \newlist{todolist}{itemize}{2}
+    \setlist[todolist]{label=$\square$}
+    \newcommand{\doing}{\rlap{$\square$}{\raisebox{0.5pt}{\large\hspace{1pt}$\bullet$}}%
+    \hspace{0.5pt}}
+    \renewcommand{\done}{\rlap{$\square$}{\raisebox{2pt}{\large\hspace{1pt}\cmark}}%
+    \hspace{-2.5pt}}
+    \newcommand{\wontfix}{\rlap{$\square$}{\large\hspace{1pt}\xmark}}
+\else
+	\PassOptionsToPackage{disable}{todonotes}
+\fi
+\RequirePackage{todonotes}
+
+% Colours:
+\colorlet{darkgreen}{green!50!black}
+
+\definecolor{darkpink}{RGB}{84,0,84}
+\definecolor{SBred}{RGB}{200,34,84}
+\definecolor{SBdark}{RGB}{1,40,63}
+\definecolor{SBgold}{RGB}{171,179,25}  % darker than the official
+\definecolor{SBblue}{RGB}{0,72,119}
+\definecolor{greendark}{HTML}{4D9900}
+
+\newcommand{\orange}[1]{\textcolor{orange}{#1\xspace}}
+\newcommand{\red}[1]{\textcolor{red}{#1\xspace}}
+
+\definecolor{burntorange}{rgb}{0.8, 0.33, 0.0}
+\definecolor{bluedark}{HTML}{004C99}
+\definecolor{greendark}{HTML}{4D9900}
+\definecolor{golddark}{HTML}{9C853E}
+\definecolor{purpledark}{HTML}{4C0099}
+\definecolor{reddark}{HTML}{990000}
+\definecolor{graydark}{HTML}{666666}
+
+
+\colorlet{maincolor}{SBblue}
+\colorlet{firstcolor}{maincolor}
+\colorlet{secondcolor}{SBred}
+\colorlet{default}{.}
+
+% Change the color of the citation-hyperlinks
+%\hypersetup{citecolor=greendark}
+%\definecolor{mydarkblue}{rgb}{0,0.08,0.45}
+\colorlet{mydarkblue}{maincolor}
+\hypersetup{ %
+	% FROM ICML TEMPLATE
+	pdftitle={},
+%	pdfsubject={Proceedings of the International Conference on Machine Learning 2023},
+	pdfsubject={},
+	pdfkeywords={},
+	pdfborder=0 0 0,
+	pdfpagemode=UseNone,
+	colorlinks=true,
+	linkcolor=mydarkblue,
+	citecolor=mydarkblue,
+	filecolor=mydarkblue,
+	urlcolor=mydarkblue,
+}
+
+% Messages
+\newcommand{\nop}{\ignorespaces}
+
+\RequirePackage{setspace}
+\RequirePackage{calc}
+
+\newlength\modparskip
+\newlength\modbaselineskip
+\def\baselinestretch{1} % this parameter will be redefined at start of 'spacing' environment
+\setlength\modparskip{\parskip/\real{\baselinestretch}}%
+\setlength\modbaselineskip{\baselineskip/\real{\baselinestretch}}%
+
+% \setlength{\intextsep}{2pt}      % vertical space above/below wrapped floats
+% \setlength{\columnsep}{8pt}    
+
+
+\setlength{\textfloatsep}{\baselineskip} 
+
+% TODO work in progress (clean)
+\PassOptionsToPackage{breakable}{tcolorbox}
+\RequirePackage{tcolorbox}
+\tcbuselibrary{skins}
+\RequirePackage{verbatim}
+
+\RequirePackage{pdflscape}
+\RequirePackage{tikz}
+\RequirePackage{xcolor}
+\RequirePackage{fontawesome5}
+
+\definecolor{SBblue}{RGB}{0,72,119}
+\colorlet{debugcolor}{SBblue}
+
+\ifpreamble@debug
+    \newenvironment{debugnote}{\color{debugcolor}}{}
+     \newcommand{\msgbox}[1]{\textcolor{alej}{$\blacktriangleright$\space#1}}
+    
+    \ifpreamble@hidecontent
+        \newenvironment*{msg}[1]{\msgbox{#1}\comment}{\endcomment}
+    \else\ifpreamble@hidemsgs
+        \newenvironment*{msg}[1]{}{}
+    \else
+        \newenvironment*{msg}[1]{\msgbox{#1}\newline}{}
+        
+        % \RequirePackage{environ}
+        % \NewEnviron{msg}[1]{%
+        %   \msgbox{#1}%
+        %   \begingroup
+        %   \sbox0{\BODY}%
+        %   \ifdim\wd0=\z@
+        %     \endgroup
+        %   \else
+        %     \endgroup
+        %     % \newline\BODY
+        %   \fi
+        %   }
+    \fi\fi
+	\newcommand{\pages}[1]{\hfill\textcolor{debugcolor}{#1 page(s)}}
+
+\else
+	% \newcommand{\msg}[1]{\nop}
+    \newenvironment{msg}[1]{}{}
+    \newenvironment{debugnote}{\comment}{\endcomment}
+	\newcommand{\pages}[1]{\nop}
+\fi
+
+% Collaborators
+\colorlet{alej}{blue}
+\colorlet{alba}{darkpink}
+
+\newcommand{\alej}[1]{\textcolor{alej}{\textbf{AA}: #1}}
+\newcommand{\alba}[1]{\textcolor{alba}{\textbf{AG}: #1}}
+
+% Add commenting for each collaborator
+\newcommandx{\aanote}[2][1=]{\todo[linecolor=alej,backgroundcolor=alej!25,bordercolor=alej,#1]{AA: #2}}
+\newcommandx{\agnote}[2][1=]{\todo[linecolor=alba,backgroundcolor=alba!25,bordercolor=alba,#1]{AG: #2}}
+
+
+% Add important comments (inline)
+\newcommandx{\aaimp}[2][1=]{\todo[inline,linecolor=alej,backgroundcolor=alej!25,bordercolor=alej, size=\footnotesize,#1]{AA: #2}}
+\newcommandx{\agimp}[2][1=]{\todo[inline,linecolor=alba,backgroundcolor=alba!25,bordercolor=alba, size=\footnotesize,#1]{AG: #2}}
+
+\ifpreamble@debug\else
+    \renewcommand{\aanote}[2][1=]{\nop}
+	\renewcommand{\aaimp}[2][1=]{\nop}
+        \renewcommand{\agnote}[2][1=]{\nop}
+	\renewcommand{\agimp}[2][1=]{\nop}
+\fi
+
+% \newcommand{\nth}[1]{$#1$-th}
+\usepackage{nth} % For things like 2nd, 3rd, etc.
+\let\oldnth\nth
+\renewcommand{\nth}[1]{%
+    \IfInteger{#1}{\oldnth{#1}}{\hbox{#1-th}}%
+}  % it does the job
+\robustify\nth
+
+% ===================================================================
+
+\newcounter{version}
+\setcounter{version}{\preamble@version}
+
+\colorlet{addcolor}{blue}
+\colorlet{removecolor}{red}
+\colorlet{replacecolor}{orange}
+
+\newcommand{\add}[2]{\ifthenelse{\value{version}=#1}{\textcolor{addcolor}{#2}}{\ifthenelse{\value{version}<#1}{\nop{}}{#2}}}
+\newcommand{\remove}[2]{\ifthenelse{\value{version}=#1}{\textcolor{removecolor}{\sout{#2}}}{\ifthenelse{\value{version}<#1}{#2}{\nop{}}}}
+\newcommand{\replace}[3]{\ifthenelse{\value{version}=#1}{\textcolor{removecolor}{\sout{#2}} \textcolor{replacecolor}{$\rightarrow$ #3}}{\ifthenelse{\value{version}<#1}{#2}{#3}}}
+
+\AtBeginDocument{\colorlet{defaultcolor}{.}}
+\newenvironment{add*}[1]{\ifthenelse{\value{version}=#1}{\color{orange}}{}}{\color{defaultcolor}}
+
+\ifpreamble@verbose
+\else
+    %% same commands, but show the actual space that the changes take
+    \renewcommand{\remove}[2]{\ifthenelse{\value{version}=#1}{\nop{}}{\ifthenelse{\value{version}<#1}{#2}{\nop{}}}}
+    \renewcommand{\replace}[3]{\ifthenelse{\value{version}=#1}{\textcolor{replacecolor}{#3}}{\ifthenelse{\value{version}<#1}{#2}{#3}}}
+\fi
+
+% Robustifying these commands to use them in captions, headers, etc.
+\robustify\add
+\robustify\remove
+\robustify\replace
+
+% Optional: nicer labels for Input/Output
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}
+
+%%%
+
+\IfFileExists{math_commands.tex}{\input{math_commands.tex}}{}
+\IfFileExists{my_commands.tex}{\input{my_commands.tex}}{}
+\IfFileExists{tikz.tex}{\input{tikz.tex}}{}
+
+\endinput
+
+% \RequirePackage{float}
+% \RequirePackage{tikz}
+% \RequirePackage{rotating}
+% \RequirePackage{booktabs}
+
+% \RequirePackage[]{natbib}
+% \bibliographystyle{dinat}
+
+
+% \RequirePackage[margin=0.9in]{geometry}
+
+% \setlength{\parskip}{1em}
+

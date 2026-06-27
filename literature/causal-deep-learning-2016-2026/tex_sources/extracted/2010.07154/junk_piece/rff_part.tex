@@ -1,0 +1,12 @@
+
+Although \eqref{eq:kernel-def} is the simplest form of the deep kernel, we claim that it does not sacrifice the expressiveness of the deep kernel. One way of seeing this is to consider the random Fourier feature \citep{Rahimi2008}.
+
+\begin{thm}\label{thm:approximation}
+    Given deep kernel function $k(x, x') = \kappa(\psi(x), \psi(x'))$ where $\kappa$ is the shift-invariant kernel function and $\psi(x')$ is a $L$-layer neural network whose output is bounded to $[0,1]^d$. Then, with an arbitrarily small $\varepsilon >0$, there exists $(L+1)$-layer neural network $\tilde{\psi}(x)$ with $D$-dimensional output that satisfies
+    \begin{align*}
+        \sup_{x, x'} |k(x, x') - (\tilde{\psi}(x))^\top (\tilde{\psi}(x'))|  \leq  \varepsilon     
+    \end{align*}
+    when $D = \Omega(\frac{d}{\varepsilon^2} \log \frac{d}{\varepsilon})$ and the cosine activation function is used in the final layer.
+\end{thm}
+
+The proof is based on the probabilistic method \citep{alon04} and \citep[Claim~1]{Rahimi2008} and given in Appendix~\ref{sec:proof}. Theorem~\ref{thm:approximation} suggests that our kernel is not less expressive compared to more complex deep kernels. In practice, we might not use cosine activation function, though we can still approximate complex deep kernel by simply adding extra layers. Considering that most popular kernel functions, such as RBF kernel and Matern kernel \citep{Rasmussen2005}, are shift-invariant, we suppose the expressive power of our simple deep kernel is comparable to more complex deep kernel functions.

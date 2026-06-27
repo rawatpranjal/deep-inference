@@ -1,0 +1,314 @@
+\documentclass[12pt]{article}
+%% Packages
+\RequirePackage{amsthm,amsmath,amsfonts,amssymb,bbm}
+%\RequirePackage[numbers]{natbib}
+\RequirePackage[authoryear]{natbib}%% uncomment this for author-year citations
+\RequirePackage[colorlinks,citecolor=blue,urlcolor=blue]{hyperref}%% uncomment this for coloring bibliography citations and linked URLs
+\RequirePackage{graphicx}%% uncomment this for including figures
+%\usepackage{amsrefs}
+%\newcommand{\MRhref}[2]{\href{http://www.ams.org/mathscinet-getitem?mr=#1}{#2}} %MR编号可点击
+\usepackage{subfigure}
+\usepackage{float}
+\usepackage{multirow}
+\usepackage{diagbox}
+\usepackage[figuresright]{rotating}
+\usepackage{pdflscape}
+\usepackage{booktabs}
+\usepackage{bm}
+% DON'T change margins - should be 1 inch all around.
+\addtolength{\oddsidemargin}{-.5in}%
+\addtolength{\evensidemargin}{-1in}%
+\addtolength{\textwidth}{1in}%
+\addtolength{\textheight}{1.68in}%
+\addtolength{\topmargin}{-1in}%
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% Uncomment next line to change            %%
+%% the type of equation numbering           %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\numberwithin{equation}{section}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% For Axiom, Claim, Corollary, Hypothesis, %%
+%% Lemma, Theorem, Proposition              %%
+%% use \theoremstyle{plain}                 %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{axiom}{Axiom}
+\newtheorem{claim}[axiom]{Claim}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{remark}{Remark}[section]
+\newtheorem{assumption}{Assumption}
+%\newtheorem{lemma}[theorem]{Lemma}
+%\newtheorem{remark}[theorem]{Remark}
+%\newtheorem{???}{???}
+%\newtheorem*{???}{???} % *指不用编号
+%\newtheorem{???}{???}[???]
+%\newtheorem{???}[???]{???}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                          %%
+%% For Assumption, Definition, Example,     %%
+%% Notation, Property, Remark, Fact         %%
+%% use \theoremstyle{remark}                %%
+%%                                          %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{remark}
+%\newtheorem{definition}[theorem]{Definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{example}{Example}
+\newtheorem*{fact}{Fact}
+\newtheorem*{pft}{Proof of Theorem}
+%\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{corollary}{Corollary}[section]
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{assertion}{Assertion}
+%\newtheorem*{???}{???}
+%\newtheorem{???}{???}[???]
+%\newtheorem{???}[???]{???}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Please put your definitions here:        %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\bs}{\boldsymbol{s}}
+\newcommand{\bk}{\boldsymbol{k}}
+\newcommand{\bl}{\boldsymbol{l}}
+\newcommand{\bu}{\boldsymbol{u}}
+\newcommand{\bo}{\boldsymbol{0}}
+\newcommand{\bv}{\boldsymbol{v}}
+\newcommand{\bka}{\boldsymbol{\kappa}}
+\newcommand{\var}{\operatorname{Var}}
+\newcommand{\cov}{\operatorname{Cov}}
+\newcommand{\nn}{\mathcal{FNN}}
+\newcommand{\sm}{s_{\text{min} }}
+\newcommand{\sM}{s_{\text{max} }}
+\newcommand{\ham}{\operatorname{Ham}}
+\newcommand{\kl}{\operatorname{KL}}
+\newcommand{\diag}{\operatorname{diag}}
+\usepackage{tikz}
+\newcommand{\ts}{\tilde{s}}
+\newcommand{\sso}{s_{0}}
+\newcommand{\ddo}{d_{0}}
+\newcommand{\ds}{\varrho}
+\newcommand{\pef}{\mathcal{E}_{\fo}(\hat{f}_{nm})}
+\newcommand{\pefn}{\mathcal{E}_{\fo}(\hat{f}_{n})}
+\newcommand{\pefh}{\mathcal{E}_{\fo}(\hat{f})}
+\newcommand{\delf}{\Delta_{nm}(\hat{f}_{nm})}
+\newcommand{\vc}{\operatorname{VCdim}}
+\newcommand{\hmfhf}{\hat{\mathcal{E}}_{\fo}(\hat{f})}
+
+\newcounter{cnstcnt}
+\newcommand{\xc}{% 
+   \refstepcounter{cnstcnt}%
+   \ensuremath{c_{\thecnstcnt}}
+}
+\newcommand{\jc}[1]{\ensuremath{c_{\ref{#1}}}}
+
+\newcounter{bnstcnt}
+\newcommand{\xb}{% 
+   \refstepcounter{bnstcnt}%
+   \ensuremath{b_{\thebnstcnt}}
+%   \refstepcounter{cnstcnt}%
+%   \ensuremath{c_{\thecnstcnt}}
+}
+\newcommand{\jb}[1]{\ensuremath{b_{\ref{#1}}}}
+
+\newcounter{dbnstcnt}
+\newcommand{\xdb}{% 
+   \refstepcounter{dbnstcnt}%
+   \ensuremath{B_{\thedbnstcnt}}
+}
+\newcommand{\jdb}[1]{\ensuremath{B_{\ref{#1}}}}
+
+\newcounter{dcnstcnt}
+\newcommand{\xdc}{% 
+   \refstepcounter{dcnstcnt}%
+   \ensuremath{B_{\thedcnstcnt}}
+}
+\newcommand{\jdc}[1]{\ensuremath{B_{\ref{#1}}}}
+
+
+\makeatletter
+\newcommand*{\centerfloat}{%
+  \parindent \z@
+  \leftskip \z@ \@plus 1fil \@minus \marginparwidth
+  \rightskip \leftskip
+  \parfillskip \z@skip}
+\makeatother
+
+% ysx加
+\usepackage{enumerate}
+\newtheorem{manualtheoreminner}{Assumption}
+\newenvironment{manualtheorem}[1]{%
+  \renewcommand\themanualtheoreminner{#1}%
+  \manualtheoreminner
+}{\endmanualtheoreminner}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%半参文章要用的记号宏定义
+\newcommand{\x}{X}
+\newcommand{\xx}{\boldsymbol{x}}
+\newcommand{\zz}{\boldsymbol{z}}
+\newcommand{\relu}{\sigma}
+\newcommand{\sob}{\mathcal{W}}
+\newcommand{\rkhs}{\mathcal{H}_{NT}}
+\newcommand{\dom}{\Omega}
+\newcommand{\kont}{K^{\mathrm{NT}}}
+\newcommand{\konto}{K_{\mathrm{W}}}
+\newcommand{\kontb}{K_{\mathrm{b}}}
+\newcommand{\kontoo}{K_{\mathrm{W}}'}
+\newcommand{\kmnt}{K^{\mathrm{NT}}_{\theta}}
+\newcommand{\knt}{K^{\mathrm{NT}}}
+\newcommand{\kntt}{K^{\mathrm{NT}}_{t}}
+\newcommand{\kntto}{K^{\mathrm{NT}}_{0}}
+\newcommand{\XX}{\boldsymbol{X}}
+\newcommand{\Pe}{P}
+\newcommand{\Pn}{\mathbb{P}_{n}}
+\newcommand{\ppp}{\mathbb{P}}
+\newcommand{\loss}{l}
+\newcommand{\Loss}{L_{n}}
+\newcommand{\tJ}{\tilde{J}}
+\newcommand{\feta}{f}
+\newcommand{\fo}{\feta_{0}}
+\newcommand{\beo}{\beta_{0}}
+\newcommand{\so}{s_{0}}
+\newcommand{\scx}{s_{c}}
+\newcommand{\poly}{\operatorname{poly}}
+\newcommand{\ddt}{\frac{d}{dt}}
+\newcommand{\hft}{\hat{\feta}_{t}}
+\newcommand{\hbt}{\hat{\beta}_{t}}
+\newcommand{\htt}{\hat{\theta}_{t}}
+\newcommand{\hts}{\hat{\theta}_{s}}
+\newcommand{\tft}{\tilde{\feta}_{t}}
+\newcommand{\tbt}{\tilde{\beta}_{t}}
+\newcommand{\hfs}{\hat{\feta}_{s}}
+\newcommand{\hbs}{\hat{\beta}_{s}}
+\newcommand{\tf}{\tilde{\feta}}
+\newcommand{\tb}{\tilde{\beta}}
+\newcommand{\tfs}{\tilde{\feta}_{s}}
+\newcommand{\tbs}{\tilde{\beta}_{s}}
+\newcommand{\tfw}{\tilde{\feta}_{\infty}}
+\newcommand{\tbw}{\tilde{\beta}_{\infty}}
+\newcommand{\hfo}{\hat{\feta}_{0}}
+\newcommand{\hbo}{\hat{\beta}_{0}}
+\newcommand{\hto}{\theta_{0}}
+\newcommand{\tfo}{\tilde{\feta}_{0}}
+\newcommand{\tbo}{\tilde{\beta}_{0}}
+\newcommand{\tLoss}{\tilde{L}_{n}}
+\newcommand{\kuan}{\poly \left(n, \lambda_0^{-1},\|\boldsymbol{y}\|, \log (1 / \delta), 1 / \varepsilon\right)}
+\newcommand{\ba}{\boldsymbol{\alpha}}
+\newcommand{\xia}{\Theta}
+\newcommand{\tw}{\Tilde{W}}
+\newcommand{\ttw}{W}
+\newcommand{\Lo}{L_{0}}
+\newcommand{\rade}{\sigma}
+\newcommand{\ind}{I}
+% \newcommand{\losstbtf}{\loss(\tb, \tf)}%
+\newcommand{\losstbtf}{\loss_{\tb, \tf}}
+%\newcommand{\lossbeofo}{\loss(\beo, \fo)}%{\loss_{\beo, \fo}}
+\newcommand{\lossbeofo}{\loss_{\beo, \fo}}
+%\newcommand{\lossbeofetanstar}{\loss(\beo, \feta_n^{*})}%{\loss_{\beo, \feta_n^{*}}}
+\newcommand{\lossbeofetanstar}{\loss_{\beo, \feta_n^{*}}}
+%\newcommand{\lossbf}{\loss(\beta, \feta)}%{\loss_{\beta, \feta}}
+\newcommand{\lossbf}{\loss_{\beta, \feta}}
+\newcommand{\ddh}{\mathbf{h}}
+\newcommand{\seff}{\tilde{S}}%{S_{\text{eff}}}
+\newcommand{\tddh}{\tilde{\ddh}}
+\newcommand{\thh}{\tilde{h}}
+\newcommand{\idicator}{\mathbbm{1}}
+\newcommand{\ut}{\boldsymbol{u}}
+\newcommand{\residual}{\boldsymbol{e}}
+\newcommand{\hre}{\hat{\residual}}
+\newcommand{\tre}{\tilde{\residual}}
+\newcommand{\hret}{\hat{\residual}_t}
+\newcommand{\tret}{\tilde{\residual}_t}
+\newcommand{\stopt}{t_{s}}
+\newcommand{\hbts}{\hat{\beta}_{\stopt}}
+\newcommand{\hfts}{\hat{\feta}_{\stopt}}
+\newcommand{\tbts}{\tilde{\beta}_{\stopt}}
+\newcommand{\tfts}{\tilde{\feta}_{\stopt}}
+% \newcommand{\cov}{\mathbb{C}\operatorname{ov}}
+
+% \usepackage{mathptmx}  
+\usepackage{newtxtext} 
+% \usepackage{newtxmath}   
+% \usepackage{helvet}  
+\usepackage{libertine}  
+% \usepackage{txfonts}
+\begin{document}
+
+%\bibliographystyle{natbib}
+
+\def\spacingset#1{\renewcommand{\baselinestretch}%
+{#1}\small\normalsize} \spacingset{1}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\title{\bf{Semiparametric M-estimation with overparameterized neural networks}}
+	
+ \author{Shunxing Yan \thanks{E-mail: sxyan@stu.pku.edu.cn},~~~Ziyuan Chen\thanks{E-mail: chenziyuan@pku.edu.cn}~~\mbox{ and }~Fang Yao\thanks{		Fang Yao is the corresponding author, E-mail: fyao@math.pku.edu.cn. } \\
+ \hspace{.2cm} 
+ School of Mathematical Sciences, Center for Statistical Science, \\	Peking University, Beijing, China\\
+ }
+\date{}
+\maketitle
+\vspace{-0.32in} 
+\input{chapters/abstract}
+% \noindent%
+% % {\it Keywords:} Clustered dependence,  Functional data, Fully connected ReLU neural networks, Intrinsic dimension, Phase transition
+% \vfill
+
+\spacingset{1.39} % DON'T change the spacing!
+
+
+\input{chapters/mainpart}
+
+% \newpage
+% \setcounter{section}{0}  % 重新开始section计数，从1开始
+% \setcounter{equation}{0}
+% \renewcommand\thesection{S.\arabic{section}}
+% \renewcommand{\theequation}{S.\arabic{equation}}
+% % \newtheorem{remark}{Remark}[section]
+% \theoremstyle{plain}
+% \newtheorem{stheorem}{Theorem}%[section]
+% \newtheorem{slemma}{Lemma}%[section]
+% \renewcommand{\theslemma}{S.\arabic{slemma}}
+% \renewcommand{\thestheorem}{S.\arabic{stheorem}}
+% \newtheorem{sdefinition}{Definition}
+% \renewcommand{\thesdefinition}{S.\arabic{sdefinition}}
+% \newtheorem{sassumption}{Assumption}
+% \renewcommand{\thesassumption}{S.\arabic{sassumption}}
+
+
+% \theoremstyle{remark}
+% % \newtheorem{remark}{Remark}[section]
+% \renewcommand{\thetable}{S.\arabic{table}}
+% \renewcommand{\thefigure}{S.\arabic{figure}}
+% % \newtheorem{sequation}{equation}%[section]
+
+
+
+
+% \begin{center}
+% \LARGE
+% \textbf{ Supplement to ``Semiparametric M-estimation with overparameterized neural networks''}
+% \end{center}
+
+
+% \input{chapters/supp}
+
+
+\bibliographystyle{apalike}
+\bibliography{bibliography}  
+
+\end{document}

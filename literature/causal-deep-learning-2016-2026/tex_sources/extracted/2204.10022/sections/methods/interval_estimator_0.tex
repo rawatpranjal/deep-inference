@@ -1,0 +1,182 @@
+\subsection{Solving for $w$}
+\label{sec:algorithm}
+We are interested in a scalable algorithm to compute the intervals on the CAPO function and the APO function.
+To calculate the bounds on the APO (dose-response) function, the bounds on  the CAPO function must be computed at each datapoint.
+The bounds on the CAPO function can be calculated independently for each instance $\X=\x$; however, the bounds on the APO are taken with respect to an expectation over $\X$, so a batched algorithm can facilitate scalability.
+Furthermore, the need for scalability is compounded by the need to evaluate the intervals at multiple values of the continuous treatment variable $\tf \in \Tcal$, which could be arbitrarily many.
+We consider three different solutions below: a parallel \emph{line search} approach; a batched \emph{grid search} approach; and a batched \emph{gradient descent} approach.
+\subsubsection{Selecting the appropriate class of $u$ functions}
+Step function
+\begin{equation*}
+    H(\y) \coloneqq 
+    \begin{dcases*}
+        1, \y > \ystar \\
+        0, \y \leq \ystar
+    \end{dcases*}
+\end{equation*}
+\begin{equation*}
+    \Und_H = \left\{ H(\y - \ystar): \ystar \in \Ycal \right\}
+\end{equation*}
+\begin{equation*}
+    \Uni_H = \left\{ H(\ystar - \y): \ystar \in \Ycal \right\}
+\end{equation*}
+
+Differentiable sigmoid function
+\begin{equation*}
+    S(y) \coloneqq \left( 1 + \exp{(-y)} \right)^{-1}
+\end{equation*}
+\begin{equation*}
+    \Und_S = \left\{ S\left(\frac{\y - \ystar}{s}\right): \ystar \in \Ycal \right\}
+\end{equation*}
+\begin{equation*}
+    \Uni_S = \left\{ S\left(\frac{\ystar - \y}{s}\right): \ystar \in \Ycal \right\}
+\end{equation*}
+
+\subsubsection{Approximating the integrals in $\kappap(\x, \tf; \Lambda, u)$ using Gauss-Hermite quadrature}
+Gauss-Hermite quadrature is a numerical method to approximate indefinite integrals of the following form: $\int_{-\infty}^{\infty}\exp{(-\y^2)f(\y)d\y}$.
+In this case,
+\begin{equation*}
+    \int_{-\infty}^{\infty}\exp{(-\y^2)f(\y)d\y} \approx \sum_{i=1}^{m}w_i f(\y),
+\end{equation*}
+where $m$ is the number of samples drawn. The $\y_i$ are the roots of the physicists Hermite polynomial $H^*_{m}(\y)(i=1, 2, \dots, m)$ and the weights are given by
+\begin{equation*}
+    w_i = \frac{2^{m-1}m!\sqrt{\pi}}{m^2[H^*_{m-1}(\y_k)]^2}
+\end{equation*}
+This method can be used to calculate the expectation of a function, $h(y)$, with respect to Gaussian distributed $\y \sim \mathcal{N}(\mu, \sigma^2)$ through a change of variables, such that,
+\begin{equation*}
+    \begin{split}
+        \E_{\mathcal{N}(\mu, \sigma^2)}[h(\y)] &= \int_{-\infty}^{\infty} \frac{1}{\sqrt{\pi}}\exp{\left( -\y^2 \right)} h\left( \sqrt{2}\sigma \y + \mu \right) d\y   \\
+        &\approx \frac{1}{\sqrt{\pi}} \sum_{i=1}^{m}w_i h\left( \sqrt{2}\sigma \y + \mu \right).
+    \end{split}
+\end{equation*}
+We would like to approximate the expectation of a function, either $h(\y) = u(\y) r_{\params}(\y; \tf, \x)$ or $h(\y) = u(\y)$, with respect to our density estimator $\pp(\y | \tf, \x)$, which is a Gaussian mixture. Thus,
+\begin{equation*}
+    \begin{split}
+        \E_{\pp(\y | \tf, \x)}&[h(\y)] = \\
+        & \frac{1}{\sqrt{\pi}} \sum_{j=1}^{n_{\tf}} \pip^{j} \int_{-\infty}^{\infty} \exp{\left( -\y^2 \right)} h\left( \sqrt{2}\sigmap^{2j} \y + \mup^{j} \right) d\y
+    \end{split}
+\end{equation*}
+where, $\pip^{j}=\pip^{j}(\x)$, $\mup^{j}=\mup^{j}(\x, \tf)$, and $\sigmap^{2j}=\sigmap^{2j}(\x, \tf)$.
+\begin{definition}
+\label{def:integral-estimator}
+{\normalfont Gauss-Hermite quadrature integral estimator}
+    \begin{equation*}
+        I(h(\y)) \coloneqq \frac{1}{\sqrt{\pi}} \sum_{j=1}^{n_{\tf}} \pip^{j} \sum_{i=1}^{m} w_i h\left( \sqrt{2}\sigmap^{2j}(\x, \tf) \y + \mup^{j} \right)
+    \end{equation*}
+\end{definition}
+We can now plug this into \Cref{eq:kappap} to define the following estimator:
+\begin{equation*}
+    \widehat{\kappa}_{\params}(\x, \tf; \Lambda, u) \coloneqq \mup + \frac{I(u(\y) r_{\params}(\y; \tf, \x))}{\alphap\left(\x; \Lambda, \pp(\tf \mid \x)\right) + I(u(\y))}.
+\end{equation*}
+
+\subsubsection{Discrete search approaches}
+Let $\widehat{\Ycal}=\{\y_i \in \Ycal\}_{i=1}^{k}$ be a set of $k$ values of $\y$, then
+\begin{equation*}
+    \begin{split}
+         \underline{\mu}_{\params}^{H}(\x, \tf) &= \min_{\ystar} \left\{ \widehat{\kappa}_{\params}(\x, \tf; \Lambda, H(\ystar - \y)): \ystar \in \widehat{\Ycal} \right\}, \\
+         \overline{\mu}_{\params}^{H}(\x, \tf) &= \max_{\ystar} \left\{ \widehat{\kappa}_{\params}(\x, \tf; \Lambda, H(\y - \ystar)): \ystar \in \widehat{\Ycal} \right\}.
+    \end{split}
+\end{equation*}
+
+\begin{algorithm}
+    \caption{Grid Search Interval Optimizer}
+    \label{alg:grid-search}
+    \begin{algorithmic}[1]
+        \Require{$\x^{*}$ is an instance of $\X$, $\tf^{*}$ is a treatment level to evaluate, $\Lambda$ is a belief in the amount of hidden confounding, $\params$ are optimized model parameters, $\widehat{\Ycal}$ is a set of unique values $\y \in \Ycal$.}
+        \Function{GridSearch}{$\x^{*}$, $\tf^{*}$, $\Lambda$, $\params$, $\widehat{\Ycal}$}
+            \State $\overline{\mu} \gets -\infty$
+            \State $\underline{\mu} \gets \infty$
+            \For{$\ystar \in \widehat{\Ycal}$}
+                \State $\overline{\kappa} \gets \widehat{\kappa}_{\params}(\x^{*}, \tf^{*}; \Lambda, H(\y - \ystar))$
+                \State $\underline{\kappa} \gets \widehat{\kappa}_{\params}(\x^{*}, \tf^{*}; \Lambda, H(\ystar-\y))$
+                \If{$\overline{\kappa} > \overline{\mu}$}
+                    \State $\overline{\mu}\gets \overline{\kappa}$
+                \EndIf
+                \If{$\underline{\kappa} < \underline{\mu}$}
+                    \State $\underline{\mu} \gets \underline{\kappa}$
+                \EndIf
+            \EndFor
+            \State \Return $\underline{\mu}, \overline{\mu}$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+    \caption{Line Search Interval Optimizer}
+    \label{alg:line-search}
+    \begin{algorithmic}[1]
+        \Require{$\x^{*}$ is an instance of $\X$, $\tf^{*}$ is a treatment level to evaluate, $\Lambda$ is a belief in the amount of hidden confounding, $\params$ are optimized model parameters, $\widehat{\Ycal}$ is a set of unique values $\y \in \Ycal$ \emph{sorted in ascending order}.}
+        \Function{LineSearch}{$\x^{*}$, $\tf^{*}$, $\Lambda$, $\params$, $\widehat{\Ycal}$}
+            \State $\overline{\mu} \gets -\infty$, $\overline{\kappa} \gets \infty$
+            \State $\underline{\mu} \gets \infty$, $\underline{\kappa} \gets -\infty$
+            \State $\underline{\delta} \gets $ True, $\overline{\delta} \gets $ True
+            \While{$\underline{\delta}$}
+                \State $\ystar \gets \textsc{Pop}(\widehat{\Ycal}_c)$ \Comment{$\widehat{\Ycal}_c$ a copy of $\widehat{\Ycal}$}
+                \State $\underline{\kappa} \gets \widehat{\kappa}_{\params}(\x, \tf; \Lambda, H(\ystar-\y))$
+                \If{$\underline{\kappa} < \underline{\mu}$}
+                    \State $\underline{\mu} \gets \underline{\kappa}$
+                \Else 
+                    \State $\underline{\delta} \gets $ False
+                \EndIf
+            \EndWhile
+            \While{$\overline{\delta}$}
+                \State $\ystar \gets \textsc{Pop}(\widehat{\Ycal}_c)$ \Comment{$\widehat{\Ycal}_c$ a copy of $\widehat{\Ycal}$}
+                \State $\overline{\kappa} \gets \widehat{\kappa}_{\params}(\x, \tf; \Lambda, H(\y - \ystar))$
+                \If{$\overline{\kappa} > \overline{\mu}$}
+                    \State $\overline{\mu} \gets \overline{\kappa}$
+                \Else 
+                    \State $\overline{\delta} \gets $ False
+                \EndIf
+            \EndWhile
+            \State \Return $\underline{\mu}, \overline{\mu}$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Gradient descent approach}
+Define $\bm{\omega} \coloneqq \begin{bmatrix} \ystar \\ s \end{bmatrix}$, $\textsc{Softplus}(s) \coloneqq \log{(1 + \exp{(s)})}$, $\underline{S}_{\bm{\omega}}(\y) \coloneqq S\left(\frac{\ystar-\y}{\textsc{Softplus}(s) + \zeta}\right)$, and $\overline{S}_{\bm{\omega}}(\y) \coloneqq S\left(\frac{\y-\ystar}{\textsc{Softplus}(s) + \zeta}\right)$, where $\zeta$ is a small positive constant.
+Then the gradient descent approach seeks to solve the following optimization problems:
+\begin{equation*}
+    \begin{split}
+        \underline{\mu}_{\params}^{S}(\x, \tf) &= \min_{\bm{\omega}} \widehat{\kappa}_{\params}\left(\x, \tf; \Lambda, \underline{S}_{\bm{\omega}}(\y) \right), \\
+        \overline{\mu}_{\params}^{S}(\x, \tf) &= \min_{\bm{\omega}} -\widehat{\kappa}_{\params}\left(\x, \tf; \Lambda, \overline{S}_{\bm{\omega}}(\y) \right).
+    \end{split}
+\end{equation*}
+
+\begin{algorithm}
+    \caption{Gradient Descent Interval Optimizer}
+    \label{alg:gradient-descent}
+    \begin{algorithmic}[1]
+        \Require{$\x^{*}$ is an instance of $\X$, $\tf^{*}$ is a treatment level to evaluate, $\Lambda$ is a belief in the amount of hidden confounding, $\params$ are optimized model parameters.}
+        \Function{GradientDescent}{$\x^{*}$, $\tf^{*}$, $\Lambda$, $\params$, $\epsilon$}
+            \State $\bm{\omega} \coloneqq \begin{bmatrix} \ystar \\ s \end{bmatrix}$
+            \State $\overline{S}_{\bm{\omega}}(\y) \coloneqq S\left(\frac{\y-\ystar}{\textsc{Softplus}(s) + \zeta}\right)$
+            \State $\underline{S}_{\bm{\omega}}(\y) \coloneqq S\left(\frac{\ystar-\y}{\textsc{Softplus}(s) + \zeta}\right)$
+            \State $i \gets 0$, $\ystar_i \sim \mathcal{N}(0, 1)$, $s_i \gets 0.0$, $\delta \gets \inf$
+            \While{$\delta > \epsilon$}
+                \State $\underline{\mu} \gets \widehat{\kappa}_{\params}\left(\x, \tf; \Lambda, \underline{S}_{\bm{\omega}_i}(\y)\right)$
+                \State $\bm{\omega}_{i+1} = \bm{\omega}_{i} - \eta \nabla_{\bm{\omega}} \underline{\mu}$ 
+                \State $\delta = \left\lVert{\bm{\omega}_{i+1} - \bm{\omega}_{i}}\right\rVert$
+                \State $i \gets i + 1$
+            \EndWhile
+            \State $i \gets 0$, $\ystar_i \sim \mathcal{N}(0, 1)$, $s_i \gets 0.0$, $\delta \gets \inf$
+            \While{$\delta > \epsilon$}
+                \State $\overline{\mu} \gets \widehat{\kappa}_{\params}\left(\x, \tf; \Lambda, \overline{S}_{\bm{\omega}_i}(\y)\right)$
+                \State $\bm{\omega}_{i+1} = \bm{\omega}_{i} + \eta \nabla_{\bm{\omega}} \overline{\mu}$ 
+                \State $\delta = \left\lVert{\bm{\omega}_{i+1} - \bm{\omega}_{i}}\right\rVert$
+                \State $i \gets i + 1$
+            \EndWhile
+            \State \Return $\underline{\mu}, \overline{\mu}$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+\subsubsection{APO (dose-response) function interval estimator}
+The bounds for the APO function interval estimator given observational data $\D$ and the CMSM parameterized by $\Lambda$ are given by,
+\begin{equation*}
+    \begin{split}
+        \underline{\mu}_{\params}^{(\cdot)}(\tf) &\coloneqq \frac{1}{n}\sum_{i=1}^{n_{\D}} \underline{\mu}_{\params}^{(\cdot)}(\x_i, \tf), \\
+        \overline{\mu}_{\params}^{(\cdot)}(\tf) &\coloneqq \frac{1}{n}\sum_{i=1}^{n_{\D}} \overline{\mu}_{\params}^{(\cdot)}(\x_i, \tf),
+    \end{split}
+\end{equation*}
+where $(\cdot)$ can either be the step function $H$ or the sigmoid function $S$ depending on the optimization proceedure.

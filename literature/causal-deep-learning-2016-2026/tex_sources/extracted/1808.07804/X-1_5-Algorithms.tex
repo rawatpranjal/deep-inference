@@ -1,0 +1,305 @@
+\section{Explicit Transfer Learning Algorithms for CATE Estimation}
+\label{app:transfer.algos}
+
+%In section 3.2 we outlined several possible transfer learning algorithms for CATE estimation. However, things were mostly presented at a high level so as to remain agnostic to one's choice of underlying CATE estimator. In this section, we provide explicit algorithms for T and Y transfer learners, and explicitly outline the Joint-Training method. 
+
+
+\subsection{MLRW Transfer for CATE Estimation}
+
+%99.9 percent sure this will have to live in the appendix. It's a huge space hog. 
+
+
+\begin{algorithm}[H]
+	\caption{MLRW Transfer for Cate Estimation.}
+	\label{alg:sf-reptile-meta-regression}
+	\begin{algorithmic}[1]
+		\State Let $\mu_0^{(i)}$ and $\mu_1^{(i)}$ be the outcome under treatment and control for experiment $i$. 
+		\State Let numexps be the number of experiments. 
+		\State Let $\pi_\theta$ be an $N$ layer neural network parameterized by $\theta = \left[\theta_0, \dots, \theta_{N} \right]$.
+		\State Let $\epsilon = \left[\epsilon_0, \dots, \epsilon_{N} \right]$ be a vector, where $N$ is the number of layers in $\pi_\theta$. 
+		\State Let outeriters be the total number of training iterations. 
+		\State Let inneriters be the number of inner loop training iterations.
+		\For{oiter $<$ outeriters}
+		\For{i $<$ numexps}
+		\State Sample $X_0$ and $X_1$: control and treatment units from experiment $i$
+		\For{$j = [0, 1]$} \Comment{j iterating over treatment and control}
+		\State Let $U_0(\theta) = \theta$
+		\For{k < inneriters}
+		\State $\mathcal{L} = \| \pi_{U_k(\theta)} (X_j) - \mu_j(X_j) \|$
+		\State Compute $\nabla_\theta \mathcal{L}$. 
+		\State Use ADAM with $\nabla_\theta \mathcal{L}$ to obtain $U_{k+1}(\theta)$. 
+		\State $U_k (\theta) = U_{k+1}(\theta)$
+		\EndFor
+		\For{ $p < N$ }
+		\State $\theta_p = \epsilon_p \cdot U_k(\theta_p) + (1 - \epsilon_p) \cdot \theta_p$.  
+		\EndFor
+		\EndFor
+		\EndFor
+		\EndFor
+		\State To Evaluate CATE estimate, \textbf{do}
+		\State $C = []$
+		\For{i $<$ numexps}
+		\State Sample $X_0$ and $X_1$: control and treatment units from experiment $i$
+		\State Sample $X$: test units from experiment $i$. 
+		\For{$j$ = [0, 1]} \Comment{j iterating over treatment and control}
+		\For{$k <$ innteriters}
+		\State $\mathcal{L} = \| \pi_{U_k(\theta)} (X_j) - \mu_j(X_j) \|$
+		\State Compute $\nabla_\theta \mathcal{L}$. 
+		\State Use ADAM with $\nabla_\theta \mathcal{L}$ to obtain $U_{k+1}(\theta)$. 
+		\State $U_k (\theta) = U_{k+1}(\theta)$
+		\EndFor
+		\State $\hat{\mu}_j = \pi_{U_k(\theta)} (X)$
+		\EndFor
+		\State  $\hat{\tau}_i = \hat{\mu}_0 - \hat{\mu_1}$
+		\State C.append$(\hat{\tau}_i)$
+		\EndFor
+		\State {\bf return} $C$
+	\end{algorithmic}
+\end{algorithm}
+
+\clearpage
+\subsection{Joint Training}
+\FloatBarrier
+\begin{figure}
+	\begin{minipage}[c]{0.45\textwidth}
+	\includegraphics[width=0.8\linewidth]{figures/joint_training}
+	\end{minipage}\hfill
+	\begin{minipage}[c]{0.4\textwidth}
+		\caption{Joint Training - Unlike the Multi-head method which differentiates base layers for treatment and control, the Joint Training method has all observations and experiments (regardless of treatment and control) share the same base network, which extracts general low level features from the data.} \label{fig:joint_training}
+	\end{minipage}
+\end{figure}
+
+\begin{algorithm}[h]
+	\begin{algorithmic}[1]
+		\State Let $\mu_0^{(i)}$ and $\mu_1^{(i)}$ be the outcome under control and treatment for experiment $i$. 
+		\State Let numexps be the number of experiments. 
+		\State Let $\pi_\rho$ be a generic expression for a neural network parameterized by $\rho$. 
+		\State Let $\theta$ be base neural network layers shared by all experiments. 
+		\State Let $\phi_0^{(i)}$  be neural network layers predicting $\mu_0^{(i)}$ in experiment $i$.
+		\State Let $\phi_1^{(i)}$  be neural network layers predicting $\mu_1^{(i)}$ in experiment $i$.
+		\State Let $\omega_0^{(i)} = \left[\theta, \phi_0^{(i)} \right]$ be the full prediction network for $\mu_0$ in experiment $i$.
+		\State Let $\omega_1^{(i)} = \left[\theta, \phi_1^{(i)} \right]$ be the full prediction network for $\mu_1$ in experiment $i$.
+		\State Let $\Omega = \bigcup_{j=0}^{\text{1}} \bigcup_{i=1}^{\text{numexps}} \omega_j^{(i)}$ be all trainable parameters. 
+		\State Let numiters be the total number of training iterations
+		\For{iter $<$ numiters}
+		\State $\mathcal{L}$ = 0
+		\For{i $<$ numexps}
+		\State Sample $X_0$ and $X_1$: control and treatment units from experiment $i$
+		\For{$j$ = [0, 1]} \Comment{j iterating over treatment and control}
+		\State $\mathcal{L}_j^{(i)} = \| \pi_{\omega_j^{(i)}} (X_j) - \mu_j(X_j) \|$
+		\State $\mathcal{L} = \mathcal{L} + \mathcal{L}_j^{(i)}$
+		\EndFor
+		\EndFor
+		\State Compute $\nabla_\Omega \mathcal{L} = \frac{\partial \mathcal{L}}{\partial \Omega} = \sum_i \sum_j \frac{\partial \mathcal{L}_j^{(i)}}{\partial \omega_j^{(i)}}$
+		\State Apply ADAM with gradients given by $\nabla_\Omega \mathcal{L}$. 
+		\For{i $<$ numexps}
+		\State Sample $X$: test units from experiment $i$
+		\EndFor
+		\EndFor
+		\State $\hat{\mu}_0 = \pi_{\omega_0^{(i)}} (X)$
+		\State $\hat{\mu}_1 = \pi_{\omega_1^{(i)}}(X)$
+		\State {\bf return} CATE estimate $\hat{\tau} = \hat{\mu}_1 - \hat{\mu}_0$
+	\end{algorithmic}
+	\caption{Joint Training}
+\label{alg:joint-training}
+\end{algorithm}
+
+\FloatBarrier
+
+\clearpage
+\subsection{T-learner Transfer CATE Estimators}
+Here, we present full pseudo code for the algorithms from Section 3 using the T-learner as a base learner. All of these algorithms can be extended to other learners including $S, R, X,$ and $Y$. See the released code for implementations. 
+
+\begin{algorithm}[H]
+	\caption{Vanilla T-learner (also referred to as Baseline T-learner)}
+	\label{alg:vanilla-t}
+	\begin{algorithmic}[1]
+		\State Let $\mu_0$ and $\mu_1$ be the outcome under treatment and control. 
+		\State Let $X$ be the experimental data. Let $X_t$ be the test data. 
+		\State Let $\pi_{\theta_0}$ and $\pi_{\theta_1}$ be a neural networks parameterized by $\theta_0$ and $\theta_1$. 
+		\State Let $\theta = \theta_0 \cup \theta_1$. 
+		\State Let numiters be the total number of training iterations.
+		\State Let batchsize be the number of units sampled. We use 64. 
+		\For{i $<$ numiters}
+		\State Sample $X_0$ and $X_1$: control and treatment units. Sample batchsize units.  
+		\State $\mathcal{L}_0= \| \pi_\theta (X_0) - \mu_0(X_0) \| $
+		\State $\mathcal{L}_1 = \| \pi_\theta (X_1) - \mu_1(X_1) \| $
+		\State $\mathcal{L} = \mathcal{L}_0 + \mathcal{L}_1$
+		\State Compute $\nabla_{\theta} \mathcal{L} = \frac{\partial \mathcal{L}}{\partial \theta}$.
+		\State Apply ADAM with gradients given by $\nabla_{\theta} \mathcal{L}$. 
+		\EndFor
+		\State $\hat{\mu}_0 = \pi_{\theta_0} (X_t)$
+		\State $\hat{\mu}_1 = \pi_{\theta_1} (X_t)$
+		\State {\bf return} CATE estimate $\hat{\tau} = \hat{\mu}_1 - \hat{\mu}_0$
+	\end{algorithmic}
+\end{algorithm}
+
+
+\begin{algorithm}[H]
+	\caption{Warm Start T-learner}
+	\label{alg:warm-t}
+	\begin{algorithmic}[1]
+		\State Let $\mu^{i}_0$ and $\mu^{i}_1$ be the outcome under treatment and control for experiment $i$. 
+		\State Let $X^i$ be the data for experiment $i$. Let $X^i_t$ be the test data for experiment $i$. 
+		\State Let $\pi_{\theta_0}$ and $\pi_{\theta_1}$ be a neural networks parameterized by $\theta_0$ and $\theta_1$. 
+		\State Let $\theta = \theta_0 \cup \theta_1$. 
+		\State Let numiters be the total number of training iterations.
+		\State Let batchsize be the number of units sampled. We use 64. 
+		\For{i $<$ numiters}
+		\State Sample $X^0_0$ and $X^0_1$: control and treatment units for experiment $0$. Sample batchsize units.  
+		\State $\mathcal{L}_0= \| \pi_{\theta_0} (X^0_0) - \mu_0(X^0_0) \| $
+		\State $\mathcal{L}_1 = \| \pi_{\theta_1} (X^0_1) - \mu_1(X^0_1) \| $
+		\State $\mathcal{L} = \mathcal{L}_0 + \mathcal{L}_1$
+		\State Compute $\nabla_{\theta} \mathcal{L} = \frac{\partial \mathcal{L}}{\partial \theta}$.
+		\State Apply ADAM with gradients given by $\nabla_{\theta} \mathcal{L}$. 
+		\EndFor
+		\For{i $<$ numiters}
+		\State Sample $X^1_0$ and $X^1_1$: control and treatment units for experiment $1$. Sample batchsize units.  
+		\State $\mathcal{L}_0= \| \pi_{\theta_0} (X^1_0) - \mu_0(X^1_0) \| $
+		\State $\mathcal{L}_1 = \| \pi_{\theta_1} (X^1_1) - \mu_1(X^1_1) \| $
+		\State $\mathcal{L} = \mathcal{L}_0 + \mathcal{L}_1$
+		\State Compute $\nabla_{\theta} \mathcal{L} = \frac{\partial \mathcal{L}}{\partial \theta}$.
+		\State Apply ADAM with gradients given by $\nabla_{\theta} \mathcal{L}$. 
+		\EndFor
+		\State $\hat{\mu}_0 = \pi_{\theta_0} (X^1_t)$
+		\State $\hat{\mu}_1 = \pi_{\theta_1} (X^1_t)$
+		\State {\bf return} CATE estimate $\hat{\tau} = \hat{\mu}_1 - \hat{\mu}_0$
+	\end{algorithmic}
+\end{algorithm}
+
+\newpage
+
+\begin{algorithm}[H]
+	\caption{Frozen Features T-learner}
+	\label{alg:frozen-t}
+	\begin{algorithmic}[1]
+		\State Let $\mu^{i}_0$ and $\mu^{i}_1$ be the outcome under treatment and control for experiment $i$. 
+		\State Let $X^i$ be the data for experiment $i$. Let $X^i_t$ be the test data for experiment $i$. 
+		\State Let $\pi_\rho$ be a generic expression for a neural network parameterized by $\rho$. 
+		\State Let $\theta_0^0, \theta_0^1, \theta_1^0, \theta_1^1$ be neural network parameters. The subscript indicates the outcome that $\theta$ is associated with predicting (0 for control and 1 for treatment) and the superscript indexes the experiment.
+		\State Let $\gamma_0$ be the first $k$ layers of $\pi_{\theta^0_0}$. Define $\gamma_1$ analogously. 
+		\State Let $\theta^i = \theta^i_0 \cup \theta^i_1$. 
+		\State Let numiters be the total number of training iterations.
+		\State Let batchsize be the number of units sampled. We use 64. 
+		\For{i $<$ numiters}
+		\State Sample $X^0_0$ and $X^0_1$: control and treatment units for experiment $0$. Sample batchsize units.  
+		\State $\mathcal{L}_0= \| \pi_{\theta^0_0} (X^0_0) - \mu_0(X^0_0) \| $
+		\State $\mathcal{L}_1 = \| \pi_{\theta^0_1} (X^0_1) - \mu_1(X^0_1) \| $
+		\State $\mathcal{L} = \mathcal{L}_0 + \mathcal{L}_1$
+		\State Compute $\nabla_{\theta} \mathcal{L} = \frac{\partial \mathcal{L}}{\partial \theta}$.
+		\State Apply ADAM with gradients given by $\nabla_{\theta^0} \mathcal{L}$. 
+		\EndFor
+		\For{i $<$ numiters}
+		\State Sample $X^1_0$ and $X^1_1$: control and treatment units for experiment $1$. Sample batchsize units. 
+		\State Compute $Z^1_0 = \pi_\gamma(X^1_0)$ and $Z^1_1 = \pi_\gamma(X^1_1)$
+		\State $\mathcal{L}_0= \| \pi_{\theta_0^1} (Z^1_0) - \mu_0(Z^1_0) \| $
+		\State $\mathcal{L}_1 = \| \pi_{\theta_1^1} (Z^1_1) - \mu_1(Z^1_1) \| $
+		\State $\mathcal{L} = \mathcal{L}_0 + \mathcal{L}_1$
+		\State Compute $\nabla_{\theta^1} \mathcal{L} = \frac{\partial \mathcal{L}}{\partial \theta^1}$. Do not compute gradients with respect to $\theta^0$ parameters. 
+		\State Apply ADAM with gradients given by $\nabla_{\theta^1} \mathcal{L}$. 
+		\EndFor
+		\State Compute $Z^1_t = \pi_\gamma(X^1_t)$. 
+		\State $\hat{\mu_0} = \pi_{\theta^1_0} (Z^1_t)$
+		\State $\hat{\mu_1} = \pi_{\theta^1_1} (Z^1_t)$
+		\State {\bf return} CATE estimate $\hat{\tau} = \hat{\mu_1} - \hat{\mu_0}$
+	\end{algorithmic}
+\end{algorithm}
+
+\newpage
+\newpage 
+\begin{algorithm}[H]
+	\caption{Multi-Head T-learner}
+	\label{alg:multi-t}
+	\begin{algorithmic}[1]
+		\State Let $\mu^{i}_0$ and $\mu^{i}_1$ be the outcome under treatment and control for experiment $i$. 
+		\State Let $X^i$ be the data for experiment $i$. Let $X^i_t$ be the test data for experiment $i$. 
+		\State Let $\pi_\rho$ be a generic expression for a neural network parameterized by $\rho$. 
+		\State Let $\theta_0$ be base neural network layers shared by all experiments for predicting outcomes under control.
+		\State Let $\theta_1$ be base neural network layers shared by all experiments for predicting outcomes under treatment.
+		\State Let $\phi_0^{(i)}$  be neural network layers receiving $\pi_{\theta_0}(x^i_0)$ as input and predicting $\mu_0^{(i)}(x^i_0)$ in experiment $i$.
+		\State Let $\phi_1^{(i)}$  be neural network layers receiving $\pi_{\theta_1}(x^i_1)$ as input and predicting $\mu_1^{(i)}(x^i_1)$ in experiment $i$.
+		\State Let $\omega_0^{(i)} = \left[\theta, \phi_0^{(i)} \right]$ be all trainable parameters used to predict $\mu_0^i$.
+		\State Let $\omega_1^{(i)} = \left[\theta, \phi_1^{(i)} \right]$ be all trainable parameters used to predict $\mu_1^i$.
+		\State Let $\Omega^i = \omega_0^{(i)} \cup \omega_1^{(i)}$. 
+		\State Let numiters be the total number of training iterations.
+		\State Let batchsize be the number of units sampled. We use 64. 
+		\State Let numexps be the number of experiments. 
+		\For{i $<$ numiters}
+		\For{j $<$ numexps}
+		\State Sample $X^j_0$ and $X^j_1$: control and treatment units for experiment $j$. Sample batchsize units.  
+		\State Compute $Z_0^j = \pi_{\theta_0}(X^j_0)$ and $Z_1^j = \pi_{\theta_1}(X^j_1)$
+		\State Compute $\hat{\mu}_0^j = \pi_{\phi_0^j} (z_0^j)$ and $\hat{\mu}_1^j = \pi_{\phi_1^j} (z_1^j)$
+		\State $\mathcal{L}_0= \| \hat{\mu}_0^j - \mu_0^j(X^j_0) \| $
+		\State $\mathcal{L}_1 = \| \hat{\mu}_1^j - \mu_1^j(X^j_1) \| $
+		\State $\mathcal{L} = \mathcal{L}_0 + \mathcal{L}_1$
+		\State Compute $\nabla_{\Omega^i} \mathcal{L} = \frac{\partial \mathcal{L}}{\partial \Omega^i}$.
+		\State Apply ADAM with gradients given by $\nabla_{\theta} \mathcal{L}$. 
+		\EndFor
+		\EndFor
+		\State Let $C = []$
+		\For{j $<$ numexps}
+		\State Compute $Z_0^j = \pi_{\theta_0}(X^j_t)$ and $Z_1^j = \pi_{\theta_1}(X^j_t)$
+		\State Compute $\hat{\mu}_0^j = \pi_{\phi_0^j} (z_0^j)$ and $\hat{\mu}_1^j = \pi_{\phi_1^j} (z_1^j)$
+		\State Estimate CATE $\hat{\tau} = \hat{\mu}_1^j - \hat{\mu}_0^j$. 
+		\State $C.$append$(\hat{\tau})$
+		\EndFor
+		\State {\bf return} $C$ 
+	\end{algorithmic}
+\end{algorithm}
+
+\newpage
+
+\begin{algorithm}[H]
+	\caption{SF Reptile T-learner}
+	\label{alg:sf-reptile-t}
+	\begin{algorithmic}[1]
+		\State Let $\mu_0^i$ and $\mu_1^i$ be the outcome under treatment and control for experiment $i$. 
+		\State Let $X^i$ be the data for experiment $i$. Let $X^i_t$ be the test data for experiment $i$. 
+		\State Let $\pi_{\theta_0}$ and $\pi_{\theta_1}$ be a neural networks parameterized by $\theta_0$ and $\theta_1$. 
+		\State Let $\theta = \theta_0 \cup \theta_1$. 
+		\State Let $\epsilon = \left[\epsilon_0, \dots, \epsilon_{N} \right]$ be a vector, where $N$ is the number of layers in $\pi_{\theta_i}$. 
+		\State Let numouteriters be the total number of outer training iterations.
+		\State Let numinneriters be the total number of inner training iterations. 
+		\State Let numexps be the number of experiments. 
+		\State Let batchsize be the number of units sampled. We use 64. 
+		\For{iouter $<$ numouteriters}
+		\For{i $<$ numexps}
+		\State $U_0(\theta_0) = \theta_0$ 
+		\State $U_0(\theta_1) = \theta_1$. 
+		\For{k$<$ numinneriters}
+		\State Sample $X_0^i$ and $X_1^i$: control and treatment units. Sample batchsize units.  
+		\State $\mathcal{L}_0= \| \pi_{U_k(\theta_0)} (X_0^i) - \mu_0(X_0^i) \| $
+		\State $\mathcal{L}_1 = \| \pi_{U_k(\theta_1)} (X_1^i) - \mu_1(X_1^i) \| $
+		\State $\mathcal{L} = \mathcal{L}_0 + \mathcal{L}_1$
+		\State Compute $\nabla_{\theta} \mathcal{L} = \frac{\partial \mathcal{L}}{\partial \theta}$.
+		\State Use ADAM with gradients given by $\nabla_{\theta} \mathcal{L}$ to obtain $U_{k+1}(\theta_0)$ and $U_{k+1}(\theta_1)$. 
+		\State Set $U_{k}(\theta_0)=U_{k+1}(\theta_0)$ and $U_{k}(\theta_1) = U_{k+1}(\theta_1)$
+		\EndFor
+		\For{ $p < N$ }
+		\State $\theta_p = \epsilon_p \cdot U_k(\theta_p) + (1 - \epsilon_p) \cdot \theta_p$.  
+		\EndFor
+		\EndFor
+		\EndFor
+		\State To Evaluate CATE estimate, \textbf{do}
+		\State $C = []$. 
+		\For{i $<$ numexps}
+		\State $U_0(\theta_0) = \theta_0$ 
+		\State $U_0(\theta_1) = \theta_1$. 
+		\For{k$<$ numinneriters}
+		\State Sample $X_0^i$ and $X_1^i$: control and treatment units. Sample batchsize units.  
+		\State $\mathcal{L}_0= \| \pi_{U_k(\theta_0)} (X_0^i) - \mu_0(X_0^i) \| $
+		\State $\mathcal{L}_1 = \| \pi_{U_k(\theta_1)} (X_1^i) - \mu_1(X_1^i) \| $
+		\State $\mathcal{L} = \mathcal{L}_0 + \mathcal{L}_1$
+		\State Compute $\nabla_{\theta} \mathcal{L} = \frac{\partial \mathcal{L}}{\partial \theta}$.
+		\State Use ADAM with gradients given by $\nabla_{\theta} \mathcal{L}$ to obtain $U_{k+1}(\theta_0)$ and $U_{k+1}(\theta_1)$. 
+		\State Set $U_{k}(\theta_0)=U_{k+1}(\theta_0)$ and $U_{k}(\theta_1) = U_{k+1}(\theta_1)$
+		\EndFor
+		\State $\hat{\mu}_0^i = \pi_{U_k(\theta_0)}(X_0^i)$
+		\State $\hat{\mu}_1^i = \pi_{U_k(\theta_1)}(X_1^i)$
+		\State $\hat{\tau}^i =  \hat{\mu}_1^i - \hat{\mu}_0^i$
+		\State $C.$append$(\hat{\tau}^i)$. 
+		\EndFor
+		\State {\bf return} $C$. 
+	\end{algorithmic}
+\end{algorithm}
+

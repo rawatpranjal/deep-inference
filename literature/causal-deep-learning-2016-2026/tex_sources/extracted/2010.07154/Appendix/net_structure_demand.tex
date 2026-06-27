@@ -1,0 +1,95 @@
+For DeepIV, we used the original structure proposed in \citet{Hartford2017}, which is described in Table~\ref{deepiv-demand-network}. We follow the default dropout rate in \citet{Hartford2017}, which depends on the data size. For DFIV, we used the structure described in Table~\ref{dfiv-demand-network}. The regularizer $\lambda_1, \lambda_2$ are both set to 0.1 as a result of the tuning procedure described in Appendix~\ref{sec:hyper-param}. For KIV, we used the Gaussian kernel where the bandwidth is determined by the median trick described by \cite{Singh2019}. We used random Fourier feature trick \citep{Rahimi2008} with 100-dimensions. For DeepGMM, we used the same structure as DeepIV but no dropout is applied and the last layer of the Instrument Net is changed to a fully-connected layer which maps 32 dimensions to 1 dimension.
+
+\begingroup
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[t]
+    \caption{Network structures of DeepIV for demand design dataset. For the input layer, we provide the input variable. For the fully-connected layers (FC), we provide the input and output dimensions. For mixture Gaussian output, we report the number of components. Dropout rate is given in the main text.}
+    
+    \label{deepiv-demand-network}
+    
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\bf Instrument Net} 
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($C, T, S$) \\ \hline
+            2 & FC(3, 128), ReLU \\ \hline
+            3 & Dropout \\ \hline
+            4 & FC(128, 64), ReLU \\ \hline
+            5 & Dropout \\ \hline
+            6 & FC(64, 32), ReLU \\ \hline
+            7 & Dropout \\ \hline
+            8 & MixtureGaussian(10) \\ \hline
+            \end{tabular}    
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\bf Treatment Net} 
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($P, T, S$) \\ \hline
+            2 & FC(3, 128), ReLU \\ \hline
+            3 & Dropout \\ \hline
+            4 & FC(128, 64), ReLU \\ \hline
+            5 & Dropout \\ \hline
+            6 & FC(64, 32), ReLU \\ \hline
+            7 & Dropout \\ \hline
+            8 & FC(32, 1)\\ \hline
+            \end{tabular}    
+    \end{minipage}
+    
+\end{table}
+\endgroup  
+
+
+\begingroup
+\renewcommand{\arraystretch}{1.2}
+\begin{table}[t]
+    \caption{Network structures of DFIV for demand design datasets. For the input layer, we provide the input variable. For the fully-connected layers (FC), we provide the input and output dimensions.}
+    
+    \label{dfiv-demand-network}
+    
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Instrument Feature} $\vec{\phi}_{\theta_Z}$ }
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($C, T, S$) \\ \hline
+            2 & FC(3, 128), ReLU \\ \hline
+            3 & FC(128, 64), ReLU \\ \hline
+            4 & FC(64, 32), ReLU \\ \hline
+            \end{tabular}    
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Treatment Feature} $\vec{\psi}_{\theta_X}$} 
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($P$) \\ \hline
+            2 & FC(1, 16), ReLU \\ \hline
+            3 & FC(16, 1) \\ \hline
+            \end{tabular}    
+    \end{minipage}\\
+    \centering
+    
+    \begin{minipage}{0.48\hsize}
+        \centering
+        \begin{tabular}{cc}
+            \multicolumn{2}{c}{\textbf{Observable Feature} $\vec{\xi}_{\theta_O}$} 
+            \\ \hline
+            Layer & Configuration \\ \hline
+            1 & Input($T, S$) \\ \hline
+            2 & FC(2, 128), ReLU \\ \hline
+            4 & FC(128, 64), ReLU \\ \hline
+            6 & FC(64, 32), BN, ReLU \\ \hline
+            \end{tabular}    
+    \end{minipage}
+\end{table}
+\endgroup  
+

@@ -1,0 +1,25 @@
+\section{TMLE Extensions and Additional Connections}
+\label{sec:tmle_comparison}
+
+This section discusses existing TMLE extensions that can mitigate practical instabilities under limited overlap, and additional connections between C-Learner and the TMLE literature. Our paper's main focus is not on the extensions and variations of TMLE, but simply on a new way to debias estimators via constrained optimization, that could potentially be combined with additional assumptions, extensions, variations, etc. Nevertheless, these connections to TMLE and variations of TMLE merit mentioning. 
+
+
+A key benefit of C-Learner is that it reduces instability, for instance, when propensity score estimates become extreme. We compared C-Learner to \emph{basic} forms of one-step estimation and TMLE that do not incorporate additional bounding assumptions or regularization heuristics. The TMLE framework includes a number of practical heuristics and assumptions for dealing with limited overlap and bounded outcomes:
+\begin{itemize}
+    \item Alternative loss functions and logistic fluctuations: Standard TMLE implementations in software such as \texttt{tmle}~\citep{gruber2012tmle} %
+    by default enforce certain bounds for continuous outcomes via a logistic fluctuation, %
+    but can also perform the linear model as well. If outcomes are truly bounded, modeling outcomes using a logistic link will constraint the resulting estimates to be within these bounds; in contrast, methods such as IPW and AIPW do not obey such constraints. TMLE with logistic fluctuations is shown to produce stable estimators~\citep{VanDerLaanRo11}. 
+    \item Regularization of TMLE: regularized variations and extensions of TMLE such as Collaborative TMLE (C-TMLE)~\citep{gruber2010application,ju2019adaptive,van2010collaborative,van2011propensity} have been shown to perform well in challenging settings, including those with low overlap~\citep{ju2019collaborative,balzer2023two}. Collaborative TMLE is a variant of TMLE that selects from a sequence of propensity score models of increasing complexity, based on their ability to improve the loss of the fluctuated outcome model, which can discourage selecting propensity score models with extreme values that hurt estimator stability. 
+\end{itemize}
+There is a broad literature of other regularized TMLE variants, many of which are designed to construct stable estimators that perform well in finite samples, such as Adaptive TMLE (A-TMLE)~\citep{van2023adaptive,van2024adaptive}, which adaptively selects between propensity scores of varying complexity. Additional advancements include TMLE methods based on the highly adaptive lasso (HAL)~\citep{benkeser2016highly,bibaut2019fast,van2017generally,van2023efficient}, which offer flexible and robust estimation including empirically in settings with low overlap. 
+Variations of C-Learner can also be complementary to such procedures. 
+
+
+
+
+Lastly, we note that the theoretical justifications for asymptotic properties for both C-Learner and TMLE build on the same underlying mathematical frameworks, as both remove the first-order error term in the distributional Taylor expansion, and then show that the second-order remainder term is negligible under suitable assumptions. 
+Proofs of this nature have appeared in the TMLE literature~\citep{van2006targeted,van2011targeted,van2016one,van2017generally,van2023higher}. The main difference between C-Learner and TMLE is how the first-order error term is fixed to zero: in C-Learner we impose this constraint directly within our chosen function class of nuisance parameters (via constrained optimization), rather than using a specific single-dimensional parametric fluctuation along the least favorable submodel~\citep{bickel1993efficient} that produces TMLE. %
+
+
+
+

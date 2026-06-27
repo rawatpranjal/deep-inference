@@ -1,0 +1,51 @@
+\begin{figure*}[htb!]
+\centering
+\hspace*{\fill}%
+    \subfigure[Inference network, $q(\*z,t,y|\*x)$. ]{\includegraphics[width=.43\textwidth]{figures/diagram_q_vcei}}\hfill%
+    \subfigure[Model network, $p(\*x,\*z, t,y)$.]{\includegraphics[height=10em,width=12em]{figures/diagram_p_vcei}}
+ \hspace*{\fill}%
+ \caption{Overall architecture of the model and inference networks for the Causal Effect Variational Autoencoder (CEVAE). White nodes correspond to parametrized deterministic neural network transitions, gray nodes correspond to drawing samples from the respective distribution and white circles correspond to switching paths according to the treatment $t$.} %\note{JM}{The picture looks nice, but what does it mean?} \note{US}{Chris could you please explain the meaning of the circles vs. the rectangles}}
+ \label{fig:cevae}
+\end{figure*}
+
+
+The approach we take in this paper to the problem of learning the latent variable causal model is by using variational autoencoders \citep{kingma2013auto,rezende2014stochastic} to infer the complex non-linear relationships between $\*X$ and $(\*Z,\*t,\*y)$ and approximately recover $p\left(\*Z,\*X, \*t,\*y\right)$. Recent work has dramatically increased the range and type of distributions which can be captured by VAEs  \citep{tran2015variational,rezende2015variational,kingma2016improving}. The drawback of these methods is that because of the difficulty of guaranteeing global optima of neural net optimization, one cannot ensure that any given instance will find the true model even if it is within the model class. We believe this drawback is offset by the strong empirical performance across many domains of deep neural networks in general, and VAEs in particular. Specifically, we propose to parametrize the causal graph of Figure~\ref{fig:hid1} as a latent variable model with neural net functions connecting the variables of interest. The flexible non-linear nature of neural nets will hopefully allow us to approximate well the true interactions between the treatment and its effect.
+
+Our design choices are mostly typical for VAEs: we assume the observations factorize conditioned on the latent variables, and use an inference network~\citep{kingma2013auto,rezende2014stochastic} which follows a factorization of the true posterior. For the generative model we use an architecture inspired by TARnet \citep{shalit2016estimating}, but instead of conditioning on observations we condition on the latent variables $\*z$; see details below.
+For the following, $\*x_i$ corresponds to an input datapoint (e.g. the feature vector of a given subject), $t_i$ corresponds to the treatment assignment, $y_i$ to the outcome of the of the particular treatment and $\*z_i$ corresponds to the latent hidden confounder. Each of the corresponding factors is described as:
+\begin{align}
+p(\*z_i) = \prod_{j=1}^{D_z}\mathcal{N}(z_{ij}| 0, 1);\qquad
+p(\*x_i|\*z_i) = \prod_{j=1}^{D_x}p(x_{ij}| \*z_i);\qquad
+p(t_i|\*z_i) = \text{Bern}(\sigma(f_1(\*z_i))),
+\end{align}
+with $p(x_{ij}|\*z_i)$ being an appropriate probability distribution for the covariate $j$ and $\sigma(\cdot)$ being the logistic function, $D_x$ the dimension of $\*x$ and $D_z$ the dimension of $\*z$. For a continuous outcome we parametrize the probability distribution as a Gaussian with its mean given by a TARnet~\citep{shalit2016estimating} architecture, i.e. a treatment specific function, and its variance fixed to $\hat{v}$, whereas for a discrete outcome we use a Bernoulli distribution similarly parametrized by a TARnet:
+\begin{align}
+p(y_i|t_i, \*z_i) = \mathcal{N}(\mu=\hat{\mu}_i, \sigma^2=\hat{v})&\qquad
+\hat{\mu}_i = t_i f_2(\*z_i) + (1 - t_i)f_3(\*z_i)\\
+p(y_i|t_i, \*z_i) = \text{Bern}(\pi=\hat{\pi}_i)&\qquad
+\hat{\pi}_i = \sigma(t_i f_2(\*z_i) + (1 - t_i)f_3(\*z_i)).
+\end{align}
+Note that each of the $f_k(\cdot)$ is a neural network parametrized by its own parameters $\theta_k$ for $k=1,2,3$. As we do not a-priori know the hidden confounder $\*z$ we have to marginalize over it in order to learn the parameters of the model $\theta_k$. Since the non-linear neural network functions make inference intractable we will employ variational inference along with inference networks; these are neural networks that output the parameters of a fixed form posterior approximation over the latent variables $\*z$, e.g. a Gaussian, given the observed variables. By the definition of the model at Figure~\ref{fig:hid1} we can see that the true posterior over $\*Z$ depends on $\*X,\*t$ and $\*y$. Therefore we employ the following posterior approximation:
+\begin{align}
+q(\*z_i|\*x_i, t_i, y_i) & = \prod_{j=1}^{D_z}\mathcal{N}(\mu_j=\bar{\mu}_{ij}, \sigma^2_j = \bar{\sigma}_{ij}^2)\\
+\bar{\!\mu}_{i} = t_i \!\mu_{t=0, i} + (1 - t_i)\!\mu_{t=1, i}&\qquad
+\bar{\!\sigma}^2_i = t_i \!\sigma^2_{t=0, i} + (1 - t_i)\!\sigma^2_{t=1, i}\nonumber\\
+\!\mu_{t=0, i},\!\sigma^2_{t=0, i} = g_2\circ g_1(\*x_i, y_i) &\qquad
+\!\mu_{t=1,i},\!\sigma^2_{t=1,i} = g_3 \circ g_1(\*x_i, y_i),\nonumber
+\end{align}
+where we similarly use a TARnet~\citep{shalit2016estimating} architecture for the inference network, i.e. split them for each treatment group in $t$ after a shared representation $g_1(\*x_i, y_i)$, and each $g_k(\cdot)$ is a neural network with variational parameters $\phi_k$. 
+We can now form a single objective for the inference and model networks, the variational lower bound of this graphical model \citep{kingma2013auto,rezende2014stochastic}:
+\begin{align}
+\mathcal{L} & = \sum_{i=1}^{N}\E_{q(\*z_i|\*x_i,t_i,y_i)}[\log p(\*x_i, t_i|\*z_i) + \log p(y_i|t_i, \*z_i) + \log p(\*z_i) - \log q(\*z_i|\*x_i,t_i,y_i)]. \label{eq:lb_full}
+\end{align}
+Notice that for out of sample predictions, i.e. new subjects, we require to know the treatment assignment $t$ along with its outcome $y$ before inferring the distribution over $\*z$. For this reason we will introduce two auxiliary distributions that will help us predict $t_i,y_i$ for new samples. More specifically, we will employ the following distributions for the treatment assignment $t$ and outcomes $y$: 
+\begin{align}
+q(t_i | \*x_i) &= \text{Bern}(\pi = \sigma(g_4(\*x_i)))\\
+q(y_i|\*x_i,t_i) = \mathcal{N}(\mu=\bar{\mu}_i, \sigma^2=\bar{v}) & \qquad \bar{\mu}_i = t_i (g_6 \circ g_5(\*x_i)) + (1 - t_i)(g_7 \circ g_5(\*x_i))\label{eq:y_contt}\\
+q(y_i|\*x_i,t_i) = \text{Bern}(\pi=\bar{\pi}_i) & \qquad\bar{\pi}_i = t_i (g_6\circ g_5(\*x_i)) + (1 - t_i)(g_7 \circ g_5(\*x_i)),\label{eq:y_binn}
+\end{align}
+where we choose eq.~\ref{eq:y_contt} for continuous and eq.~\ref{eq:y_binn} for discrete outcomes. To estimate the parameters of these auxiliary distributions we will add two extra terms in the variational lower bound:
+\begin{align}
+\mathcal{F}_{\text{CEVAE}} = \mathcal{L} + \sum_{i=1}^{N}\big(\log q(t_i = t^*_i|\*x^*_i) + \log q(y_i=y^*_i|\*x^*_i, t^*_i)\big),\label{eq:objfn}
+\end{align}
+with $\*x_i,t^*_i,y^*_i$ being the observed values for the input, treatment and outcome random variables in the training set. We coin the name \emph{Causal Effect Variational Autoencoder} (CEVAE) for our method.

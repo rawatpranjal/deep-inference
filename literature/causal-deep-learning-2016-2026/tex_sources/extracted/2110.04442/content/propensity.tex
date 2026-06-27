@@ -1,0 +1,114 @@
+\subsection{Double Robustness with Inverse Propensity Score Weighting}
+\label{section:ipw}
+
+Rather than applying losses directly to the representation function, IPW methods estimate propensity scores from representations using the function $\pi(\Phi(X),T)=P(T|\Phi(X))$. As in traditional IPW estimators, these methods exploit the sufficiency of correctly-specified propensity scores to reweight the plugged-in outcome predictions and provide unbiased estimates of the ATE \citep{rosenbaum1983central}. Because these models combine outcome modeling with IPW, they retain the attractive statistical properties of doubly robust estimators discussed in section \ref{subsection:doublyrobust} \citep{Atan2018}. In this section we focus on \citet{Shi2019}'s Dragonnet model, which adapts semi-parametric estimation theory for batch-wise neural network training in a procedure they call ``Targeted Regularization" (TarReg) \citep{kennedy2016semiparametric}. Given the increasing importance of semi-parametric theory and ``double machine learning" across the causal estimation literature, we include a brief introduction to semi-parametric theory and targeted maximum likelihood estimation (TMLE) before diving into the details of the Dragonnet algorithm \cite{van2011targeted,chernozhukov2016double}.
+
+\emph{Dragonnet (\textit{Tutorial 3 \href{https://colab.research.google.com/drive/1XzyOINgdSr78_KT7HJRJn07AwkHh-fG8?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png} }} \textit{/} \textit{Tutorial 4 \href{https://colab.research.google.com/drive/1NHYTbvGq-cWyy-mm0TrBH2rAmMqtcgPJ?usp=sharing}{\includegraphics[height=\fontcharht\font`\B,keepaspectratio]{content/colab_button.png} }})}
+
+    A trivial extension to TARNet is to add a third head to predict the propensity score. This third head could use multiple neural network layers or just a single neuron, as proposed in Dragonnet (Fig. \ref{fig:tlearner}C) \citep{Shi2019}. Dragonnet uses this additional head to develop a training procedure called ``Targeted Regularization"  for semi-parametric causal estimation, inspired by ``Targeted Maxmimum Likelihood Estimation" (TMLE)\citep{van2011targeted}.
+
+With three heads, the basic loss function for this network looks like:
+\begin{equation}
+\underset{\Phi,\pi,h}{\arg \min}\
+\underbrace{MSE(Y_i,h(\Phi(X_i),T_i)}_{\text{Outcome Loss}} + \alpha \underbrace{\text{BCE}(T_i,\pi(\Phi(X_i),T_i))}_{\pi\text{ Loss}} +  \lambda\underbrace{\mathcal{R}(h)}_{L_2} 
+\end{equation}
+with $\alpha$ being a hyperparameter to balance the two objectives. The mean squared error and binary cross-entropy are standard objective functions in machine learning for regression and binary classification, respectively. Note that the first term is simply an expansion of the first term in equation \ref{eq:tarnetloss} 
+
+Below, we explore how the authors add a second loss on top of this one to allow for semi-parametric estimation. 
+
+\subsubsection{Semi-parametric Theory of Causal Inference}
+
+In recent years, semi-parametric theory has emerged as a dominant theoretical framework for applying machine learning algorithms, including neural networks, to causal estimation \citep{chernozhukov2016double,chernozhukov2021automatic,chernozhukov2022riesznet,farrell2021deep,kennedy2016semiparametric,nie2021quasi,van2011targeted,wager2018}. The great appeal of these frameworks is that they allow for machine learning algorithms to be plugged-in for non-linear estimates of outcomes and propensity score, while still providing attractive statistical guarantees (e.g., consistency, efficiency, asymptotically-valid confidence intervals).
+
+At a very intuitive level, semi-parametric causal estimation is focused on estimating a target parameter of a distribution $P$ (the $ATE$) of treatment effects $T(P)$ \citep{fisher2021visually}. While we do not know the true distribution of treatment effects because we lack counterfactuals, we do know some parameters of this distribution (e.g., the treatment assignment mechanism). We can encode these constraints in the form of a likelihood that parametrically defines a set of possible approximate distributions  $\mathcal{P}$ from our existing data $P$. Within this set there is a sample-inferred distribution $\tilde{P}\in\mathcal{P}$, that can be used to estimate $T(P)$ using $T(\tilde{P})$.
+
+Regardless of $\tilde{P}$ chosen, $\tilde{P}\neq P \rightarrow T(\tilde{P})\neq T(P)$. We do not know how to pick $\tilde{P}$ with finite data to get the best estimate $T(\tilde{P})$. We can maximize a likelihood function to pick $\tilde{P}$, but there may be ``nuisance" parameters in the likelihood that are not the target and we do not care about estimating accurately. Maximum likelihood optimization may provide lower-biased estimates of these nuissance terms at the cost of better estimates of $T(P)$. 
+
+To sharpen the likelihood's focus on $T(P)$, we define a ``nudge" parameter $\epsilon$ that moves $\tilde{P}$ closer to $P$ (thus moving $T(\tilde{P})$ closer to $T(P)$). An influence curve of $T(P)$ tells us how changes in $\epsilon$ will induce changes in $T(P+\epsilon(\tilde{P}-P))$. We'll use this influence curve to fit $\epsilon$ to get a better approximation of $T(P)$ within the likelihood framework. In particular, there is a specific \textbf{efficient influence curve (EIC)} that provides us with the lowest variance estimates of $T(P)$. In causal estimation, solving the EIC for the ATE yields estimates that are asymptotically unbiased, efficient, and have confidence intervals with (asymptotically) correct coverage.
+
+The EIC for the ATE is,
+
+\begin{equation}
+EIC_{ATE} = \frac{1}{N}\sum_{i=1}^N{[\underbrace{\underbrace{(\frac{T_i}{\pi(X_i,1)}-\frac{1-T_i}{\pi(X_i,0)})}_{\text{Treatment Modeling}}\times\underbrace{(Y_i-h(X_i,T))}_{\text{Residual Confounding}}}_{\text{Adjustment}}] +\underbrace{[h(X_i,1)-h(X_i,0)]}_{\text{Outcome Modeling}}}]-ATE
+\end{equation}
+Setting $EIC_{ATE}$ to it's mean of 0,
+\begin{equation}
+ATE = \frac{1}{N}\sum_{i=1}^N{[\underbrace{\underbrace{(\frac{T_i}{\pi(X_i,1)}-\frac{1-T_i}{\pi(X_i,0)})}_{\text{Treatment Modeling}}\times\underbrace{(Y_i-h(X_i,T))}_{\text{Residual Confounding}}}_{\text{Adjustment}}] +\underbrace{[h(X_i,1)-h(X_i,0)]}_{\text{Outcome Modeling}}}]
+\label{eq:eic}
+\end{equation}
+The underbraces illustrate how $EIC_{ATE}$ resembles a doubly robust estimator. When the EIC is minimized (set to 0) as in equation \ref{eq:eic}, the $ATE$ is equal to the outcome modeling estimate plus a treatment modeling estimate proportional to the residual error. 
+
+\subsubsection{From TMLE to Targeted Regularization}
+
+Targeted Regularization (TarReg) is closely modeled after ``Targeted Maxmimum Likelihood Estimation" (TMLE) \citep{van2011targeted}. 
+TMLE is an iterative procedure where a nuissance parameter $\epsilon$ is used to nudge the outcome models towards sharper estimates of the ATE when minimizing the EIC as in Equation \ref{eq:eic}.\footnote{For a deeper dive on targeted learning, we recommend \citep{chambaz2020}.}
+
+\begin{enumerate}
+\singlespacing
+\item Fit $h$ by predicting outcomes (e.g., using TARNet) and minimizing $MSE(Y,h(\Phi(X),T))$
+\item Fit $\pi$ by predicting treatment (e.g., using logistic regression) and $BCE(T,\pi(\Phi(X),T))$
+\item Plug-in $h$ and $\pi$ functions to fit $\epsilon$ and estimate $h^{*}(X,T)$ where,
+$$\underbrace{h^{*}(X_i,T_i)}_{Y^*}=\underbrace{h(\Phi(X_i),\Phi(T_i))}_{\hat{Y}}+\underbrace{\left(\frac{T_i}{\pi(\Phi(X_i),1)}-\frac{1-T_i}{\pi(\Phi(X_i),0)}\right)}_{\text{Treatment Modeling Adjustment}}\times \underbrace{\epsilon}_{\text{``nudge"}}$$
+by minimizing $MSE(Y,h^{*}(\Phi(X),T))$. This is equivalent to minimizing the ``Adjustment" part in equation \ref{eq:eic}.
+\item Plug-in $h^*(X,T)$ to estimate $\hat{ATE}$:
+$$\widehat{ATE}_{TMLE}=\frac{1}{N}\sum_{i=1}^N{ \underbrace{h^*(X_i,1)}_{Y_i^*(1)}-\underbrace{ h^*(X_i,0)}_{Y_i^*(0)}}$$
+\doublespacing
+\end{enumerate}
+
+Targeted Regularization takes TMLE and adapts it for a neural network loss function. The main difference is that steps 1 and 2 above are done concurrently by Dragonnet, and that the loss functions for the first three steps are combined into a single loss applied to the whole network at the end of each batch. It requires adding a single free parameter to the Dragonnet network for $\epsilon$.
+
+ At a very intuitive level, Targeted Regularization is appealing because it introduces a loss function to TARNet that explicitly encourages the network to learn the mean of the treatment effect distribution, and not just the outcome distribution. The Targeted Regularization procedure proceeds as follows:
+
+In each epoch:
+\begin{enumerate}
+\singlespacing
+    \item \begin{enumerate}
+    \item Use Dragonnet to predict $h(\Phi(X),T)$ and $\pi(\Phi(X),T)$.
+    \item Calculate the standard ML loss for the network using a hyperparameter $\alpha$:
+    $$\underset{\Phi,\pi,h}{\arg \min}\ \underbrace{MSE(Y_i,h(\Phi(X_i),T_i))}_{\text{Outcome Loss}} + \alpha \underbrace{\text{BCE}(T_i,\pi(\Phi(X_i),T_i))}_{\pi\text{ Loss}} +  \lambda\underbrace{\mathcal{R}(h)}_{L_2}$$
+    \end{enumerate}
+    \item \begin{enumerate}
+    \item Compute $h^{*}(\Phi(X_i),T_i)$ as above,
+    $$\underbrace{h^{*}(\Phi(X_i),T_i)}_{Y^*}=\underbrace{h(\Phi(X_i),T_i)}_{\hat{Y_i}}+\underbrace{(\frac{T_i}{\pi(\Phi(X_i),1)}-\frac{1-T_i}{\pi(\Phi(X_i),0)})}_{\text{Treatment Modeling Adjustment}}\times \underbrace{\epsilon}_{\text{``nudge"}}$$
+    \item Calculate the targeted regularization loss: $MSE(Y,h^*(\Phi(X),T))$
+    \end{enumerate}
+  \item Combine and minimize the losses from 1 and 2 using a hyperparameter $\beta$,
+    $$\underset{\Phi,h,\epsilon}{\arg \min}= \underbrace{MSE(Y,h(\Phi(X),T))}_{\text{Outcome Loss}} + \alpha \cdot \underbrace{\text{BCE}(T,\pi(\Phi(X),T))}_{\pi\text{ Loss}}+  \lambda\underbrace{\mathcal{R}(h)}_{L_2}+\beta\cdot \underbrace{MSE(Y,h^*(\Phi(X),T))}_{\text{Targeted Regularization Loss}}$$
+\doublespacing
+\end{enumerate}
+
+Step 3 of Targeted Regularization is exactly equivalent to minimizing the EIC up to a constant $\beta$. 
+
+At the end of training, we can thus estimate the targeted regularization estimate of  the ATE $\hat{ATE_{TR}}$ as in TMLE:
+$$\hat{ATE_{TR}}=\frac{1}{N}\sum_{i=1}^N{ \underbrace{h^*(\Phi(X_i),1)}_{Y^*_i(1)}-\underbrace{ h^*(\Phi(X_i),0)}_{Y^*_i(0)}}$$
+
+Compared to S-learners, T-learners, and TARNet, the Dragonnet algorithm is particularly attractive because of the statistical guarantees afforded by its semiparametric framework. It is doubly robust, unbiased,  converges at a rate of $\frac{1}{\sqrt{n}}$, and the sampling distribution is asymptotically normal. Below we describe how to create assymptotically-valid confidence intervals for this estimator.
+
+
+\iffalse  
+
+Other approaches to estimating IPW weights using adversarial training are discussed in the appendix. We note that a number of other losses for the basic TarNet/Dragonnet architecture have been proposed with differing theoretical motivations. In the interest of space, these approaches are discussed briefly in Box \ref{box:otherlosses}.
+
+\begin{TCBBox}[label=box:otherlosses]{Other Flavors of TarNet}
+A number of additional losses have been proposed for the representation layers in the two-headed TARNet or three-headed Weighted CFRNet/Dragonnet architectures:
+\begin{itemize}
+\singlespacing
+\item \textbf{Reconstruction Loss.} Some authors have proposed that reconstruction losses should be applied to representation layers to improve confidence in the invertability assumption \citep{Du2019,zhang2020learning}. These losses simply minimize an $L_2$ norm between inputs and outputs to force the representation function to be able to reconstruct it's inputs, along with it's other tasks: $\mathcal{L}(X,X')=||X-X'||^2$
+\item \textbf{Adversarial Loss.} Rather than learn to predict the propensity score \citet{Du2019}, apply an adversarial gradient to force the representation layers to ``unlearn" information about treatment assignment. This approach is also applied in \citet{bica2020estimating}.
+\item \textbf{Propensity Dropout.} While not a loss \textit{per se}, \citet{Alaa2017} propose probabilistically applying dropout to neurons based on the Shannon Entropy in propensity score predictions.This penalty forces the network to attend comparatively more to data where overlap is greatest and the propensity score is not close to either the 0 or 1 extremes.
+\end{itemize}
+\end{TCBBox}
+
+Note that because they solve the EIC estimating equation for the ATE, both TMLE and Targeted Regularization are doubly robust estimators.
+
+\subsubsection{Other Propensity Score Approaches}
+\addcontentsline{toc}{subsubsection}{\protect\numberline{\thesubsubsection}{Other Propensity Score Approaches}}
+
+In a more indirect IPW approach, \citet{Alaa2017} takes the standard TarNet and regularizes the encoder through the application of dropout probabilistically based on $\pi(X)$. Rather than reducing overfitting, the application of dropout here is to mitigate confounding bias.  Before training TARNet, the authors train a separate regressor network to estimate $\pi(x)$. During the training of TARNet, nodes in the encoder are probabilistically dropped out based on the Shannon Entropy of the propensity score in that batch:
+\begin{equation}
+P(Dropout)= 1 - \frac{\lambda}{2}-\frac{1}{2}H(\pi(x))
+\end{equation}
+where $\lambda$ is a hyperparameter.
+
+This penalty forces the network to attend comparatively more to data where overlap is greatest and the propensity score is not close to either the 0 or 1 extremes. The authors apply a similar technique again in the evaluation stage as a means to generate confidence intervals.
+\fi

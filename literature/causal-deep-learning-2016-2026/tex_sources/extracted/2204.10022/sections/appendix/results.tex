@@ -1,0 +1,114 @@
+\section{Additional Results}
+\subsection{Synthetic}
+\begin{figure}[ht]
+    \centering
+     \begin{subfigure}[b]{.32\textwidth}
+        \includegraphics[width = \textwidth]{figures/synthetic/statistical/synth_apo_ci_unconfounded.png}
+        \caption{APO Functions}
+        \label{fig:statistical-uncertainty-apo}   
+    \end{subfigure}
+    \begin{subfigure}[b]{0.54\textwidth} 
+        \includegraphics[width=\textwidth]{figures/synthetic/statistical/synth_capo_ci_unconfounded.png}
+        \caption{CAPO Functions}
+        \label{fig:statistical-uncertainty-capo}  
+    \end{subfigure}
+    \caption{Investigating statistical uncertainty using unconfounded synthetic data.}
+    \label{fig:statistical-uncertainty}   
+\end{figure}
+
+\subsection{Aerosol-Cloud-Climate Effects}
+
+In \Cref{fig:rho} we show how $\Lambda$ can be interpreted as the proportion, $\rho$, of the unexplained range of $\Yt$ attributed to unobserved confounding variables. 
+In the left figure, we plot the corresponding bounds for increasing values of $\Lambda$ of the predicted AOD-$\tau$ dose-response curves. 
+In the right figure we plot the $\rho$ value for each $\Lambda$ at each value of $\tf$. For the curves reported in \Cref{fig:CODresults_apo}: we find that $\Lambda = 1.1$ leads to $\rho \approx 0.04$, $\Lambda = 1.2$ leads to $\rho \approx 0.07$, and $\Lambda = 1.6$ leads to $\rho \approx 0.15$. 
+This shows that when we let just a small amount of the unexplained range of $\Yt$ be attributed to unobserved confounding, the  range  of the predicted APO curves become quite wide. 
+If we were to completely relax the no-hidden-confounding assumption, the entire range seen in \Cref{fig:rho} 
+Left would be plausible for the APO function. 
+This range dwarfs the predicted APO curve. 
+These results highlight the importance of reporting such sensitivity analyses.
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{figures/COD/rho.png}
+    \caption{Interpreting $\Lambda$ as a proportion ($\rho$) of the unexplained range of $\Yt$ attributed to unobserved confounding variables.}
+    \label{fig:rho}
+\end{figure}
+
+In \Cref{fig:cloud-property-dr-curves} we show additional dose response curves for cloud optical thickness ($\tau$), water droplet effective radius ($r_e$), and liquid water path (LWP). 
+\begin{figure}[ht]
+    \centering
+     \begin{subfigure}[b]{.32\textwidth} 
+        \includegraphics[width = \textwidth]{figures/COD/dr_tau_attn.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.32\textwidth}
+        \includegraphics[width = \textwidth]{figures/COD/dr_re_attn.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.32\textwidth}
+        \includegraphics[width = \textwidth]{figures/COD/dr_lwp_attn.png}
+        \caption{}
+    \end{subfigure}
+    \caption{Average dose-response curves for other cloud properties. a) Cloud optical depth. b) Water droplet effective radius. c) Liquid water path.}
+    \label{fig:cloud-property-dr-curves}
+\end{figure}
+
+
+In \Cref{fig:cloud-property-scatterplots} we show additional scatter plots comparing the neural network and transformer models for cloud optical thickness ($\tau$), water droplet effective radius ($r_e$), and liquid water path (LWP). 
+\begin{figure}[ht]
+    \centering
+     \begin{subfigure}[b]{.32\textwidth} 
+        \includegraphics[width = \textwidth]{figures/COD/scatter_tau.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.32\textwidth}
+        \includegraphics[width = \textwidth]{figures/COD/scatter_re.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.32\textwidth}
+        \includegraphics[width = \textwidth]{figures/COD/scatter_lwp.png}
+        \caption{}
+    \end{subfigure}
+    \caption{Comparing transformer to feed-forward feature extractor at predicting cloud properties given covariates and AOD. a) Cloud optical depth. b) Water droplet effective radius. c) Liquid water path. We see a significant improvement in pearson correlation ($R^2$) in each case.}
+    \label{fig:cloud-property-scatterplots}
+\end{figure}
+
+\subsection{$\omega_{500}$ experiment}
+
+The Overcast models make use of expert knowledge about ACI to select the covariates. 
+Ideally, they would include pressure profiles, temperature profiles and supersaturation since these are directly involved in cloud processes and impact the quality of AOD measurements as a proxy for aerosol concentration. 
+Unfortunately, they are impossible to retrieve from satellite data, so we rely on meteorological proxies like relative humidity, sea surface temperature, inversion strengths, and vertical motion. 
+Relying on these proxies however results in ignorability violations, which must be accounted for in the parameter $\Lambda$ in order to derive appropriate plausible ranges of outcomes.
+
+In the experiment that follows, we are removing a confounding variable from the model, therefore inducing hidden confounding.
+The covariate we remove is vertical motion at 500 mb, denoted by $\omega500$. 
+This experiment helps us gain some intuition about the influence of the parameter $\Lambda$ and how it relates to the inclusion of confounding variables in the model. 
+
+In \Cref{fig:apo_tr_lrp-vs-lrpw500} we compare the same region with different covariates to identify an appropriate $\Lambda$. 
+We fit one model on data from the Pacific (blue) and one model from the Pacific omitting $\omega500$ from the covariates (orange). 
+The shaded bounds in blue are the ignorance region for $\Lambda \to 1$ for the Pacific. 
+We then find the $\Lambda$ that results in an ignorance interval around the Pacific omitting $\omega500$ that covers the Pacific model prediction. 
+From this, we can infer how the parameter $\Lambda$ relates to the inclusion of covariates in the model. We show that we need to set $\Lambda=1.01$ to account for the fact that we are omitting $\omega500$ from our list of covariates.
+We also note that the slopes of the dose-response curves are slightly different, with worse predictions when omitting $\omega500$ from the covariates, as expected.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.46\textwidth} 
+        \includegraphics[width = \textwidth]{figures/apo_tr_lrp-vs-lrpw500_re.pdf}
+        \label{subfig:apo_tr_lrp-vs-lrpw500}
+        \caption{Unscaled}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.46\textwidth} 
+        \includegraphics[width = \textwidth]{figures/apo_tr_lrp-vs-lrpw500_lrpw500_re.pdf}
+        \label{subfig:apo-scaled_tr_lrp-vs-lrpw500}
+        \caption{Scaled by min-max with appropriate $\Lambda$}
+    \end{subfigure}
+    \caption{Dose-response curves with or without vertical motion at 500 mb ($\omega500$) as a covariate.}
+    \label{fig:apo_tr_lrp-vs-lrpw500}
+\end{figure}
+
+This work attempts to set a new methodology for setting $\Lambda$ which can be summarised as followed.
+Working with two datasets, which vary in only aspect, we train two different models: (i), the control model, and (ii), the experimental model. 
+After training both models, we plot the dose-response curves for (i) and (ii) on the same plot. 
+We can compare the shape and slope of these curves as well as their uncertainty bounds under the unconfoundedness assumption by plotting the ignorance region for $\Lambda \to 1$ for both models. 
+Then, we are interested in setting $\Lambda$ for model (ii) such that the uncertainty bounds cover the entire ignorance region of model (i) under the unconfoundedness assumption. 
+For this, we are interested in comparing the slopes and thus min-max scale both curves. 

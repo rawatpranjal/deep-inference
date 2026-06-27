@@ -1,0 +1,66 @@
+\appendix
+% \appendixpage
+\section{Discussion on assumptions}
+The decision to initiate ECMO is almost always the most complex decision to make. ECMO is the most resource intensive therapy provided in the ICU and is associated with significant morbidities, in addition there are no universally accepted tools to identify patients at highest risk of receiving ECMO or universally accepted criteria for ECMO initiation. It was thus important to first identify patients not eligible for ECMO (by either BMI or age). From an inclusion perspective it was then important to include all the clinical, laboratory and therapeutic variables that influence ECMO decision making as no single variable can solely identify patients who might or might not receive ECMO. For example, a patient’s respiratory rate if high could represent severe respiratory distress and failure that could contribute to the decision to provide ECMO. A normal respiratory rate for a patient who is endotracheally intubated, on mechanical ventilatory support and under neuromuscular blockade but without satisfactory evidence of adequate gas exchange could also be considered a reason to consider ECMO support. Additionally, a patient in severe respiratory failure with subsequent hypercarbia can become hypopneic with low respiratory rate could be at risk of impending cardio-respiratory arrest and thus could be a candidate for urgent ECMO support.
+
+\subsection{Discussion on Assumption 1}
+The no unmeasured confounding assumption comes from the fact that an ICU patient is continuously measured in various aspects that might be relevant to treatment assignment and potential treatment outcomes, and clinicians rely on these measures to make reasonable treatment decisions. We assume that clinicians have taken necessary measurements that reflect all confounding information. As all such measurements/tests are captured in the Electronic Health Records, we believe the dataset has included all confounding variables. Take Institutional Data for example, we collect 52,216 measurements only from the flowsheets table, despite other tables such as demographics, comorbidities, lab tests, ventilation settings, etc. However, in the actual implementation, highly missing measures/tests are excluded from the model inputs, which remains to be investigated if this incurs any no unmeasured confounding. This has been included in the discussion of limitations in Sec. 6. 
+
+\subsection{Discussion on Assumption 2}
+For the rigorous analysis, we pre-exclude definite cases with zero probability (for example, any ICU patients with age>80 is considered unsuitable for ECMO treatment). Since there are no clinical criteria that an ICU patient ‘must’ be on ECMO, probability of each invidual treatment assignment is less than 1. In the resulting dataset, the probability of treatment decision is always in the range of (0,1). 
+
+\section{Identifiability of Treatment Outcomes}
+To predict the factual and counterfactual outcomes (hence the individual treatment effect), we need to show that $p(Y|X,\textit{do}(W=1))$ in TVAE is identifiable. From the Identification Theorem \cite{louizos2017cevae}, we can see that: 
+\begin{align*}
+    p(Y|X,\textit{do}(W=1))&=\int_{Z} p(Y|X,\textit{do}(W=1),Z)p(Z|X,\textit{do}(W=1))dZ\\
+    &\stackrel{i}{=}\int_{Z} p(Y|X,W=1,Z)p(Z|X,W=1)dZ\\
+    &\stackrel{j}{=}\int_{Z^1} p(Y|X,W=1,Z^1)p(Z^1|X,W=1)dZ^1\\
+    &\stackrel{k}{=}\int_{Z^1} p(Y|W=1,Z^1)p(Z^1|X,W=1)dZ^1
+\end{align*}
+where equality $(i)$ is by the rules of \textit{do}-calculus, equality $(j)$ is by the designated latent dimension in TVAE, and equality $(k)$ comes from the property of VAE that $Y$ is independent of $X$ given $Z$. To ensure that $Y$ is only expressed in the designated latent dimension, disentanglement is further added to TVAE (see Sec 4.3). The case of $p(Y|X,\textit{do}(W=0))$ is identical, hence the defined individual treatment effect can be recovered.  
+\section{Proof of Proposition 1}
+\begin{proposition*}
+    Given $Z^{1:d}:=\{Z^1, Z^2, ..., Z^d\}$ and $Z^1 = \hat{W}$, conditioned on the data $X$, the total correlation of $Z^{1:d}$ equals the sum of the total correlation of $Z^{2:d}$ and the mutual information between the first dimension $\hat{W}$ and all the other dimensions $Z^{2:d}$, i.e., 
+\begin{equation}
+        TC(Z^{1:d}|X) = TC(Z^{2:d}|X) 
+    + I(\hat{W}|X;Z^{2:d}|X)
+\end{equation}
+where $I(A;B)$ is the mutual information between variable $A$ and $B$.
+\end{proposition*}
+
+\begin{proof}
+\begin{equation}
+\begin{split}
+    LHS &=\mathbb{E}_{q_{\phi}(Z^{1:d}|X)} \bigl[ \log \frac{q_{\phi}(Z^{1:d}|X)}{q_{\phi}(Z^1|X)q_{\phi}(Z^2|X)...q_{\phi}(Z^d|X)}  \bigl] \\
+    &= \mathbb{E}_{q_{\phi}(Z^{1:d}|X)} 
+    \Bigl[ \log \bigl(\frac{q_{\phi}(Z^{2:d}|X)}
+    {q_{\phi}(Z^1|X)q_{\phi}(Z^2|X)...q_{\phi}(Z^d|X)}\bigr) \\
+    &+ \log \bigl(\frac{q_{\phi}(Z^{1:d}|X)}
+    {q_{\phi}(Z^{2:d}|X)q_{\phi}(Z^1|X)}\bigr)\Bigr] \\
+    &= TC(Z^{2:d}|X) 
+    + I(Z^1|X;Z^{2:d}|X) \\
+    &= RHS 
+\end{split}
+\end{equation}
+\end{proof}
+
+\section{Predicted risks of control and treatment cases}
+The predicted distribution of ECMO cases and control cases in terms of treatment effect and control effect are plotted in Figure S1. Patients positioned to the right have higher mortality risk even without ECMO treatment, and patients in the upper regions have higher mortality risks after ECMO treatment. From the figure we can see that 1): Death ECMO cases have higher predicted treatment and control mortality risks than survival cases, and 2): actual treatment cases do not have the highest predicted mortality risks (either treatment or no-treatment).  
+For 1), this is consistent with our intuition. First, the deaths after treatment demonstrate their high mortality risk even after ECMO. Second, the deaths imply their more severe symptoms before treatment decision, hence they are associated with higher mortality risks without ECMO treatment.  For 2), the actual clinical decision is not the reduction in mortality risks, but the changes in outcome. For instance, a reduction of death probability from 30\% to 0 will not justify the ECMO treatment when comparing to the reduction of death probability from 65\% to 35\%, since the latter is more likely to result in a change of outcome (changing the patient from death to survival). As a result, the actual ECMO assignment are not picking the cases with highest mortality risk (more likely to die regardless of treatment or not), but rather the cases that are more likely to be overturned. 
+\input{figures/fig_s1.tex}
+\section{data access agreement, preprocessing and cohort characteristics}
+Data access agreement with International Severe Acute Respiratory and emerging Infections
+Consortium (ISARIC) were signed on Dec 18, 2020. The purpose of access is to contribute to execute an analysis of \textbf{"Development of predictive
+analytics model for need of extracorporeal support in COVID-19"}. 
+
+For the BJC dataset, the IRB (\#202011004) titled \textbf{"Identifying predictors for ECMO need in COVID 19 patients"} was approved on Nov 2, 2020. 
+
+Detailed data description and processing pipeline and characteristics of cohort are summarized. For ISARIC, the summary is provided here: https://tinyurl.com/mrv8rmp3. For the institutional data, the summary is provided here: https://tinyurl.com/yxersh7d.
+\section{More metrics between TVAE and BART}
+\input{tables/table_s1.tex}
+\section{Parameters of baselines}
+The summary of hyper-parameters used in ECMO datasets are listed here: https://tinyurl.com/433yhjzh The hyper-parameters are tuned through grid-search. For IHDP, we use the default hyper-parameters in the associated Github code repository, and uploaded the experiment results here: https://github.com/xuebing1234/tvae
+\section{Optimal Sampling strategy}
+\input{figures/fig_s2.tex}
+\clearpage
+% \end{appendices}

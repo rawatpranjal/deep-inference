@@ -1,0 +1,35 @@
+\section{Y-learner} \label{section:XvsY}
+In this section, we show the favorable behavior of the Y-learner over the X-learner. In order to show this, we implemented the X-learner exactly as it is described in \citep{kunzel2017meta} and the Y-learner as it is described in Algorithm \ref{algo:Ylearner}. 
+Figure \ref{fig:compareXY} shows the MSE in proportion to its sample size. We can see that the X--learner is consistently outperformed on all these data sets by the Y-learner. 
+We note that all these data sets were intentionally crated to be very similar to the GOTV data set we are interested in studying. Therefore these data sets are not extremely different from each other, and it is possible that the X-NN performs much better on different data sets. 
+\FloatBarrier
+%\begin{figure}
+%	\centering
+%	\includegraphics[width=0.5\linewidth]{figures/y_learner}
+%    \caption{Y-learner with Neural Networks}
+%    \label{fig:ylearner}
+%\end{figure}
+
+
+\begin{figure}
+	\centering
+	\includegraphics[width=1\linewidth]{figures/compareXY}
+    \caption{In this figure, we compare the Y and the X learner on six simulated data sets. A precise description on how the data was created can be found in Section \ref{sec:simulatedGOTV}}
+    	\label{fig:compareXY}
+\end{figure}
+
+\subsubsection*{The Y-Learner}
+Another important advantage of neural networks is that they can be trained jointly. This enables us to adapt well-performing meta-learners to perform even better. 
+Specifically, we used the idea of X-NN to propose %%PA.5.17: invent -> propose ?
+%%PA.5.17: it's a bit confusing to read about X-NN here, but it's not defined yet (and it's not clear it's defined anywhere actually...); I am assuming X-NN means an X-learner that uses a neural net, but it's nowhere made explicit...
+a new CATE estimator, which we call Y-NN.\footnote{Y is chosen as it is the next letter in the alphabet after X. However, this is not a meta-learner because there is no obvious way to extend it to arbitrary base learners, such as RF or BART.}
+The X-learner is essentially a two step procedure.
+In the first stage, the outcome functions, $\hat \mu_0$ and $\hat \mu_1$, are estimated and the individual treatment effects are imputed: 
+\begin{align*}
+&D_i^1 \define Y(1) - \hat \mu_0(X_i)& &\mbox{and} &D_i^0 \define \hat \mu_1(X_i) - Y_i(0).& 
+\end{align*}
+In the second stage, estimators for the CATE are derived by regressing the features $X$ on the imputed treatment effects. \cite{kunzel2017meta} provides details. In the X-learner, the estimators of the first stage are held fixed and are not updated in the second stage. This is necessary since, unlike neural networks, many machine learning algorithms, such as RF and BART, cannot be updated in a meaningful way once they have been trained. For neural networks and similar gradient optimization-based algorithms, it is possible to jointly update the estimators in the first and the second stage. 
+%%PA.5.17: how is this used later to get a CATE estimate? [nowhere explained I think...]  
+
+This is exactly the motivation of the Y-learner. Instead of first deriving an estimator for the control response functions and then an estimator for the CATE function, these functions are optimized jointly. The pseudo-code in Algorithm \ref{algo:Ylearner} shows how these two stages are updated simultaneously. 
+In Figure \ref{fig:compareXY}, we compare Y-NN with X-NN, and we find that Y-NN outperforms X-NN for our data sets.

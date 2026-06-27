@@ -1,0 +1,174 @@
+\section{Experiments}
+\begin{table*}[]
+\centering
+\caption{Root Mean Square Error (RMSE) for factual outcome evaluation across prediction lengths (the duration for which predictions are made). For the COVID-19 dataset, we report the mean and standard deviation accuracy with multiple runs.}
+ \vspace{-1em}
+% \resizebox{1.1\columnwidth}{!}{%
+\begin{tabular}{l|ccc|cccc}
+\toprule
+% \hline
+\multicolumn{1}{c|}{Dataset}           & \multicolumn{3}{c|}{Covid-19}                   & \multicolumn{3}{c}{Tumor Growth}                   \\
+\multicolumn{1}{c|}{Prediction Length} & 7-days & 14-days & 21-days & 14-days & 21-days & 28-days \\ \hline
+CG-ODE                                 & 4063 $\pm$ 68     & 4454 $\pm$ 100    & 4659 $\pm$ 63           & 18.37          & 21.00          & 24.58          \\
+TE-CDE                                 & 7999 $\pm$ 212    & 7470 $\pm$ 289    & 6832 $\pm$ 243           & 55.45          & 55.38          & 71.23          \\
+COVID-POLICY                           & 4008 $\pm$ 44      & 4128 $\pm$ 60     & 3963 $\pm$ 59  & 20.07          & 25.93         &  29.29         \\ \hline
+CAG-ODE                                & \textbf{3710 $\pm$ 29}     & \textbf{3925 $\pm$ 44}     & \textbf{3933 $\pm$ 40}           & \textbf{10.91} & \textbf{10.82} & \textbf{14.84}          \\
+w/o $L^{\left< G \right>}$             & 3800 $\pm$ 60     & 3987 $\pm$ 40     & 3990 $\pm$ 49           & 15.57          & 16.28          & 16.62              \\
+w/o $L^{\left< A \right>}$             & 3840 $\pm$ 35     & 4100 $\pm$ 53     & 4069 $\pm$ 49           & 17.90          & 14.69          & 20.19              \\
+w/o $L^{\left< G \right>}$ ,$L^{\left< A \right>}$                       & 3793 $\pm$ 23     & 4089 $\pm$ 79     & 3953 $\pm$ 38           & 17.28          & 16.72          & 24.36          \\
+w/o attention                          & 3867 $\pm$ 61     & 3958 $\pm$ 31      & 4256 $\pm$ 55           & 18.91          & 17.55          & 34.45          \\ %\hline
+\bottomrule
+\end{tabular}%
+% }
+\medskip
+\label{exp:main_table}
+\vspace{-2em}
+\end{table*}
+\subsection{Experiment Setup}
+\subsubsection{Datasets and Experiment Configuration} 
+
+We evaluate the performance of our model using two datasets: 1.) The {\bf COVID-19 dataset}, which captures the daily COVID-19 trends of  U.S. states from April.12.2020 to Dec.31.2020. The daily population flows among states are represented as dynamic edges. Treatments are state-level COVID-19 policies. We ask the model to predict the daily confirmed cases in each state.  2.) The {\bf Tumor Growth simulation dataset} \cite{geng2017prediction}, which describes the tumor growth dynamics in different regions of patients, where they may receive differing treatments. We aim to predict the tumor volumes in each region. Additional details about the datasets can be found in Appendix~\ref{sec:dataset_descriptions}.
+
+
+We predict trajectory rollouts across varying lengths and use Root Mean Square Error (RMSE) as the evaluation metric. Specifically, we train our model in a sequence-to-sequence setting where we split the trajectory of each training sample into two parts $[t_1,t_K]$ and $[t_{K+1},t_T]$. We condition the model on the first part of observations and predict the second part. To fully utilize the data points within each trajectory, we generate training and validation samples by splitting each trajectory into several chunks using a sliding window. Details can be found in Appendix~\ref{sec:training_details}.
+
+
+\subsubsection{Baselines and Model Variants}
+We conduct a comparative analysis of our model with three baseline models:  one non-causal continuous multi-agent baseline CG-ODE~\cite{huang2021coupled}, and two causal models: TE-CDE~\cite{seedat2022continuous} and COVID-POLICY~\cite{covidpolicy}. TE-CDE~\cite{seedat2022continuous} is a causal model that employs continuous-time differential equations to capture temporal event dependencies. COVID-Policy~\cite{covidpolicy} is another causal model designed specifically for assessing the impact of public health policies on COVID-19 outcomes. To further analyze the performance of our model, we also compare variants of our model. Each variant excludes a specific component to assess its individual impact on performance. The variants include models without treatment balancing, interference balancing, both components or the attention module.
+
+\subsubsection{Training Details}
+We employ the AdamW optimizer, as proposed in the study by Loshchilov et al. \cite{loshchilovdecoupled}, to train our model. The initial learning rate is set at $\eta = 0.005$, and the batch size is set as $8$ to accommodate memory constraints.
+
+The Graph Neural Network (GNN) used for the encoder has a singular layer with a hidden dimension of $64$. Similarly, the GNN that parameterizes the ODE function is also comprised of a single layer. The dimension of the latent state is set at $20$, and the dimension for the embedded treatments is $5$. We assign a weight of $10$ for both the treatment balancing term $\alpha$ and the interference balancing term $\beta$. Additionally, the weight designated for the edge reconstruction error $\lambda$ is set at $0.5$.
+
+
+\subsection{Performance Evaluation}
+We evaluate the performance of our model, CAG-ODE, as well as the baselines using Root Mean Square Error (RMSE) across different prediction lengths. The results are shown in Table~\ref{exp:main_table} and Table~\ref{exp:flip_table}, reporting the factual and counterfactual outcomes respectively. As the COVID-19 is a real-world dataset that does not have counterfactual outcomes, we evaluate only the Tumor Growth dataset in Table~\ref{exp:flip_table}. To ensure consistent comparison, we align the prediction periods of all models with weekly intervals on the COVID-19 dataset, similar to the statistical baselines derived from their official weekly submissions to the CDC, as done in \cite{huang2021coupled}. To assess the accuracy of short-term and long-term predictions, the prediction lengths for the COVID-19 and Tumor Growth datasets are set to 7, 14, 21 days and 14, 21, and 28 days, respectively. We include longer-range predictions on the Tumor-Growth dataset in Appendix~\ref{sec:appendix_tumor_results}
+
+
+
+\textbf{Factual Outcome Predictions.} 
+ Table~\ref{exp:main_table} shows that our model, CAG-ODE, consistently outperforms the baseline models across all prediction lengths for both datasets. This underscores the effectiveness of our model in capturing the dynamic interactions among objects, especially over longer time periods. Comparing our model with  TE-CDE, we observe a performance gap that highlights the benefits of incorporating interference balancing and spatial correlation in the model. Additionally, our model outperforms the COVID-POLICY model, indicating its broader generalizability across different types of data due to modeling dynamic interactions. 
+ % {CG-ODE also shows inferior performance as it fails to model the treatment effects.} 
+ Furthermore, our model exhibits proficiency in both short-term and long-term predictions. For instance, it achieves promising results for 21-day predictions on the COVID-19 dataset and 28-day predictions on the Tumor Growth simulation dataset.  The analysis of our model variants further emphasizes the importance of each component in the model. Particularly, the model variant excluding the attention module has the weakest performance, indicating the significance of our time-embedding attention module in effectively representing the treatment.
+
+\begin{table*}[htbp]
+\caption{Root Mean Square Error (RMSE) for counterfactual Outcome evaluation on the Tumor Growth dataset with treatment flipping ratio. Treatment F.R. (\textbf{Treatment} \textbf{F}lipping \textbf{R}atio) represents the ratio of treatments that are flipped.}
+ \vspace{-1em}
+\begin{tabular}{l|ccc|ccc|ccc}
+\toprule
+\multicolumn{1}{c|}{Prediction Length} & \multicolumn{3}{c|}{14-days} & \multicolumn{3}{c|}{21-days} & \multicolumn{3}{c}{28-days} \\
+\multicolumn{1}{c|}{Treatment F.R.} & 0.25 & 0.5 & 0.75   & 0.25 & 0.5 & 0.75 & 0.25 & 0.5 & 0.75 \\ \hline
+TE-CDE & 95.61 & 103.2 & 100.8 & 98.65 & 103.0 & 97.93 & 118.3 & 124.0 & 121.4 \\
+COVID-POLICY & 21.32 & 22.37 & 23.31 & 26.63 & 26.83 & 27.00 & 32.01 & 32.16 & 32.21        \\ \hline
+CAG-ODE & \textbf{17.23} & \textbf{16.98} & \textbf{16.96} & \textbf{18.64} & \textbf{18.84} & \textbf{18.85} & \textbf{19.91} & \textbf{19.88} & \textbf{19.87} \\
+w/o $L^{\left< G \right>}$ & 20.62 & 20.53 & 20.51 & 19.70 & 19.60          & 19.55          & 21.10            & 21.41           & 21.38            \\
+w/o $L^{\left< A \right>}$                       & 22.17          & 22.35          & 22.35          & 20.19          & 20.10          & 20.09          & 20.83            & 21.14           & 21.15            \\
+w/o $L^{\left< G \right>}$, $L^{\left< A \right>}$                                 & 19.78          & 19.75          & 19.71          & 19.34          & 19.29          & 19.27          & 21.31        & 21.40       & 21.34        \\
+w/o attention                                       & 19.09          & 18.37 & 18.13 & 22.16          & 21.78          & 21.65          & 27.70        & 27.44       & 27.38        \\ \bottomrule
+
+\end{tabular}%
+\medskip
+\label{exp:flip_table}
+\vspace{-1em}
+\end{table*}
+
+\textbf{Counterfactual Outcome Predictions.} In the context of a multi-agent dynamical system, the total number of possible treatments for all nodes is $\bO(K \times 2N)$, making it infeasible to enumerate all treatment combinations. To assess the robustness of each model to counterfactual treatment scenarios, we perform an experiment where we randomly flip a certain percentage of observed treatments. In Table~\ref{exp:flip_table}, we evaluate the performance when 25\%, 50\%, and 75\% of all observed treatments in each experiment are randomly flipped.
+The purpose of this experiment is to examine the robustness of the models to counterfactual treatment scenarios, and since CG-ODE does not incorporate causal modeling, it is excluded from this experiment.
+CAG-ODE outperforms others by a wide margin across all settings.
+These findings collectively demonstrate the superiority of our proposed model, CAG-ODE, in capturing the dynamics of multi-agent systems and making accurate predictions across different time horizons. We additionally include the visualization of the learned balanced latent representations in Section~\ref{sec:appendix_visual}.
+
+
+
+
+
+
+\subsection{Case Study about COVID-19 Policies} 
+
+
+
+
+
+
+We conduct a case study to show the impact of different treatments, e.g., COVID-19 related policies, on the COVID-19 dataset as shown in Figure~\ref{fig:case study}. Specifically, we consider four different policy intervention methods and report the resulting average changes in the number of daily confirmed cases across all states in the U.S.
+
+
+
+\begin{figure*}[htbp]
+    \centering
+    \begin{minipage}[b]{0.24\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig/policy_a.pdf}
+        {(a) Remove partial states' policy.}
+    \end{minipage}
+    \begin{minipage}[b]{0.24\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig/policy_b.pdf}
+        {(b) Change policy start date.}
+    \end{minipage}
+    \begin{minipage}[b]{0.24\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig/policy_c.pdf}
+        {(c) Remove policy across states.}
+    \end{minipage}
+    \begin{minipage}[b]{0.25\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig/policy_d.pdf}
+        {(d) Change relative time of policies.}
+    \end{minipage}
+     \vspace{-0.5em}
+    \caption{Case Study for changing different policies on the COVID-19 dataset.}
+    \label{fig:case study}
+    \vspace{-0.5em}
+\end{figure*}
+
+First, we focus on the removal of policies in three states that have the highest number of announced policies during the time frame of the COVID-19 dataset. By masking out these policies, we observe an increase in the average number of confirmed cases across states in the future. This increase is attributed to both in-state disease spread and population flow to other states. The removal of policies exacerbates the spread of COVID-19 over an extended period, as shown in Figure~\ref{fig:case study}(a), indicating that our model captures the dynamic interference resulting from agents' interactions.  
+
+We then explore the effect of changing the starting time of a specific policy for all states. We changed the "No Public Gatherings" policy starting time for each state to be 15 days earlier, 15 and 30 days later respectively. As shown in Figure~\ref{fig:case study}(b) when announcing the policy earlier, we observe a decrease in the average number of daily confirmed cases in the future, while announcing the policy later leads to an increase. This intuitive outcome highlights the capability of our model to capture the causal relationships between policy interventions and COVID-19 spread.
+
+Next, we analyze the impact of the top three most frequent policies across all states by removing them separately.  As shown in Figure~\ref{fig:case study}(c), the "Public Gatherings" policy has the largest effect in reducing the spread of COVID-19, even though the most frequent policy is "Emergency Funds". This demonstrates the potential of our model in assisting policymakers to identify the relative importance of each policy over time.
+
+
+ \begin{figure*}[htbp]
+    \centering
+    \begin{minipage}[b]{0.24\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig/visual_a.pdf}
+        {(a) "State-of-Emergency" w/o. Treatment Balancing.}
+    \end{minipage}
+    \begin{minipage}[b]{0.24\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig/visual_b.pdf}
+        {(b) "State-of-Emergency" with Treatment Balancing.}
+    \end{minipage}
+    \begin{minipage}[b]{0.224\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig/visual_c.pdf}
+        {(c) "No-Public-Gathering" w/o. Treatment Balancing.}
+    \end{minipage}
+    \begin{minipage}[b]{0.24\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{fig/visual_d.pdf}
+        {(d) "No-Public-Gathering" with Treatment Balancing.}
+    \end{minipage}
+    \vspace{-1em}
+    \caption{Treatment Balancing Visualization on the COVID-19 Dataset.}
+    \label{fig:visual}
+\end{figure*}
+
+Finally, we study the effects of different orders in policy announcements, specifically focusing on the simultaneous or closely timed announcements of "No Public Gatherings" and "No Traveler from Outside States" policies. We change the announcement dates for the two policies in each state to mimic three scenarios shown in Figure~\ref{fig:case study} (d). We found that initializing the announcement of "No Public Gatherings" early generally contributes to a reduction in the spread of COVID-19 compared with "No Traveler from Outside States". We further analyzed the daily population flow during the given time frame and found that the majority of population flows are within the same states, indicating that residents of each state pose a high risk of virus transmission compared to people from other states. These insights suggest prioritizing the earlier announcement of the "No Public Gatherings" policy over the  "No Traveler from Outside States" policy can better mitigate the spread of COVID-19.
+
+These case study results demonstrate the effectiveness of our model CAG-ODE in capturing the complex interactions between treatments, disease spread, and population flow, providing valuable insights for policymakers in making informed decisions.
+
+
+
+
+
+
+\subsection{Visualization of Learned Balanced Representations}\label{sec:appendix_visual}
+To further understand the effect of treatment balancing loss in~\model, we visualize the 2-D T-SNE projections of the latent representations of nodes on the COVID-19 dataset, i.e. $\bm{z}_i^t$ as shown in Figure~\ref{fig:visual}. Specifically, we visualize the latent node representations under two different treatments: "State-of-Emergency" and "No-Public-Gathering". Under each treatment (policy), we use different colors to denote whether a node receives such treatment (treated) or not (control). As shown in Figure~\ref{fig:visual}(a) and (c), the distributions of the learned representations are more distinguishable between the two groups, compared with Figure~\ref{fig:visual}(b) and (d) which have the treatment balancing loss. This indicates that~\model~ indeed learns balanced latent representations by employing the treatment balancing loss.
+
+
+
+
+

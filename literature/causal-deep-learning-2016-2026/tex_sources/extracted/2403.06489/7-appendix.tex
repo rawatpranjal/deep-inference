@@ -1,0 +1,140 @@
+\section{Appendix}
+\subsection{Proposition Proof}
+\label{appx:proof}
+
+\begin{proof}
+\begin{equation} 
+\begin{split}
+    &\mathbb{E}(z_i|\mathbf{x}_i,\mathit{G})=\mathbb{E}(y_i^{obs}\cdot \frac{t_i-p}{p(1-p)}|\mathbf{x}_i,\mathit{G})  \\ 
+    &=\mathbb{E}(t_iy_i^{obs}\cdot \frac{t_i-p}{p(1-p)}+(1-t_i)y_i^{obs}\cdot \frac{t_i-p}{p(1-p)}|\mathbf{x}_i,\mathit{G})
+\end{split}
+\label{eqn:proof1}
+\end{equation}
+Given $t_i\in\{0,1\}$, we have $t_i^2=t_i$ and $(1-t_i)^2=(1-t_i)$. Simultaneously with the definition in Eq. \eqref{eqn:y_obs}, we have:
+\begin{equation}
+\left\{
+             \begin{array}{lr}
+             t_iy_i^{obs}=t_i^2y_i(1) + t_i(1 - t_i)y_i(0)=t_i^2 y_i(1)=t_iy_i(1) \nonumber \\ 
+(1-t_i)y_i^{obs}=t_i(1-t_i)y_i(1) + (1 - t_i)^2y_i(0)=(1-t_i)y_i(0) . \nonumber
+             \end{array}
+\right.
+\end{equation}
+
+Then we can rewire Eq. \ref{eqn:proof1} as \footnote{Due to the limit of space, $t_i^j$ represents $t_i=j$ here.}: 
+\begin{equation} 
+\begin{split}
+    &\mathbb{E}(t_iy_i^{obs}\cdot \frac{t_i-p}{p(1-p)}+(1-t_i)y_i^{obs}\cdot \frac{t_i-p}{p(1-p)}|\mathbf{x}_i,\mathit{G}) \\
+    &=\mathbb{E}(t_iy_i(1)\frac{t_i-p}{p(1-p)}+(1-t_i)y_i(0) \frac{t_i-p}{p(1-p)}|\mathbf{x}_i,\mathit{G},t_i^1)*p(t_i^1|\mathbf{x}_i,\mathit{G})\\
+    &+\mathbb{E}(t_iy_i(1)\frac{t_i-p}{p(1-p)}+(1-t_i)y_i(0) \frac{t_i-p}{p(1-p)}|\mathbf{x}_i,\mathit{G},t_i^0)*p(t_i^0|\mathbf{x}_i,\mathit{G}) \\
+    &=\mathbb{E}(\frac{y_i(1)}{p}|\mathbf{x}_i,\mathit{G})*p(t_i=1|\mathbf{x}_i,\mathit{G})-\mathbb{E}(\frac{y_i(0)}{1-p}|\mathbf{x}_i,\mathit{G})*p(t_i=0|\mathbf{x}_i,\mathit{G})\\
+    &=\mathbb{E}(y_i(1)|\mathbf{x}_i,\mathit{G})\frac{p(t_i=1|\mathbf{x}_i,\mathit{G})}{p}-\mathbb{E}(y_i(0)|\mathbf{x}_i,\mathit{G})\frac{p(t_i=0|\mathbf{x}_i,\mathit{G})}{1-p}\\
+    &=\mathbb{E}(y_i(1)|\mathbf{x}_i,\mathit{G})-\mathbb{E}(y_i(0)|\mathbf{x}_i,\mathit{G}) \\
+    &=\hat{\tau}_i \nonumber
+\end{split}
+\end{equation}
+\end{proof}
+
+\subsection{Pseudo Code and Complexity Analysis}
+\label{appx:code}
+The pseudo-code of GNUM-CT is given in Algorithm \ref{alg2} and GNUM-PL in Algorithm \ref{alg1}. Our proposed method can be trained by an end-to-end back-propagation, and thus we can use gradient descent to optimize the model.
+
+For each sample, it will go through the GNUM layer first and then perform the uplift prediction. The complexity of the whole process is
+$O\left(M\sum_{i=0}^L f_l+N \sum_{i=1}^L f_{i-1}f_i \right)$ where $N$ denotes the total number of users, including the users in the treatment and control group, $M = \left| \mathit{E}\right|$ is the number of relationships, $L$ is number of hidden layers and $f_l$ is the dimensionality of the $l^{th}$ hidden layer. In practice, $L$ and $f_l$ are often bounded within a small constant. The proposed method is linear to the number of users and number of relationships in the dataset respectively. Therefore, the overall model is scalable. 
+
+$O(Nd^2_{max}S_{max})$, where $N$ denotes the total number of users, including the users in the treatment and control group, $d_{max}$ denotes the maximum number of dimensionality among different layers and $S_{max}$ denotes in the social graph the maximum degree among all the users. In practice, $S_{max}$ is often bounded within a constant. For example, in social networks like Facebook, the number of friends a user can have has an upper bound. 
+
+\begin{algorithm}[t]\caption{Graph Neural Network for Uplift Modeling (GNUM) using Class-Transformed Target} \label{alg2}
+	\begin{algorithmic}[1]
+		\REQUIRE Set of user features, treatment assignment and observed outcome $\{(\mathbf{x}_i,t_i,y_i)\}_{i=1}^N$, social graph $\mathit{G}=(\mathit{V},\mathit{E})$ and number of layers $L$, 
+		\ENSURE Prediction of user uplift and GNUM parameters $\mathbf{\Theta}$.
+		\STATE Initialize all parameters $\mathbf{\Theta}$ and using $\mathbf{X}$ as $\mathbf{H}^{(0)}$
+		\WHILE {$\mathcal{L}$ does not converge}
+		\FOR{i $\leftarrow$ 1 to L}
+		\STATE Calculate graph-based representation $\mathbf{H}^{(l)}$.
+		\ENDFOR
+		\STATE Calculate  $\hat{y}_i^{pl1}$ and $\hat{y}_i^{pl2}$  from learned representations $\mathbf{H}^{(L)}$ using Eq. \eqref{eqn:partial_resp}.
+		\STATE Calculate the class-transformed target $z_i$ using Eq. \eqref{eq_zi}.
+		\STATE Calculate the loss $\mathcal{L}_{CT}$ using Eq. \eqref{eq:loss_ct}.
+		\STATE Update $\mathbf{\Theta}$ using back-propagation.
+		\ENDWHILE
+		\STATE Using the trained model parameters to estimate the user uplift as: $\hat{\tau}_i=\mathbb{E}(z_i|\mathbf{x}_i, \mathit{G})$.
+	\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[t]\caption{Graph Neural Network for Uplift Modeling (GNUM) using Partial Label Learning} \label{alg1}
+	\begin{algorithmic}[1]
+		\REQUIRE Set of user features, treatment assignment and observed outcome $\{(\mathbf{x}_i,t_i,y_i)\}_{i=1}^N$, social graph $\mathit{G}=(\mathit{V},\mathit{E})$ and number of layers $L$, 
+		\ENSURE Prediction of user uplift and GNUM parameters $\mathbf{\Theta}$.
+		\STATE Initialize all parameters $\mathbf{\Theta}$ and using $\mathbf{X}$ as $\mathbf{H}^{(0)}$
+		\WHILE {$\mathcal{L}$ does not converge}
+		\FOR{i $\leftarrow$ 1 to L}
+		\STATE Calculate graph-based representation $\mathbf{H}^{(l)}$.
+		\ENDFOR
+		\STATE Calculate  $\hat{y}_i^{pl1}$ and $\hat{y}_i^{pl2}$  from learned representations $\mathbf{H}^{(L)}$ using Eq. \eqref{eqn:partial_resp}.
+		\STATE Construct the sample's partial labels based on $y_i$ and $t_i$.
+		\STATE Calculate the loss $\mathcal{L}$ using Eq. \eqref{eq:gnum_loss}.
+		\STATE Update $\mathbf{\Theta}$ using back-propagation.
+		\ENDWHILE
+		\STATE Using the trained model parameters to estimate the user uplift as: $\hat{\tau}_i = 1 - P(S_i=[1, 0, 0]|\mathbf{x}_i,\mathit{G}) - P(S_i=[0, 0, 1]|\mathbf{x}_i,\mathit{G})$
+	\end{algorithmic}
+\end{algorithm}
+
+
+
+\subsection{More Experimental Details}
+\subsubsection{More Details about Dataset}
+\label{appn:dataset}
+Blogcatalog is a social blog directory that manages bloggers and their blogs. The dateset contains 
+the features of bloggers and the social relationships between bloggers listed on the BlogCatalog website. The features are bag-of-words representations of keywords in bloggers’ descriptions. 
+We follow the assumptions and procedures
+of synthesizing the outcomes and treatments assignments in \cite{guo2020learning}, in which the outcomes represent the opinions of readers on each
+blogger and the treatments represent whether contents created by a blogger receive more views on mobile devices or desktops.
+In the treatment group, the blogger’s blogs are read more on mobile devices. In the control group, the blogger’s blogs are read more on desktops. 
+We assume that the social relationships of bloggers can causally affect their treatment assignments and readers’ opinions of them. 
+We trained the LDA topic model to get the device
+preference of the readers of the i-th blogger’s content as:
+
+\begin{center}
+$
+\begin{aligned}
+\operatorname{Pr}(t&\left.=1 \mid \mathbf{x}_i, \mathrm{~A}\right)=\frac{\exp \left(p_1^i\right)}{\exp \left(p_1^i\right)+\exp \left(p_0^i\right)} ; \\
+p_1^i &=\kappa_1 r\left(\mathbf{x}_i\right)^T r_1^c+\kappa_2 \sum_{j \in \mathcal{N}(i)} r\left(\mathbf{x}_j\right)^T r_1^c \\
+&=\kappa_1 r\left(\mathbf{x}_i\right)^T r_1^c+\kappa_2\left(\mathrm{~A} r\left(\mathbf{x}_j\right)\right)^T r_1^c ; \\
+p_0^i &=\kappa_1 r\left(\mathbf{x}_i\right)^T r_0^c+\kappa_2 \sum_{j \in \mathcal{N}(i)} r\left(\mathbf{x}_j\right)^T r_0^c \\
+&=\kappa_1 r\left(\mathbf{x}_i\right)^T r_0^c+\kappa_2\left(\mathrm{~A} r\left(\mathbf{x}_j\right)\right)^T r_0^c,
+\end{aligned}
+$
+\end{center}
+
+where $\kappa_1, \kappa_2 \geq 0$ signifies the magnitude of the confounding bias resulting from a blogger’s topics and her neighbors’ topics, respectively.  $\kappa_1 = 0, \kappa_2 = 0$ means
+the treatment assignment is random and there is no selection bias,
+and greater $\kappa_1, \kappa_2$ means larger selection bias. The factual outcome and the counterfactual outcome of the i-th blogger are simulated as:
+
+\begin{center}
+$
+\begin{aligned}
+y^F\left(\mathbf{x}_i\right) &=y_i=C\left(p_0^i+t_i p_1^i\right)+\epsilon \\
+y^{C F}\left(\mathbf{x}_i\right) &=C\left[p_0^i+\left(1-t_i\right) p_1^i\right]+\epsilon,
+\end{aligned}
+$
+\end{center}
+where $C$ is a scaling factor and the noise is sampled as $\epsilon \sim \mathcal{N}(0,1)$. In this work, we set $C=5, \kappa_1=10, \kappa_2 \in\{0.5,2\}$.
+
+\subsubsection{Details about the comparing methods}
+\label{appn:baseline}
+The detail descriptions of the comparing methods can be found here. 
+\begin{itemize}
+	\item{Two-Model: This method infers the labels in the treatment group and the control group respectively. }
+	\item{CTM: The Class-Transformation model (CTM) creates the new target variable to estimate the uplift.}
+	\item{Uplift-RF}: This model modifies existing random forest algorithms to directly infer the uplift.
+	\item{DML}: Double Machine Learning (DML) method uses the Neyman orthogonal score and cross-fitting to construct the uplift estimator.
+	\item{DRL}: Doubly Robust Learning (DRL) method combines the error imputation and the inverse propensity score estimator to address the bias problem.
+	\item{NetDeconf}: It uses the graph to minimize confounding bias in the task of estimating treatment effects.
+	\item{GNUM-GCN/GAT}: To show the effectiveness of partial label learning, we replace the graph representation learning method with GCN and GAT respectively for comparison.
+\end{itemize}
+
+
+\subsubsection{Parameter Settings}
+\label{appn:para}
+We adopt the deep neural networks \cite{liu2017survey} with two $64$-unit hidden layers as the building block for the Two-Model and CTM methods. For uplift random forest, we set the number of estimators as $50$ and the depth of the tree as $5$. For NetDeconf and our proposed method, we use two layers of GNN with units of $128-64$. All the weight matrices are initialized using Xavier initialization \cite{glorot2010understanding}.  We train the model for $5$ epochs with a learning rate of $0.0001$ and batch size of $256$. Note that we use grid search to get the best hyper-parameters. For each dataset, we randomly sampled 70\% of the users as the training set, 10\% as the validation set, and 20\% as the test set.  The models are trained on a cluster of 10 Dual-CPU servers with AGL \cite{zhang2020agl} framework. For the largest dataset, containing 573.8K nodes and 2.6M edges, the proposed method took about 17 minutes to train on a cluster of 10 Dual-CPU servers. We run each algorithm $5$ times and report the average result. 
+

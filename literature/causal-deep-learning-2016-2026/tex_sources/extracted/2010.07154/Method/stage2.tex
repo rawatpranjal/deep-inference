@@ -1,0 +1,33 @@
+In stage 2, we learn the structural function by computing the weight vector $\vec{u}$ and parameter $\theta_X$ while \emph{fixing}  $\theta_Z=\hat{\theta}_Z$, and thus the corresponding feature map $\vec{\phi}_{\hat{\theta}_Z}(z)$. Given the data $(\tilde y_i, \tilde{z_i})$, we can minimize the empirical version of $\mathcal{L}_2$, defined as
+\begin{align}
+    \hat{\vec{u}}^{(n)}, \hat{\theta}_X = \argmin_{\vec{u} \in \mathbb{R}^{d_1}, \theta_X \in \Theta_X}\mathcal{L}^{(n)}_2(\vec{u},\theta_X), \quad \mathcal{L}^{(n)}_2 = \frac1n \sum_{i=1}^n (\tilde y_i - \vec{u}^\top \hat{\vec{V}}^{(m)} \vec{\phi}_{\hat\theta_Z}(\tilde z_i))^2 + \lambda_2 \|\vec{u}\|^2. \label{eq:stage2-empirical-loss}
+\end{align}
+
+Again, for a given $\theta_X$, we can solve the minimization problem \eqref{eq:stage2-empirical-loss} for $\vec{u}$ as a function of $\hat{\vec{V}}^{(m)}:=\hat{\vec{V}}^{(m)}(\theta_X,\hat\theta_Z)$ by a linear ridge regression
+\begin{align}
+    \hat{\vec{u}}^{(n)}(\theta_X,\hat\theta_Z) = \left(\hat{\vec{V}}^{(m)}\Phi_2 ^\top \Phi_2 (\hat{\vec{V}}^{(m)})^\top + n\lambda_2 I\right)^{-1}\hat{\vec{V}}^{(m)}\Phi_2^\top \vec{y}_2, \label{eq:stage2-sol}
+\end{align}
+where
+%\begin{align*}
+$    \Phi_2 = [\vec{\phi}_{\hat\theta_Z}(\tilde z_1), \dots, \vec{\phi}_{\hat\theta_Z}(\tilde z_n)]^\top \in \mathbb{R}^{n \times d_2}$ and $\vec{y}_2 = [\tilde y_1, \dots, \tilde y_n]^\top \in \mathbb{R}^{n}.
+$ %\end{align*}
+%Here, $\hat{\vec{u}}^{(n)}$ is a function of $\theta_X$ through the dependence of $\hat{\vec{V}}^{(m)}$. Then, again, we learn $\theta_X$ by minimizing the loss $\mathcal{L}^{(n)}_2$ at $\vec{u} = \hat{\vec{u}}^{(n)}$. 
+
+The loss $\mathcal{L}^{(n)}_2$ explicitly depends on the parameters $\theta_X$ and we can backpropagate it to $\theta_X$ via $\hat{\vec{V}}^{(m)}(\theta_X,\hat{\theta}_Z)$, 
+%% AG:I removed the hat above on \theta_Z for consistency with the rest of the section. AD: got it.
+%\adcomment{(recall $\theta_Z=\hat{\theta}_Z$ here)},
+%AG: do we need this reminder?  I think it's clear AD: ok Arthur
+even though the samples of the treatment variable $X$ do not appear in stage 2 regression.
+%\adcomment{We again slightly abuse notation and denote by $\hat{\theta}_X$ the parameter estimate obtained after a few gradient steps even if it does not minimize the non-convex loss \eqref{eq:stage2-sol} 
+%and write $\hat{\vec{u}}^{(n)}=\hat{\vec{u}}^{(n)}(\hat{\theta}_X,\theta_Z)$.}
+We again introduce a small abuse of notation for simplicity, 
+and denote by $\hat{\theta}_X$ the  estimate obtained after a few gradient steps on \eqref{eq:stage2-empirical-loss}
+with $\hat{\vec{u}}^{(n)}(\theta_X,\hat\theta_Z)$ from \eqref{eq:stage2-sol},
+even though $\hat{\theta}_X$ need not minimize the non-convex loss \eqref{eq:stage2-empirical-loss}. 
+We then have 
+$\hat{\vec{u}}^{(n)}=\hat{\vec{u}}^{(n)}(\hat{\theta}_X,\hat\theta_Z)$.
+ %Note that we do not attempt to backpropagate through the estimate $\hat{\theta}_Z$ as this is too computationally expensive. Instead, we rely on alternating optimization of stages 1 and 2. %, and on backpropagation through $\hat{\vec{V}}^{(m)}(\theta_X,\hat{\theta}_Z)$.
+%After updating $\hat{\theta}_X$, we need to perform stage 1 regression to update $\hat{\theta}_Z$ again since 
+%$\vec{\psi}_{\theta_X}(x)$
+% has changed.
+After updating $\hat{\theta}_X$, we need to update $\hat{\theta}_Z$ accordingly. We do not attempt to backpropagate through the estimate $\hat{\theta}_Z$ to do this, however, as this would be too computationally expensive; instead, we alternate stages 1 and 2. We also considered updating $\hat{\theta}_X$ and $\hat{\theta}_Z$ jointly to optimize the loss $\mathcal{L}_2^{(n)}$, but this fails, as discussed in Appendix~\ref{sec:joint}.

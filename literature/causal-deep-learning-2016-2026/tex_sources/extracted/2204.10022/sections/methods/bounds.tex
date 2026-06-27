@@ -1,0 +1,98 @@
+\subsection{Continuous Treatment Effect Bounds Without Ignorability}
+\label{sec:bounds}
+The CAPO and APO (dose-response) functions cannot be point identified from observational data without ignorability.
+Under the CMSM with a given $\Lambda$, we can only identify a set of CAPO and APO functions jointly consistent with the observational data $\D$ and the continuous marginal sensitivity model.
+All of the functions in this set are possible from the point of view of the observational data alone. 
+So to cover the range of all possible functional values, we seek an interval function that maps covariate values, $\X=\x$, to the upper and lower bounds of this set for every treatment value, $\tf$.
+
+For $\tf \in \Tcal$ and $\x \in \Xcal$, let $p(\yt \mid \tf, \x)$ denote the density of the distribution $P(\Yt \mid \Tf=\tf, \X=\x)$.
+As a reminder, this distribution is identifiable from observational data, but without further assumptions the CAPO, $\mu(\x, \tf) = \E\left[ \Yt \mid \X = \x \right]$, is not.
+We can express the CAPO in terms of its identifiable and unidentifiable components as
+\begin{equation}
+    \begin{split}
+        \mu(\x, \tf)
+        &= \frac{\int_\Ycal \yt \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)}d\yt}{\int_\Ycal \frac{p(\yt \mid \tf, \x)}{p(\tf \mid \yt, \x)} d\yt}
+        = \mut(\x, \tf) + \frac{\int_\Ycal w(\y, \x) (\y - \mut(\x, \tf)) p(\y \mid \tf, \x)d\y}{(\Lambda^2 - 1)^{-1} + \int_\Ycal w(\y, \x)p(\y \mid \tf, \x)d\y}, \\
+        &\equiv \mu(w(\y, \x); \x, \tf, \Lambda)
+    \end{split}
+    \label{eq:mu_w}
+\end{equation}
+where, by a one-to-one change of variables, $\frac{1}{p(\tf \mid \yt, \x)} = \frac{1}{\Lambda p(\tf \mid \x)} + w(\y, \x) (\frac{\Lambda}{p(\tf \mid \x)} - \frac{1}{\Lambda p(\tf \mid \x)})$ with $w : \Ycal\times \Xcal \to [0, 1]$.
+Both \cite{kallus2019interval} and later \cite{jesson2021quantifying} provide analogous expressions for the CAPO in the discrete treatment regime under the MSM, and we provide our derivation in \Cref{lem:capo}. 
+
+The uncertainty set that includes all possible values of $w(\y, \x)$ that agree with the CMSM, \emph{i.e.}, the set of functions that violate ignorability by no more than $\Lambda$, can now be expressed as 
+$
+% \begin{equation*}
+    \mathcal{W} = \{w: w(\y, \x) \in [ 0, 1 ] \quad \forall \y \in \Ycal,  \forall \x \in \Xcal \}.
+$
+% \end{equation*}
+
+With this set of functions, we can now define the CAPO and APO bounds under the CMSM.
+The CAPO lower, $\underline{\mu}(\x, \tf; \Lambda)$, and upper, $\overline{\mu}(\x, \tf; \Lambda)$, bounds under the CMSM with parameter $\Lambda$ are:
+\noindent
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:CAPO_lower}
+        \begin{split}
+            \underline{\mu}(\x, \tf; \Lambda) 
+            &\coloneqq \inf_{w \in \mathcal{W}} \mu(w(\y, \x); \x, \tf, \Lambda) \\
+            &= \inf_{w \in \WniH} \mu(w(\y); \x, \tf, \Lambda) 
+        \end{split}
+    \end{equation}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:CAPO_upper}
+        \begin{split}
+            \overline{\mu}(\x, \tf; \Lambda) 
+            &\coloneqq \sup_{w \in \mathcal{W}} \mu(w(\y, \x); \x, \tf, \Lambda) \\
+            &= \sup_{w \in \WndH} \mu(w(\y); \x, \tf, \Lambda)
+        \end{split}
+    \end{equation}
+\end{minipage}
+\break
+Where the sets $\WniH = \left\{ w: w(y) = H(\yH - \y) \right\}_{\yH \in \Ycal}$, and $\WndH = \left\{ w: w(y) = H(\y - \yH)  \right\}_{\yH \in \Ycal}$, and $H(\cdot)$ is the Heaviside step function. 
+\Cref{lem:monotonic} in \cref{app:step} proves the equivalence in \cref{eq:CAPO_upper} for bounded $Y$. 
+The equivalence in \cref{eq:CAPO_lower} can be proved analogously.
+
+The APO lower, $\underline{\mu}(\tf; \Lambda)$, and upper, $\overline{\mu}(\tf; \Lambda)$, bounds under the CMSM with parameter $\Lambda$ are:
+\noindent
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:APO_lower}
+        \underline{\mu}(\tf; \Lambda) \coloneqq \E\left[ \underline{\mu}(\X, \tf; \Lambda) \right]
+    \end{equation}
+\end{minipage}%
+\begin{minipage}{.5\linewidth}
+    \begin{equation}
+        \label{eq:APO_upper}
+        \overline{\mu}(\tf; \Lambda) \coloneqq \E\left[ \overline{\mu}(\X, \tf; \Lambda) \right]
+    \end{equation}
+\end{minipage}
+
+\textbf{Remark.} It is worth pausing here and breaking down \Cref{eq:mu_w} to get an intuitive sense of how the specification of $\Lambda$ in the CMSM affects the bounds on the causal estimands. 
+When $\Lambda \to 1$, then the $(\Lambda^2 - 1)^{-1}$ term (and thus the denominator) in \Cref{eq:mu_w} tends to infinity.
+As a result, the CAPO under $\Lambda$ converges to the empirical estimate of the CAPO — $\mu(w(\y); \x, \tf, \Lambda \to 1) \to \mut(\x, \tf)$ — as expected.
+Thus, the supremum and infimum in \Cref{eq:CAPO_lower,eq:CAPO_upper} become independent of $w$, and the ignorance intervals concentrate on point estimates.
+Next, consider complete relaxation of the ignorability assumption, $\Lambda \to \infty$. Then, the $(\Lambda^2 - 1)^{-1}$ term tends to zero, and we are left with,
+\begin{equation*}
+    \begin{split}
+        \mu(w; \cdot, \Lambda \to \infty)
+        \to \mut(\x, \tf) + \frac{\int_\Ycal w(\y) (\y - \mut(\x, \tf)) p(\y \mid \tf, \x)d\y}{\int_\Ycal w(\y)p(\y \mid \tf, \x)d\y,}
+        = \mut(\x, \tf) + \!\!\!\! \E_{p(w(\y) \mid \x, \tf)} \!\!\!\! [\Y - \mut(\x, \tf)],
+    \end{split}
+\end{equation*}
+where, $p(w(\y) \mid \x, \tf) \equiv \frac{w(\y) p(\y \mid \tf, \x)}{\int_\Ycal w(\y')p(\y' \mid \tf, \x)d\y'}$, a distribution over $\Y$ given $\X=x$ and $\Tf=\tf$.
+Thus, when we \emph{relax} the ignorability assumption entirely, the CAPO can be anywhere in the range of $\Y$.
+
+The parameter $\Lambda$ relates to the proportion of unexplained range in $\Y$ assumed to come from unobserved confounders after observing $\x$ and $\tf$. 
+When a user sets $\Lambda$ to 1, they assume that the entire unexplained range of $\Y$ comes from unknown mechanisms independent of $\Tf$. 
+As the user increases $\Lambda$, they attribute some of the unexplained range of $\Y$ to mechanisms causally connected to $\Tf$.
+For bounded $\Yt$, this proportion can be calculated as:
+\begin{equation*}
+        \rho(\x, \tf; \Lambda) \coloneqq \frac{\overline{\mu}(\x, \tf; \Lambda) - \underline{\mu}(\x, \tf; \Lambda)}{\overline{\mu}(\x, \tf; \Lambda \to \infty) - \underline{\mu}(\x, \tf; \Lambda \to \infty)}
+        = \frac{\overline{\mu}(\x, \tf; \Lambda) - \underline{\mu}(\x, \tf; \Lambda)}{\y_{\max} - \y_{\min} \mid \X=x, \Tf=\tf}.
+\end{equation*}
+The user can sweep over a set of $\Lambda$ values and report the bounds corresponding to a $\rho$ value they deem tolerable (e.g., $\rho=0.5$ yields bounds for the assumption that half the unexplained range in $Y$ is due to unobserved confounders). For unbounded outcomes, the limits can be estimated empirically by increasing $\Lambda$ to a large value. Refer to \Cref{fig:rho} in the appendix for a comparison between $\rho$ and $\Lambda$.
+
+For another way to interpret $\Lambda$, in \Cref{app:kld} we $\Lambda$ can be presented as a bound on the Kullback–Leibler divergence between the nominal and complete propensity scores  through the relationship: $|\log{\left(\Lambda\right)}| \geq  D_{\mathrm{KL}}\left( P(\Yt \mid \Tf=\tf, \X=\x) || P(\Yt \mid \X=\x) \right)$.

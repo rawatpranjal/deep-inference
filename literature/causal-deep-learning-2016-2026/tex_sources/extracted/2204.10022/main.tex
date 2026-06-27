@@ -1,0 +1,280 @@
+\documentclass{article}
+\pdfoutput=1
+% if you need to pass options to natbib, use, e.g.:
+\PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2022
+
+
+% ready for submission
+% \usepackage{neurips_2022} 
+
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+% \usepackage[preprint]{neurips_2022}
+
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+    \usepackage[final]{neurips_2022}
+
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2022}
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+
+% \usepackage{selectp}
+% % \outputonly{1-16}
+% \outputonly{17-33}
+
+
+\usepackage{import}
+\usepackage{wrapfig}
+\usepackage{graphicx}
+\usepackage{subcaption}
+
+\newcommand{\uri}[1]{\textcolor{blue}{Uri: #1}}
+\newcommand{\nicolai}[1]{\textcolor{cyan}{Nicolai: #1}}
+\newcommand{\andrew}[1]{\textcolor{red}{Andrew: #1}}
+\newcommand{\yarin}[1]{\textcolor{green}{Yarin: #1}}
+\newcommand{\alyson}[1]{\textcolor{purple}{Alyson: #1}}
+
+\input{math_commands.tex}
+
+
+\definecolor{mydarkblue}{rgb}{0,0.08,0.45}
+\definecolor{purple}{HTML}{9673A6}
+\definecolor{red}{HTML}{B85450}
+\definecolor{blue}{HTML}{6C8EBF}
+\definecolor{orange}{HTML}{D79B00}
+\definecolor{green}{HTML}{82B366}
+\usepackage{hyperref}       % hyperlinks
+\hypersetup{
+    colorlinks=True,
+    linkcolor=mydarkblue,
+    citecolor=mydarkblue,
+    filecolor=mydarkblue,
+    urlcolor=mydarkblue,
+}
+\usepackage{cleveref}
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+
+
+\title{Scalable Sensitivity and Uncertainty Analyses for Causal-Effect Estimates of Continuous-Valued Interventions}
+
+
+\author{%
+    Andrew Jesson\thanks{Correspondence to \texttt{andrew.jesson@cs.ox.ac.uk}}\\
+    OATML \\ 
+    Department of Computer Science \\ 
+    University of Oxford \\
+    % \texttt{andrew.jesson@cs.ox.ac.uk} \\
+    \And
+    Alyson Douglas \\
+    AOPP \\ 
+    Department of Physics \\
+    University of Oxford \\
+    % \texttt{alyson.douglas@physics.ox.ac.uk} \\
+    \And
+    Peter Manshausen \\
+    AOPP \\ 
+    Department of Physics \\
+    University of Oxford \\
+    % \texttt{peter.manshausen@physics.ox.ac.uk} \\
+    \And
+    Maëlys Solal \\
+    Department of Computer Science \\
+    University of Oxford \\
+    % \texttt{maelys.solal@some.ox.ac.uk} \\
+    \And
+    Nicolai Meinshausen \\
+    Seminar for Statistics \\ 
+    Department of Mathematics \\ 
+    ETH Zurich \\
+    % \texttt{meinshausen@stat.math.ethz.ch} \\
+    \And
+    Philip Stier \\
+    AOPP \\ 
+    Department of Physics \\
+    University of Oxford \\
+    % \texttt{philip.stier@physics.ox.ac.uk} \\
+    \And
+    Yarin Gal \\
+    OATML \\ 
+    Department of Computer Science \\ 
+    University of Oxford \\
+    % \texttt{yarin@cs.ox.ac.uk} \\
+    \And
+    Uri Shalit \\
+    Machine Learning and Causal Inference in Healthcare Lab \\ 
+    Technion -- Israel Institute of Technology  \\
+    % \texttt{urishalit@technion.ac.il} \\
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+    Estimating the effects of continuous-valued interventions from observational data is a critically important task for climate science, healthcare, and economics. 
+    Recent work focuses on designing neural network architectures and regularization functions to allow for scalable estimation of average and individual-level dose-response curves from high-dimensional, large-sample data. 
+    Such methodologies assume ignorability (observation of all confounding variables) and positivity (observation of all treatment levels for every covariate value describing a set of units), assumptions problematic in the continuous treatment regime. 
+    Scalable sensitivity and uncertainty analyses to understand the ignorance induced in causal estimates when these assumptions are relaxed are less studied.
+    Here, we develop a continuous treatment-effect marginal sensitivity model (CMSM) and derive bounds that agree with the observed data and a researcher-defined level of hidden confounding. 
+    We introduce a scalable algorithm and uncertainty-aware deep models to derive and estimate these bounds for high-dimensional, large-sample observational data.
+    We work in concert with climate scientists interested in the climatological impacts of human emissions on cloud properties using satellite observations from the past 15 years. 
+    This problem is known to be complicated by many unobserved confounders.
+\end{abstract}
+
+\import{sections/}{introduction}
+\import{sections/}{problem}
+\import{sections/}{methods}
+\import{sections/}{related_works}
+\import{sections/}{experiments}
+
+\begin{ack}
+We would like to thank Angela Zhou for introducing us to the works of \citep{zhao2019sensitivity} and \citep{dorn2021sharp}. 
+These works use the percentile bootstrap for finite sample uncertainty estimation within their sensitivity analysis methods.
+We would also like to thank Lewis Smith for helping us understand the Marginal Sensitivity Model of  \cite{tan2006msm} in detail.
+Finally, we would like to thank Clare Lyle and all anonymous reviewers for their valuable feedback.
+
+This research was supported by the European Research Council (ERC) project constRaining the EffeCts of Aerosols on Precipitation (RECAP) under the European Union's Horizon 2020 research and innovation program with grant agreement no. 724602 and from the European Union's Horizon 2020 research and innovation program project Constrained aerosol forcing for improved climate projections (FORCeS) under grant agreement No 821205. and Marie Skłodowska-Curie grant agreement No 860100 (iMIRACLI).
+This work used JASMIN, the UK's collaborative data analysis environment (http://jasmin.ac.uk).
+U.S. was partially supported by the Israel Science Foundation (grant No. 1950/19).
+\end{ack}
+
+
+\bibliography{references}
+\bibliographystyle{alpha}
+
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Checklist}
+
+
+%%% BEGIN INSTRUCTIONS %%%
+The checklist follows the references.  Please
+read the checklist guidelines carefully for information on how to answer these
+questions.  For each question, change the default \answerTODO{} to \answerYes{},
+\answerNo{}, or \answerNA{}.  You are strongly encouraged to include a {\bf
+justification to your answer}, either by referencing the appropriate section of
+your paper or providing a brief inline description.  For example:
+\begin{itemize}
+  \item Did you include the license to the code and datasets? \answerYes{See Section.}
+  \item Did you include the license to the code and datasets? \answerNo{The code and the data are proprietary.}
+  \item Did you include the license to the code and datasets? \answerNA{}
+\end{itemize}
+Please do not modify the questions and only use the provided macros for your
+answers.  Note that the Checklist section does not count towards the page
+limit.  In your paper, please delete this instructions block and only keep the
+Checklist section heading above along with the questions/answers below.
+%%% END INSTRUCTIONS %%%
+
+
+\begin{enumerate}
+
+
+\item For all authors...
+\begin{enumerate}
+  \item Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
+    \answerYes{}
+    \begin{enumerate}
+        \item we claim to introduce a novel marginal sensitivity model for continuous valued treatment effect (the CMSM). See \Cref{sec:methods}.
+        \item we claim to derive bounds for the CAPO and APO functions that agree with the CMSMS and observed data. See \Cref{sec:bounds}.
+        \item we claim to provide tractable estimators of the CAPO and APO bounds. See \Cref{sec:estimator,sec:algorithm}.
+        \item we claim to provide bounds that account for finite-sample (statistical) uncertainty. See \Cref{sec:uncertainty}.
+        \item we claim to provide a novel architecture for scalable estimation of the effects of continuous valued interventions. See \Cref{sec:scalable}.
+        \item we claim that the bounds cover the true ignorance interval for well specified $\Lambda$. See \Cref{fig:capo_causal_1,fig:capo_causal_2,fig:capo_causal_3,fig:capo_causal_4} and \Cref{th:sharpness}.
+        \item we claim that this model scales to real-world, large-sample, high-dimensional data. See \Cref{sec:clouds}
+    \end{enumerate}
+  \item Did you describe the limitations of your work?
+    \answerYes{}
+    \begin{enumerate}
+        \item We have discussed the major limitation of sensitivity analysis methods, that unobserved confounding is not identifiable from data alone. We have tried to be honest and transparent that our method provides users with a way to communicate the uncertainty induced when relaxing the ignorability assumption.
+        We do not claim that lambda is in any way identifiable without further assumptions.
+        \item In \Cref{sec:clouds}, we have clearly discussed the limitations of analyses of aerosol-cloud interactions using satellite data where we only see underlying causal mechanisms through proxy variables. We hope this paper serves as a stepping stone for work that specifically addresses those issues.
+    \end{enumerate}
+  \item Did you discuss any potential negative societal impacts of your work?
+    \answerYes{}
+  \item Have you read the ethics review guidelines and ensured that your paper conforms to them?
+    \answerYes{}
+\end{enumerate}
+
+
+\item If you are including theoretical results...
+\begin{enumerate}
+    \item Did you state the full set of assumptions of all theoretical results?
+        \answerYes{} 
+        We have five theoretical results. 
+        \Cref{prop:density_ratio}, \Cref{eq:mu_w}, \Cref{eq:CAPO_lower}, \Cref{eq:CAPO_upper}, and \Cref{th:sharpness}.
+        All assumptions are stated for each.
+    \item Did you include complete proofs of all theoretical results?
+        \answerYes{}
+        The proof of \Cref{prop:density_ratio} is given in \Cref{proof:density_ratio}. 
+        The proof of \Cref{eq:mu_w} is given in \Cref{lem:capo}.
+        The proofs for \Cref{eq:CAPO_lower} and \Cref{eq:CAPO_upper} are given in \Cref{lem:monotonic}.
+        The proof for \Cref{th:sharpness} is given in \Cref{app:sharpness}.
+\end{enumerate}
+
+
+\item If you ran experiments...
+\begin{enumerate}
+  \item Did you include the code, data, and instructions needed to reproduce the main experimental results (either in the supplemental material or as a URL)?
+    \answerYes{} Code, data, and instructions are provided in the suppleemental material. 
+  \item Did you specify all the training details (e.g., data splits, hyperparameters, how they were chosen)?
+    \answerYes{} We specify these details in \Cref{app:datasets} and \Cref{app:implementation} as well as in the provided code. 
+    \item Did you report error bars (e.g., with respect to the random seed after running experiments multiple times)?
+    \answerYes{} Both random seeds and random bootstrapped sampling of the training data.
+    \item Did you include the total amount of compute and the type of resources used (e.g., type of GPUs, internal cluster, or cloud provider)?
+    \answerYes{} this is outlined in \Cref{app:implementation}
+\end{enumerate}
+
+
+\item If you are using existing assets (e.g., code, data, models) or curating/releasing new assets...
+\begin{enumerate}
+  \item If your work uses existing assets, did you cite the creators?
+    \answerYes{} We use existing satellite data and open source code libraries that we have cited. 
+  \item Did you mention the license of the assets?
+    \answerYes{}
+  \item Did you include any new assets either in the supplemental material or as a URL?
+    \answerYes{} we provide a new synthetic dataset and code base
+  \item Did you discuss whether and how consent was obtained from people whose data you're using/curating?
+    \answerNA{}
+  \item Did you discuss whether the data you are using/curating contains personally identifiable information or offensive content?
+    \answerNA{}
+\end{enumerate}
+
+
+\item If you used crowdsourcing or conducted research with human subjects...
+\begin{enumerate}
+  \item Did you include the full text of instructions given to participants and screenshots, if applicable?
+    \answerNA{}
+  \item Did you describe any potential participant risks, with links to Institutional Review Board (IRB) approvals, if applicable?
+    \answerNA{}
+  \item Did you include the estimated hourly wage paid to participants and the total amount spent on participant compensation?
+    \answerNA{}
+\end{enumerate}
+
+
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\import{sections/}{appendices}
+
+
+\end{document}
