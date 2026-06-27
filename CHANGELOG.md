@@ -2,6 +2,7 @@
 
 ## 2026-06-27
 
+- Added `docs/dev/competitors.md`, an internal decider doc mapping the deep causal inference landscape (PyWhy/DoWhy/EconML, DoubleML, Uber CausalML, causallib) against `deep-inference`. Coverage matrix over 16 method families, per-package profiles verified from each package's own docs, and a gap analysis showing the white space is torch-native estimators with influence-function SEs across causal and structural-econ targets. Ends with a build-next shortlist cross-linked to `backlog.md` and grounded in the 86-paper literature corpus. Claims audited by a fresh agent against the package code and the catalog.
 - Added a searchable text layer to `literature/causal-deep-learning-2016-2026/`: Docling Markdown for all 79 local PDFs, public arXiv source extraction for 75 records, retained 476 TeX-like files / 830 text-like source files, and generated `SEARCH.md` plus CSV/JSON catalog paths for `rg`-based search.
 - Added `literature/causal-deep-learning-2016-2026/`: a reproducible causal deep learning literature pack with 86 indexed treatment-effect / neural semiparametric causal-inference records, `websource` batch inputs/logs, retrieval notes, and local PDF status (79 public PDFs downloaded; 7 publisher/title records indexed but unresolved through public routes).
 
