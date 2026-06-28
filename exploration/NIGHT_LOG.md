@@ -9,18 +9,15 @@
 - Code is committed and syntax-clean. All knobs exist: spike.py flags `--flm-folds`,
   `--flm-repeats`, `--tikhonov` (matched eps), `--max-condition` (spectrum-adaptive clamp),
   `--logit-lambdas`/`--linear-lambdas` (specs: cholesky, oracleprop[logit], oracle, ridge/flat).
-- RUNNING: honest M=50 (b7z4ca6ta -> exploration/results_honest_M50.md). Linear leg DONE
-  (see below: cholesky biased+over-covers; RieszNet diverges). Logit leg finishing.
-- NEXT ACTION when cores free: launch the localizing ladder (do NOT change folds/reg yet):
-  ```
-  PYTHONPATH=src python3 exploration/spike.py --dgp both --M 50 --n 2000 --flm-folds 10 \
-    --flm-epochs 150 --workers 8 --tikhonov 0.01 \
-    --logit-lambdas cholesky,oracleprop,oracle --linear-lambdas cholesky,oracle \
-    2>&1 | tee exploration/results_ladder.md
-  ```
-  Read: is oracle-Λ unbiased/well-calibrated at folds=10/tik=0.01? If yes, cholesky's bias &
-  over-coverage are Λ-estimation; if oracle also fails, it's θ/folds/reg. THEN change ONE knob
-  (folds, then max_condition) and iterate at M=50 for DIRECTION; certify at M=200.
+- LOCALIZED: linear cholesky's bias+over-coverage = Λ-ESTIMATION (cholesky-net overfitting);
+  TRUE Λ is flawless at folds=10. RieszNet divergence = unpenalized eps (TMLE), not folds.
+- RUNNING: fix-test (bbgecezmo -> exploration/results_fix1.md), both DGPs, M=50, folds=10,
+  tikhonov=0.01. Tests cholesky EARLY-STOPPING (anti-overfit) + RieszNet MEDIAN-over-3-splits.
+- NEXT ACTION when it lands: read results_fix1.md. If linear cholesky -> ~oracle (bias~0,
+  SE-ratio~1) and RieszNet emp SE collapses (1.14 -> ~0.06), the fixes work -> go to M>=200
+  certification. If linear cholesky still off, next lever = max_condition=30 clamp (`--max-condition 30`,
+  spectrum-adaptive). If RieszNet still diverges, the divergence is data-level; investigate eps
+  further or report honestly. One knob at a time; certify only at M>=200.
 - Verify before "done": fresh Opus/general agent audits the M=200 numbers + that nothing was
   tuned to the truth. Two audits already passed (cholesky impl; estimand) + caught the 2x bug.
 
