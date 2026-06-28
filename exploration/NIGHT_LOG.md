@@ -54,5 +54,30 @@ Read: general FLM[cholesky] already hits the gate on logit. Oracle-MLE canary at
 the earlier M=8 "everything broken" was small-M noise. The one real gap is RieszNet's full-batch
 divergence -> addressed by the minibatch + two-stage-LR rewrite (in the honest run below).
 
-### Honest M=50 both DGPs (ε=0.01 truth-free, minibatch RieszNet, no seed) -- RUNNING
-(results appended when complete)
+### Honest M=50, LINEAR leg (ε=0.01, folds=10, minibatch RieszNet, no seed), truth=1.0
+| method | bias | emp SE | mean SE | SE-ratio | cover |
+|---|---|---|---|---|---|
+| Oracle-MLE | -0.001 | 0.055 | 0.054 | 0.98 | 98% |  <- anchor ok
+| FLM[cholesky] | -0.030 | 0.084 | 0.117 | 1.39 | 100% |  <- NOT flawless: biased + over-covers
+| FLM[flat] (contrast) | +0.018 | 0.059 | 0.046 | 0.77 | 86% |  <- under-covers as expected
+| FLM[oracle] | (INVALID -- buggy 2x, fixed after this run) |
+| RieszNet (minibatch) | +0.039 | 0.326 | 0.087 | 0.27 | 98% |  <- STILL diverging
+| Naive | -0.004 | 0.064 | 0.012 | 0.19 | 22% |
+
+Two real gaps found (this is the diagnostic working, not gaming):
+1. **Linear FLM[cholesky] biased -0.030 and over-covers (1.39).** The original clean cholesky
+   run used folds=20 (bias -0.0015); folds=10 here is too few -> bias. The over-coverage is the
+   heavy-tailed ψ from near-singular Λ⁻¹ at low overlap: a trace-relative tikhonov (ε=0.01)
+   over-regularizes linear (large trace) while logit needs MORE -> a fixed additive ε can't be
+   flawless for both. Fix direction: spectrum-adaptive condition-number clamp (max_condition),
+   which adapts to each Λ̂'s own spectrum; one value works across DGPs. Now exposed + sweepable.
+2. **RieszNet still diverges** (a few reps give wild estimates -> emp SE 0.33, SE-ratio 0.27).
+   Hardened _fit_riesz: 3 restarts, batch 256, + a truth-free divergence guard (reject restarts
+   whose val representer RMS >> the overlap-implied bound). Median-over-repeats is the fallback.
+
+### Next diagnostic run (queued, fires when cores free)
+both DGPs, M=50, folds=20, tikhonov=1e-6, max_condition=30 (clamp does the regularizing),
+logit specs cholesky/oracleprop/oracle, linear cholesky/oracle, hardened RieszNet. Tests whether
+a single spectrum-adaptive clamp makes cholesky flawless on both, and whether the RieszNet guard
+kills the divergence. Oracle ladder (oracleprop = true propensity) localizes any residual gap.
+

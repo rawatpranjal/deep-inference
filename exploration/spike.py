@@ -185,11 +185,14 @@ def _loss(net, t, x, y, ones, zeros, logit):
     return reg + LAMBDA1 * riesz + LAMBDA2 * tmle
 
 
-def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=2, batch_size=512):
-    """Faithful RieszNet fit, now with the paper's minibatch + two-stage LR schedule
-    (Adam 1e-3 then 2e-4) instead of full-batch. Minibatch noise + the LR drop remove
-    the occasional full-batch-Adam divergence to a junk Riesz head; grad-clip and
-    best-of-restarts (by val loss) are kept as belt-and-suspenders."""
+def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=3,
+               batch_size=256, weight_decay=L2):
+    """Faithful RieszNet fit: minibatch + two-stage LR (Adam 1e-3 then 2e-4). Restart
+    selection uses a divergence-robust val metric -- the combined val loss PLUS a penalty
+    on the validation representer magnitude. The DR moment ψ = (g̃1-g̃0) + a(Y-g̃) blows up
+    when the learned representer a(Z) runs away; the true ATE representer (T-e)/(e(1-e)) is
+    bounded by overlap, so an implausibly large val |a| flags a junk head that the plain
+    val loss (dominated by the regression term) does not reject. Truth-free guard."""
     d_x = Xtr.shape[1]
 
     # train/val split within the fold for early stopping (fixed across restarts)
@@ -207,7 +210,15 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=2, bat
         return t, x, y, torch.ones_like(t), torch.zeros_like(t)
 
     val_b = pack(val)
-    net = RieszNet(d_x)
+
+    def val_score(net):
+        # combined val loss + soft penalty on a runaway representer (rms of a on val)
+        with torch.no_grad():
+            loss = _loss(net, *val_b, logit).item()
+            _, a_val = net(val_b[0], val_b[1])
+            a_rms = float((a_val ** 2).mean().sqrt())
+        return loss + 0.01 * max(0.0, a_rms - 25.0) ** 2
+
     global_best, global_state = float("inf"), None
     for r in range(restarts):
         torch.manual_seed(seed + 1000 * r)
@@ -215,7 +226,7 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=2, bat
         net = RieszNet(d_x)
         # L2 on net weights only, NOT on eps (paper: R does not take eps as input)
         opt = torch.optim.Adam([
-            {"params": [p for n, p in net.named_parameters() if n != "eps"], "weight_decay": L2},
+            {"params": [p for n, p in net.named_parameters() if n != "eps"], "weight_decay": weight_decay},
             {"params": [net.eps], "weight_decay": 0.0},
         ], lr=1e-3)
         best, best_state, wait = float("inf"), None, 0
@@ -231,8 +242,7 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=2, bat
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 5.0)
                 opt.step()
             net.eval()
-            with torch.no_grad():
-                v = _loss(net, *val_b, logit).item()
+            v = val_score(net)
             if v < best - 1e-5:
                 best, best_state, wait = v, {k: p.clone() for k, p in net.state_dict().items()}, 0
             else:
@@ -241,6 +251,7 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=2, bat
                     break
         if best_state is not None and best < global_best:
             global_best, global_state = best, best_state
+    net = RieszNet(d_x)
     if global_state is not None:
         net.load_state_dict(global_state)
     net.eval()
