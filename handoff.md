@@ -1,4 +1,58 @@
-# Handoff — 2026-06-28 — main
+# Handoff — 2026-06-28 (overnight) — branch night/general-lambda-perfect-scores
+
+## TL;DR (60-second read)
+Overnight goal: make the GENERAL FLM and RieszNet estimators FLAWLESS (SE-ratio≈1, coverage≈0.95,
+bias≈0) on the linear AND logit ATE benchmarks, no analytical-formula exploitation, using an
+oracle ladder to localize issues. RESULT: **FLM[cholesky] is flawless on both DGPs** at M=50
+(linear 1.04/96%, logit 1.01/98%, bias≈0). **RieszNet is stabilized** (divergence killed) but
+mildly conservative. An **M=200 certification run is in progress** (the gate). All work is on the
+branch `night/general-lambda-perfect-scores`; main is untouched pending the squash-merge.
+
+## What shipped (committed to the branch)
+- **General `lambda_method='cholesky'`** in the package (`src/deep_inference/lambda_/estimate.py`):
+  a PSD-by-construction net Λ̂(x)=L(x)L(x)ᵀ trained Frobenius to the per-obs Hessians, now with
+  **early stopping** on a held-out Hessian-fit split (the key fix — the net was overfitting the
+  noisy rank-1 per-obs Hessians, which poisoned the near-singular inverse). `max_condition`
+  exposed (spectrum-adaptive inverse reg). Routed in `selector.py`.
+- **`inference(lambda_strategy=...)` passthrough** (`__init__.py`) — inject a custom/oracle Λ.
+- **Benchmark harness** (`exploration/spike.py`): both DGPs through the general `inference()` path;
+  oracle ladder (cholesky / oracleprop / oracle / ridge|flat contrasts); RieszNet rewritten with
+  minibatch + 2-stage LR + **median-over-3-splits** (kills the occasional divergence) + eps clamp.
+- Knobs: `--flm-folds --flm-repeats --tikhonov --max-condition --logit-lambdas --linear-lambdas`.
+
+## How it was won (the diagnostic arc — this is the science)
+1. Linear cholesky was biased (-0.030) AND over-covering (SE-ratio 1.39). The **oracle ladder**
+   (true Λ injected, matched folds/tik) showed the true Λ is flawless at folds=10 -> the failure
+   is **Λ-ESTIMATION, not folds/θ**. Root cause: cholesky-net overfitting -> **early stopping** fixed it.
+2. The true logit Λ is genuinely near-singular (det=e(1-e)·w0·w1 -> 0 at overlap AND outcome
+   saturation), so the inverse needs real regularization; a single truth-free tikhonov=0.01 works
+   for both DGPs (NOT per-DGP tuned). Even oracle-Λ under-covers at ε≈0 -> reg matters > Λ accuracy.
+3. RieszNet's divergence is the unpenalized eps/TMLE knob, not the representer magnitude; median
+   over 3 cross-fit splits rejects the divergent split. Cost: mild conservatism (RieszNet needs
+   this crutch; cholesky does not).
+
+## Integrity guardrails honored (autochecks caught these)
+- No fixed seed on the Λ net (init variance stays in the empirical SD -> honest SE-ratio).
+- One truth-free tikhonov for both DGPs (NOT tuned per-DGP to hit a target -> not gaming).
+- Localize with the oracle ladder BEFORE changing knobs; certify "flawless" ONLY at M>=200.
+- Two fresh-agent audits passed (cholesky impl; estimand) + caught a factor-2 linear-oracle bug (fixed).
+
+## Pending before "done" (next session, or when M=200 lands)
+1. Read `exploration/results_cert_M200.md`; confirm cholesky SE-ratio∈[0.9,1.1], coverage∈[92,98],
+   |bias| small on BOTH DGPs. Report RieszNet honestly (valid, mildly conservative).
+2. Regression check: run an existing eval (e.g. eval_06 coverage) — package changes are additive
+   (cholesky-only early-stop; max_condition default 100 unchanged) so no regression expected; confirm.
+3. Fresh-agent verify the M=200 numbers + that nothing was tuned to the truth.
+4. Build dashboard (`exploration/build_dashboard.py --in exploration/results_cert_M200.md`),
+   update CHANGELOG, then **squash-merge the branch to main as ONE commit** (user as author).
+5. OPTIONAL "others": extend the flawless general estimator to one more family (poisson/probit) —
+   only if the core is solid and time remains.
+
+## Full running log
+`exploration/NIGHT_LOG.md` (decisions, every result table, resume pointer).
+
+---
+# (PREVIOUS) Handoff — 2026-06-28 — main
 
 ## Where we left off
 Diagnosed AND fixed (in a spike) the FLM linear-ATE SE undercoverage. Root cause = the
