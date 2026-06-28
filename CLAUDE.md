@@ -287,6 +287,8 @@ python3 -m evals.run_all --quick 2>&1 | tee evals/evals_report_quick.txt
 - **lambda_method='ridge'** (default, validated 96% coverage)
 - **t_tilde=0.0** (must match DGP's mu_true() definition)
 
+**Coverage lesson (folds + repeats + nuisance size).** Linear ATE valid CIs need `n_folds>=50` AND `n_repeats>=5` (M=200: folds=20 -> 90%, folds=50 -> 92%, folds=50+n_repeats=5 -> 94% point / SE-ratio 0.915). Repeated cross-fitting (median DML) is the SE-ratio lever, not the variance formula. A residual ~8% SE undercount plus a small bias persist at n=2000 (likely finite-sample, unconfirmed). Counterintuitive: a BIGGER nuisance net recovers alpha/beta better but makes coverage WORSE (94->90), so keep `hidden_dims` small for calibration.
+
 ## How to do E2E User Runs
 
 **Benchmarking = comparing NN to Oracle. Show EVERYTHING. No opinions. Only facts.**
