@@ -1,54 +1,49 @@
-# Handoff — 2026-06-09 — main
+# Handoff — 2026-06-28 — main
 
 ## Where we left off
-Mid coverage-fix program. A fast *directional* SIM2 sweep (R0 baseline vs R1a deeper
-training; folds=5/M=12/threads=8) is RUNNING in background (job `b0cfmmt45` →
-`evals/reports/sim_02_R*fast_*.txt`). Even this trimmed config has run >2h without
-finishing — CNN Monte Carlo on CPU is the binding constraint.
+Diagnosed AND fixed (in a spike) the FLM linear-ATE SE undercoverage. Root cause = the
+flat aggregate Lambda(x); the load-bearing failure is inverting a near-singular estimated
+Lambda under severe overlap. Built a general PSD-by-construction fix. All committed + pushed
+(commits 2965cb8, e0f62b1). Stopped at a clean milestone. Next session formalizes generality.
 
 ## Active streams (clustered)
-- **Pristine close-out — DONE, pushed.** Batches 0-5 (editable-install fix; multinomial
-  `inference()` estimand bug E[α₂]→E[β₁]; repo hygiene — untracked 53 copyrighted PDFs +
-  211 data files, sealed leak paths; API coherence + decision tree; doc sync), Batch 3
-  (variance → FLM **pooled** default + `within_fold` toggle; removed dead inversion `ridge`
-  knob), Part A (repeated cross-fitting median DML + `n_repeats`/`three_way_theta_frac`/
-  `dropout`/`weight_decay` knobs; CLI-ified sim_02 / run_all / eval_14). 39 fast tests green.
-- **Coverage-fix program — IN FLIGHT (SEQUENTIAL, compute-bound).** Target: SIM2 CNN 85%
-  under-coverage. Hypothesis from the eval_06 firewall: the z_mean<0 bias is driven by
-  nuisance UNDER-TRAINING → training depth (epochs/patience) is the prime lever, `n_repeats`
-  the secondary SE lever. NEXT: read R0fast vs R1afast summary; if R1a's z_mean→0 and
-  coverage↑, confirm at full M=20/folds=20/n=10k, then add `n_repeats` if SE-ratio<0.8.
-- **eval_14 DiD + SIM3 — PENDING (task 5).** eval_14: re-run M=50/n=8000 (only z_mean
-  fails; coverage 96% already ok). SIM3: confirm it's over-conservative (100%, not a bug);
-  relabel harness so >99% ≠ "FAIL".
-- **Finalize — PENDING (task 6).** Bake winning configs as defaults; regenerate run_all;
-  update known_limitations/CHANGELOG; commit.
+- **PSD-by-construction Lambda fix (LEAD, general).** Net outputs a Cholesky factor L(x),
+  Lambda_hat = L L^T (PSD for any output), trained Frobenius to the autodiff per-obs Hessians.
+  Also a spectral variant Q diag(softplus(lambda)) Q^T. Both hit target on LINEAR at M=50
+  (cholesky 96%/1.01, spectral 98%/0.98). `exploration/lambda_cholesky.py`. SEQUENTIAL next:
+  (1) run on the logit DGP, (2) M=200 confirm, (3) fresh-agent verify.
+- **Linear propensity fix (DONE, family-specific).** Estimate e(x), build Lambda analytically.
+  95%/1.04 at M=200, confirmed. NOT general (uses the closed form). `exploration/lambda_inv_fix.py`.
+- **Diagnosis (DONE).** `exploration/lambda_decomp.py` (11-object panel vs oracle),
+  `lambda_surface.py` (+ .png, the det<0 figure). Write-up: `docs/notes/flm_lambda_se_undercount.md`.
 
 ## Decisions made this session
-- Variance: FLM prescribes POOLED (sample var of ψ at global mean) → now default;
-  within_fold kept as toggle. structural_dml SE shifted within-fold→pooled (widens, safe).
-- API: keep 3 entry points + document decision tree (Option B); NOT deprecating.
-- Copyrighted PDFs: removed from HEAD only (`git rm --cached`), NOT history-rewritten (user
-  chose option a; no force-push) — they remain in git history.
-- DR-DiD (Sant'Anna-Zhao 2020 + Callaway-Sant'Anna 2021) logged to `docs/dev/backlog.md`.
+- The fix MUST be general: never exploit a family's closed-form Hessian. User corrected this
+  twice, hard ("you cannot use the analytical formula", "I want delta(x) not e(x)").
+- PSD-by-construction beats entry-wise regression + post-hoc clamp (clamp insufficient:
+  Lambda-inv-R2 went -4395 -> -385, still broken).
+- Stability beats accuracy: PSD methods have Lambda-inv-R2 only 0.17-0.20 yet calibrated SE;
+  mlp fit Lambda to R2 0.94 and still detonated (var_ratio 1475).
 
 ## Open questions
-- Compute: SIM2 CNN MC is brutally slow on CPU. May need GPU, far smaller configs, or to
-  accept "n-sweep convergence as proof" rather than chase 95% at n=10k.
-- Clean eval_06 at VALIDATED settings (epochs=200/patience=50) to confirm no-regression, or
-  trust byte-identical unit tests + theory? (Deferred; SIM2 R0 is the de-facto check.)
+- Does PSD-Cholesky hold on logit / gamma (theta-dependent, y-dependent Hessians)? Reasoned
+  YES (every GLM Hessian = positive-weight * rank-1 outer product, so Lambda is PSD for free),
+  but NOT run. This is the one experiment that converts "general by construction" to "shown".
+- Candidate Learned Rule for CLAUDE.md (needs your OK): "Fixing a nuisance estimator -> keep
+  it general; do not slide into a family's closed-form shortcut. The package is general."
 
 ## Landmines / gotchas
-- **Light eval ≠ valid firewall.** eval_06 at reduced epochs (150 vs validated 200)
-  reintroduces the z_mean<0 regularization bias and tanks coverage to 80% — independent of
-  any code change. Firewalls MUST use validated epochs/patience.
-- **eval_06 default drifted** to n=8000/lgbm (`evals/eval_06_coverage.py:174,177`) → ~135
-  min/run. CLAUDE.md still says n=5000/ridge. Use explicit light args for quick checks.
-- **n_repeats>1**: returned `psi_values`/diagnostics come from the FIRST repeat only; only
-  scalar mu_hat/se/CI are median-aggregated. `dropout` is a no-op when a `network_factory`
-  is supplied (SIM2 CNN) → use `weight_decay`/epochs/patience for SIM2 undersmoothing.
-- Package is editable (`pip install -e .` on python3.11). Always run with `python3.11`.
+- `exploration/lambda_cholesky.py` run_flm_cell (~line 109) hardcodes `family="linear"` — that
+  is the TEST-DGP pin, not the estimator. Change it (and the target) for the logit test.
+- SpectralNet asserts d==2 (Givens rotation); generalize to O(d) for theta_dim>2. Cholesky has
+  no such cap.
+- Env fixes this session: lightgbm upgraded 4.5 -> 4.6.0 (was ABI-broken vs sklearn 1.8);
+  pygam installed. Interpreter: `/opt/homebrew/bin/python3.11`, run with `PYTHONPATH=src`.
+- Linear Hessian is theta-INDEPENDENT, so linear never exercises the autodiff-at-theta-hat path;
+  that is precisely why logit (p(1-p) weight) is the real generality test.
+- Two intermediate `exploration/lambda_sweep_2026*/` dirs left untracked (early fast-pass logs,
+  superseded by the result tables). Harmless.
 
 ## Suggested next move
-When `b0cfmmt45` lands: compare R0fast vs R1afast z_mean/coverage. If deeper training pulls
-z_mean toward 0, training depth is the fix — confirm at full settings, then `n_repeats` for SE.
+Wire the logit DGP through `exploration/lambda_cholesky.py` and run the autodiff-Cholesky there.
+That single result earns the generality claim. Then M=200 confirm + a fresh-agent check.
