@@ -125,7 +125,32 @@ tikhonov under-covers because its near-singular inverse amplifies θ̂ noise -> 
 matters MORE than Λ accuracy. This is why the ladder must use MATCHED tikhonov (0.01) to
 compare cholesky vs oracle fairly. So logit cholesky is ~there; LINEAR cholesky is the gap.
 
-### Next: localizing ladder (matched settings, fires when cores free)
+### LOCALIZED (ladder, linear, matched folds=10/tik=0.01, fixed oracle), truth=1.0
+| method | bias | emp SE | mean SE | SE-ratio | cover |
+|---|---|---|---|---|---|
+| FLM[oracle] (TRUE Λ) | +0.005 | 0.060 | 0.058 | 0.98 | 96% |  <- FLAWLESS at folds=10
+| FLM[cholesky] (est Λ) | -0.030 | 0.084 | 0.117 | 1.39 | 100% |  <- broken
+| RieszNet (guard only) | +0.18 | 1.14 | 0.19 | 0.17 | 98% |  <- still diverges
+
+CONCLUSION: linear cholesky's bias AND over-coverage are 100% Λ-ESTIMATION (the TRUE Λ is
+flawless at the same folds=10/tik=0.01, so it is NOT folds/θ -- my earlier "folds" guess was
+wrong; localizing first was right). Root cause: the cholesky net OVERFITS the noisy rank-1
+per-obs Hessians (more epochs made Λ̂ worse), and the near-singular inverse hugely amplifies
+that error. RieszNet divergence is in the unpenalized eps (TMLE knob), not the representer
+magnitude, so the RMS guard missed it.
+
+### Fixes applied (committed) and under test (run bbgecezmo -> results_fix1.md)
+- cholesky: EARLY STOPPING on a held-out Hessian-fit val split (package estimate.py). Fits the
+  smooth E[H|X] instead of per-obs noise. Self-check still PASS (recovers E[H|X], PSD). Won't
+  hurt logit (it wasn't overfitting). Principled, no magic constant.
+- RieszNet: MEDIAN over 3 cross-fit splits (median DML) -- rejects a divergent split outright;
+  + eps clamp to [-2,2]; + the representer guard. riesz_epochs 400->200 (minibatch converges
+  faster), since median triples the cost.
+These target DIFFERENT estimators so one M=50 run tests both without confounding. Read next:
+does early-stopping pull linear cholesky to ~oracle (bias->0, SE-ratio->1)? does median kill the
+RieszNet divergence (emp SE 1.14 -> ~0.06)? M=50 = direction only; certify at M>=200.
+
+### (superseded) localizing ladder
 both DGPs, M=50, folds=10 (UNCHANGED), --tikhonov 0.01 (matched across ALL rungs), default
 max_condition. Rungs: linear cholesky,oracle; logit cholesky,oracleprop,oracle (oracle now
 factor-2-fixed). Reads: (a) is oracle-Λ unbiased at folds=10? if yes -> cholesky's -0.030 bias

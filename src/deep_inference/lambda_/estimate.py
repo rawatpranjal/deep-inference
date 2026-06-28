@@ -220,11 +220,33 @@ class EstimateLambda(BaseLambdaStrategy):
         # reproducible via the caller's per-run global seed. Net moved to X's device for GPU.
         net = _CholeskyNet(Xf.shape[1], d=d_theta, hidden=self.chol_hidden).to(Xf.device)
         opt = torch.optim.Adam(net.parameters(), lr=self.chol_lr)
-        net.train()
+        # Early stopping on a held-out split. The targets are NOISY rank-1 per-obs Hessians;
+        # the object we want is the SMOOTH conditional mean E[H|X]. Without early stopping the
+        # net overfits the per-obs noise (more epochs made Λ̂ WORSE, not better), which poisons
+        # the near-singular inverse -> biased correction + heavy-tailed ψ. Validating on a held
+        # split and keeping the best-val state fits the smooth mean instead.
+        n = len(Xf)
+        n_val = max(8, n // 5)
+        perm = torch.randperm(n, device=Xf.device)
+        vi, ti = perm[:n_val], perm[n_val:]
+        Xt, Ht, Xv, Hv = Xf[ti], H[ti], Xf[vi], H[vi]
+        best_val, best_state, wait, patience = float("inf"), None, 0, 25
         for _ in range(self.chol_epochs):
+            net.train()
             opt.zero_grad()
-            ((net(Xf) - H) ** 2).mean().backward()
+            ((net(Xt) - Ht) ** 2).mean().backward()
             opt.step()
+            net.eval()
+            with torch.no_grad():
+                v = ((net(Xv) - Hv) ** 2).mean().item()
+            if v < best_val - 1e-9:
+                best_val, best_state, wait = v, {k: p.clone() for k, p in net.state_dict().items()}, 0
+            else:
+                wait += 1
+                if wait >= patience:
+                    break
+        if best_state is not None:
+            net.load_state_dict(best_state)
         net.eval()
         self._chol_net = net
 
