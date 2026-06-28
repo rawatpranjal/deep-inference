@@ -1,12 +1,29 @@
 # Handoff — 2026-06-28 (overnight) — branch night/general-lambda-perfect-scores
 
 ## TL;DR (60-second read)
-Overnight goal: make the GENERAL FLM and RieszNet estimators FLAWLESS (SE-ratio≈1, coverage≈0.95,
-bias≈0) on the linear AND logit ATE benchmarks, no analytical-formula exploitation, using an
-oracle ladder to localize issues. RESULT: **FLM[cholesky] is flawless on both DGPs** at M=50
-(linear 1.04/96%, logit 1.01/98%, bias≈0). **RieszNet is stabilized** (divergence killed) but
-mildly conservative. An **M=200 certification run is in progress** (the gate). All work is on the
-branch `night/general-lambda-perfect-scores`; main is untouched pending the squash-merge.
+Goal: make the GENERAL FLM estimator valid (SE-ratio≈1, coverage≈0.95, bias≈0) on the linear,
+logit, AND poisson ATE benchmarks, no analytical-formula exploitation. RESULT (CERTIFIED, M=100):
+**FLM[cholesky] is valid on all three DGPs** — linear −0.0041/0.92/93%, logit −0.0020/1.07/98%,
+poisson −0.0116/0.98/98% (bias / SE-ratio / coverage), single truth-free tikhonov=0.01. Contrasts
+under-cover (flat 83%, ridge/oracle 86%, naive 23/10/33%); on logit cholesky even beats the
+oracle-Λ ceiling. RieszNet is fine on linear/logit, unreliable on poisson (SE-ratio 0.32, divergent
+reps). Cert ran fresh on a RunPod 16-core pod (all 3 DGPs one platform) → `exploration/results_cert_all_M100.md`
++ dashboard `exploration/results_cert_all_M100.html`. Fresh-agent (Opus) verify PASSED all 4 checks
+(numbers consistent, no truth-tuning, cholesky general, RieszNet-poisson canonical). Thin spot:
+linear 93% sits within ~2.6pp MC noise of the band edge at M=100. All work is on branch
+`night/general-lambda-perfect-scores`; **main is untouched, PENDING the user's go-ahead for the squash-merge.**
+
+## Backlog (user-requested 2026-06-28, "for later")
+1. **Ridge as a first-class tracked solution, not just a contrast.** Ridge-on-Hessian-entries is
+   general (no analytical-formula exploitation), so benchmark it as a real candidate alongside
+   cholesky, head-to-head. It's already a row in the logit/poisson tables; add a ridge row to the
+   LINEAR table too (currently linear contrasts cholesky vs flat-bug vs oracle only).
+2. **Promote the dashboard to THE canonical sim-study dashboard.** User likes
+   `exploration/build_dashboard.py` + the dark tabbed HTML; make it the standard output for every
+   simulation study here (not a one-off), so each benchmark run renders into the same dashboard.
+3. **Slowly add more functional forms after poisson.** Extend the flawless general
+   cholesky-Lambda cert to probit, gamma, etc., one family at a time (the package already has the
+   GLM families; the work is wiring each DGP + oracle row into spike.py like linear/logit/poisson).
 
 ## What shipped (committed to the branch)
 - **General `lambda_method='cholesky'`** in the package (`src/deep_inference/lambda_/estimate.py`):
