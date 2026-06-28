@@ -235,8 +235,15 @@ def _loss(net, t, x, y, ones, zeros, outcome):
     _, a1 = net(ones, x)
     _, a0 = net(zeros, x)
     riesz = (a_obs ** 2 - 2.0 * (a1 - a0)).mean()          # E[a^2 - 2 m(a)]
-    g_tilde = g_obs + torch.clamp(net.eps, -2.0, 2.0) * a_obs  # clamp the TMLE knob
-    tmle = ((y - g_tilde) ** 2).mean()                     # targeted reg (lambda2)
+    eps = torch.clamp(net.eps, -2.0, 2.0)                  # clamp the TMLE knob
+    if outcome == "poisson":
+        # canonical Poisson TMLE: fluctuate the log-mean η -> η+ε·a, target via Poisson
+        # deviance, whose FOC is E_n[a·(Y - λ̃)]=0 on the count scale (λ̃=exp(η+ε·a)).
+        lt = g_raw + eps * a_obs
+        tmle = (torch.exp(lt) - y * lt).mean()
+    else:                                                  # paper's generic squared-loss targeting
+        g_tilde = g_obs + eps * a_obs
+        tmle = ((y - g_tilde) ** 2).mean()
     return reg + LAMBDA1 * riesz + LAMBDA2 * tmle
 
 
@@ -341,10 +348,16 @@ def _riesz_single(Y, T, X, outcome, K, max_epochs, patience, seed):
             g1, a1 = gmean(ones)
             g0, a0 = gmean(zeros)
             g_obs, a_obs = gmean(te_t)
-        # TMLE-corrected regression g~ = g + eps*a, then the DR moment
-        gt1 = g1 + eps * a1
-        gt0 = g0 + eps * a0
-        gt_obs = g_obs + eps * a_obs
+        # TMLE-corrected regression, then the DR moment. Poisson fluctuates on the LOG
+        # scale (g̃ = g·exp(ε·a) = exp(η+ε·a)); linear/logit on the mean scale (g̃ = g+ε·a).
+        if outcome == "poisson":
+            gt1 = g1 * np.exp(eps * a1)
+            gt0 = g0 * np.exp(eps * a0)
+            gt_obs = g_obs * np.exp(eps * a_obs)
+        else:
+            gt1 = g1 + eps * a1
+            gt0 = g0 + eps * a0
+            gt_obs = g_obs + eps * a_obs
         g_diff[te] = g1 - g0                                # uncorrected plug-in
         psi[te] = (gt1 - gt0) + a_obs * (Y[te] - gt_obs)    # DR moment
     se, lo, hi, _ = compute_se_ci(torch.tensor(psi))
