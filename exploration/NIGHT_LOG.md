@@ -110,6 +110,21 @@ Two real gaps found (this is the diagnostic working, not gaming):
   The linear cholesky failure is TWO modes (bias -0.030 AND over-conservative SE 1.39) that
   may have different causes -- do not attribute both to "folds" without isolating.
 
+### Honest M=50, LOGIT leg (ε=0.01, folds=10, minibatch RieszNet no-guard), truth=0.1481
+| method | bias | emp SE | mean SE | SE-ratio | cover |
+|---|---|---|---|---|---|
+| Oracle-MLE | +0.006 | 0.022 | 0.022 | 0.98 | 92% |
+| FLM[cholesky] | -0.009 | 0.053 | 0.054 | 1.02 | 98% |  <- near-flawless calibration, mild over-cover
+| FLM[ridge] (contrast) | +0.018 | 0.023 | 0.020 | 0.86 | 82% |
+| FLM[oracle] @1e-8 | +0.021 | 0.032 | 0.027 | 0.82 | 84% |  <- TRUE Λ under-covers w/o reg!
+| RieszNet (no guard) | -0.072 | 0.520 | 0.097 | 0.19 | 92% |  <- still diverges hard
+| Naive | +0.008 | 0.029 | 0.003 | 0.11 | 20% |
+
+KEY: logit cholesky@0.01 (1.02/98%) BEATS oracle-Λ@1e-8 (0.82/84%). The true Λ at near-zero
+tikhonov under-covers because its near-singular inverse amplifies θ̂ noise -> regularization
+matters MORE than Λ accuracy. This is why the ladder must use MATCHED tikhonov (0.01) to
+compare cholesky vs oracle fairly. So logit cholesky is ~there; LINEAR cholesky is the gap.
+
 ### Next: localizing ladder (matched settings, fires when cores free)
 both DGPs, M=50, folds=10 (UNCHANGED), --tikhonov 0.01 (matched across ALL rungs), default
 max_condition. Rungs: linear cholesky,oracle; logit cholesky,oracleprop,oracle (oracle now
