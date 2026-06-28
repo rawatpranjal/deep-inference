@@ -726,7 +726,9 @@ def run(truth, dgp_name, M, n, flm_folds, flm_epochs,
     t0 = time.time()
 
     def _heartbeat():
-        while not stop_hb.wait(120):
+        # 300s < the cloud watchdog's 600s silence limit, but ~3x fewer monitor wakeups
+        # than 120s under a slow/contended box (a rep wave can be ~10 min there).
+        while not stop_hb.wait(300):
             print(f"  [heartbeat] {dgp_name} rep_offset={rep_offset}: "
                   f"{progress['done']}/{M} reps done, elapsed {int(time.time()-t0)}s",
                   flush=True)
