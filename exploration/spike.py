@@ -24,6 +24,8 @@ Run:
 
 import os
 import json
+import time
+import threading
 # Parallelism is ACROSS reps (one process per rep), so each worker must be
 # single-threaded or the BLAS/OMP backends oversubscribe (14 workers x 16 BLAS
 # threads = 260 threads on 16 cores). Must be set before numpy/torch import.
@@ -711,18 +713,37 @@ def run(truth, dgp_name, M, n, flm_folds, flm_epochs,
         if rec is not None:
             for k in rec_acc:
                 rec_acc[k].append(rec[k])
+        progress["done"] += 1
         flm_str = " ".join(f"{k}={out[k][0]:.3f}" for k in out if k.startswith("FLM"))
         print(f"  rep {rep_offset+i+1} (chunk {i+1}/{M}): oracle={out['Oracle'][0]:.3f} "
               f"{flm_str} riesz={out['RieszNet'][0]:.3f} naive={out['Naive'][0]:.3f}", flush=True)
 
-    if workers <= 1:
-        for i, t in enumerate(tasks):
-            absorb(i, _one_rep(t))
-    else:
-        # imap keeps results in submission order so seeds map to reps deterministically
-        with Pool(processes=workers) as pool:
-            for i, out in enumerate(pool.imap(_one_rep, tasks)):
-                absorb(i, out)
+    # Heartbeat: a rep wave can take ~9 min at high worker counts, and the cloud agent's
+    # stream watchdog kills the run after 600s of silence. Print every 120s so the stream
+    # never goes quiet between rep completions. Daemon thread, no effect on the statistics.
+    progress = {"done": 0}
+    stop_hb = threading.Event()
+    t0 = time.time()
+
+    def _heartbeat():
+        while not stop_hb.wait(120):
+            print(f"  [heartbeat] {dgp_name} rep_offset={rep_offset}: "
+                  f"{progress['done']}/{M} reps done, elapsed {int(time.time()-t0)}s",
+                  flush=True)
+
+    hb = threading.Thread(target=_heartbeat, daemon=True)
+    hb.start()
+    try:
+        if workers <= 1:
+            for i, t in enumerate(tasks):
+                absorb(i, _one_rep(t))
+        else:
+            # imap keeps results in submission order so seeds map to reps deterministically
+            with Pool(processes=workers) as pool:
+                for i, out in enumerate(pool.imap(_one_rep, tasks)):
+                    absorb(i, out)
+    finally:
+        stop_hb.set()
     return acc, rec_acc
 
 
