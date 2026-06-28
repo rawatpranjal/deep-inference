@@ -1,5 +1,32 @@
 # Night log: general PSD-Λ for perfect inference scores on linear + logit
 
+## >>> RESUME POINTER (read first) <<<
+- Branch: `night/general-lambda-perfect-scores` (main untouched; squash-merge at the end).
+- Goal (Stop hook active): FLAWLESS general FLM[cholesky] + RieszNet on linear AND logit
+  (SE-ratio≈1.0, coverage≈0.95, bias≈0), no analytical-formula exploitation. Localize gaps
+  with the oracle ladder; certify flawless ONLY at M>=200. Then ship + "finish the roadmap"
+  (= verify, squash-merge to main, CHANGELOG, dashboard, handoff.md).
+- Code is committed and syntax-clean. All knobs exist: spike.py flags `--flm-folds`,
+  `--flm-repeats`, `--tikhonov` (matched eps), `--max-condition` (spectrum-adaptive clamp),
+  `--logit-lambdas`/`--linear-lambdas` (specs: cholesky, oracleprop[logit], oracle, ridge/flat).
+- RUNNING: honest M=50 (b7z4ca6ta -> exploration/results_honest_M50.md). Linear leg DONE
+  (see below: cholesky biased+over-covers; RieszNet diverges). Logit leg finishing.
+- NEXT ACTION when cores free: launch the localizing ladder (do NOT change folds/reg yet):
+  ```
+  PYTHONPATH=src python3 exploration/spike.py --dgp both --M 50 --n 2000 --flm-folds 10 \
+    --flm-epochs 150 --workers 8 --tikhonov 0.01 \
+    --logit-lambdas cholesky,oracleprop,oracle --linear-lambdas cholesky,oracle \
+    2>&1 | tee exploration/results_ladder.md
+  ```
+  Read: is oracle-Λ unbiased/well-calibrated at folds=10/tik=0.01? If yes, cholesky's bias &
+  over-coverage are Λ-estimation; if oracle also fails, it's θ/folds/reg. THEN change ONE knob
+  (folds, then max_condition) and iterate at M=50 for DIRECTION; certify at M=200.
+- Verify before "done": fresh Opus/general agent audits the M=200 numbers + that nothing was
+  tuned to the truth. Two audits already passed (cholesky impl; estimand) + caught the 2x bug.
+
+---
+
+
 Goal (user, overnight): get FLM and RieszNet to ~95% coverage / ~1.0 SE-ratio on BOTH the
 linear and logit ATE benchmarks, using GENERAL approaches only (no exploiting analytical
 formulas). Branch: `night/general-lambda-perfect-scores` (main untouched until one squashed merge).
@@ -75,9 +102,19 @@ Two real gaps found (this is the diagnostic working, not gaming):
    Hardened _fit_riesz: 3 restarts, batch 256, + a truth-free divergence guard (reject restarts
    whose val representer RMS >> the overlap-implied bound). Median-over-repeats is the fallback.
 
-### Next diagnostic run (queued, fires when cores free)
-both DGPs, M=50, folds=20, tikhonov=1e-6, max_condition=30 (clamp does the regularizing),
-logit specs cholesky/oracleprop/oracle, linear cholesky/oracle, hardened RieszNet. Tests whether
-a single spectrum-adaptive clamp makes cholesky flawless on both, and whether the RieszNet guard
-kills the divergence. Oracle ladder (oracleprop = true propensity) localizes any residual gap.
+### Methodology discipline (locked)
+- M=50 is for DIRECTION ONLY (coverage MC-error ~3pp; cannot tell 0.95 from 0.92). The
+  "flawless" claim is certified ONLY at M>=200 (coverage SE ~1.5pp, SE-ratio noise ~5%).
+- LOCALIZE before fixing: run the oracle ladder at MATCHED, unchanged settings first, so
+  cholesky-vs-oracle isolates each failure's cause. Change ONE knob at a time afterward.
+  The linear cholesky failure is TWO modes (bias -0.030 AND over-conservative SE 1.39) that
+  may have different causes -- do not attribute both to "folds" without isolating.
+
+### Next: localizing ladder (matched settings, fires when cores free)
+both DGPs, M=50, folds=10 (UNCHANGED), --tikhonov 0.01 (matched across ALL rungs), default
+max_condition. Rungs: linear cholesky,oracle; logit cholesky,oracleprop,oracle (oracle now
+factor-2-fixed). Reads: (a) is oracle-Λ unbiased at folds=10? if yes -> cholesky's -0.030 bias
+is Λ-estimation; if no -> it's θ/folds. (b) does oracle-Λ also over-cover at tik=0.01? if yes
+-> the regularization is too strong for both; if no -> cholesky-Λ specific. Only AFTER this
+localization do I change folds / max_condition, one at a time. Hardened RieszNet rides along.
 
