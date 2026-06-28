@@ -20,6 +20,18 @@
   build dashboard (exploration/build_dashboard.py --in results_cert_M200.md), update CHANGELOG,
   write handoff.md, squash-merge night/general-lambda-perfect-scores to main (ONE commit, user author).
 - Ship artifacts being drafted now while the cert runs (dashboard note text, CHANGELOG entry, handoff).
+- POISSON (3rd family) ADDED: DGP Y~Poisson(exp(a+b T)), oracle-MLE + oracle-Λ + custom-loss FLM
+  (autodiff, most general) + RieszNet poisson outcome; 3-DGP registry (`--dgp all`). Smoke (M=3)
+  confirms ALL wiring runs; oracle/ridge/RieszNet recover truth 0.898. BUT poisson FLM[cholesky]
+  blew up at smoke (mean -4, emp SE 8.9) -- Poisson's λ=exp(η) is unbounded so scores are large AND
+  Λ near-singular at low overlap -> the inverse can explode. Linear cholesky ALSO blew up at smoke
+  yet was flawless at M=50, so this may be a settings artifact. RUNNING poisson M=50 proper
+  (b9qrh17ww -> results_poisson_M50.md, cholesky+oracle matched tik=0.01) to judge + localize.
+  IF cholesky still blows up but oracle is fine -> Λ-estimation (try max_condition clamp / more
+  tikhonov / the unbounded-λ scale needs the Hessians normalized in the cholesky net). Then cert.
+- NOTE: killed the linear+logit M=200 cert (was still on its linear phase) to test Poisson now per
+  the user; will re-certify all 3 together (M>=100) at the end. Linear+logit flawless already shown
+  at M=50 (results_fix1.md).
 - Verify before "done": fresh Opus/general agent audits the M=200 numbers + that nothing was
   tuned to the truth. Two audits already passed (cholesky impl; estimand) + caught the 2x bug.
 
