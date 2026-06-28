@@ -319,8 +319,11 @@ LINEAR_TIKHONOV = {"oracle": 1e-8, "cholesky": 0.01, "ridge": 0.01}
 
 
 class OracleLinearLambda:
-    """Oracle Λ(x)=2[[1,e],[e,e]] for the linear DGP (squared-error Hessian
-    2[[1,t],[t,t²]] integrated over T~Bernoulli(e*(x)), e*=σ(γ(x0+x1))). Ceiling
+    """Oracle Λ(x)=[[1,e],[e,e]] for the linear DGP. The package's Linear loss is
+    0.5*(y-pred)², so its per-obs Hessian is [[1,t],[t,t²]] with NO factor 2; the
+    conditional mean over T~Bernoulli(e*(x)), e*=σ(γ(x0+x1)), is [[1,e],[e,e]].
+    (The legacy structural_dml LinearFamily used (y-μ)² and so carried a 2 -- do NOT
+    copy that here; this strategy is injected into the new inference() path.) Ceiling
     reference, NOT a general method. LambdaStrategy-shaped; fit is a no-op."""
     requires_theta = True
     requires_separate_fold = True
@@ -331,10 +334,10 @@ class OracleLinearLambda:
     def predict(self, X, theta_hat=None):
         e = torch.sigmoid(GAMMA * (X[:, 0] + X[:, 1]))
         L = X.new_zeros(len(X), 2, 2)
-        L[:, 0, 0] = 2.0
-        L[:, 0, 1] = 2.0 * e
-        L[:, 1, 0] = 2.0 * e
-        L[:, 1, 1] = 2.0 * e
+        L[:, 0, 0] = 1.0
+        L[:, 0, 1] = e
+        L[:, 1, 0] = e
+        L[:, 1, 1] = e
         return L
 
 
