@@ -32,6 +32,7 @@ class DMLResult(PredictVisualizeMixin):
     theta_hat: np.ndarray                  # Estimated parameters theta(x) for all x
     mu_naive: float                        # Naive estimate (for comparison)
     diagnostics: Dict[str, Any] = field(default_factory=dict)
+    lambda_hat: Optional[np.ndarray] = None  # Estimated Lambda(x) (n,d,d), for diagnostics
 
     # Metadata fields (set by structural_dml wrapper)
     _family: Optional[str] = field(default=None, repr=False)
@@ -108,6 +109,8 @@ def structural_dml_core(
     weight_decay: float = 0.0,
     verbose: bool = False,
     network_factory: Optional[Callable] = None,
+    lambda_eval_fn: Optional[Callable] = None,
+    tikhonov_scale: float = 0.01,
 ) -> DMLResult:
     """
     Core structural DML algorithm with proper cross-fitting.
@@ -221,6 +224,7 @@ def structural_dml_core(
         # Storage for results
         psi_values = np.zeros(n)
         theta_hat_all = np.zeros((n, theta_dim))
+        lambda_hat_all = np.zeros((n, theta_dim, theta_dim))
         corrections = np.zeros(n)
         lambda_cond_numbers = []
         lambda_min_eigenvalues = []
@@ -313,8 +317,13 @@ def structural_dml_core(
             else:
                 hessians_lambda = compute_hessian(loss_fn, Y_lambda, T_lambda, theta_lambda)
 
-            # Fit Lambda estimator
-            if three_way:
+            # Fit Lambda estimator (or inject a caller-supplied oracle Lambda(x))
+            if lambda_eval_fn is not None:
+                # Diagnostic path: bypass entry-wise estimation, use a supplied
+                # Lambda(x). Gets this fold's lambda-train (X,T) too so a
+                # propensity-style Lambda can cross-fit e(x) itself.
+                Lambda_eval = lambda_eval_fn(X_eval, X_lambda, T_lambda)  # (n_eval, d, d)
+            elif three_way:
                 if lambda_method == 'aggregate':
                     # Use aggregate even for three-way (ensures full-rank for binary T)
                     lambda_est = AggregateLambdaEstimator(theta_dim=theta_dim)
@@ -335,7 +344,8 @@ def structural_dml_core(
                 Lambda_eval = lambda_est.predict(X_eval)  # (n_eval, d, d)
 
             # Invert Lambda matrices
-            Lambda_inv_eval = batch_inverse(Lambda_eval, ridge=ridge)
+            Lambda_inv_eval = batch_inverse(Lambda_eval, ridge=ridge,
+                                            tikhonov_scale=tikhonov_scale)
 
             # Track condition numbers and min eigenvalues
             for i in range(len(Lambda_eval)):
@@ -390,11 +400,13 @@ def structural_dml_core(
 
                 psi_values[global_idx] = psi_i
                 theta_hat_all[global_idx] = theta_eval[i].detach().numpy()
+                lambda_hat_all[global_idx] = Lambda_eval[i].detach().cpu().numpy()
                 corrections[global_idx] = correction_i
 
         return {
             "psi_values": psi_values,
             "theta_hat_all": theta_hat_all,
+            "lambda_hat_all": lambda_hat_all,
             "corrections": corrections,
             "fold_indices": fold_indices,
             "lambda_cond_numbers": lambda_cond_numbers,
@@ -435,6 +447,7 @@ def structural_dml_core(
     # Unpack the kept (first) repeat for psi, theta, and diagnostics.
     psi_values = keep["psi_values"]
     theta_hat_all = keep["theta_hat_all"]
+    lambda_hat_all = keep["lambda_hat_all"]
     corrections = keep["corrections"]
     fold_indices = keep["fold_indices"]
     lambda_cond_numbers = keep["lambda_cond_numbers"]
@@ -490,6 +503,7 @@ def structural_dml_core(
         ci_upper=ci_upper,
         psi_values=psi_values,
         theta_hat=theta_hat_all,
+        lambda_hat=lambda_hat_all,
         mu_naive=mu_naive,
         diagnostics=diagnostics,
     )
