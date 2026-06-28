@@ -180,7 +180,7 @@ def _loss(net, t, x, y, ones, zeros, logit):
     _, a1 = net(ones, x)
     _, a0 = net(zeros, x)
     riesz = (a_obs ** 2 - 2.0 * (a1 - a0)).mean()          # E[a^2 - 2 m(a)]
-    g_tilde = g_obs + net.eps * a_obs
+    g_tilde = g_obs + torch.clamp(net.eps, -2.0, 2.0) * a_obs  # clamp the TMLE knob
     tmle = ((y - g_tilde) ** 2).mean()                     # targeted reg (lambda2)
     return reg + LAMBDA1 * riesz + LAMBDA2 * tmle
 
@@ -258,8 +258,8 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=3,
     return net
 
 
-def riesz_ate(Y, T, X, logit, K=5, max_epochs=400, patience=30, seed=0):
-    """Cross-fit faithful RieszNet; returns (mu, se, mu_naive, se_naive)."""
+def _riesz_single(Y, T, X, logit, K, max_epochs, patience, seed):
+    """One K-fold cross-fit RieszNet pass -> (mu, se, mu_naive, se_naive)."""
     n = len(Y)
     rng = np.random.default_rng(seed)
     folds = np.array_split(rng.permutation(n), K)
@@ -273,7 +273,7 @@ def riesz_ate(Y, T, X, logit, K=5, max_epochs=400, patience=30, seed=0):
             xe = torch.tensor(X[te], dtype=torch.float32)
             te_t = torch.tensor(T[te], dtype=torch.float32).unsqueeze(1)
             ones, zeros = torch.ones_like(te_t), torch.zeros_like(te_t)
-            eps = net.eps.item()
+            eps = float(np.clip(net.eps.item(), -2.0, 2.0))  # clamp TMLE knob (match training)
 
             def gmean(traw):
                 g, a = net(traw, xe)
@@ -293,7 +293,21 @@ def riesz_ate(Y, T, X, logit, K=5, max_epochs=400, patience=30, seed=0):
     mu = float(psi.mean())
     mu_naive = float(g_diff.mean())
     se_naive = float(g_diff.std(ddof=1) / np.sqrt(n))
-    return mu, se, mu_naive, se_naive
+    return mu, float(se), mu_naive, se_naive
+
+
+def riesz_ate(Y, T, X, logit, K=5, max_epochs=400, patience=30, seed=0, repeats=3):
+    """Median-DML over `repeats` independent cross-fit splits (Chernozhukov et al.). A junk
+    Riesz head in ONE split makes that split's mu_r an outlier; the median across splits
+    rejects it, where best-of-restarts and the representer guard could not. SE folds the
+    across-split spread in: se² = median_r(se_r² + (mu_r - mu)²)."""
+    res = [_riesz_single(Y, T, X, logit, K, max_epochs, patience, seed + 100 * r)
+           for r in range(repeats)]
+    mus = np.array([r[0] for r in res])
+    ses = np.array([r[1] for r in res])
+    mu = float(np.median(mus))
+    se = float(np.sqrt(np.median(ses ** 2 + (mus - mu) ** 2)))
+    return mu, se, res[0][2], res[0][3]
 
 
 # ---- FLM via the package --------------------------------------------------
@@ -637,7 +651,7 @@ def main():
         M, n, flm_folds, flm_epochs, riesz_epochs, riesz_patience = 3, 1000, 5, 60, 150, 20
     else:
         M, n, flm_folds, flm_epochs, riesz_epochs, riesz_patience = (
-            args.M, args.n, args.flm_folds, args.flm_epochs, 400, 30)
+            args.M, args.n, args.flm_folds, args.flm_epochs, 200, 25)
 
     truth_rng = np.random.default_rng(99)
     t_lin = truth_linear()
