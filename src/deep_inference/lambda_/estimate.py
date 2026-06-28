@@ -86,6 +86,7 @@ class EstimateLambda(BaseLambdaStrategy):
         chol_hidden: int = 32,
         chol_epochs: int = 250,
         chol_lr: float = 5e-3,
+        max_condition: float = 100.0,
     ):
         """
         Initialize EstimateLambda strategy.
@@ -127,6 +128,7 @@ class EstimateLambda(BaseLambdaStrategy):
         self.chol_hidden = chol_hidden
         self.chol_epochs = chol_epochs
         self.chol_lr = chol_lr
+        self.max_condition = max_condition  # relative eigenvalue-floor for inverse stability
         self._model = None
         self._mean_hessian = None
         self._d_theta = None
@@ -357,8 +359,11 @@ class EstimateLambda(BaseLambdaStrategy):
         elif self.method == "cholesky":
             Lambda = self._predict_cholesky(X, dtype, device)
 
-        # Project to PSD to ensure valid matrices (fixes numerical instability)
-        Lambda = self._project_to_psd(Lambda)
+        # Project to PSD to ensure valid matrices (fixes numerical instability).
+        # max_condition is the spectrum-adaptive inverse regularizer (floor min-eig at
+        # max-eig/max_condition): a single value adapts to each Λ̂'s own conditioning,
+        # which a fixed additive tikhonov cannot (it does not see the DGP's curvature scale).
+        Lambda = self._project_to_psd(Lambda, max_condition=self.max_condition)
 
         return Lambda
 
