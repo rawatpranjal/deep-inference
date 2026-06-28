@@ -147,6 +147,19 @@ These target DIFFERENT estimators so one M=50 run tests both without confounding
 does early-stopping pull linear cholesky to ~oracle (bias->0, SE-ratio->1)? does median kill the
 RieszNet divergence (emp SE 1.14 -> ~0.06)? M=50 = direction only; certify at M>=200.
 
+### FIX-TEST M=50 (cholesky early-stop + RieszNet median-3), LINEAR -- BOTH FIXES WORK
+| method | bias | emp SE | mean SE | SE-ratio | cover | (before) |
+|---|---|---|---|---|---|---|
+| Oracle-MLE | -0.001 | 0.055 | 0.054 | 0.98 | 98% | |
+| FLM[cholesky] | -0.007 | 0.057 | 0.059 | 1.04 | 96% | was -0.030/1.39/100% |
+| FLM[oracle] ref | +0.009 | 0.060 | 0.059 | 0.97 | 96% | |
+| RieszNet | -0.004 | 0.055 | 0.061 | 1.10 | 100% | was +0.18/0.17/empSE1.14 |
+| Naive | -0.002 | 0.074 | 0.012 | 0.16 | 18% | |
+Linear: both GENERAL estimators now match the oracle (cholesky 1.04/96, RieszNet 1.10/100).
+Early-stopping fixed the cholesky Λ overfit; median-over-3 killed the RieszNet divergence
+(emp SE 1.14 -> 0.055). RieszNet 1.10 is mildly conservative but valid. M=50 = direction;
+certify at M>=200. LOGIT leg appended next.
+
 ### (superseded) localizing ladder
 both DGPs, M=50, folds=10 (UNCHANGED), --tikhonov 0.01 (matched across ALL rungs), default
 max_condition. Rungs: linear cholesky,oracle; logit cholesky,oracleprop,oracle (oracle now
