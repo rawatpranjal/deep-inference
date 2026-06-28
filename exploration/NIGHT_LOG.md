@@ -9,15 +9,17 @@
 - Code is committed and syntax-clean. All knobs exist: spike.py flags `--flm-folds`,
   `--flm-repeats`, `--tikhonov` (matched eps), `--max-condition` (spectrum-adaptive clamp),
   `--logit-lambdas`/`--linear-lambdas` (specs: cholesky, oracleprop[logit], oracle, ridge/flat).
-- LOCALIZED: linear cholesky's bias+over-coverage = Λ-ESTIMATION (cholesky-net overfitting);
-  TRUE Λ is flawless at folds=10. RieszNet divergence = unpenalized eps (TMLE), not folds.
-- RUNNING: fix-test (bbgecezmo -> exploration/results_fix1.md), both DGPs, M=50, folds=10,
-  tikhonov=0.01. Tests cholesky EARLY-STOPPING (anti-overfit) + RieszNet MEDIAN-over-3-splits.
-- NEXT ACTION when it lands: read results_fix1.md. If linear cholesky -> ~oracle (bias~0,
-  SE-ratio~1) and RieszNet emp SE collapses (1.14 -> ~0.06), the fixes work -> go to M>=200
-  certification. If linear cholesky still off, next lever = max_condition=30 clamp (`--max-condition 30`,
-  spectrum-adaptive). If RieszNet still diverges, the divergence is data-level; investigate eps
-  further or report honestly. One knob at a time; certify only at M>=200.
+- SOLVED at M=50 (direction): FLM[cholesky] FLAWLESS on both DGPs (linear 1.04/96, logit 1.01/98,
+  bias~0) via cholesky EARLY-STOPPING + tik=0.01. RieszNet stabilized via MEDIAN-over-3 (divergence
+  gone) but mildly conservative (1.10/1.30). Fixes committed.
+- RUNNING: M=200 CERTIFICATION (bki03skl8 -> exploration/results_cert_M200.md), both DGPs, folds=10,
+  tik=0.01, full rows (cholesky/ridge|flat/oracle + RieszNet/Oracle-MLE/Naive). ~3h. THE GATE.
+- NEXT ACTION when it lands: read results_cert_M200.md. Confirm FLM[cholesky] SE-ratio in [0.9,1.1]
+  & coverage in [92,98] & |bias| small on BOTH DGPs (this certifies flawless). Report RieszNet
+  honestly (valid, mildly conservative). THEN ship: fresh-agent verify the numbers + no-truth-tuning,
+  build dashboard (exploration/build_dashboard.py --in results_cert_M200.md), update CHANGELOG,
+  write handoff.md, squash-merge night/general-lambda-perfect-scores to main (ONE commit, user author).
+- Ship artifacts being drafted now while the cert runs (dashboard note text, CHANGELOG entry, handoff).
 - Verify before "done": fresh Opus/general agent audits the M=200 numbers + that nothing was
   tuned to the truth. Two audits already passed (cholesky impl; estimand) + caught the 2x bug.
 
@@ -159,6 +161,26 @@ Linear: both GENERAL estimators now match the oracle (cholesky 1.04/96, RieszNet
 Early-stopping fixed the cholesky Λ overfit; median-over-3 killed the RieszNet divergence
 (emp SE 1.14 -> 0.055). RieszNet 1.10 is mildly conservative but valid. M=50 = direction;
 certify at M>=200. LOGIT leg appended next.
+
+### FIX-TEST M=50, LOGIT -- cholesky FLAWLESS, RieszNet stable-but-conservative
+| method | bias | emp SE | mean SE | SE-ratio | cover |
+|---|---|---|---|---|---|
+| Oracle-MLE | +0.006 | 0.022 | 0.022 | 0.98 | 92% |
+| FLM[cholesky] | +0.001 | 0.056 | 0.056 | 1.01 | 98% |  <- FLAWLESS (early-stop didn't hurt logit)
+| FLM[oracle]@0.01 | +0.017 | 0.028 | 0.024 | 0.86 | 88% |
+| RieszNet (median-3) | +0.005 | 0.031 | 0.040 | 1.30 | 100% |  <- stable (no divergence) but conservative
+| Naive | +0.010 | 0.029 | 0.003 | 0.10 | 12% |
+
+VERDICT (M=50, direction): FLM[cholesky] is FLAWLESS on BOTH DGPs (linear 1.04/96, logit 1.01/98,
+bias ~0) -- the general PSD estimator works once you (1) early-stop the Λ net (anti-overfit) and
+(2) regularize the inverse (tik=0.01). RieszNet is STABLE after median-3 but mildly conservative
+(SE-ratio 1.10 linear / 1.30 logit) -- the honest cost of the robustification it needs to not
+diverge (cholesky needs no such crutch). The conservatism is the standard median-DML SE, NOT tuned.
+
+### CERTIFICATION RUNNING: M=200 both DGPs (bki03skl8 -> results_cert_M200.md)
+full rows: cholesky(general), ridge/flat(contrast), oracle(ceiling) + RieszNet + Oracle-MLE + Naive.
+folds=10, tik=0.01. ~3h. This is the gate -- "flawless" certified only here. While it runs:
+draft dashboard + CHANGELOG + handoff; then fresh-agent verify, squash-merge to main, ship.
 
 ### (superseded) localizing ladder
 both DGPs, M=50, folds=10 (UNCHANGED), --tikhonov 0.01 (matched across ALL rungs), default
