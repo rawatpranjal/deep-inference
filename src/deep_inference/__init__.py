@@ -474,6 +474,10 @@ def inference(
     treatment_dist: Optional["TreatmentDistribution"] = None,
     # Lambda estimation override
     lambda_method: Optional[str] = None,
+    # Advanced: supply a pre-built LambdaStrategy directly (bypasses auto-selection).
+    # Used to inject a custom/oracle Λ(x); the clean replacement for the legacy
+    # structural_dml lambda_eval_fn hook, which the new inference() path lacks.
+    lambda_strategy: Optional["LambdaStrategy"] = None,
     # Cross-fitting settings
     n_folds: int = 50,
     n_repeats: int = 1,
@@ -679,13 +683,14 @@ def inference(
         # Default: average beta
         struct_target = AverageParameter(param_index=beta_index, theta_dim=struct_model.theta_dim)
 
-    # Select Lambda strategy
-    lambda_strategy = select_lambda_strategy(
-        model=struct_model,
-        is_randomized=is_randomized,
-        treatment_dist=treatment_dist,
-        lambda_method=lambda_method,
-    )
+    # Select Lambda strategy (unless the caller supplied one, e.g. an oracle Λ(x))
+    if lambda_strategy is None:
+        lambda_strategy = select_lambda_strategy(
+            model=struct_model,
+            is_randomized=is_randomized,
+            treatment_dist=treatment_dist,
+            lambda_method=lambda_method,
+        )
 
     # Detect regime for diagnostics
     regime = detect_regime(struct_model, is_randomized, treatment_dist is not None)

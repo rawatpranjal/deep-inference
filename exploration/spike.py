@@ -185,7 +185,11 @@ def _loss(net, t, x, y, ones, zeros, logit):
     return reg + LAMBDA1 * riesz + LAMBDA2 * tmle
 
 
-def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=2):
+def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=2, batch_size=512):
+    """Faithful RieszNet fit, now with the paper's minibatch + two-stage LR schedule
+    (Adam 1e-3 then 2e-4) instead of full-batch. Minibatch noise + the LR drop remove
+    the occasional full-batch-Adam divergence to a junk Riesz head; grad-clip and
+    best-of-restarts (by val loss) are kept as belt-and-suspenders."""
     d_x = Xtr.shape[1]
 
     # train/val split within the fold for early stopping (fixed across restarts)
@@ -193,6 +197,8 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=2):
     idx = rng.permutation(len(Ytr))
     n_val = max(1, int(0.2 * len(Ytr)))
     val, tr = idx[:n_val], idx[n_val:]
+    n_tr = len(tr)
+    stage2 = max_epochs // 2  # LR drop point
 
     def pack(ii):
         x = torch.tensor(Xtr[ii], dtype=torch.float32)
@@ -200,16 +206,12 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=2):
         y = torch.tensor(Ytr[ii], dtype=torch.float32)
         return t, x, y, torch.ones_like(t), torch.zeros_like(t)
 
-    tr_b, val_b = pack(tr), pack(val)
-
-    # ponytail: grad-clip + best-of-restarts guard a known full-batch-Adam
-    # failure mode (a rep occasionally diverges to a junk Riesz head, e.g.
-    # est=-0.289). Keep the restart with the lowest val loss. The real upgrade
-    # is the paper's two-stage minibatch LR schedule; restarts are the cheap one.
+    val_b = pack(val)
     net = RieszNet(d_x)
     global_best, global_state = float("inf"), None
     for r in range(restarts):
         torch.manual_seed(seed + 1000 * r)
+        brng = np.random.default_rng(seed + 7 * r + 1)
         net = RieszNet(d_x)
         # L2 on net weights only, NOT on eps (paper: R does not take eps as input)
         opt = torch.optim.Adam([
@@ -217,11 +219,17 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=2):
             {"params": [net.eps], "weight_decay": 0.0},
         ], lr=1e-3)
         best, best_state, wait = float("inf"), None, 0
-        for _ in range(max_epochs):
-            net.train(); opt.zero_grad()
-            _loss(net, *tr_b, logit).backward()
-            torch.nn.utils.clip_grad_norm_(net.parameters(), 5.0)
-            opt.step()
+        for ep in range(max_epochs):
+            for g in opt.param_groups:
+                g["lr"] = 1e-3 if ep < stage2 else 2e-4
+            net.train()
+            perm = tr[brng.permutation(n_tr)]
+            for s in range(0, n_tr, batch_size):
+                bb = pack(perm[s:s + batch_size])
+                opt.zero_grad()
+                _loss(net, *bb, logit).backward()
+                torch.nn.utils.clip_grad_norm_(net.parameters(), 5.0)
+                opt.step()
             net.eval()
             with torch.no_grad():
                 v = _loss(net, *val_b, logit).item()
@@ -304,13 +312,155 @@ def flm_linear(Y, T, X, n_folds, epochs, n_repeats=1,
     return r.mu_hat, r.se, rec
 
 
-def flm_logit(Y, T, X, n_folds, epochs, n_repeats=1):
+# cholesky uses the SAME truth-free default (0.01) as logit -- one general setting
+# across DGPs, not per-DGP tuned. Linear Λ=2[[1,e],[e,e]] is near-singular only at the
+# overlap tails (one channel), so 0.01 is comfortably enough.
+LINEAR_TIKHONOV = {"oracle": 1e-8, "cholesky": 0.01, "ridge": 0.01}
+
+
+class OracleLinearLambda:
+    """Oracle Λ(x)=2[[1,e],[e,e]] for the linear DGP (squared-error Hessian
+    2[[1,t],[t,t²]] integrated over T~Bernoulli(e*(x)), e*=σ(γ(x0+x1))). Ceiling
+    reference, NOT a general method. LambdaStrategy-shaped; fit is a no-op."""
+    requires_theta = True
+    requires_separate_fold = True
+
+    def fit(self, X, T, Y, theta_hat, model):
+        return None
+
+    def predict(self, X, theta_hat=None):
+        e = torch.sigmoid(GAMMA * (X[:, 0] + X[:, 1]))
+        L = X.new_zeros(len(X), 2, 2)
+        L[:, 0, 0] = 2.0
+        L[:, 0, 1] = 2.0 * e
+        L[:, 1, 0] = 2.0 * e
+        L[:, 1, 1] = 2.0 * e
+        return L
+
+
+def flm_linear_general(Y, T, X, n_folds, epochs, n_repeats=1, lambda_spec="cholesky",
+                       tikhonov=None):
+    """Linear ATE = E[β(X)] via the GENERAL new path (inference + cholesky), so linear
+    and logit use the same general estimator. 'flat' = the legacy 2-way aggregate-Λ
+    contrast (the under-covering bug); 'oracle' = ceiling reference (not general)."""
+    if lambda_spec == "flat":
+        r = structural_dml(Y, T, X.astype(float), family="linear", n_folds=n_folds,
+                           epochs=epochs, n_repeats=n_repeats, three_way=False,
+                           hidden_dims=[32], verbose=False)
+        return r.mu_hat, r.se
+    kw = dict(model="linear", target="average_slope", n_folds=n_folds, epochs=epochs,
+              n_repeats=n_repeats, hidden_dims=[32], verbose=False)
+    if lambda_spec == "cholesky":
+        kw["lambda_method"] = "cholesky"
+    elif lambda_spec == "ridge":
+        kw["lambda_method"] = "ridge"
+    elif lambda_spec == "oracle":
+        kw["lambda_strategy"] = OracleLinearLambda()
+    else:
+        raise ValueError(f"unknown linear lambda_spec: {lambda_spec}")
+    kw["tikhonov_scale"] = tikhonov if tikhonov is not None else LINEAR_TIKHONOV[lambda_spec]
+    r = inference(Y, T, X.astype(float), **kw)
+    return r.mu_hat, r.se
+
+
+class OracleLogitLambda:
+    """Oracle Λ(x)=E[ℓ_θθ|X=x] for the logit DGP -- the ceiling diagnostic.
+
+    Integrates T~Bernoulli(e*(x)) out of the per-obs logit Hessian w·[[1,t],[t,t²]]
+    (w=p(1-p); NO factor 2 -- the package logit loss Hessian carries no 2):
+      Λ*(x) = (1-e*)·w0·[[1,0],[0,0]] + e*·w1·[[1,1],[1,1]]
+    with e*=σ(γ(x0+x1)), w0=p0(1-p0), w1=p1(1-p1), p0=σ(α*), p1=σ(α*+β*),
+    α*=A0+A1 x0+A2 x1, β*=B0+B1 x0. Uses the TRUE DGP constants, so this is the
+    achievable ceiling Λ̂(x) should approach. LambdaStrategy-shaped (3-way path,
+    same cross-fitting as cholesky/ridge); fit is a no-op since the oracle needs none."""
+    requires_theta = True
+    requires_separate_fold = True
+
+    def fit(self, X, T, Y, theta_hat, model):
+        return None
+
+    def predict(self, X, theta_hat=None):
+        x0, x1 = X[:, 0], X[:, 1]
+        a = A0 + A1 * x0 + A2 * x1
+        b = B0 + B1 * x0
+        e = torch.sigmoid(GAMMA * (x0 + x1))
+        p0, p1 = torch.sigmoid(a), torch.sigmoid(a + b)
+        w0, w1 = p0 * (1 - p0), p1 * (1 - p1)
+        L = X.new_zeros(len(X), 2, 2)
+        L[:, 0, 0] = (1 - e) * w0 + e * w1
+        L[:, 0, 1] = e * w1
+        L[:, 1, 0] = e * w1
+        L[:, 1, 1] = e * w1
+        return L
+
+
+# tikhonov defaults per spec. cholesky needs REAL inverse regularization on logit:
+# the true Λ(x) is near-singular at low overlap (w=p(1-p)->0), so a noisy Λ̂ inverts
+# explosively under near-zero tikhonov. oracle-Λ is exactly right so 1e-8 is fine.
+# cholesky uses the package DEFAULT tikhonov (0.01), the SAME for both DGPs -- a
+# truth-free choice (NOT tuned per-DGP to hit a target SE-ratio, which would require
+# knowing the truth). oracle/analytic are labeled reference ceilings, not the solution.
+LOGIT_TIKHONOV = {"oracle": 1e-8, "analytic": 1e-2, "cholesky": 0.01, "ridge": 0.01}
+
+
+class LogitAnalyticLambda:
+    """Λ(x) from the KNOWN logit form. Instead of regressing the Hessian entries
+    (cholesky/ridge) or collapsing them (aggregate), estimate the scalar propensity
+    ê(x) -- a clean, well-conditioned 1-D problem -- and assemble Λ analytically from
+    θ̂(x). This is the logit analogue of the linear 'estimate e(x) then build Λ' fix
+    that CLAUDE.md flags as the recommended direction. The near-singularity at the tails
+    is still present (it is real), but the inverse is large-and-correct (like oracle),
+    not large-and-noisy (like cholesky's amplified fit error).
+      Λ(x) = (1-ê)·w0·[[1,0],[0,0]] + ê·w1·[[1,1],[1,1]]
+      w0 = σ(α̂)(1-σ(α̂)),  w1 = σ(α̂+β̂)(1-σ(α̂+β̂)),  ê(x) from a propensity model.
+    Here the DGP propensity is logistic so LogisticRegression is correctly specified;
+    swap in a flexible learner for robustness."""
+    requires_theta = True
+    requires_separate_fold = True
+
+    def __init__(self, C=1.0):
+        self.C = C
+        self._clf = None
+
+    def fit(self, X, T, Y, theta_hat, model):
+        from sklearn.linear_model import LogisticRegression
+        Xn = X.detach().cpu().numpy()
+        Tn = T.detach().cpu().numpy().astype(int)
+        self._clf = LogisticRegression(C=self.C, max_iter=500).fit(Xn, Tn)
+
+    def predict(self, X, theta_hat=None):
+        e = self._clf.predict_proba(X.detach().cpu().numpy())[:, 1]
+        e = torch.tensor(np.clip(e, 1e-3, 1 - 1e-3), dtype=X.dtype)
+        a, b = theta_hat[:, 0], theta_hat[:, 1]
+        p0, p1 = torch.sigmoid(a), torch.sigmoid(a + b)
+        w0, w1 = p0 * (1 - p0), p1 * (1 - p1)
+        L = X.new_zeros(len(X), 2, 2)
+        L[:, 0, 0] = (1 - e) * w0 + e * w1
+        L[:, 0, 1] = e * w1
+        L[:, 1, 0] = e * w1
+        L[:, 1, 1] = e * w1
+        return L
+
+
+def flm_logit(Y, T, X, n_folds, epochs, n_repeats=1, lambda_spec="cholesky", tikhonov=None):
     # discrete ATE on probability scale: g(1,X)-g(0,X) = sigmoid(a+b)-sigmoid(a)
     def ate_target(x, theta, t_tilde):
         return torch.sigmoid(theta[0] + theta[1]) - torch.sigmoid(theta[0])
-    r = inference(Y, T, X.astype(float), model="logit", target_fn=ate_target,
-                  t_tilde=0.0, n_folds=n_folds, epochs=epochs, n_repeats=n_repeats,
-                  hidden_dims=[32], verbose=False)
+    kw = dict(model="logit", target_fn=ate_target, t_tilde=0.0,
+              n_folds=n_folds, epochs=epochs, n_repeats=n_repeats,
+              hidden_dims=[32], verbose=False)
+    if lambda_spec == "oracle":
+        kw["lambda_strategy"] = OracleLogitLambda()
+    elif lambda_spec == "analytic":
+        kw["lambda_strategy"] = LogitAnalyticLambda()
+    elif lambda_spec == "cholesky":
+        kw["lambda_method"] = "cholesky"
+    elif lambda_spec == "ridge":
+        kw["lambda_method"] = "ridge"            # package default; explicit contrast row
+    else:
+        raise ValueError(f"unknown logit lambda_spec: {lambda_spec}")
+    kw["tikhonov_scale"] = tikhonov if tikhonov is not None else LOGIT_TIKHONOV[lambda_spec]
+    r = inference(Y, T, X.astype(float), **kw)
     return r.mu_hat, r.se
 
 
@@ -321,9 +471,10 @@ def covered(mu, se, truth):
 
 
 def _one_rep(task):
-    """One MC replication, all four methods. Top-level so it pickles for Pool."""
+    """One MC replication, all methods. Top-level so it pickles for Pool.
+    Logit runs one FLM row per lambda spec (cholesky / ridge / oracle-Λ)."""
     (truth, logit, n, flm_folds, flm_epochs, flm_repeats,
-     lambda_method, ridge_alpha, three_way, riesz_epochs, riesz_patience, seed) = task
+     logit_lambdas, linear_lambdas, riesz_epochs, riesz_patience, seed) = task
     # Seed the GLOBAL torch/numpy RNG per rep so FLM (which uses global state for
     # net init) is reproducible and identical serial-vs-parallel. Distinct per
     # rep, so cross-rep MC variability is preserved.
@@ -331,45 +482,44 @@ def _one_rep(task):
     np.random.seed(seed % (2 ** 32))
     rng = np.random.default_rng(seed)
     dgp = gen_logit if logit else gen_linear
-    flm_fn = flm_logit if logit else flm_linear
     Y, T, X = dgp(n, rng)
     out = {}
-    rec = None
     mu, se = (oracle_logit if logit else oracle_linear)(Y, T, X)
     out["Oracle"] = (mu, se, covered(mu, se, truth))
-    if logit:
-        mu, se = flm_fn(Y, T, X, flm_folds, flm_epochs, n_repeats=flm_repeats)
-    else:
-        mu, se, rec = flm_fn(Y, T, X, flm_folds, flm_epochs, n_repeats=flm_repeats,
-                             lambda_method=lambda_method, ridge_alpha=ridge_alpha,
-                             three_way=three_way)
-    out["FLM"] = (mu, se, covered(mu, se, truth))
+    # Both DGPs run one FLM row per lambda spec through the GENERAL inference() path
+    # (cholesky); ridge/flat are contrasts, analytic/oracle are labeled ceilings.
+    specs = logit_lambdas if logit else linear_lambdas
+    flm = flm_logit if logit else flm_linear_general
+    for spec in specs:
+        mu, se = flm(Y, T, X, flm_folds, flm_epochs, n_repeats=flm_repeats, lambda_spec=spec)
+        out[f"FLM[{spec}]"] = (mu, se, covered(mu, se, truth))
     mu, se, mun, sen = riesz_ate(Y, T, X, logit, max_epochs=riesz_epochs,
                                  patience=riesz_patience, seed=seed)
     out["RieszNet"] = (mu, se, covered(mu, se, truth))
     out["Naive"] = (mun, sen, covered(mun, sen, truth))
-    return out, rec
+    return out, None
 
 
-def run(dgp, truth, flm_fn, logit, M, n, flm_folds, flm_epochs,
+def run(truth, logit, M, n, flm_folds, flm_epochs,
         riesz_epochs, riesz_patience, base_seed, workers=1, flm_repeats=1,
-        lambda_method="ridge", ridge_alpha=1000.0, three_way=False):
-    acc = {m: {"est": [], "se": [], "cov": []} for m in
-           ["Oracle", "FLM", "RieszNet", "Naive"]}
-    rec_acc = {k: [] for k in ("alpha_r2", "beta_r2", "alpha_rmse",
-                               "beta_rmse", "alpha_bias", "beta_bias")}
+        logit_lambdas=("cholesky", "ridge", "oracle"),
+        linear_lambdas=("cholesky", "flat", "oracle")):
+    acc = {}  # method -> {est,se,cov}; built lazily so the FLM rows appear in order
+    rec_acc = {}  # recovery panel retired (goal is coverage/SE-ratio)
     tasks = [(truth, logit, n, flm_folds, flm_epochs, flm_repeats,
-              lambda_method, ridge_alpha, three_way, riesz_epochs, riesz_patience,
-              base_seed + i) for i in range(M)]
+              list(logit_lambdas), list(linear_lambdas),
+              riesz_epochs, riesz_patience, base_seed + i) for i in range(M)]
 
     def absorb(i, result):
         out, rec = result
         for m, (est, se, cov) in out.items():
-            acc[m]["est"].append(est); acc[m]["se"].append(se); acc[m]["cov"].append(cov)
+            d = acc.setdefault(m, {"est": [], "se": [], "cov": []})
+            d["est"].append(est); d["se"].append(se); d["cov"].append(cov)
         if rec is not None:
             for k in rec_acc:
                 rec_acc[k].append(rec[k])
-        print(f"  rep {i+1}/{M}: oracle={out['Oracle'][0]:.3f} flm={out['FLM'][0]:.3f} "
+        flm_str = " ".join(f"{k}={out[k][0]:.3f}" for k in out if k.startswith("FLM"))
+        print(f"  rep {i+1}/{M}: oracle={out['Oracle'][0]:.3f} {flm_str} "
               f"riesz={out['RieszNet'][0]:.3f} naive={out['Naive'][0]:.3f}", flush=True)
 
     if workers <= 1:
@@ -426,7 +576,17 @@ def main():
     ap.add_argument("--three-way", action="store_true",
                     help="force 3-way split so Lambda(x) is estimated via "
                          "lambda_method (default 2-way uses flat aggregate Lambda)")
+    ap.add_argument("--logit-lambdas", default="cholesky,analytic,ridge,oracle",
+                    help="comma-sep FLM Lambda specs for the LOGIT DGP, one table row each: "
+                         "cholesky (general PSD net), analytic (est. propensity + known "
+                         "logit form), ridge (default contrast), oracle (true Lambda ceiling)")
+    ap.add_argument("--linear-lambdas", default="cholesky,flat,oracle",
+                    help="comma-sep FLM Lambda specs for the LINEAR DGP: cholesky (general "
+                         "PSD net), flat (legacy 2-way aggregate bug contrast), oracle "
+                         "(true Lambda ceiling). All but 'flat' run the general inference() path.")
     args = ap.parse_args()
+    logit_lambdas = [s for s in args.logit_lambdas.split(",") if s]
+    linear_lambdas = [s for s in args.linear_lambdas.split(",") if s]
 
     if args.smoke:
         M, n, flm_folds, flm_epochs, riesz_epochs, riesz_patience = 3, 1000, 5, 60, 150, 20
@@ -439,24 +599,23 @@ def main():
     t_log = truth_logit(truth_rng)
     print(f"truths: linear ATE={t_lin:.4f}  logit ATE={t_log:.4f}")
 
-    def do(name, gen, truth, flm_fn, logit, base_seed):
+    def do(name, truth, logit, base_seed):
         print(f"\n[{name.upper()}]  (workers={args.workers})", flush=True)
-        acc, rec_acc = run(gen, truth, flm_fn, logit, M, n, flm_folds, flm_epochs,
+        acc, rec_acc = run(truth, logit, M, n, flm_folds, flm_epochs,
                   riesz_epochs, riesz_patience, base_seed=base_seed,
                   workers=args.workers, flm_repeats=args.flm_repeats,
-                  lambda_method=args.lambda_method, ridge_alpha=args.ridge_alpha,
-                  three_way=args.three_way)
-        s = summarize(f"{name.capitalize()} DGP (lambda={args.lambda_method}, "
-                      f"alpha={args.ridge_alpha:g}, three_way={args.three_way}, "
-                      f"n={n})", truth, acc, rec_acc, M)
+                  logit_lambdas=logit_lambdas, linear_lambdas=linear_lambdas)
+        specs = logit_lambdas if logit else linear_lambdas
+        s = summarize(f"{name.capitalize()} DGP (lambdas={','.join(specs)}, n={n}, "
+                      f"folds={flm_folds})", truth, acc, rec_acc, M)
         print(s, flush=True)  # print each summary AS its DGP finishes (partial-safe)
         return s
 
     summaries = []
     if args.dgp in ("both", "linear"):
-        summaries.append(do("linear", gen_linear, t_lin, flm_linear, False, 1000))
+        summaries.append(do("linear", t_lin, False, 1000))
     if args.dgp in ("both", "logit"):
-        summaries.append(do("logit", gen_logit, t_log, flm_logit, True, 5000))
+        summaries.append(do("logit", t_log, True, 5000))
 
     report = ("# Spike: FLM vs RieszNet (known-truth ATE)\n"
               + "\n".join(summaries)
