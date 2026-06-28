@@ -278,11 +278,30 @@ def riesz_ate(Y, T, X, logit, K=5, max_epochs=400, patience=30, seed=0):
 
 
 # ---- FLM via the package --------------------------------------------------
-def flm_linear(Y, T, X, n_folds, epochs, n_repeats=1):
+def flm_linear(Y, T, X, n_folds, epochs, n_repeats=1,
+               lambda_method="ridge", ridge_alpha=1000.0, three_way=False):
+    # three_way=False -> package default (aggregate flat Lambda, ignores
+    # lambda_method). three_way=True -> Lambda(x) estimated via lambda_method.
     r = structural_dml(Y, T, X.astype(float), family="linear",
                        n_folds=n_folds, epochs=epochs, n_repeats=n_repeats,
-                       hidden_dims=[32], verbose=False)
-    return r.mu_hat, r.se
+                       lambda_method=lambda_method, ridge_alpha=ridge_alpha,
+                       three_way=three_way, hidden_dims=[32], verbose=False)
+    # Parameter recovery: theta_hat[:,0]=alpha(x), theta_hat[:,1]=beta(x).
+    a_hat, b_hat = r.theta_hat[:, 0], r.theta_hat[:, 1]
+    a_star = A0 + A1 * X[:, 0] + A2 * X[:, 1]
+    b_star = B0 + B1 * X[:, 0]
+
+    def _r2(hat, star):
+        ss_res = float(((hat - star) ** 2).sum())
+        ss_tot = float(((star - star.mean()) ** 2).sum())
+        return 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
+
+    rec = {"alpha_r2": _r2(a_hat, a_star), "beta_r2": _r2(b_hat, b_star),
+           "alpha_rmse": float(np.sqrt(((a_hat - a_star) ** 2).mean())),
+           "beta_rmse": float(np.sqrt(((b_hat - b_star) ** 2).mean())),
+           "alpha_bias": float((a_hat - a_star).mean()),
+           "beta_bias": float((b_hat - b_star).mean())}
+    return r.mu_hat, r.se, rec
 
 
 def flm_logit(Y, T, X, n_folds, epochs, n_repeats=1):
@@ -304,7 +323,7 @@ def covered(mu, se, truth):
 def _one_rep(task):
     """One MC replication, all four methods. Top-level so it pickles for Pool."""
     (truth, logit, n, flm_folds, flm_epochs, flm_repeats,
-     riesz_epochs, riesz_patience, seed) = task
+     lambda_method, ridge_alpha, three_way, riesz_epochs, riesz_patience, seed) = task
     # Seed the GLOBAL torch/numpy RNG per rep so FLM (which uses global state for
     # net init) is reproducible and identical serial-vs-parallel. Distinct per
     # rep, so cross-rep MC variability is preserved.
@@ -315,27 +334,41 @@ def _one_rep(task):
     flm_fn = flm_logit if logit else flm_linear
     Y, T, X = dgp(n, rng)
     out = {}
+    rec = None
     mu, se = (oracle_logit if logit else oracle_linear)(Y, T, X)
     out["Oracle"] = (mu, se, covered(mu, se, truth))
-    mu, se = flm_fn(Y, T, X, flm_folds, flm_epochs, n_repeats=flm_repeats)
+    if logit:
+        mu, se = flm_fn(Y, T, X, flm_folds, flm_epochs, n_repeats=flm_repeats)
+    else:
+        mu, se, rec = flm_fn(Y, T, X, flm_folds, flm_epochs, n_repeats=flm_repeats,
+                             lambda_method=lambda_method, ridge_alpha=ridge_alpha,
+                             three_way=three_way)
     out["FLM"] = (mu, se, covered(mu, se, truth))
     mu, se, mun, sen = riesz_ate(Y, T, X, logit, max_epochs=riesz_epochs,
                                  patience=riesz_patience, seed=seed)
     out["RieszNet"] = (mu, se, covered(mu, se, truth))
     out["Naive"] = (mun, sen, covered(mun, sen, truth))
-    return out
+    return out, rec
 
 
 def run(dgp, truth, flm_fn, logit, M, n, flm_folds, flm_epochs,
-        riesz_epochs, riesz_patience, base_seed, workers=1, flm_repeats=1):
+        riesz_epochs, riesz_patience, base_seed, workers=1, flm_repeats=1,
+        lambda_method="ridge", ridge_alpha=1000.0, three_way=False):
     acc = {m: {"est": [], "se": [], "cov": []} for m in
            ["Oracle", "FLM", "RieszNet", "Naive"]}
-    tasks = [(truth, logit, n, flm_folds, flm_epochs, flm_repeats, riesz_epochs,
-              riesz_patience, base_seed + i) for i in range(M)]
+    rec_acc = {k: [] for k in ("alpha_r2", "beta_r2", "alpha_rmse",
+                               "beta_rmse", "alpha_bias", "beta_bias")}
+    tasks = [(truth, logit, n, flm_folds, flm_epochs, flm_repeats,
+              lambda_method, ridge_alpha, three_way, riesz_epochs, riesz_patience,
+              base_seed + i) for i in range(M)]
 
-    def absorb(i, out):
+    def absorb(i, result):
+        out, rec = result
         for m, (est, se, cov) in out.items():
             acc[m]["est"].append(est); acc[m]["se"].append(se); acc[m]["cov"].append(cov)
+        if rec is not None:
+            for k in rec_acc:
+                rec_acc[k].append(rec[k])
         print(f"  rep {i+1}/{M}: oracle={out['Oracle'][0]:.3f} flm={out['FLM'][0]:.3f} "
               f"riesz={out['RieszNet'][0]:.3f} naive={out['Naive'][0]:.3f}", flush=True)
 
@@ -347,10 +380,10 @@ def run(dgp, truth, flm_fn, logit, M, n, flm_folds, flm_epochs,
         with Pool(processes=workers) as pool:
             for i, out in enumerate(pool.imap(_one_rep, tasks)):
                 absorb(i, out)
-    return acc
+    return acc, rec_acc
 
 
-def summarize(name, truth, acc, M):
+def summarize(name, truth, acc, rec_acc, M):
     lines = [f"\n### {name}  (truth = {truth:.4f}, M = {M})\n",
              "| method | mean est | bias | emp SE | mean est SE | SE ratio | coverage |",
              "|---|---|---|---|---|---|---|"]
@@ -360,6 +393,15 @@ def summarize(name, truth, acc, M):
         lines.append(f"| {m} | {est.mean():.4f} | {est.mean()-truth:+.4f} | "
                      f"{emp:.4f} | {se.mean():.4f} | {se.mean()/emp:.2f} | "
                      f"{100*cov.mean():.0f}% |")
+    if rec_acc and len(rec_acc["beta_r2"]) > 0:
+        ar2 = np.array(rec_acc["alpha_r2"]); br2 = np.array(rec_acc["beta_r2"])
+        arm = np.array(rec_acc["alpha_rmse"]); brm = np.array(rec_acc["beta_rmse"])
+        ab = np.array(rec_acc["alpha_bias"]); bb = np.array(rec_acc["beta_bias"])
+        lines += ["\n**FLM parameter recovery** (theta_hat(x) vs truth, mean over reps)\n",
+                  "| param | R2 | RMSE | bias |",
+                  "|---|---|---|---|",
+                  f"| alpha(x) | {ar2.mean():.4f} | {arm.mean():.4f} | {ab.mean():+.4f} |",
+                  f"| beta(x)  | {br2.mean():.4f} | {brm.mean():.4f} | {bb.mean():+.4f} |"]
     return "\n".join(lines)
 
 
@@ -376,6 +418,14 @@ def main():
                     help="parallel processes over MC reps (torch pinned to 2 threads each)")
     ap.add_argument("--dgp", choices=["both", "linear", "logit"], default="both",
                     help="which DGP(s) to run (logit/Regime-C is far heavier at high folds)")
+    ap.add_argument("--lambda-method", default="ridge",
+                    choices=["ridge", "lgbm", "rf", "mlp", "aggregate"],
+                    help="FLM Lambda estimator (linear DGP only)")
+    ap.add_argument("--ridge-alpha", type=float, default=1000.0,
+                    help="ridge_alpha for lambda_method=ridge")
+    ap.add_argument("--three-way", action="store_true",
+                    help="force 3-way split so Lambda(x) is estimated via "
+                         "lambda_method (default 2-way uses flat aggregate Lambda)")
     args = ap.parse_args()
 
     if args.smoke:
@@ -391,10 +441,14 @@ def main():
 
     def do(name, gen, truth, flm_fn, logit, base_seed):
         print(f"\n[{name.upper()}]  (workers={args.workers})", flush=True)
-        acc = run(gen, truth, flm_fn, logit, M, n, flm_folds, flm_epochs,
+        acc, rec_acc = run(gen, truth, flm_fn, logit, M, n, flm_folds, flm_epochs,
                   riesz_epochs, riesz_patience, base_seed=base_seed,
-                  workers=args.workers, flm_repeats=args.flm_repeats)
-        s = summarize(f"{name.capitalize()} DGP", truth, acc, M)
+                  workers=args.workers, flm_repeats=args.flm_repeats,
+                  lambda_method=args.lambda_method, ridge_alpha=args.ridge_alpha,
+                  three_way=args.three_way)
+        s = summarize(f"{name.capitalize()} DGP (lambda={args.lambda_method}, "
+                      f"alpha={args.ridge_alpha:g}, three_way={args.three_way}, "
+                      f"n={n})", truth, acc, rec_acc, M)
         print(s, flush=True)  # print each summary AS its DGP finishes (partial-safe)
         return s
 

@@ -298,7 +298,14 @@ def structural_dml(
         fam = get_family(family, **family_kwargs)
         loss_fn = fam.loss
         theta_dim = fam.theta_dim
-        three_way = fam.hessian_depends_on_theta()
+        # Explicit override wins (as in automatic mode); else default to the
+        # family's theta-dependence. NOTE: theta-independence (e.g. linear) does
+        # NOT imply Lambda is x-independent: Lambda(x)=E[l_theta_theta|x] still
+        # varies in x through the treatment design E[T|x]. Forcing three_way=True
+        # lets the Lambda(x) estimator capture that heterogeneity.
+        three_way = kwargs.pop('three_way', None)
+        if three_way is None:
+            three_way = fam.hessian_depends_on_theta()
 
         # Use closed-form functions if available
         # Create test inputs with correct dimensions
