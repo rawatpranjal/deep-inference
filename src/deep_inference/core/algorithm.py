@@ -320,9 +320,10 @@ def structural_dml_core(
             # Fit Lambda estimator (or inject a caller-supplied oracle Lambda(x))
             if lambda_eval_fn is not None:
                 # Diagnostic path: bypass entry-wise estimation, use a supplied
-                # Lambda(x). Gets this fold's lambda-train (X,T) too so a
-                # propensity-style Lambda can cross-fit e(x) itself.
-                Lambda_eval = lambda_eval_fn(X_eval, X_lambda, T_lambda)  # (n_eval, d, d)
+                # Lambda(x). Gets this fold's lambda-train (X,T) AND the autodiff
+                # per-obs Hessians, so a PSD-by-construction estimator can fit
+                # Lambda(x) generally (no closed form).
+                Lambda_eval = lambda_eval_fn(X_eval, X_lambda, T_lambda, hessians_lambda)  # (n_eval, d, d)
             elif three_way:
                 if lambda_method == 'aggregate':
                     # Use aggregate even for three-way (ensures full-rank for binary T)

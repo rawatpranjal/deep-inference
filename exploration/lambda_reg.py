@@ -59,7 +59,7 @@ def _clamp_cond(L, max_cond):
 def make_hess_lambda(kind, clamp=None, structure=False):
     """Closure built INSIDE the worker. Regress the linear Hessian entries (or the
     scalar e) on X_lambda, return Lambda(X_eval)."""
-    def fn(X_eval, X_lambda, T_lambda):
+    def fn(X_eval, X_lambda, T_lambda, *_):
         Xl = X_lambda.detach().cpu().numpy(); Tl = T_lambda.detach().cpu().numpy()
         Xe = X_eval.detach().cpu().numpy()
         if structure:                          # impose Lambda=2[[1,e],[e,e]] from one regression

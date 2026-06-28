@@ -47,7 +47,7 @@ E_CLIP = 1e-3   # clip e(x) away from 0/1 for a finite (honest) overlap weight
 def make_prop_lambda(kind):
     """Closure (built INSIDE the worker, never pickled): cross-fit e(x) on the
     fold's lambda-train (X,T), return the structured Lambda(x)=2[[1,e],[e,e]]."""
-    def fn(X_eval, X_lambda, T_lambda):
+    def fn(X_eval, X_lambda, T_lambda, *_):
         Xl = X_lambda.detach().cpu().numpy(); Tl = T_lambda.detach().cpu().numpy().astype(int)
         Xe = X_eval.detach().cpu().numpy()
         if kind == "logit_ridge":
