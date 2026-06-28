@@ -161,6 +161,29 @@ trades a little Λ accuracy (Λ⁻¹-R² 0.17 against the oracle's 1.00) for gua
 conditioning was the whole problem. RieszNet, which learns the correction directly and so never
 inverts anything, remains the other general route, and FLM with the correct Λ equals RieszNet.
 
+### Full results table
+
+Every Λ(x) estimator tried, same DGP, n=2000, θ=net, M=50 (the linear fix row is M=200).
+
+```
+                          SE-ratio  cov    var_ratio    Λ⁻¹-R²    note
+ flat (the bug)             0.81    88%     0.56        -0.11     covariate-constant Λ
+ oracle (true Λ)            1.09    96%     1.16        +1.00     gold
+ ridge (alpha=1000)         0.76    84%     0.51        +0.01     general, flattens
+ lgbm (heavy reg)           0.78    84%     0.53        -0.04     general, undercovers
+ rf                         1.14    98%     2.39        -0.11     general, over-inflates
+ mlp                        0.60   100%  1475          -6766      general, detonates
+ propensity-ridge           1.04    95%     1.20        +0.94     linear-only, est e(x)
+ cholesky   Lambda=L L^T    1.01    96%     1.04        +0.17     general, PSD by construction
+ spectral   Q Lambda Q^T    0.98    98%     1.01        +0.20     general, PSD by construction
+ spectral + eig-floor       0.97    94%     0.99        +0.12     general, PSD + conditioning floor
+```
+
+The dividing line is exact: every estimator that can emit a non-PSD Λ̂ fails (ridge/lgbm/rf/mlp,
+and the smooth bases GAM/spline/poly per the surface plot), every PSD-by-construction estimator
+works (Cholesky and the two spectral forms). The PSD forms are interchangeable; spectral edges
+Cholesky on Λ⁻¹-R², and the eigenvalue floor buys the tightest calibration at a small accuracy cost.
+
 ## Honest caveats
 
 - The fixed estimator now mildly **over**-covers (96 percent, SE-ratio about 1.1), slightly above the

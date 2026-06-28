@@ -57,21 +57,51 @@ class CholNet(nn.Module):
         return L @ L.transpose(-1, -2)                   # (n,d,d), PSD by construction
 
 
+class SpectralNet(nn.Module):
+    """X -> PSD via eigen-decomposition: Q(phi) diag(softplus(lambda)+floor) Q(phi)^T.
+    The floor bounds the minimum eigenvalue, hence the condition number. d=2 only."""
+    def __init__(self, d_x, d=2, hidden=32, floor=0.0):
+        super().__init__()
+        assert d == 2, "spectral parameterization here is for d=2"
+        self.floor = floor
+        self.net = nn.Sequential(nn.Linear(d_x, hidden), nn.ReLU(),
+                                 nn.Linear(hidden, hidden), nn.ReLU(), nn.Linear(hidden, 3))
+
+    def forward(self, X):
+        p = self.net(X)
+        l1 = nn.functional.softplus(p[:, 0]) + self.floor + 1e-4
+        l2 = nn.functional.softplus(p[:, 1]) + self.floor + 1e-4
+        phi = p[:, 2]
+        c, s = torch.cos(phi), torch.sin(phi)
+        Q = torch.stack([torch.stack([c, -s], 1), torch.stack([s, c], 1)], 1)   # (n,2,2)
+        D = X.new_zeros(len(X), 2, 2); D[:, 0, 0] = l1; D[:, 1, 1] = l2
+        return Q @ D @ Q.transpose(-1, -2)
+
+
+def _fit_predict(net, Xl, H, X_eval, epochs=250, lr=5e-3):
+    opt = torch.optim.Adam(net.parameters(), lr=lr)
+    for _ in range(epochs):
+        opt.zero_grad(); ((net(Xl) - H) ** 2).mean().backward(); opt.step()
+    net.eval()
+    with torch.no_grad():
+        return net(X_eval.float())
+
+
 def make_cholesky_lambda(hidden=32, epochs=250, lr=5e-3):
-    def fn(X_eval, X_lambda, T_lambda):
-        Xl = X_lambda.detach().float(); Tl = T_lambda.detach().float()
-        # general per-obs Hessian (linear loss): H = 2[[1,T],[T,T^2]]
-        H = torch.zeros(len(Tl), 2, 2)
-        H[:, 0, 0] = 2.0; H[:, 0, 1] = 2 * Tl; H[:, 1, 0] = 2 * Tl; H[:, 1, 1] = 2 * Tl ** 2
-        net = CholNet(Xl.shape[1], d=2, hidden=hidden)
-        opt = torch.optim.Adam(net.parameters(), lr=lr)
-        for _ in range(epochs):
-            opt.zero_grad()
-            loss = ((net(Xl) - H) ** 2).mean()           # Frobenius fit to per-obs Hessians
-            loss.backward(); opt.step()
-        net.eval()
-        with torch.no_grad():
-            return net(X_eval.float())
+    def fn(X_eval, X_lambda, T_lambda, H_lambda):
+        # GENERAL: targets are the pipeline's AUTODIFF per-obs Hessians (any family,
+        # no closed form). For the linear loss these equal 2[[1,T],[T,T^2]], but we
+        # never assume that -- we read them off H_lambda.
+        Xl = X_lambda.detach().float(); H = H_lambda.detach().float()
+        return _fit_predict(CholNet(Xl.shape[1], d=H.shape[-1], hidden=hidden), Xl, H, X_eval, epochs, lr)
+    return fn
+
+
+def make_spectral_lambda(floor=0.0, hidden=32, epochs=250, lr=5e-3):
+    def fn(X_eval, X_lambda, T_lambda, H_lambda):
+        Xl = X_lambda.detach().float(); H = H_lambda.detach().float()
+        return _fit_predict(SpectralNet(Xl.shape[1], d=H.shape[-1], hidden=hidden, floor=floor),
+                            Xl, H, X_eval, epochs, lr)
     return fn
 
 
@@ -85,6 +115,11 @@ def run_flm_cell(Y, T, X, lam, folds, epochs):
         kw["lambda_eval_fn"] = oracle_lambda_fn; kw["tikhonov_scale"] = tik = ORACLE_TIKHONOV
     elif lam == "cholesky":
         kw["lambda_eval_fn"] = make_cholesky_lambda(); kw["tikhonov_scale"] = tik = ORACLE_TIKHONOV
+    elif lam == "spectral":
+        kw["lambda_eval_fn"] = make_spectral_lambda(floor=0.0); kw["tikhonov_scale"] = tik = ORACLE_TIKHONOV
+    elif lam.startswith("spectral_floor"):
+        fl = float(lam.split("@")[1]) if "@" in lam else 0.1
+        kw["lambda_eval_fn"] = make_spectral_lambda(floor=fl); kw["tikhonov_scale"] = tik = ORACLE_TIKHONOV
     elif lam == "lgbm":
         kw.update(three_way=True, lambda_method="lgbm")
     else:
