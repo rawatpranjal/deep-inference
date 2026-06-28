@@ -33,17 +33,16 @@ def parse_sections(text):
 
 def highlight(method):
     m = method.lower()
-    if "oracle[" in m or "flm[oracle" in m:
+    # the two GENERAL solutions that must hit the gate
+    if "cholesky" in m or "riesznet" in m:
+        return "general"
+    # reference ceilings (exploit analytical structure) -- not solutions
+    if "flm[oracle" in m or "flm[analytic" in m:
         return "ceiling"
-    if "cholesky" in m:
-        return "fix"
-    if m == "oracle":
-        return "anchor"
-    if "riesznet" in m:
-        return "anchor"
+    # naive / contrast rows
     if "naive" in m:
         return "bad"
-    return ""
+    return ""  # Oracle-MLE anchor, ridge/flat contrasts
 
 
 def table_html(header, body):
@@ -78,10 +77,10 @@ table{{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;fon
 th,td{{text-align:right;padding:8px 12px;border-bottom:1px solid var(--line)}}
 th:first-child,td:first-child{{text-align:left;font-weight:500}}
 thead th{{color:var(--mut);font-weight:500;border-bottom:1px solid var(--line)}}
-tr.fix td{{background:rgba(31,111,235,.14)}}
-tr.ceiling td{{background:rgba(46,160,67,.13)}}
+tr.general td{{background:rgba(31,111,235,.14)}}
+tr.ceiling td{{background:rgba(46,160,67,.10)}}
 tr.bad td{{color:var(--mut)}}
-tr.fix td:first-child{{box-shadow:inset 3px 0 var(--fix)}}
+tr.general td:first-child{{box-shadow:inset 3px 0 var(--fix)}}
 tr.ceiling td:first-child{{box-shadow:inset 3px 0 var(--ceil)}}
 .note{{margin-top:22px;padding:16px 18px;background:var(--panel);border:1px solid var(--line);
 border-radius:8px;color:var(--ink);font-size:14px}}
@@ -96,9 +95,9 @@ margin-right:5px}}
 <div class="tabs">{tabbtns}</div>
 {panels}
 <div class="legend">
-<span><i class="sw" style="background:var(--fix)"></i>FLM, general PSD Λ̂(x) (the fix)</span>
-<span><i class="sw" style="background:var(--ceil)"></i>Oracle-Λ ceiling (true Λ injected)</span>
-<span>Anchors: Oracle-MLE, RieszNet. Naive = no correction.</span>
+<span><i class="sw" style="background:var(--fix)"></i>General solutions: FLM[cholesky] + RieszNet (must hit ~95%/1.0)</span>
+<span><i class="sw" style="background:var(--ceil)"></i>Reference ceilings: FLM[oracle], FLM[analytic] (exploit structure)</span>
+<span>Oracle-MLE = gold-standard anchor. ridge/flat = naive-Λ contrasts. Naive = no correction.</span>
 </div>
 </div>
 <script>
