@@ -101,6 +101,37 @@ def truth_logit(rng):
     return float(np.mean(s1 - s0))
 
 
+# ---- Poisson DGP: Y ~ Poisson(lambda), lambda = exp(a(X) + b(X) T) --------
+# Smaller coefficients than linear/logit so lambda=exp(eta) stays moderate (counts ~0-8).
+# theta-dependent Hessian (weight lambda) like logit, but exp link -> UNBOUNDED weight and
+# NO saturation channel: Lambda*(x) near-singular only at overlap (det = e(1-e) lam0 lam1).
+PA0, PA1, PA2 = 0.2, 0.4, -0.3
+PB0, PB1 = 0.4, 0.2
+
+
+def a_of_pois(X):
+    return PA0 + PA1 * X[:, 0] + PA2 * X[:, 1]
+
+
+def b_of_pois(X):
+    return PB0 + PB1 * X[:, 0]
+
+
+def gen_poisson(n, rng):
+    X = draw_X(n, rng)
+    T = (rng.uniform(size=n) < propensity(X)).astype(float)
+    lam = np.exp(a_of_pois(X) + b_of_pois(X) * T)
+    Y = rng.poisson(lam).astype(float)
+    return Y, T, X
+
+
+def truth_poisson(rng):
+    # ATE on the count-mean scale: E[ exp(a+b) - exp(a) ].
+    Xb = draw_X(2_000_000, rng)
+    a, b = a_of_pois(Xb), b_of_pois(Xb)
+    return float(np.mean(np.exp(a + b) - np.exp(a)))
+
+
 # ---- Oracle (gold standard, correctly specified) --------------------------
 def oracle_linear(Y, T, X):
     # True mean: A0 + A1 X0 + A2 X1 + (B0 + B1 X0) T. Design includes T, T*X0.
@@ -128,6 +159,22 @@ def oracle_logit(Y, T, X):
     mu = float(np.mean(s1 - s0))
     # delta method: grad of mean(s1-s0) wrt theta
     g = (((s1 * (1 - s1))[:, None] * D1) - ((s0 * (1 - s0))[:, None] * D0)).mean(0)
+    var = float(g @ cov @ g)
+    return mu, np.sqrt(var)
+
+
+def oracle_poisson(Y, T, X):
+    # correctly-specified Poisson GLM + delta-method SE for E[exp(D1 θ) - exp(D0 θ)].
+    D = np.column_stack([np.ones_like(T), X[:, 0], X[:, 1], T, T * X[:, 0]])
+    m = sm.GLM(Y, D, family=sm.families.Poisson()).fit()
+    th = np.asarray(m.params)
+    cov = np.asarray(m.cov_params())
+    D1 = np.column_stack([np.ones_like(T), X[:, 0], X[:, 1], np.ones_like(T), X[:, 0]])
+    D0 = np.column_stack([np.ones_like(T), X[:, 0], X[:, 1], np.zeros_like(T), np.zeros_like(T)])
+    l1 = np.exp(D1 @ th)
+    l0 = np.exp(D0 @ th)
+    mu = float(np.mean(l1 - l0))
+    g = ((l1[:, None] * D1) - (l0[:, None] * D0)).mean(0)  # d/dθ mean(exp(D1θ)-exp(D0θ))
     var = float(g @ cov @ g)
     return mu, np.sqrt(var)
 
@@ -172,11 +219,19 @@ class RieszNet(nn.Module):
         return self.reg_head(rep).squeeze(-1), self.riesz_head(rep).squeeze(-1)
 
 
-def _loss(net, t, x, y, ones, zeros, logit):
+def _outcome_g_reg(g_raw, y, outcome):
+    """Mean g(Z) and the regression loss for each outcome type (g_raw is the linear index)."""
+    if outcome == "logit":
+        return torch.sigmoid(g_raw), nn.functional.binary_cross_entropy_with_logits(g_raw, y)
+    if outcome == "poisson":
+        g = torch.exp(g_raw)
+        return g, (g - y * g_raw).mean()                   # Poisson NLL exp(η)-y·η
+    return g_raw, ((g_raw - y) ** 2).mean()                # linear / MSE
+
+
+def _loss(net, t, x, y, ones, zeros, outcome):
     g_raw, a_obs = net(t, x)
-    g_obs = torch.sigmoid(g_raw) if logit else g_raw
-    reg = nn.functional.binary_cross_entropy_with_logits(g_raw, y) if logit \
-        else ((g_raw - y) ** 2).mean()
+    g_obs, reg = _outcome_g_reg(g_raw, y, outcome)
     _, a1 = net(ones, x)
     _, a0 = net(zeros, x)
     riesz = (a_obs ** 2 - 2.0 * (a1 - a0)).mean()          # E[a^2 - 2 m(a)]
@@ -185,7 +240,7 @@ def _loss(net, t, x, y, ones, zeros, logit):
     return reg + LAMBDA1 * riesz + LAMBDA2 * tmle
 
 
-def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=3,
+def _fit_riesz(Xtr, Ttr, Ytr, outcome, max_epochs, patience, seed, restarts=3,
                batch_size=256, weight_decay=L2):
     """Faithful RieszNet fit: minibatch + two-stage LR (Adam 1e-3 then 2e-4). Restart
     selection uses a divergence-robust val metric -- the combined val loss PLUS a penalty
@@ -214,7 +269,7 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=3,
     def val_score(net):
         # combined val loss + soft penalty on a runaway representer (rms of a on val)
         with torch.no_grad():
-            loss = _loss(net, *val_b, logit).item()
+            loss = _loss(net, *val_b, outcome).item()
             _, a_val = net(val_b[0], val_b[1])
             a_rms = float((a_val ** 2).mean().sqrt())
         return loss + 0.01 * max(0.0, a_rms - 25.0) ** 2
@@ -238,7 +293,7 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=3,
             for s in range(0, n_tr, batch_size):
                 bb = pack(perm[s:s + batch_size])
                 opt.zero_grad()
-                _loss(net, *bb, logit).backward()
+                _loss(net, *bb, outcome).backward()
                 torch.nn.utils.clip_grad_norm_(net.parameters(), 5.0)
                 opt.step()
             net.eval()
@@ -258,7 +313,7 @@ def _fit_riesz(Xtr, Ttr, Ytr, logit, max_epochs, patience, seed, restarts=3,
     return net
 
 
-def _riesz_single(Y, T, X, logit, K, max_epochs, patience, seed):
+def _riesz_single(Y, T, X, outcome, K, max_epochs, patience, seed):
     """One K-fold cross-fit RieszNet pass -> (mu, se, mu_naive, se_naive)."""
     n = len(Y)
     rng = np.random.default_rng(seed)
@@ -268,7 +323,7 @@ def _riesz_single(Y, T, X, logit, K, max_epochs, patience, seed):
     for k in range(K):
         te = folds[k]
         tr = np.concatenate([folds[j] for j in range(K) if j != k])
-        net = _fit_riesz(X[tr], T[tr], Y[tr], logit, max_epochs, patience, seed + k)
+        net = _fit_riesz(X[tr], T[tr], Y[tr], outcome, max_epochs, patience, seed + k)
         with torch.no_grad():
             xe = torch.tensor(X[te], dtype=torch.float32)
             te_t = torch.tensor(T[te], dtype=torch.float32).unsqueeze(1)
@@ -277,7 +332,10 @@ def _riesz_single(Y, T, X, logit, K, max_epochs, patience, seed):
 
             def gmean(traw):
                 g, a = net(traw, xe)
-                g = torch.sigmoid(g) if logit else g
+                if outcome == "logit":
+                    g = torch.sigmoid(g)
+                elif outcome == "poisson":
+                    g = torch.exp(g)
                 return g.numpy(), a.numpy()
 
             g1, a1 = gmean(ones)
@@ -296,12 +354,12 @@ def _riesz_single(Y, T, X, logit, K, max_epochs, patience, seed):
     return mu, float(se), mu_naive, se_naive
 
 
-def riesz_ate(Y, T, X, logit, K=5, max_epochs=400, patience=30, seed=0, repeats=3):
+def riesz_ate(Y, T, X, outcome, K=5, max_epochs=400, patience=30, seed=0, repeats=3):
     """Median-DML over `repeats` independent cross-fit splits (Chernozhukov et al.). A junk
     Riesz head in ONE split makes that split's mu_r an outlier; the median across splits
     rejects it, where best-of-restarts and the representer guard could not. SE folds the
     across-split spread in: se² = median_r(se_r² + (mu_r - mu)²)."""
-    res = [_riesz_single(Y, T, X, logit, K, max_epochs, patience, seed + 100 * r)
+    res = [_riesz_single(Y, T, X, outcome, K, max_epochs, patience, seed + 100 * r)
            for r in range(repeats)]
     mus = np.array([r[0] for r in res])
     ses = np.array([r[1] for r in res])
@@ -515,52 +573,116 @@ def flm_logit(Y, T, X, n_folds, epochs, n_repeats=1, lambda_spec="cholesky",
     return r.mu_hat, r.se
 
 
+POISSON_TIKHONOV = {"oracle": 1e-8, "cholesky": 0.01, "ridge": 0.01}
+
+
+class OraclePoissonLambda:
+    """Oracle Λ(x)=E[ℓ_θθ|X=x] for the Poisson DGP. Per-obs Hessian is λ·[[1,t],[t,t²]],
+    λ=exp(α+β t) (loss exp(η)-y·η, NO factor). Integrate over T~Bernoulli(e*):
+      Λ*(x) = (1-e)·λ0·[[1,0],[0,0]] + e·λ1·[[1,1],[1,1]], λ0=exp(α*), λ1=exp(α*+β*).
+    Ceiling reference, NOT general."""
+    requires_theta = True
+    requires_separate_fold = True
+
+    def fit(self, X, T, Y, theta_hat, model):
+        return None
+
+    def predict(self, X, theta_hat=None):
+        x0, x1 = X[:, 0], X[:, 1]
+        a = PA0 + PA1 * x0 + PA2 * x1
+        b = PB0 + PB1 * x0
+        e = torch.sigmoid(GAMMA * (x0 + x1))
+        l0, l1 = torch.exp(a), torch.exp(a + b)
+        L = X.new_zeros(len(X), 2, 2)
+        L[:, 0, 0] = (1 - e) * l0 + e * l1
+        L[:, 0, 1] = e * l1
+        L[:, 1, 0] = e * l1
+        L[:, 1, 1] = e * l1
+        return L
+
+
+def flm_poisson(Y, T, X, n_folds, epochs, n_repeats=1, lambda_spec="cholesky",
+                tikhonov=None, max_condition=None):
+    # ATE on the count-mean scale exp(a+b)-exp(a), via a CUSTOM LOSS -> fully autodiff (no
+    # built-in poisson model), the most general test of the cholesky Λ path.
+    def ploss(y, t, theta):
+        eta = theta[0] + theta[1] * t
+        return torch.exp(eta) - y * eta
+    def ate_target(x, theta, t_tilde):
+        return torch.exp(theta[0] + theta[1]) - torch.exp(theta[0])
+    kw = dict(loss=ploss, target_fn=ate_target, theta_dim=2, t_tilde=0.0,
+              hessian_depends_on_theta=True, hessian_depends_on_y=False,
+              n_folds=n_folds, epochs=epochs, n_repeats=n_repeats,
+              hidden_dims=[32], verbose=False)
+    if lambda_spec == "oracle":
+        kw["lambda_strategy"] = OraclePoissonLambda()
+    elif lambda_spec == "cholesky":
+        if max_condition is not None:
+            kw["lambda_strategy"] = _cholesky_strategy(max_condition)
+        else:
+            kw["lambda_method"] = "cholesky"
+    elif lambda_spec == "ridge":
+        kw["lambda_method"] = "ridge"
+    else:
+        raise ValueError(f"unknown poisson lambda_spec: {lambda_spec}")
+    kw["tikhonov_scale"] = tikhonov if tikhonov is not None else POISSON_TIKHONOV[lambda_spec]
+    r = inference(Y, T, X.astype(float), **kw)
+    return r.mu_hat, r.se
+
+
 # ---- Monte Carlo driver ---------------------------------------------------
 def covered(mu, se, truth):
     z = norm.ppf(0.975)
     return float(mu - z * se <= truth <= mu + z * se)
 
 
+# DGP registry: name -> data generator, oracle-MLE anchor, general FLM, RieszNet outcome.
+DGPS = {
+    "linear":  dict(gen=gen_linear,  oracle=oracle_linear,  flm=flm_linear_general, outcome="linear"),
+    "logit":   dict(gen=gen_logit,   oracle=oracle_logit,   flm=flm_logit,          outcome="logit"),
+    "poisson": dict(gen=gen_poisson, oracle=oracle_poisson, flm=flm_poisson,        outcome="poisson"),
+}
+DEFAULT_SPECS = {  # 'flat'/'ridge' = naive-Λ contrast, 'oracle' = ceiling ref, cholesky = general
+    "linear":  ("cholesky", "flat", "oracle"),
+    "logit":   ("cholesky", "ridge", "oracle"),
+    "poisson": ("cholesky", "ridge", "oracle"),
+}
+DGP_BASE_SEED = {"linear": 1000, "logit": 5000, "poisson": 9000}
+TRUTH_FN = {"linear": lambda rng: truth_linear(), "logit": truth_logit, "poisson": truth_poisson}
+
+
 def _one_rep(task):
-    """One MC replication, all methods. Top-level so it pickles for Pool.
-    Logit runs one FLM row per lambda spec (cholesky / ridge / oracle-Λ)."""
-    (truth, logit, n, flm_folds, flm_epochs, flm_repeats, flm_tikhonov, flm_max_condition,
-     logit_lambdas, linear_lambdas, riesz_epochs, riesz_patience, seed) = task
-    # Seed the GLOBAL torch/numpy RNG per rep so FLM (which uses global state for
-    # net init) is reproducible and identical serial-vs-parallel. Distinct per
-    # rep, so cross-rep MC variability is preserved.
+    """One MC replication, all methods. Top-level so it pickles for Pool."""
+    (truth, dgp_name, n, flm_folds, flm_epochs, flm_repeats, flm_tikhonov,
+     flm_max_condition, specs, riesz_epochs, riesz_patience, seed) = task
+    # Seed the GLOBAL torch/numpy RNG per rep so FLM (which uses global state for net
+    # init) is reproducible and identical serial-vs-parallel; distinct per rep.
     torch.manual_seed(seed)
     np.random.seed(seed % (2 ** 32))
     rng = np.random.default_rng(seed)
-    dgp = gen_logit if logit else gen_linear
-    Y, T, X = dgp(n, rng)
+    d = DGPS[dgp_name]
+    Y, T, X = d["gen"](n, rng)
     out = {}
-    mu, se = (oracle_logit if logit else oracle_linear)(Y, T, X)
+    mu, se = d["oracle"](Y, T, X)
     out["Oracle"] = (mu, se, covered(mu, se, truth))
-    # Both DGPs run one FLM row per lambda spec through the GENERAL inference() path
-    # (cholesky); ridge/flat are contrasts, analytic/oracle are labeled ceilings.
-    specs = logit_lambdas if logit else linear_lambdas
-    flm = flm_logit if logit else flm_linear_general
-    for spec in specs:
-        mu, se = flm(Y, T, X, flm_folds, flm_epochs, n_repeats=flm_repeats,
-                     lambda_spec=spec, tikhonov=flm_tikhonov, max_condition=flm_max_condition)
+    for spec in specs:  # general cholesky + contrast(ridge/flat) + ceiling(oracle) rows
+        mu, se = d["flm"](Y, T, X, flm_folds, flm_epochs, n_repeats=flm_repeats,
+                          lambda_spec=spec, tikhonov=flm_tikhonov, max_condition=flm_max_condition)
         out[f"FLM[{spec}]"] = (mu, se, covered(mu, se, truth))
-    mu, se, mun, sen = riesz_ate(Y, T, X, logit, max_epochs=riesz_epochs,
+    mu, se, mun, sen = riesz_ate(Y, T, X, d["outcome"], max_epochs=riesz_epochs,
                                  patience=riesz_patience, seed=seed)
     out["RieszNet"] = (mu, se, covered(mu, se, truth))
     out["Naive"] = (mun, sen, covered(mun, sen, truth))
     return out, None
 
 
-def run(truth, logit, M, n, flm_folds, flm_epochs,
+def run(truth, dgp_name, M, n, flm_folds, flm_epochs,
         riesz_epochs, riesz_patience, base_seed, workers=1, flm_repeats=1,
-        flm_tikhonov=None, flm_max_condition=None,
-        logit_lambdas=("cholesky", "ridge", "oracle"),
-        linear_lambdas=("cholesky", "flat", "oracle")):
+        flm_tikhonov=None, flm_max_condition=None, specs=("cholesky", "oracle")):
     acc = {}  # method -> {est,se,cov}; built lazily so the FLM rows appear in order
     rec_acc = {}  # recovery panel retired (goal is coverage/SE-ratio)
-    tasks = [(truth, logit, n, flm_folds, flm_epochs, flm_repeats, flm_tikhonov,
-              flm_max_condition, list(logit_lambdas), list(linear_lambdas),
+    tasks = [(truth, dgp_name, n, flm_folds, flm_epochs, flm_repeats, flm_tikhonov,
+              flm_max_condition, list(specs),
               riesz_epochs, riesz_patience, base_seed + i) for i in range(M)]
 
     def absorb(i, result):
@@ -619,8 +741,8 @@ def main():
                     help="FLM repeated cross-fitting splits (n_repeats); >1 = median DML")
     ap.add_argument("--workers", type=int, default=1,
                     help="parallel processes over MC reps (torch pinned to 2 threads each)")
-    ap.add_argument("--dgp", choices=["both", "linear", "logit"], default="both",
-                    help="which DGP(s) to run (logit/Regime-C is far heavier at high folds)")
+    ap.add_argument("--dgp", choices=["both", "all", "linear", "logit", "poisson"], default="both",
+                    help="which DGP(s): both=linear+logit, all=+poisson, or a single name")
     ap.add_argument("--lambda-method", default="ridge",
                     choices=["ridge", "lgbm", "rf", "mlp", "aggregate"],
                     help="FLM Lambda estimator (linear DGP only)")
@@ -637,6 +759,9 @@ def main():
                     help="comma-sep FLM Lambda specs for the LINEAR DGP: cholesky (general "
                          "PSD net), flat (legacy 2-way aggregate bug contrast), oracle "
                          "(true Lambda ceiling). All but 'flat' run the general inference() path.")
+    ap.add_argument("--poisson-lambdas", default="cholesky,ridge,oracle",
+                    help="comma-sep FLM Lambda specs for the POISSON DGP: cholesky (general),"
+                         " ridge (contrast), oracle (true Lambda ceiling).")
     ap.add_argument("--tikhonov", type=float, default=None,
                     help="global tikhonov_scale override applied to ALL FLM specs (matched-eps "
                          "oracle-ladder diagnostic). Default None = each spec's own default.")
@@ -644,8 +769,11 @@ def main():
                     help="cholesky inverse condition-number clamp (spectrum-adaptive regularizer). "
                          "Default None = package default 100. Lower = more inverse regularization.")
     args = ap.parse_args()
-    logit_lambdas = [s for s in args.logit_lambdas.split(",") if s]
-    linear_lambdas = [s for s in args.linear_lambdas.split(",") if s]
+    specs_map = {
+        "linear": [s for s in args.linear_lambdas.split(",") if s],
+        "logit": [s for s in args.logit_lambdas.split(",") if s],
+        "poisson": [s for s in args.poisson_lambdas.split(",") if s],
+    }
 
     if args.smoke:
         M, n, flm_folds, flm_epochs, riesz_epochs, riesz_patience = 3, 1000, 5, 60, 150, 20
@@ -653,32 +781,27 @@ def main():
         M, n, flm_folds, flm_epochs, riesz_epochs, riesz_patience = (
             args.M, args.n, args.flm_folds, args.flm_epochs, 200, 25)
 
-    truth_rng = np.random.default_rng(99)
-    t_lin = truth_linear()
-    t_log = truth_logit(truth_rng)
-    print(f"truths: linear ATE={t_lin:.4f}  logit ATE={t_log:.4f}")
+    sel = {"both": ["linear", "logit"],
+           "all": ["linear", "logit", "poisson"]}.get(args.dgp, [args.dgp])
+    truths = {name: TRUTH_FN[name](np.random.default_rng(99)) for name in sel}
+    print("truths: " + "  ".join(f"{k} ATE={v:.4f}" for k, v in truths.items()))
 
-    def do(name, truth, logit, base_seed):
+    def do(name):
         print(f"\n[{name.upper()}]  (workers={args.workers})", flush=True)
-        acc, rec_acc = run(truth, logit, M, n, flm_folds, flm_epochs,
-                  riesz_epochs, riesz_patience, base_seed=base_seed,
+        specs = specs_map[name]
+        acc, rec_acc = run(truths[name], name, M, n, flm_folds, flm_epochs,
+                  riesz_epochs, riesz_patience, base_seed=DGP_BASE_SEED[name],
                   workers=args.workers, flm_repeats=args.flm_repeats,
-                  flm_tikhonov=args.tikhonov, flm_max_condition=args.max_condition,
-                  logit_lambdas=logit_lambdas, linear_lambdas=linear_lambdas)
-        specs = logit_lambdas if logit else linear_lambdas
+                  flm_tikhonov=args.tikhonov, flm_max_condition=args.max_condition, specs=specs)
         tik_desc = f", tikhonov={args.tikhonov:g}" if args.tikhonov is not None else ""
         cond_desc = f", maxcond={args.max_condition:g}" if args.max_condition is not None else ""
         rep_desc = f", repeats={args.flm_repeats}" if args.flm_repeats > 1 else ""
         s = summarize(f"{name.capitalize()} DGP (lambdas={','.join(specs)}, n={n}, "
-                      f"folds={flm_folds}{rep_desc}{tik_desc}{cond_desc})", truth, acc, rec_acc, M)
+                      f"folds={flm_folds}{rep_desc}{tik_desc}{cond_desc})", truths[name], acc, rec_acc, M)
         print(s, flush=True)  # print each summary AS its DGP finishes (partial-safe)
         return s
 
-    summaries = []
-    if args.dgp in ("both", "linear"):
-        summaries.append(do("linear", t_lin, False, 1000))
-    if args.dgp in ("both", "logit"):
-        summaries.append(do("logit", t_log, True, 5000))
+    summaries = [do(name) for name in sel]
 
     report = ("# Spike: FLM vs RieszNet (known-truth ATE)\n"
               + "\n".join(summaries)
