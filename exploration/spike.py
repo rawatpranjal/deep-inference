@@ -23,6 +23,7 @@ Run:
 """
 
 import os
+import json
 # Parallelism is ACROSS reps (one process per rep), so each worker must be
 # single-threaded or the BLAS/OMP backends oversubscribe (14 workers x 16 BLAS
 # threads = 260 threads on 16 cores). Must be set before numpy/torch import.
@@ -691,12 +692,16 @@ def _one_rep(task):
 
 def run(truth, dgp_name, M, n, flm_folds, flm_epochs,
         riesz_epochs, riesz_patience, base_seed, workers=1, flm_repeats=1,
-        flm_tikhonov=None, flm_max_condition=None, specs=("cholesky", "oracle")):
+        flm_tikhonov=None, flm_max_condition=None, specs=("cholesky", "oracle"),
+        rep_offset=0):
     acc = {}  # method -> {est,se,cov}; built lazily so the FLM rows appear in order
     rec_acc = {}  # recovery panel retired (goal is coverage/SE-ratio)
+    # rep_offset shifts the per-rep seed (base_seed+offset+i) so M=100 can be run as
+    # disjoint rep-range chunks that merge to a byte-identical M=100 (each rep keeps its
+    # own seed regardless of chunking). Used to keep a chunk under the cloud 60-min cap.
     tasks = [(truth, dgp_name, n, flm_folds, flm_epochs, flm_repeats, flm_tikhonov,
               flm_max_condition, list(specs),
-              riesz_epochs, riesz_patience, base_seed + i) for i in range(M)]
+              riesz_epochs, riesz_patience, base_seed + rep_offset + i) for i in range(M)]
 
     def absorb(i, result):
         out, rec = result
@@ -707,8 +712,8 @@ def run(truth, dgp_name, M, n, flm_folds, flm_epochs,
             for k in rec_acc:
                 rec_acc[k].append(rec[k])
         flm_str = " ".join(f"{k}={out[k][0]:.3f}" for k in out if k.startswith("FLM"))
-        print(f"  rep {i+1}/{M}: oracle={out['Oracle'][0]:.3f} {flm_str} "
-              f"riesz={out['RieszNet'][0]:.3f} naive={out['Naive'][0]:.3f}", flush=True)
+        print(f"  rep {rep_offset+i+1} (chunk {i+1}/{M}): oracle={out['Oracle'][0]:.3f} "
+              f"{flm_str} riesz={out['RieszNet'][0]:.3f} naive={out['Naive'][0]:.3f}", flush=True)
 
     if workers <= 1:
         for i, t in enumerate(tasks):
@@ -741,6 +746,45 @@ def summarize(name, truth, acc, rec_acc, M):
                   f"| alpha(x) | {ar2.mean():.4f} | {arm.mean():.4f} | {ab.mean():+.4f} |",
                   f"| beta(x)  | {br2.mean():.4f} | {brm.mean():.4f} | {bb.mean():+.4f} |"]
     return "\n".join(lines)
+
+
+def _jsonable_acc(acc):
+    """Coerce np scalars to JSON-safe floats so a chunk's raw per-rep arrays persist."""
+    return {m: {k: [float(x) for x in d[k]] for k in ("est", "se", "cov")}
+            for m, d in acc.items()}
+
+
+def merge_raw(paths, out):
+    """Concatenate raw per-rep arrays from disjoint rep-range chunks and re-summarize.
+
+    Each chunk file is {dgp_name: {truth, desc, M, acc}}; merging is exact because the
+    chunks cover disjoint reps of the same seed sequence (base_seed+i), so the union IS
+    the full M=100 run. emp SE / SE-ratio / coverage are recomputed over all reps at once.
+    """
+    merged = {}
+    for p in paths:
+        with open(p) as f:
+            blob = json.load(f)
+        for name, d in blob.items():
+            if name not in merged:
+                merged[name] = {"truth": d["truth"], "desc": d["desc"], "M": 0, "acc": {}}
+            merged[name]["M"] += d["M"]
+            for m, arrs in d["acc"].items():
+                a = merged[name]["acc"].setdefault(m, {"est": [], "se": [], "cov": []})
+                for k in ("est", "se", "cov"):
+                    a[k] += arrs[k]
+    order = ["linear", "logit", "poisson"]
+    summaries = [summarize(merged[name]["desc"], merged[name]["truth"],
+                           merged[name]["acc"], None, merged[name]["M"])
+                 for name in order if name in merged]
+    report = ("# Spike: FLM vs RieszNet (known-truth ATE) [merged from rep-range chunks]\n"
+              + "\n".join(summaries)
+              + "\n\nPass if FLM and RieszNet both ~truth, coverage 90-97%, SE ratio ~1; "
+                "Naive should under-cover (shows the correction is necessary).\n")
+    with open(out, "w") as f:
+        f.write(report)
+    print(f"merged {len(paths)} chunks -> {out}")
+    print(report)
 
 
 def main():
@@ -781,7 +825,21 @@ def main():
     ap.add_argument("--max-condition", type=float, default=None,
                     help="cholesky inverse condition-number clamp (spectrum-adaptive regularizer). "
                          "Default None = package default 100. Lower = more inverse regularization.")
+    ap.add_argument("--rep-offset", type=int, default=0,
+                    help="shift the per-rep seed (base+offset+i) so M reps form a disjoint "
+                         "chunk of a larger run; merge chunks with --from-raw for the full M.")
+    ap.add_argument("--dump-raw", default=None,
+                    help="write this chunk's raw per-rep arrays (est/se/cov per method) to "
+                         "this JSON path, for later --from-raw merge.")
+    ap.add_argument("--from-raw", default=None,
+                    help="comma-sep chunk JSONs to merge+summarize into --out (no MC run).")
+    ap.add_argument("--out", default="exploration/results.md",
+                    help="report path written by the run (or by --from-raw merge).")
     args = ap.parse_args()
+
+    if args.from_raw:
+        merge_raw([p for p in args.from_raw.split(",") if p], args.out)
+        return
     specs_map = {
         "linear": [s for s in args.linear_lambdas.split(",") if s],
         "logit": [s for s in args.logit_lambdas.split(",") if s],
@@ -800,29 +858,42 @@ def main():
     print("truths: " + "  ".join(f"{k} ATE={v:.4f}" for k, v in truths.items()))
 
     def do(name):
-        print(f"\n[{name.upper()}]  (workers={args.workers})", flush=True)
+        print(f"\n[{name.upper()}]  (workers={args.workers}, rep_offset={args.rep_offset})",
+              flush=True)
         specs = specs_map[name]
         acc, rec_acc = run(truths[name], name, M, n, flm_folds, flm_epochs,
                   riesz_epochs, riesz_patience, base_seed=DGP_BASE_SEED[name],
                   workers=args.workers, flm_repeats=args.flm_repeats,
-                  flm_tikhonov=args.tikhonov, flm_max_condition=args.max_condition, specs=specs)
+                  flm_tikhonov=args.tikhonov, flm_max_condition=args.max_condition, specs=specs,
+                  rep_offset=args.rep_offset)
         tik_desc = f", tikhonov={args.tikhonov:g}" if args.tikhonov is not None else ""
         cond_desc = f", maxcond={args.max_condition:g}" if args.max_condition is not None else ""
         rep_desc = f", repeats={args.flm_repeats}" if args.flm_repeats > 1 else ""
-        s = summarize(f"{name.capitalize()} DGP (lambdas={','.join(specs)}, n={n}, "
-                      f"folds={flm_folds}{rep_desc}{tik_desc}{cond_desc})", truths[name], acc, rec_acc, M)
+        desc = (f"{name.capitalize()} DGP (lambdas={','.join(specs)}, n={n}, "
+                f"folds={flm_folds}{rep_desc}{tik_desc}{cond_desc})")
+        s = summarize(desc, truths[name], acc, rec_acc, M)
         print(s, flush=True)  # print each summary AS its DGP finishes (partial-safe)
-        return s
+        return s, {name: {"truth": truths[name], "desc": desc, "M": M,
+                          "acc": _jsonable_acc(acc)}}
 
-    summaries = [do(name) for name in sel]
+    results = [do(name) for name in sel]
+    summaries = [r[0] for r in results]
+
+    if args.dump_raw:
+        blob = {}
+        for _, entry in results:
+            blob.update(entry)
+        with open(args.dump_raw, "w") as f:
+            json.dump(blob, f)
+        print(f"wrote raw chunk -> {args.dump_raw}")
 
     report = ("# Spike: FLM vs RieszNet (known-truth ATE)\n"
               + "\n".join(summaries)
               + "\n\nPass if FLM and RieszNet both ~truth, coverage 90-97%, SE ratio ~1; "
                 "Naive should under-cover (shows the correction is necessary).\n")
-    with open("exploration/results.md", "w") as f:
+    with open(args.out, "w") as f:
         f.write(report)
-    print("wrote exploration/results.md")
+    print(f"wrote {args.out}")
 
 
 if __name__ == "__main__":
