@@ -1,5 +1,18 @@
 # Night log: general PSD-Λ for perfect inference scores on linear + logit
 
+## >>> CURRENT STATE (2026-06-28 ~07:20) <<<
+RESULT: the GENERAL estimator FLM[cholesky] is flawless/valid on THREE GLM families at M=50:
+linear 1.04/96%, logit 1.01/98%, poisson 1.05/98% (SE-ratio/coverage, bias~0). RieszNet
+stabilized (median-over-3) + canonical Poisson TMLE targeting (reduced its poisson bias
+-0.037->-0.023; grounds in references/gruber-vanderlaan-2010-tmle-bounded-outcome.md, sourced
++ read). Preview dashboard: exploration/results_all_M50.html (opened). RUNNING: combined
+certification --dgp all M=100 (bdviwky24 -> exploration/results_cert_all_M100.md, ~2.5h) for
+the rigorous numbers. THEN: rebuild dashboard from the cert, fresh-agent verify, CHANGELOG,
+rewrite handoff, squash-merge night/general-lambda-perfect-scores to main (ONE commit, user
+author). vdL-Rubin 2006 source = FAILED (all hosts browser-gate it; websource confirmed; did
+not substitute). RieszNet<->TMLE<->FLM connection answered (all three = same EIF, Riesz
+representer = TMLE clever covariate = FLM's Λ⁻¹ correction weight (T-e)/(e(1-e))).
+
 ## >>> RESUME POINTER (read first) <<<
 - Branch: `night/general-lambda-perfect-scores` (main untouched; squash-merge at the end).
 - Goal (Stop hook active): FLAWLESS general FLM[cholesky] + RieszNet on linear AND logit
