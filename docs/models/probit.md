@@ -187,7 +187,7 @@ result = structural_dml(Y, T, X, family=ProbitFamily(target='ame'))
 
 **Parameter recovery.** Not benchmarked in `evals/eval_01.py` at the time of writing
 (eval_01 covers linear, gaussian, logit, and seven other families but not probit). Recovery
-benchmarks for probit are not yet recorded in [Eval 01](../simulation_studies/eval_01.md).
+benchmarks for probit are not yet recorded in [Eval 01](../simulation_studies.md).
 
 **Coverage** (M=50 replications, source: [Replications](../replications/index.md)):
 
@@ -227,5 +227,5 @@ the influence scores and underestimates the variance.
 
 - [References index](../references/index.md) for the FLM 2021 and FLM 2025 paper
   transcripts.
-- [API: families](../api/families.md) for `ProbitFamily` and the full `structural_dml`
+- [API: families](../api.md) for `ProbitFamily` and the full `structural_dml`
   signature.

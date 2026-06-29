@@ -189,10 +189,10 @@ a custom `loss` and `target_fn` if you need a non-default target.
 ## Evidence
 
 Component validations for Poisson pass cleanly. Parameter recovery is reported in
-[Eval 01](../simulation_studies/eval_01.md), where Poisson gives RMSE on $\alpha$ of 0.014, RMSE
+[Eval 01](../simulation_studies.md), where Poisson gives RMSE on $\alpha$ of 0.014, RMSE
 on $\beta$ of 0.030, correlation with the true $\alpha(X)$ of 0.998, and correlation with the true
 $\beta(X)$ of 0.972, marked PASS. Autodiff agreement with the closed-form score and Hessian is in
-[Eval 02](../simulation_studies/eval_02.md), with a score error of $1.74\times10^{-9}$ and a
+[Eval 02](../simulation_studies.md), with a score error of $1.74\times10^{-9}$ and a
 Hessian error of $2.57\times10^{-9}$, marked PASS.
 
 The end-to-end coverage benchmark is the Poisson row of the
@@ -241,5 +241,5 @@ print(f"Min lambda eigenvalue: {diagnostics.get('min_lambda_eigenvalue', 'N/A')}
 ## References and API
 
 The full API for every family, including the `PoissonFamily` class and its `loss`, `gradient`,
-and `hessian` methods, is in the [Families API reference](../api/families.md). The papers behind
+and `hessian` methods, is in the [Families API reference](../api.md). The papers behind
 the method are annotated in [References](../references/index.md).

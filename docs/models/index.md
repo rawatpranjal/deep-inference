@@ -22,6 +22,28 @@ of them:
 11. **Diagnostics and pitfalls**.
 12. **References and API links**.
 
+```{toctree}
+:hidden:
+:maxdepth: 1
+
+linear
+gaussian
+logit
+probit
+poisson
+negbin
+zip
+gamma
+weibull
+gumbel
+tobit
+beta
+multinomial
+quantile
+combinatorial
+did
+```
+
 ## Pick your model by outcome type
 
 ```{list-table}
@@ -100,24 +122,3 @@ on a three-way split (Regime C), unless the treatment is randomized with a known
   - Any model when the treatment law is known
 ```
 
-```{toctree}
-:maxdepth: 1
-:caption: Models
-
-linear
-gaussian
-logit
-probit
-poisson
-negbin
-zip
-gamma
-weibull
-gumbel
-tobit
-beta
-multinomial
-quantile
-combinatorial
-did
-```

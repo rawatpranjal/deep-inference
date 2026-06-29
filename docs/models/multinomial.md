@@ -259,7 +259,7 @@ result = inference(Y, T, W, model='multinomial_logit', target=ame_target,
 
 ## Evidence
 
-From `docs/simulation_studies/eval_09.md` (Eval 09, J=3, K=2, $d_w=3$):
+From `docs/simulation_studies.md` (Eval 09, J=3, K=2, $d_w=3$):
 
 **Parameter recovery (n=10000, single run):**
 
@@ -283,7 +283,7 @@ Autodiff validation: score and Hessian match closed-form formulas to machine pre
 | z-score mean | 0.14 | (-0.3, 0.3) | PASS |
 | z-score std | 0.96 | 0.7-1.5 | PASS |
 
-**EVAL 09: PASS** (source: `docs/simulation_studies/eval_09.md`)
+**EVAL 09: PASS** (source: `docs/simulation_studies.md`)
 
 ## Diagnostics and Pitfalls
 
@@ -330,4 +330,4 @@ regularization via `tikhonov_scale` if needed.
 - Target classes: `ChoiceProbabilityTarget`, `MultinomialAME`
   (`src/deep_inference/targets/choice_probability.py`)
 - Simulation study: `evals/eval_09_multinomial.py`, results at
-  `docs/simulation_studies/eval_09.md`
+  `docs/simulation_studies.md`

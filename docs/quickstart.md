@@ -110,7 +110,7 @@ On this run the naive average of the network's `β(X)` is `0.4817`, biased low; 
 estimate is `0.5044`, on the truth. The bias is small here because the model is linear and
 well-behaved; on nonlinear models the naive interval can cover the truth as little as 8% of the
 time. See the [Overview](overview.md) motivation table and the
-[Simulation Studies](simulation_studies/index.md) for the full picture.
+[Simulation Studies](simulation_studies.md) for the full picture.
 
 ## A few of the knobs
 
