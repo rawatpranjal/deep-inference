@@ -219,17 +219,29 @@ IHDP_URL = (
 )
 
 
-def fetch_ihdp(n: int, dest: str = "data/external/ihdp") -> Path:
-    """Download ihdp_npci_{i}.csv for i=1..n only if missing (idempotent)."""
-    import urllib.request as _req  # lazy: avoids import at module level
+def fetch_ihdp(n: int, dest: str = "data/external/ihdp") -> tuple[Path, int]:
+    """Download ihdp_npci_{i}.csv for i=1..n only if missing (idempotent).
+
+    The public Dragonnet/CEVAE mirrors only ship the first ~50 individual CSVs,
+    so on a 404 we stop and use however many contiguous realizations exist rather
+    than hard-failing. Returns (dest_path, n_available).
+    """
+    import urllib.error as _err  # lazy: avoids import at module level
+    import urllib.request as _req
 
     dest_path = Path(__file__).resolve().parent.parent / dest
     dest_path.mkdir(parents=True, exist_ok=True)
+    avail = 0
     for i in range(1, n + 1):
         fpath = dest_path / f"ihdp_npci_{i}.csv"
         if not fpath.exists():
-            _req.urlretrieve(IHDP_URL.format(i=i), str(fpath))
-    return dest_path
+            try:
+                _req.urlretrieve(IHDP_URL.format(i=i), str(fpath))
+            except _err.HTTPError:
+                fpath.unlink(missing_ok=True)  # remove the empty 404 stub
+                break
+        avail += 1
+    return dest_path, avail
 
 
 def load_ihdp(i: int, dest_path: Path):
@@ -270,7 +282,13 @@ def run_riesz_mode(args) -> str:
         f"n_folds={cfg['n_folds']}, n_repeats={cfg['n_repeats']}, "
         f"max_epochs={cfg['max_epochs']}, patience={cfg['patience']}"
     )
-    dest_path = fetch_ihdp(N)
+    dest_path, avail = fetch_ihdp(N)
+    if avail < N:
+        print(
+            f"NOTE: only {avail} IHDP realizations available from the public "
+            f"mirror (requested {N}); running on {avail}."
+        )
+        N = avail
 
     abs_errs: list[float] = []
     covers: list[float] = []
