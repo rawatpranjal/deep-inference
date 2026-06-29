@@ -83,6 +83,7 @@
 ## 2026-02-08 (v0.2.0)
 
 ### New Targets & Combinatorial Model
+
 - Added 4 new target functionals: `DoseResponse` (CL2026), `Profit` (DM2023), `TailProbability` (GDR2026), `ConditionalVariance` (GDR2026)
 - Added `CombinatorialModel` with 4 link functions (multiplicative, sigmoid, gen_sigmoid_i, gen_sigmoid_ii) from DeDL2025
 - Added `MultiTreatmentATE` target for combinatorial experiment ATE estimation
@@ -90,26 +91,31 @@
 - Added eval_10 (new target Jacobian + coverage validation) and eval_11 (combinatorial model validation)
 
 ### Eval & Documentation
+
 - Fixed eval_10 defaults: n=5000→8000 for targets with degenerate Jacobians at t̃=0; added t̃=0.5 test point
 - Updated docs: feature card, target examples, API reference for all 5 new targets and CombinatorialModel
 - Version bump 0.1.6 → 0.2.0 (significant feature release)
 
 ### Reference Library
+
 - Downloaded + Docling-transcribed 18 papers (22 total with existing 4) on DNN + Influence Functions / Semiparametric Efficiency
 - Papers organized into 6 categories: Core Framework, Applications, Automatic Debiasing/Riesz, DNN Architecture+IF, Theory, Frontier
 - Updated `docs/index.md` and `docs/theory/index.md` with full categorized citations (22 papers)
 
 ### Documentation
+
 - Fixed paper citations: removed 4 non-IF papers (Wei & Jiang, Kase et al., Dell, Chernozhukov et al.), added 2 confirmed DNN+IF papers (Chen et al. 2024 *J. Econometrics*, Chernozhukov et al. 2022 RieszNet *ICML*)
 
 ## 2026-02-07 (v0.1.6)
 
 ### Documentation
+
 - Updated front page Economic Targets section: added custom loss/target example showing built-in vs custom equivalence, added statsmodels-style output table
 - Economic Targets section now shows real output for BOTH built-in and custom AME, proving equivalence
 - Added `detect_hessian_y_dependence()` to autodiff/hessian.py (was referenced but missing)
 
 ### Economic Targets & Paper Integration
+
 - Added 3 new built-in targets for economic applications: `Elasticity`, `WTP` (Willingness To Pay), `ConsumerWelfare`
 - New targets are accessible via `inference(..., target='elasticity')`, `target='wtp'`, `target='welfare'`
 - Added personalized pricing tutorial (`docs/tutorials/pricing.md`) based on Dube & Misra (2022, JPE)
@@ -120,6 +126,7 @@
 ## 2026-02-07 (v0.1.5)
 
 ### Input Validation & Gallery Expansion
+
 - Added `_validate_inputs()` defensive input checking to both `structural_dml()` and `inference()` APIs — catches NaN, Inf, shape mismatches, constant treatment, sparse matrices, and family-specific constraints (negative counts for Poisson, non-positive values for Gamma/Weibull)
 - Auto-converts Python lists and pandas objects via `np.asarray()` (no more crashes on non-ndarray input)
 - Added hyperparameter validation (epochs, n_folds, lr must be positive) in both entry points and `structural_dml_core()`
@@ -129,6 +136,7 @@
 ## 2026-02-07
 
 ### Tester Feedback: Discoverability, Warnings, UX
+
 - Fixed "8 families" → "13 families" in API docs (`docs/api/index.md`, `docs/api/inference.md`)
 - Updated FAMILY_REGISTRY print output and import list to include all 13 families (gaussian, probit, beta, zip, multinomial_logit were missing)
 - Improved correction_ratio warning: now explains high ratios are expected for non-linear models, only suggests more folds if n_folds < 50
@@ -137,18 +145,21 @@
 - Added 4 missing families (gaussian, probit, beta, zip) to `structural_dml()` family arg docs
 
 ### Multinomial Logit Documentation, Tutorial, and Showcase Notebook
+
 - Added `docs/tutorials/multinomial.md`: Full tutorial mirroring logit.md structure (DGP, data encoding, example, results, applications)
 - Added `tutorials/07_multinomial_logit.ipynb`: End-to-end showcase notebook with parameter recovery and visualization
 - Updated API docs: families.md, models.md, targets.md, inference.md with MNL entries
 - Updated README.md, getting_started, quickstart with MNL in supported families tables
 
 ### Fix Multinomial Logit Parameter Recovery & Coverage
+
 - **Root cause**: `structural_dml()` (legacy API) hardcoded `patience=10` for early stopping, fatal for multinomial logit (3-way split + high-dim random T = noisy validation loss)
 - **Fix**: Added `patience` parameter to `structural_dml()` and `structural_dml_core()`, forwarded to `train_structural_net()` (default=10, backwards-compatible)
 - **Eval_09 tuning**: patience=50, epochs=300, n=10000 (recovery), n=8000 (coverage) — multinomial logit with 3-way split needs more data than binary logit
 - **Results**: Recovery PASS (RMSE 0.08-0.12, Corr 0.78-0.90), Coverage **98%** (SE ratio=0.97, z_mean=0.14, z_std=0.96)
 
 ### Paper Transcription, Eval Standardization, and Multinomial Choice Model
+
 - **Docling transcriptions**: Transcribed 4 PDFs (FLM 2021, 2023, 2025 + Hetzenecker & Osterhaus 2024) to markdown with preserved equations
 - **Standardized eval metrics**: Created `evals/common/metrics.py` with strict thresholds, fixed broken imports in `evals/common/__init__.py`, refactored `eval_06_coverage.py`
 - **Multinomial logit model**: Implemented conditional logit (McFadden) with J alternatives — `models/multinomial.py`, `families/multinomial.py`, `targets/choice_probability.py`, `evals/dgp_multinomial.py`, `evals/eval_09_multinomial.py`
@@ -158,6 +169,7 @@
 ## 2026-01-16 (Night - Late)
 
 ### Package Defaults Updated to Match Validated Settings
+
 - **Fixed n_folds bug in `run_crossfit()`**: Default was 5, now 50 (matches all other APIs)
 - **Increased epochs default**: 100 → 200 across all APIs for safer convergence on complex DGPs
 - Files modified: `engine/crossfit.py`, `__init__.py`, `core/algorithm.py`
@@ -166,6 +178,7 @@
 ## 2026-01-16 (Night)
 
 ### Next-Gen Requirements Document
+
 - Created `full_requirements_next_gen.md`: Comprehensive requirements for incremental improvements to deep-inference
 - **IN SCOPE**: IV/2SLS, Doubly Robust ATE, Causal Estimands (ATE, ATT, CATE), New Targets (Elasticity, WTP, Welfare), API unification
 - **OUT OF SCOPE**: Berry models, vector treatments, multi-equation systems, Bayesian uncertainty
@@ -177,6 +190,7 @@
 ## 2026-01-16 (Late Evening)
 
 ### Implementation Verification: deep_inference vs FLM Papers & External Repo
+
 - **Verified all core formulas match FLM 2025 paper** (Farrell, Liang, Misra):
   - ✅ Influence function: ψ = H - H_θ Λ⁻¹ ℓ_θ (`engine/assembler.py`)
   - ✅ Lambda definition: Λ(x) = E[ℓ_θθ | X=x] (`lambda_/estimate.py`)
@@ -198,6 +212,7 @@
 ## 2026-01-16 (Evening)
 
 ### Critical Bug Fix: t_tilde Default in inference() API
+
 - **Fixed regime_c/eval_06_coverage.py**: Added `t_tilde=0.0` to match DGP's mu_true() definition
 - **Root cause**: `inference()` defaults t_tilde to `mean(T)` when not specified, but DGP's mu_true() is computed at t_tilde=0.0
 - **Before fix**: 0% coverage (systematic bias of -0.1)
@@ -205,6 +220,7 @@
 - This affects any eval using `inference()` with `target="ame"` where the DGP defines mu_true at a specific t_tilde value
 
 ### Restored eval_07_e2e.py from Archive
+
 - Copied `/Users/pranjal/deepest/archive/evals_experimental/eval_07_e2e.py` to `/Users/pranjal/deepest/evals/eval_07_e2e.py`
 - E2E user experience test: loan application scenario with heterogeneous rate sensitivity
 - Parts A-F: Bootstrap Oracle, structural_dml(), comparison tables, heterogeneity analysis
@@ -213,6 +229,7 @@
 ## 2026-01-16
 
 ### Evaluation Strategy by Architecture (Section 7.7)
+
 - Added Section 7.7 to `paper_replication_details.md`: How eval suite survives architecture changes
 - Analysis: ~60% of eval logic is architecture-agnostic (math oracles), ~40% is API-coupled
 - Per-architecture eval compatibility ratings: Protocol Orchestra ★★★★★, Effects ★★★★★, Compiler ★★★☆☆, Dataflow ★★☆☆☆
@@ -220,6 +237,7 @@
 - Rewrite estimates: 10% (Protocol) to 80% (Dataflow) depending on architecture choice
 
 ### InferenceResult Prediction & Visualization Methods (Mixin Refactor)
+
 - Created `PredictVisualizeMixin` in `utils/result_mixin.py` to share methods between result classes
 - `InferenceResult` now has: `predict_theta()`, `predict_alpha()`, `predict_beta()`, `predict_proba()`, `predict()`, `plot_distributions()`, `plot_heterogeneity()`
 - Both `DMLResult` and `InferenceResult` inherit from the same mixin (no code duplication)
@@ -227,6 +245,7 @@
 - Mixin handles both numpy arrays (DMLResult) and Tensors (InferenceResult) for theta_hat
 
 ### Staff Engineer Architecture Proposals (Section 7)
+
 - Added Section 7 to `paper_replication_details.md`: Four fundamentally different architectural approaches
 - **7.1 Architecture A: "The Compiler"** - JAX/XLA functional approach with end-to-end compilation, vmap batching
 - **7.2 Architecture B: "The Protocol Orchestra"** - Rust/Go-style traits with minimal protocols and dependency injection
@@ -236,11 +255,13 @@
 - **7.6 Recommendation**: Protocol Orchestra (B) as primary with Compiler (A) elements for inner loops
 
 ### Quick Start Documentation: Visual Plot Images
+
 - Added `plot_distributions()` and `plot_heterogeneity()` images to Quick Start in `docs/index.md`
 - Created `docs/_static/quickstart_distributions.png` and `docs/_static/quickstart_heterogeneity.png`
 - Added `docs/generate_quickstart_plots.py` script to regenerate plots if needed
 
 ### Smoke Test: Eval-Validated Hyperparameters
+
 - Updated `smoke_test.py` with eval-validated settings for `structural_dml()` API
 - **New settings**: n=5000 (8000 for binary), epochs=100, n_folds=50, hidden_dims=[64,32], lr=0.01
 - **Binary family auto-scaling**: logit/probit use n=8000 (2x samples needed for ~1 bit/observation)
@@ -249,12 +270,14 @@
 - Note: `structural_dml()` doesn't support early stopping (`patience`), so epochs=100 instead of 200
 
 ### Quick Start Documentation Verification
+
 - Fixed fabricated output in `docs/index.md` and `docs/getting_started/quickstart.md`
 - Added `torch.manual_seed(42)` to both Quick Start examples for reproducibility
 - Replaced placeholder values (e.g., "Correction ratio: 0.1234") with real output
 - Added `evals/eval_08_docs.py` to verify Quick Start examples work and produce valid coverage
 
 ### World-Class Architecture Gap Analysis (Section 6)
+
 - Expanded `paper_replication_details.md` with comprehensive architectural critique
 - **6.1**: What Google engineers would build differently (type-safe tensors, unified computation graph, declarative models)
 - **6.2**: Missing paper components (IV/2SLS, doubly robust ATE, implicit targets)
@@ -264,34 +287,40 @@
 - **6.6**: Honest assessment of researcher-focused vs practitioner-focused architecture
 
 ### Paper Replication Details Documentation
+
 - Created `paper_replication_details.md`: Comprehensive analysis of FLM paper coverage vs implementation
 - Documents ~67% paper scope coverage with detailed breakdown of implemented vs missing features
 - Includes package design analysis validating protocol-based architecture
 - Lists complexity estimates for full paper coverage (~2000 new LOC, ~950 refactor)
 
 ### RTD Navigation Menu Fix
+
 - Fixed inconsistent sidebar navigation by adding `:caption:` to all section toctrees
 - Added empty toctree to `docs/algorithm/index.md` for consistency
 - Removed `:hidden:` from `docs/validation/index.md` so eval pages appear in sidebar
 - Renamed flowchart title from "Flowchart: Choosing Your Model" to "Flowchart"
 
 ### DMLResult Prediction & Visualization Methods
+
 - Added prediction methods to `DMLResult`: `predict_theta()`, `predict_alpha()`, `predict_beta()`, `predict_proba()`, `predict()`
 - Added visualization methods: `plot_distributions()` (KDE plots), `plot_heterogeneity()` (covariate profiles)
 - Uses lightweight sklearn Ridge as surrogate predictor for out-of-sample extrapolation
 - New `store_data=True` parameter in `structural_dml()` to enable prediction capability
 
 ### FLM Papers Converted to Searchable Text
+
 - Downloaded FLM2025 (arxiv v3) and converted both FLM2021/FLM2025 PDFs to searchable `.txt` files
 - Split into ~50KB chunks for easier searching: `references/FLM2021_part_*`, `references/FLM2025_part_*`
 
 ### Quick Start Example Upgrade
+
 - Replaced boring Linear example with Logit + Heterogeneous Effects example in `docs/index.md`
 - New example shows: binary outcomes, heterogeneous β(X) = 0.5 + 0.3*X₁, statsmodels-style summary()
 - Diagnostics now show interesting nonlinearity (Lambda eigenvalue < 1, condition number > 1)
 - Added "Predictions & Visualization" section to Quick Start showing `predict_beta()`, `predict_proba()`, `plot_distributions()`, `plot_heterogeneity()`
 
 ### API Flowchart Page for RTD
+
 - Added `docs/flowchart.md`: Interactive decision tree for model/target/regime selection
 - Mermaid diagram with color-coded nodes: outcome types → families → targets → regimes → API calls
 - 8 GLM families, 4 target functionals, 3 Lambda regimes documented
@@ -300,19 +329,22 @@
 - Added `sphinxcontrib-mermaid>=0.9` dependency and extension
 
 ### RTD Documentation Audit
+
 - Verified ReadTheDocs configuration is production-ready with complete coverage
 - `.readthedocs.yaml`: v2, Python 3.11, PDF/ePub enabled ✅
 - `docs/conf.py`: 8 extensions (myst_parser, autodoc, napoleon, viewcode, intersphinx, sphinx_autodoc_typehints, sphinx_copybutton, sphinxcontrib.mermaid) ✅
 - All 37 markdown files properly linked in toctrees with no orphaned or dead links
 
 ### BRUTAL E2E Smoke Test Implementation
+
 - Added `smoke_test.py`: Ground truth verification for all 12 GLM families
-- **Ground truth**: μ* = 0.3 (β(X) = 0.3 + 0.1*X₁, E[X₁] = 0)
+- **Ground truth**: μ*= 0.3 (β(X) = 0.3 + 0.1*X₁, E[X₁] = 0)
 - **Verdict criteria**: PASS (CI covers μ*), WARN (SE miscalibrated), FAIL (exception/NaN)
 - **Real results**: 10/12 PASS, 2/12 WARN (negbin, beta have CI calibration issues)
 - Updated `smoke_e2e_user_run_tests.md` with brutal test and actual output
 
 ### Propagated summary() Output Through Documentation & Tutorials
+
 - Updated all documentation and tutorials to use `print(result.summary())` instead of manual print statements
 - Added statsmodels-style output block to `docs/index.md` Quick Start section
 - **Homepages** (2 files): README.md, docs/index.md
@@ -323,18 +355,21 @@
 - **Python Scripts** (2 files): 05_john_minnesota_e2e.py, 06_multimodal_gallery.py - added summary() calls after inference
 
 ### FLM Paper Quotes Added to Theory/Algorithm Docs
+
 - Added authoritative quotes from Farrell, Liang, Misra (2021) to strengthen academic grounding
 - `docs/theory/index.md`: Added core insight quote about ML and economic structure as complements
 - `docs/theory/influence_functions.md`: Added Theorem 1 (convergence rate), Theorem 2 (asymptotic normality), Neyman orthogonality explanation, and critical rate condition quote
 - `docs/algorithm/index.md`: Added cross-fitting quote, Lambda regime remark, three-way splitting quote, and Theorem 3 (variance estimation)
 
 ### E2E Smoke Test Document
+
 - Added `smoke_e2e_user_run_tests.md` - "John from Minnesota" new user experience test
 - Tests all 12 GLM families (linear, logit, poisson, gamma, gaussian, gumbel, tobit, negbin, weibull, probit, beta, zip)
 - Includes fresh venv setup, package import verification, and synthetic data DGPs for each family
 - Fast settings: n=500, epochs=30, n_folds=10, hidden_dims=[32, 16]
 
 ### Statsmodels-Style Summary and tqdm Progress Bars
+
 - Added `summary()` method to `DMLResult`, `InferenceResult`, `CrossFitResult`, `TrainingHistory`
 - Added `__repr__()` methods for clean object representation
 - Added tqdm progress bars to cross-fitting loops (fold iteration) and training loops (epoch iteration)
@@ -342,6 +377,7 @@
 - Metadata (family, target, n_obs, n_folds) now passed through to result objects
 
 ### Complete Eval Documentation
+
 - Added detailed documentation for Evals 04-06 in `evals/eval.md`
 - Eval 04: Target Jacobian H_θ - paper references, test matrix (9 parts), pass criteria
 - Eval 05: IF Assembly ψ - Theorem 2 formula, 5 test rounds, DGP details
@@ -349,15 +385,18 @@
 - Added summary table showing all 6 evals and their status
 
 ### Gallery Page for RTD
+
 - Added `docs/tutorials/gallery.md` - concise overview of 3 validated examples (Linear, Logit, Poisson)
 - Added to tutorials index as first item for visibility
 
 ### Showcase Tutorial Performance Improvements
+
 - Updated `tutorials/01_showcase.ipynb` settings to match eval_06 validated parameters
 - N_FOLDS: 30 → 50 (better SE calibration, ratio 0.91 → ~1.0)
 - EPOCHS: 100 → 200 (proper convergence, better heterogeneity recovery)
 
 ### Multimodal Gallery Tutorial Complete
+
 - **Added Jupyter notebook**: `tutorials/06_multimodal_gallery.ipynb` with structured cells and markdown explanations
 - **Added documentation**: `docs/tutorials/multimodal.md` (240 lines)
 - **3/3 models achieve valid CI coverage**:
@@ -369,6 +408,7 @@
 ## 2026-01-15
 
 ### Multimodal Gallery Tutorial
+
 - Added `tutorials/06_multimodal_gallery.py`: 3 examples with high-dim embeddings as X
   - LINEAR: Wages ~ Experience | Job description embeddings (384-dim)
   - LOGIT: Purchase ~ Discount | Product image embeddings (512-dim)
@@ -377,6 +417,7 @@
 - Shows how to use BERT, ResNet, CLIP embeddings as covariates
 
 ### Remove DML Terminology + E2E Test
+
 - **Removed "Double Machine Learning" references**: This package is NOT DML, it uses Influence Functions (FLM framework)
   - `README.md`: Removed "(a form of Double Machine Learning)" phrase
   - `docs/theory/influence_functions.md`: Retitled section to "Inference via Influence Functions"
@@ -386,6 +427,7 @@
   - Shows valid CI coverage, heterogeneity capture, and policy insights
 
 ### Documentation Surface Audit
+
 - Fixed `docs/api/inference.md`: Updated `lambda_method='aggregate'` → `'ridge'` in signature, replaced outdated method table
 - Fixed `src/deep_inference/__init__.py`: Updated docstring from `src2` → `deep_inference`
 - Updated 4 tutorials to remove outdated "MUST use aggregate" language:
@@ -398,6 +440,7 @@
 ## 2026-01-14
 
 ### Eval 07: Enhanced Round G (3x More Signal, <5% More Compute)
+
 - **New metrics extracted from existing runs**:
   - SE Ratio tail behavior: [p5, p95] percentiles expose worst-case behavior
   - Condition(Λ) statistics: mean and max across seeds
@@ -409,12 +452,14 @@
 - **File**: `/Users/pranjal/deepest/archive/evals_experimental/eval_07_e2e.py`
 
 ### Eval 06: Binary Family Sample Size Fix
+
 - **Increased n from 5000 to 8000** for eval_06_coverage.py (matches eval_01's binary scaling)
 - **Rationale**: Binary outcomes (logit) carry ~1 bit/observation, requiring 2x data for convergence
 - Previous run at n=5000: Coverage 72%, z-mean=-1.29 (systematic bias)
 - Expected improvement: Coverage 85-99%, z-mean ≈ 0
 
 ### Lambda Defaults: Safe by Default
+
 - **Changed default `lambda_method`** from 'mlp' to 'ridge' (validated 96% coverage)
 - **Changed default `ridge_alpha`** from 1.0 to 1000.0 (heavy regularization required)
 - **Added MLP warning**: Using `lambda_method='mlp'` now emits UserWarning about invalid SEs
@@ -423,6 +468,7 @@
 - **Key finding**: MLP achieves 0.997 correlation but only 67% coverage; ridge achieves 0.508 correlation but 96% coverage
 
 ### Lambda Regularization Improvements
+
 - **Scale-aware regularization**: Added three regularization strategies for Lambda inversion:
   - `TIKHONOV`: (Λ + εI)⁻¹ where ε = scale * trace(Λ)/d (new default)
   - `RELATIVE`: Bound condition number by clamping min eigenvalue to max_eig/max_condition
@@ -435,6 +481,7 @@
 - **Backward compatible**: Legacy code continues to work via `batch_inverse_legacy()` and default parameters
 
 ### Eval 05: Round E - Per-Observation Lambda
+
 - **Round E added**: Compares aggregate vs per-observation Λ(xᵢ) across sample sizes
 - **Key finding**: Aggregate Lambda shows U-shaped SE ratio; per-obs is stable (~1.0 for all n)
 - **Large-n investigation**: Confirmed SE formula is correct; "overestimation" is MC noise
@@ -442,6 +489,7 @@
 - **Coverage**: Per-obs achieves 97% (nominal), aggregate overcoverage at 99%
 
 ### Eval 03: Brutal Overhaul
+
 - **Package code tests**: Added A4 (ComputeLambda) and B4 (AnalyticLambda) - now tests actual package code, not just oracle math
 - **Part E: Method Failure Analysis**: Explicitly shows which methods fail and why
   - Aggregate identified as BROKEN for Regime C (zero x-dependence, fatal)
@@ -452,18 +500,21 @@
 - **Results**: 11/11 PASS (A4 and B4 now tested)
 
 ### Eval 02: Strengthened Autodiff Validation
+
 - **Added Gaussian oracle**: Part 1 now tests 8 families (was 7) with closed-form comparison
 - **Replaced "is finite" with finite-difference validation**: Part 2 now validates Probit, Beta, Tobit, ZIP against numerical FD approximation instead of just checking values are finite
 - **Real error metrics**: FD families now show actual error magnitudes (1e-11 to 1e-7) instead of Yes/No
 - **Results**: 31/31 PASS — all 12 families now have real correctness validation
 
 ### Eval 01: Auto-Scale Sample Size for Binary Families
+
 - **Auto-scaling**: Binary families (logit/probit) now use n=8000, others use n=5000
 - **Rationale**: Binary outcomes carry ~1 bit/observation, requiring 2x samples for same precision
 - **CLI default changed**: `--n` now defaults to None (auto-scale) instead of fixed 5000
 - **Results**: 11/12 PASS, logit still UNSTABLE (7/10) — this is expected behavior for binary families
 
 ### Eval 01: Ruthless Redesign
+
 - **Tighter thresholds**: RMSE < 0.15 (was 0.3), Corr > 0.8 (was 0.7) — theory-aligned for n=2000
 - **Stricter pass logic**: PASS (all seeds), UNSTABLE (60%+), FAIL (<60%) — no more mean-aggregation hiding failures
 - **Worst-case reporting**: Summary shows Max RMSE(β), Min Corr(β) to expose instability
@@ -473,6 +524,7 @@
 - **Results**: 9 PASS, 1 UNSTABLE (negbin), 2 FAIL (logit, probit) — exposing real instability
 
 ### Eval 08: Regularization Diagnostics
+
 - Created new eval `/Users/pranjal/deepest/evals/eval_08_regularization.py`
 - **Part A: Cross-Fitting Necessity** - Tests whether cross-fitting is required for valid inference
   - A1: No-split vs cross-fit (K=5) comparison
@@ -486,6 +538,7 @@
 ## 2026-01-13
 
 ### Lambda Method Comparison (Eval 07 Round G)
+
 - Tested aggregate vs lgbm vs ridge Lambda methods with M=50 multi-seed validation
 - **LGBM**: Heavy regularization (n_estimators=20, max_depth=2, reg_alpha=5.0, reg_lambda=5.0)
 - **Ridge**: Heavy regularization (alpha=1000.0) - without this, Bias=66, SE ratio=0.5
@@ -493,6 +546,7 @@
 - Updated CLAUDE.md Lambda Method Recommendations with test results
 
 ### Eval 03: Regularization Ablation Study (Part D)
+
 - Added `--reg-study` CLI flag to run regularization ablation (12 configs, ~60s)
 - Exposed regularization params in EstimateLambda: `mlp_alpha`, `rf_max_depth`, `lgbm_reg_lambda`
 - **Key findings:**
@@ -503,6 +557,7 @@
 - **Conclusion**: RF default (max_depth=10) is overfitting; max_depth=3 is optimal
 
 ### Documentation Overhaul: New API Alignment
+
 - Updated `CLAUDE.md` package structure to reflect new modules (models/, targets/, lambda_/, engine/)
 - Updated `README.md` with new `inference()` API section and regime table
 - Rewrote `docs/api/inference.md` documenting both `structural_dml()` and `inference()` APIs
@@ -512,6 +567,7 @@
 - Updated `docs/getting_started/quickstart.md` with new API examples
 
 ### Eval 07: End-to-End User Experience + Round G SE Calibration
+
 - Created `evals/eval_07_e2e.py` demonstrating full analyst workflow
 - Scenario: Loan application with heterogeneous rate sensitivity
 - **Parts A-F**: Bootstrap Oracle inference, structural_dml() NN inference, comparison tables
@@ -524,11 +580,13 @@
   - **Results: PASS** - Coverage 95%, SE Ratio 0.91
 
 ### Tutorial: New `inference()` API Section Added
+
 - Added Section 5 to `tutorials/01_showcase.ipynb` demonstrating new API
 - Covers: Basic comparison vs `structural_dml()`, AME target, custom target with autodiff, randomization mode (Regime A)
 - All 4 test cases pass: beta, AME, custom target, ComputeLambda
 
 ### New `inference()` API Validated
+
 - Discovered and validated new modular architecture: `models/`, `targets/`, `lambda_/`, `engine/`
 - **Flexible targets**: `CustomTarget(h_fn)` with autodiff Jacobian, `AME` with closed-form
 - **Randomization mode**: `ComputeLambda` computes Λ via Monte Carlo (Regime A, 2-way split)
@@ -537,6 +595,7 @@
 - Usage: `inference(Y, T, X, model='logit', target='ame', is_randomized=True, treatment_dist=Normal())`
 
 ### Eval 05: Influence Function Assembly (Ruthless Rewrite)
+
 - Complete rewrite with 4 rounds of validation: Mechanical Assembly, Neyman Orthogonality, Variance Formula, Multi-Seed Coverage
 - **Round A**: Ruthless tolerances (Corr > 0.999, |Bias| < 0.001, Max|diff| < 0.01) for AME + AverageParameter targets
 - **Round B**: Neyman orthogonality - perturb θ, verify bias scales as O(δ²)
@@ -547,6 +606,7 @@
 - Coverage at lower bound (88%), SE ratio 0.87 - worth monitoring
 
 ### Eval 04: Target Jacobian Expansion (Ruthless Firewall)
+
 - Expanded from narrow AME+Logit test to full **Targets × Families × Edge Cases** matrix
 - **Part 1 - Targets (Logit)**: AverageParameter, AME, AveragePrediction (45 tests)
 - **Part 2 - Families (AME)**: Linear, Poisson, Probit (25 tests)
@@ -556,6 +616,7 @@
 - **Results: 92/92 PASS** - max|err| = 1.78e-15 (machine precision)
 
 ### Eval 03: Timing & Enhanced Statistics
+
 - Added execution timing for all parts and methods (Part A: 0.16s, Part B: 0.02s, Part C: 22.01s)
 - Added LightGBM method to EstimateLambda (lgbm: Corr=0.977, 3/3 PASS)
 - **Part A**: Added eigenvalues, condition number (1.62), determinant
@@ -566,6 +627,7 @@
 - Per-method timing: aggregate 0.02s, ridge 0.08s, rf 0.29s, lgbm 1.24s, mlp 12.55s
 
 ### Eval 03: Ruthless Redesign (3-Regime Testing) → 9/9 PASS
+
 - Complete rewrite to test Lambda across ALL THREE REGIMES with tight tolerances
 - **Part A (RCT)**: Gauss-Hermite quadrature oracle, MC convergence rate (√M), Y-independence
 - **Part B (Linear)**: Analytical E[TT'|X] oracle, θ-independence, confounded T handling
@@ -575,6 +637,7 @@
 - Added RUTHLESS EVALS rule to CLAUDE.md: "Evals are firewalls. They MUST be brutal."
 
 ### Eval 01: Multi-Seed Validation + Scale Ratio Diagnostic
+
 - **Multi-seed validation (5 seeds)**: Run 42, 123, 456, 789, 999 by default, report mean ± std
 - **Scale ratio diagnostic**: Detects scale identification issues (high corr + high RMSE = scale shift, not bug)
 - **Scale-normalized RMSE**: When scale shift detected (ratio std < 0.2), reports RMSE after normalizing
@@ -584,6 +647,7 @@
 - **Eval 01: 12/12 PASS** (3 seeds, n=2000, epochs=100)
 
 ### Eval 02: Autodiff vs Calculus (All Families)
+
 - Enhanced `eval_02_autodiff.py` with 3-part validation
 - **Part 1 - Oracle @ Random θ (7 families)**: Linear, Logit, Poisson, NegBin, Gamma, Weibull, Gumbel
   - Closed-form score/Hessian oracles vs torch.func autodiff
@@ -597,6 +661,7 @@
 - **Eval 02: 19/19 PASS**
 
 ### Eval 01: Auxiliary Parameter Checking
+
 - Updated `compute_recovery_metrics()` to handle any theta_dim dynamically
 - For varying params (α, β): check RMSE < 0.3 AND Corr > 0.7
 - For constant params (γ, δ): check RMSE < 0.5 only (correlation undefined for flat line)
@@ -604,6 +669,7 @@
 - Critical for Stage 2 inference: wrong σ estimate → wrong Hessian scaling → invalid CIs
 
 ### Added 3 New GLM Families: Probit, Beta, ZIP
+
 - **Probit**: Binary classification with normal CDF link Φ(η), theta_dim=2
 - **Beta**: Proportions Y∈(0,1) with logit link for mean, fixed precision φ, theta_dim=2
 - **ZIP**: Zero-Inflated Poisson mixture model, theta_dim=4 (rate + inflation params)
@@ -611,11 +677,13 @@
 - **Eval 01: 12/12 PASS** (9 existing + 3 new families)
 
 ### Added GLM Formula Cheat Sheet
+
 - Added `## GLM Family Formulas` table to CLAUDE.md with all 12 families
 - Documents Loss, Gradient, Hessian Weight, and θ_dim for each family
 - Cross-verified all formulas against standard statistical references
 
 ### Fixed NegBin, Gaussian, and Weibull Families
+
 - **NegBin**: Changed from Poisson-like loss to true Negative Binomial NLL using `lgamma` terms
 - **Gaussian**: Now estimates sigma via MLE (theta_dim=3 with gamma=log(sigma)), distinct from Linear
 - **Weibull DGP bug fix**: `_generate_weibull` was missing `size=` parameter, generating 1 sample broadcast to all n
@@ -624,12 +692,14 @@
 - **Eval 01: 9/9 PASS** (Weibull was 8/9 before fix)
 
 ### Multi-Family Parameter Recovery (Eval 01)
+
 - Extended `eval_01_theta.py` to test all 9 families: Linear, Gaussian, Logit, Poisson, NegBin, Gamma, Weibull, Gumbel, Tobit
 - Added family-specific DGPs with appropriate coefficient ranges
 - All 9/9 families pass parameter recovery with relaxed thresholds (RMSE < 0.3, Corr > 0.7)
 - Verified Tobit implementation against Tobias/Purdue lecture notes
 
 ### Eval 01 Investigation
+
 - Created `evals/eval.md` documenting learnings from each eval
 - **Finding 1**: Default `patience=10` too aggressive, stops training at epoch ~15
 - **Finding 2**: Flat loss surface - α and β compensate (Δloss=0.0003 for α+0.1,β-0.1)
@@ -637,6 +707,7 @@
 - Recommendation: Increase patience to 50+, relax RMSE(β) threshold to 0.2
 
 ### Enriched Evaluation Framework
+
 - Added automatic report generation: JSON, Markdown, TXT summary in `evals/reports/`
 - Increased default MC simulations from M=20 to M=100 for better coverage estimates
 - Added `--M` and `--output-dir` CLI flags to `run_all.py`
@@ -644,6 +715,7 @@
 - Report links printed at end of evaluation run
 
 ### Comprehensive 3-Regime Evaluation Framework
+
 - Reorganized `evals/` to support all 3 Lambda regimes with isolated ground-truth tests
 - **Regime A (RCT Logit)**: ComputeLambda (Monte Carlo), 4 evals for randomized experiments
 - **Regime B (Linear)**: AnalyticLambda (E[TT'|X]), 5 evals including Robinson 1988 closed-form ψ
@@ -654,16 +726,19 @@
 ## 2026-01-12
 
 ### Poisson E2E Validation
+
 - Added `tutorials/04_poisson_e2e_test.ipynb` - validates Poisson family across 4 DGPs
 - Results: NN Naive 25% coverage, NN IF 100% coverage, SE Ratio 5.1x-6.9x (mean 6.1x)
 - Confirms `lambda_method='aggregate'` requirement for Poisson
 
 ### Release 0.1.1
+
 - Bumped version to 0.1.1 and published to PyPI
 - Simplified logit tutorial: Oracle MC (M=500) + single NN run with IF-based SE
 - Added NN Naive vs IF comparison showing SE ratio ~7.5x (naive severely underestimates uncertainty)
 
 ### E2E Logit Validation
+
 - Rewrote `tutorials/02_logit_oracle.ipynb` with comprehensive E2E validation
   - Three scenarios: simple (1D linear), complex (5D nonlinear), high-dim (20D, 2 signal)
   - Target μ* = 0.5 (not 0)
@@ -674,18 +749,21 @@
 - Added links to README.md (GitHub, PyPI, ReadTheDocs, Papers)
 
 ### Release Cleanup
+
 - Fixed version mismatch: docs/conf.py now matches pyproject.toml (0.1.0)
 - Fixed pyproject.toml testpaths: `["tests"]` → `["src/deep_inference/tests"]`
 - Removed unused `Tuple` import from `src/deep_inference/core/autodiff.py`
 - Removed `src2` reference from MANIFEST.in
 
 ### Complete Tutorial Coverage (All 8 Families)
+
 - Added `docs/tutorials/gamma.md` - Gamma model for positive right-skewed data
 - Added `docs/tutorials/gumbel.md` - Gumbel model for extreme values
 - Added `docs/tutorials/weibull.md` - Weibull model for survival analysis
 - Updated `docs/tutorials/index.md` with all 8 families
 
 ### Archive Cleanup
+
 - Archived broken prototype scripts (basic_usage.py, run_python.py, validation_suite.py) to `archive/prototypes_broken/`
 - Archived logs/ directory to `archive/logs_historical/`
 - Archived unused MNIST data to `archive/data_mnist/`
@@ -693,12 +771,14 @@
 - Added `logs/` to .gitignore
 
 ### Tutorial: Logit Oracle Comparison
+
 - Added `tutorials/02_logit_oracle.ipynb` - validates structural_dml against logistic regression oracle
 - DGP: P(Y=1) = sigmoid(α(X) + β(X)·T) with heterogeneous parameters
 - Compares: naive vs delta-corrected oracle, neural network with influence functions
 - Monte Carlo validation: M=100, N=1000
 
 ### Documentation Alignment
+
 - Updated all 21 docs files from `deepstats` to `deep_inference` API
 - All code examples now use `from deep_inference import structural_dml`
 - Updated validation docs with Python-based MC examples (archived command-line tools)
@@ -706,9 +786,11 @@
 ## 2026-01-09
 
 ### Cleanup
+
 - Removed VALIDATION_REPORT.md (content preserved in logs/)
 
 ### Tutorial: Linear Oracle Comparison
+
 - Added `tutorials/01_linear_oracle.ipynb` - validates structural_dml against OLS oracle
 - DGP: Y = α(X) + β(X)·T + ε with heteroskedastic errors, linear α(X) and β(X)
 - Compares: (a) parameter recovery, (b) training diagnostics, (c) bias/variance, (d) coverage/SE calibration
@@ -718,11 +800,13 @@
 ## 2026-01-08
 
 ### Proper Package Structure
+
 - Renamed `src2/` to `src/deep_inference/` for standard Python package layout
 - **New import**: `from deep_inference import structural_dml`
 - PyPI install: `pip install deep-inference`
 
 ### Major Refactor: Clean API
+
 - Ported all 8 families: linear, logit, poisson, gamma, gumbel, tobit, negbin, weibull
 - Archived old `src/deep_inference/` to `archive/deep_inference_v1/`
 - MC infrastructure (run_mc, metrics, logging, dgp) now in archive for reference
@@ -730,10 +814,12 @@
 ## 2026-01-07
 
 ### Documentation Update
+
 - Added verification page comparing deepstats against original FLM2 repository
 - Updated tutorials with final linear validation (M=100, N=20K): Naive 8% → IF 95% coverage
 
 ### Comprehensive Validation Study Script
+
 - Added `prototypes/validation_study.py` - main example for ReadTheDocs
 - Compares Naive vs IF inference across linear, logit, poisson families
 - Config: N=50K, M=50, K=50, epochs=500, [64,64,64,32] architecture
@@ -742,6 +828,7 @@
 - Uses src2's `structural_dml()` API with tqdm progress
 
 ### Data-Rich Validation (Part XV)
+
 - **Goal**: Achieve BOTH valid inference AND good parameter recovery
 - **Finding**: N=20000 achieves Corr(α)=0.86, Corr(β)=0.58 with Coverage 96%
 - **Scaling**: Corr(β) improves from 0.28 (N=2000) → 0.43 (N=5000) → 0.58 (N=20000)
@@ -749,6 +836,7 @@
 - For rich heterogeneity recovery, use N=20000+
 
 ### Poisson Family Implementation & Validation
+
 - **Added PoissonFamily to src2**: Y ~ Poisson(λ), λ = exp(α + βT)
 - Model: log-linear rate with heterogeneous treatment effects
 - Closed-form gradient and Hessian (weight = λ)
@@ -760,6 +848,7 @@
 - Recommendation: Use `lambda_method='aggregate'` for Poisson
 
 ### Additional Validation (Phase 13)
+
 - **Logit continuous T**: SE ratio 1.06 (nearly perfect!), coverage 100%, reg rate 0%
 - MLP Lambda still overfits with continuous T (40% reg rate, negative eigenvalues)
 - **Naive vs Debiased**: Both achieve valid coverage for well-specified models
@@ -767,6 +856,7 @@
 - Recommendation: Use `lambda_method='aggregate'` regardless of T type
 
 ### SE Ratio Optimization (Phase 12)
+
 - **Root cause of SE ratio 1.66**: Insufficient cross-fitting folds (K=20 vs K=50)
 - **With K=50**: SE ratio drops to ~1.12-1.19 for Aggregate Lambda
 - **With N=5000, K=50**: SE ratio = **1.04** (nearly perfect!)
@@ -775,6 +865,7 @@
 - Updated VALIDATION_REPORT.md with Phase 12 findings
 
 ### Lambda Estimation Investigation (Phase 11)
+
 - **Root cause identified**: MLP Lambda estimator was overfitting, producing singular predictions
 - **Key finding**: Conditional expectation Λ(x) = E[ℓ_θθ | X=x] should average over both T=0 and T=1
 - **When properly averaged, Λ is FULL RANK** - min eigenvalue = 0.046 (not singular!)
@@ -783,6 +874,7 @@
 - Implemented PropensityWeightedLambdaEstimator (theoretically correct for heterogeneous propensity)
 
 ### Post-Validation Fixes
+
 - Changed default K from 20 to 50 for stable SE estimation
 - Added adaptive eigenvalue monitoring to safe_inverse and batch_inverse
 - Added diagnostics: min_lambda_eigenvalue, n_regularized, pct_regularized
@@ -790,6 +882,7 @@
 - Updated documentation with requirements for valid inference
 
 ### Validation Results
+
 - **Comprehensive MC validation completed** - Algorithm validated for well-specified models
 - Simple Linear DGP: SE ratio 1.00-1.05, coverage 92-100% across N=500-5000 (M=50 per size)
 - Logit DGP: Coverage 95-97% with three-way splitting (M=100)
@@ -798,6 +891,7 @@
 - Created detailed VALIDATION_REPORT.md with all test results
 
 ### Features
+
 - Implemented three-way splitting for nonlinear families (logit, poisson, etc.) where Λ depends on θ
 - Added nonparametric Λ(x) estimation via LambdaEstimator class (MLP or LightGBM)
 - Made treatment centering configurable (default off to match paper formula)
@@ -805,6 +899,7 @@
 - Added `lambda_depends_on_theta()` and `hessian_at_point()` methods to all families
 
 ### Documentation
+
 - Added Sphinx documentation with Read the Docs support
 - Created tutorials for core models: linear, logit, poisson, tobit, negbin
 - Added comprehensive theory section with FLM framework and Structural DML algorithm
