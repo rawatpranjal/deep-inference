@@ -77,13 +77,14 @@ M=100. An M=200 confirm would tighten it.
 
 ## The landscape (2026-06-29)
 
-Eight GLM families mapped. FLM[cholesky] (the general fix) is valid everywhere EXCEPT the
-heavy-tailed log-link count families. Valid: linear, gaussian (marginal), logit, probit, beta,
-poisson. Fails: gamma, negbin. The decisive control is beta, which is bounded but continuous
-with a y-dependent Hessian and still passes (96%), so the failure is not "y-dependent Hessian"
-or "continuous outcome" - it is specific to gamma/negbin, where a noisy y-dependent weight in
-the target block combines with a heavy-tailed outcome. Two fixes (cholesky-Λ hardening,
-log-link nuisance-bias correction) would close them. Dashboard:
+Eight GLM families mapped. Measured result: FLM[cholesky] (the general fix) fails on exactly
+gamma and negbin; it passes on linear, gaussian (marginal), logit, probit, beta, poisson. Two
+falsifications come for free: beta passes despite a y-dependent Hessian on a continuous
+outcome (neither is sufficient to cause the failure), and poisson passes despite a log link
+(log link is not sufficient). gamma and negbin differ from the passing families on several
+confounded axes at once (heavy tail, log link, y-dependent Hessian weight, convex exp target);
+which axis is causal is NOT yet isolated. The clean test is to sweep gamma's shape k and see
+whether the failure tracks outcome variance. Until then, treat the cause as open. Dashboard:
 `exploration/results_landscape.html`.
 
 ## Tier A, M=50 (2026-06-29)

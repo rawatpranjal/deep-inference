@@ -147,12 +147,15 @@ three at `exploration/results_tierA_M50.html`.
 probit (bounded link like logit) bias -0.010 / SE-ratio 1.16 / coverage 98%, no left tail;
 RieszNet 98% (`exploration/results_probit_M50.md`). beta (bounded CONTINUOUS, y-dependent
 Hessian) bias -0.0004 / 1.02 / 96%, tight spread; RieszNet 100% (`results_beta_M50.md`).
-**The decisive contrast: beta has a y-dependent Hessian and a continuous outcome yet passes,
-so the cholesky failure is NOT "y-dependent Hessian" or "continuous outcome" per se. It is
-specific to the heavy-tailed log-link count families (gamma, negbin)**, where the noisy
-y-dependent weight in the target block AND the high outcome variance combine. The 8-family
-landscape: cholesky valid on linear, gaussian (marginal), logit, probit, beta, poisson;
-fails on gamma, negbin. Consolidated dashboard `exploration/results_landscape.html`. Known
+**What is measured: cholesky fails on exactly gamma and negbin among the 8 families; it
+passes on linear, gaussian (marginal), logit, probit, beta, poisson.** Two falsifications:
+beta passes despite a y-dependent Hessian on a continuous outcome (so neither is sufficient to
+cause the failure), and poisson passes despite a log link (so log link is not sufficient).
+gamma + negbin differ from the passing families on SEVERAL confounded axes at once (heavy
+tail, log link, y-dependent Hessian weight, the convex exp target). Which axis is operative is
+NOT isolated. To get a causal answer, vary one axis at a time, e.g. sweep gamma's shape k
+(outcome variance / weight noise) and see whether the failure tracks it. The narrative about
+"noisy weight severity + outcome variance" is an untested hypothesis, not a result. Consolidated dashboard `exploration/results_landscape.html`. Known
 ceiling artifact: `OracleProbitLambda` blows up under tikhonov 1e-8 (near-singular probit
 Fisher at extreme η), a diagnostic-row bug, not a method failure. Cheap GLM families still
 unmapped: zip (`ZeroInflatedPoisson` oracle available). Expensive (custom MLE oracle):
