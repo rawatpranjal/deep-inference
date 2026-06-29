@@ -3,13 +3,9 @@
 How the package fits the heterogeneous parameters and the nuisance object the correction needs.
 This is the machinery: the structural network, cross-fitting, the three ways the expected
 Hessian is obtained, and how the influence function is assembled. It implements the
-Farrell, Liang, Misra algorithm.
-
-```{toctree}
-:hidden:
-:maxdepth: 1
-:caption: Algorithm
-```
+Farrell, Liang, Misra algorithm. Once this machinery produces the influence values, the
+[Inference](../inference/index.md) section turns them into a standard error and a confidence
+interval.
 
 ---
 
@@ -168,17 +164,19 @@ Consider increasing ridge regularization or checking model fit.
 
 ## Variance Estimation
 
-### Within-Fold Formula
+The point estimate is the mean of the influence values and the variance is their sample
+variance, both computed in `engine/variance.py`. The default estimator is `'pooled'`.
 
 ```text
-# From core/algorithm.py
-Ψ̂ = (1/K) Σ_k Var_k(ψ)
-  = (1/K) Σ_k (1/|I_k|) Σ_{i ∈ I_k} (ψᵢ - μ̂_k)²
-
-SE = √(Ψ̂/n)
+# Default ('pooled', FLM): Bessel-corrected sample variance, centered at the global mean
+Psi_hat = (1/(n-1)) * sum_i (psi_i - mu_hat)^2
+SE      = sqrt(Psi_hat / n)
 ```
 
-Where μ̂_k is the fold-specific mean.
+A legacy `'within_fold'` estimator centers each fold at its own mean and averages the per-fold
+variances; it drops the between-fold component, so it is always smaller than pooled and
+under-covers. Use the default. The full treatment of the standard error, the two estimators, and
+the median-DML rule for repeated splits is on the [Inference](../inference/index.md) page.
 
 > **Theorem 3 (FLM 2021):** "The variance estimator $\hat{V} = n^{-1}\sum_i \hat{\psi}_i^2$ is consistent: $\hat{V} \xrightarrow{p} V$. The resulting confidence intervals achieve nominal coverage asymptotically."
 
@@ -206,7 +204,8 @@ Indicates the bias correction term H_θ · Λ⁻¹ · ℓ_θ has high variance, 
 
 ### Legacy: `structural_dml()`
 
-For the 8 built-in GLM families:
+For the built-in GLM families (13 are registered: linear, logit, poisson, gamma, gumbel, tobit,
+negbin, weibull, gaussian, probit, beta, zip, multinomial_logit):
 ```python
 from deep_inference import structural_dml
 
@@ -307,7 +306,14 @@ def structural_dml_core(Y, T, X, family, lambda_method, n_folds, ...):
 
 ---
 
+## See also
+
+- [Inference](../inference/index.md): how the influence values become a standard error and a confidence interval, and the RieszNet alternative.
+- [Models](../models/index.md): each model page states which regime applies and why.
+- [Guide](../guide/index.md): choosing the Lambda method and reading the diagnostics.
+- [Theory](../theory/index.md): the derivation and the formal guarantees.
+
 ## References
 
-- Farrell, Liang, Misra (2021): "Deep Neural Networks for Estimation and Inference" *Econometrica*
-- Farrell, Liang, Misra (2025): "Deep Learning for Individual Heterogeneity" *Working Paper*
+- Farrell, Liang, Misra (2021): "Deep Neural Networks for Estimation and Inference" *Econometrica*. See [References](../references/index.md).
+- Farrell, Liang, Misra (2025): "Deep Learning for Individual Heterogeneity" *Working Paper*.
