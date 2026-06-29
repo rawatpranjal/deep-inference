@@ -176,7 +176,7 @@ $\mu^*$. It is not wrong to use it in that case; it is just slower.
 ## Evidence
 
 **Parameter recovery** (n=5000, one seed, source:
-[Eval 01](../simulation_studies/eval_01.md)):
+[Eval 01](../simulation_studies.md)):
 
 | metric | value |
 |--------|-------|
@@ -224,5 +224,5 @@ it. See the [lambda method recommendations](../overview.md) for full coverage nu
 
 - [References index](../references/index.md) for the FLM 2021 and FLM 2025 paper
   transcripts.
-- [API: families](../api/families.md) for `GaussianFamily` and the full `structural_dml`
+- [API: families](../api.md) for `GaussianFamily` and the full `structural_dml`
   signature.

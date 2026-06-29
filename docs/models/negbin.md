@@ -177,10 +177,10 @@ available. Reach the Negative Binomial through `structural_dml(family='negbin')`
 ## Evidence
 
 Component validations pass. Parameter recovery is reported in
-[Eval 01](../simulation_studies/eval_01.md), where the Negative Binomial gives RMSE on $\alpha$ of
+[Eval 01](../simulation_studies.md), where the Negative Binomial gives RMSE on $\alpha$ of
 0.059, RMSE on $\beta$ of 0.061, correlation with the true $\alpha(X)$ of 0.985, and correlation
 with the true $\beta(X)$ of 0.938, marked PASS. Autodiff agreement with the closed-form score and
-Hessian is in [Eval 02](../simulation_studies/eval_02.md), with a score error of
+Hessian is in [Eval 02](../simulation_studies.md), with a score error of
 $3.33\times10^{-16}$ and a Hessian error of $5.55\times10^{-16}$, marked PASS.
 
 End-to-end coverage is a different story, and the [Replications](../replications/index.md) page is
@@ -224,5 +224,5 @@ print(f"Min lambda eigenvalue: {result.diagnostics.get('min_lambda_eigenvalue', 
 
 The full API for every family, including the `NegBinFamily` class with its `overdispersion`
 argument and its `loss`, `gradient`, and `hessian` methods, is in the
-[Families API reference](../api/families.md). The papers behind the method are annotated in
+[Families API reference](../api.md). The papers behind the method are annotated in
 [References](../references/index.md).

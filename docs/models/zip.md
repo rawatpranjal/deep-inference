@@ -178,7 +178,7 @@ available. Reach ZIP through `structural_dml(family='zip')`.
 
 ## Evidence
 
-Autodiff correctness is validated. In [Eval 02](../simulation_studies/eval_02.md), the ZIP family
+Autodiff correctness is validated. In [Eval 02](../simulation_studies.md), the ZIP family
 is in the autodiff-only group (it has no closed-form derivatives to compare against), and both the
 gradient-norm and Hessian-symmetry checks pass, marked PASS. ZIP is also covered by the package
 integration part of that eval, which exercises the full `family.gradient()` and `family.hessian()`
@@ -208,5 +208,5 @@ exists.
 ## References and API
 
 The full API for every family, including the `ZIPFamily` class with its `target` argument and its
-mixture `loss`, is in the [Families API reference](../api/families.md). The framework papers and the
+mixture `loss`, is in the [Families API reference](../api.md). The framework papers and the
 Lambert (1992) zero-inflation reference are annotated in [References](../references/index.md).

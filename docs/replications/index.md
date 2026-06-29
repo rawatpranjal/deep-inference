@@ -4,12 +4,6 @@ This page records what the package has validated against both published paper be
 known-truth synthetic DGPs. Each section sets the package value against the paper's published
 value, side by side.
 
-```{toctree}
-:hidden:
-
-did_candidates
-```
-
 Scoping in progress: [DID + deep-learning replication candidates](did_candidates.md) surveys
 difference-in-differences / observational-panel methods that could be added next.
 

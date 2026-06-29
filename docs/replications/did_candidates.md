@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # DID + deep-learning replication candidates (scoping menu)
 
 A scope-only survey: difference-in-differences and observational-panel methods built on deep

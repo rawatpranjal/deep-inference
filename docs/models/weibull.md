@@ -118,7 +118,7 @@ $$H(\theta, y, t) = w \cdot \begin{bmatrix} 1 & t \\ t & t^2 \end{bmatrix} = k^2
 - Both dependencies mean $E[H \mid X]$ cannot be computed in closed form without knowledge
   of $\theta$, so Lambda must be estimated from data (Regime C).
 - The Hessian is computed in closed form (no autodiff). The formula is validated against
-  autodiff in [Eval 02](../simulation_studies/eval_02.md).
+  autodiff in [Eval 02](../simulation_studies.md).
 - `WeibullFamily.hessian_depends_on_theta()` returns `True`, which tells the engine to
   use the three-way split.
 
@@ -223,7 +223,7 @@ result = structural_dml(Y, T, X, family='weibull', shape=1.0)
 
 ## Evidence
 
-From [Eval 01: Parameter Recovery](../simulation_studies/eval_01.md) (n=5000, seed=42):
+From [Eval 01: Parameter Recovery](../simulation_studies.md) (n=5000, seed=42):
 
 | Family | RMSE($\alpha$) | RMSE($\beta$) | Corr($\alpha$) | Corr($\beta$) | Status |
 |--------|---------------|--------------|----------------|---------------|--------|
@@ -274,7 +274,7 @@ application of this family will produce biased estimates.
 ## References and API
 
 - [References](../references/index.md) covers FLM 2021 and FLM 2025 in full.
-- [API: Families](../api/families.md) documents `WeibullFamily` and its constructor
+- [API: Families](../api.md) documents `WeibullFamily` and its constructor
   arguments (`shape`, and all inherited arguments).
 - Source:
   `src/deep_inference/families/weibull.py`
