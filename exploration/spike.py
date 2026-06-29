@@ -1326,7 +1326,40 @@ def flm_probit(
     return r.mu_hat, r.se
 
 
-BETA_TIKHONOV = {"cholesky": 0.01, "ridge": 0.01}
+BETA_TIKHONOV = {"oracle": 1e-8, "cholesky": 0.01, "ridge": 0.01}
+
+
+class OracleBetaLambda:
+    """Oracle Λ(x)=E[ℓ_θθ|X] for the Beta DGP. The digamma score has mean zero, so the
+    expected Hessian weight is DETERMINISTIC: w(η)=φ²·[ψ'(μφ)+ψ'((1-μ)φ)]·(μ(1-μ))², μ=σ(η),
+    ψ'=trigamma. Λ*(x)=(1-e)·w0·[[1,0],[0,0]]+e·w1·[[1,1],[1,1]], μ0=σ(a), μ1=σ(a+b),
+    e=σ(γ(x0+x1)). Ceiling reference, NOT general."""
+
+    requires_theta = True
+    requires_separate_fold = True
+
+    def fit(self, X, T, Y, theta_hat, model):
+        return None
+
+    def predict(self, X, theta_hat=None):
+        x0, x1 = X[:, 0], X[:, 1]
+        a = BTA0 + BTA1 * x0 + BTA2 * x1
+        b = BTB0 + BTB1 * x0
+        e = torch.sigmoid(GAMMA * (x0 + x1))
+        ph = PHI_BETA
+        tri = lambda z: torch.special.polygamma(1, z)
+
+        def w_of(mu):
+            return ph * ph * (tri(mu * ph) + tri((1 - mu) * ph)) * (mu * (1 - mu)) ** 2
+
+        w0 = w_of(torch.sigmoid(a))
+        w1 = w_of(torch.sigmoid(a + b))
+        L = X.new_zeros(len(X), 2, 2)
+        L[:, 0, 0] = (1 - e) * w0 + e * w1
+        L[:, 0, 1] = e * w1
+        L[:, 1, 0] = e * w1
+        L[:, 1, 1] = e * w1
+        return L
 
 
 def flm_beta(
@@ -1341,8 +1374,8 @@ def flm_beta(
     max_condition=None,
 ):
     # ATE on the (0,1) mean scale sigmoid(a+b)-sigmoid(a), custom Beta NLL (logit-link mean,
-    # known precision phi) -> fully autodiff. No oracle-Lambda ceiling for this one (the beta
-    # Fisher info is messy); cholesky vs ridge vs Oracle-MLE/RieszNet still places it on the map.
+    # known precision phi) -> fully autodiff. Oracle-Lambda available (expected Hessian weight
+    # is deterministic, see OracleBetaLambda).
     def bloss(y, t, theta):
         mu = torch.sigmoid(theta[0] + theta[1] * t)
         a_, b_ = mu * PHI_BETA, (1 - mu) * PHI_BETA
@@ -1369,7 +1402,9 @@ def flm_beta(
         hidden_dims=[32],
         verbose=False,
     )
-    if lambda_spec == "cholesky":
+    if lambda_spec == "oracle":
+        kw["lambda_strategy"] = OracleBetaLambda()
+    elif lambda_spec == "cholesky":
         if max_condition is not None:
             kw["lambda_strategy"] = _cholesky_strategy(max_condition)
         else:
@@ -1424,7 +1459,7 @@ DEFAULT_SPECS = {  # 'flat'/'ridge' = naive-Λ contrast, 'oracle' = ceiling ref,
     "negbin": ("cholesky", "ridge", "oracle"),
     "gaussian": ("cholesky", "ridge", "oracle"),
     "probit": ("cholesky", "ridge", "oracle"),
-    "beta": ("cholesky", "ridge"),  # no oracle-Lambda for beta (messy Fisher info)
+    "beta": ("cholesky", "ridge", "oracle"),
 }
 DGP_BASE_SEED = {
     "linear": 1000,
@@ -1781,9 +1816,9 @@ def main():
     )
     ap.add_argument(
         "--beta-lambdas",
-        default="cholesky,ridge",
+        default="cholesky,ridge,oracle",
         help="comma-sep FLM Lambda specs for the BETA DGP: cholesky (general),"
-        " ridge (contrast). No oracle-Lambda ceiling for beta.",
+        " ridge (contrast), oracle (true Lambda ceiling).",
     )
     ap.add_argument(
         "--tikhonov",
