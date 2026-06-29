@@ -33,15 +33,24 @@ of them:
 * - Continuous, unbounded
   - Linear
   - [Linear](linear.md)
-* - Binary (0/1)
+* - Continuous, with modelled variance
+  - Gaussian
+  - [Gaussian](gaussian.md)
+* - Binary (0/1), logistic link
   - Logit
   - [Logit](logit.md)
+* - Binary (0/1), normal link
+  - Probit
+  - [Probit](probit.md)
 * - Counts
   - Poisson
   - [Poisson](poisson.md)
 * - Overdispersed counts
   - Negative Binomial
   - [Negative Binomial](negbin.md)
+* - Counts with excess zeros
+  - Zero-Inflated Poisson
+  - [Zero-Inflated Poisson](zip.md)
 * - Positive, skewed
   - Gamma
   - [Gamma](gamma.md)
@@ -54,16 +63,41 @@ of them:
 * - Censored
   - Tobit
   - [Tobit](tobit.md)
+* - Bounded in (0,1)
+  - Beta
+  - [Beta](beta.md)
 * - Discrete choice (3+ options)
   - Multinomial Logit
   - [Multinomial Logit](multinomial.md)
+* - Quantiles
+  - Quantile
+  - [Quantile](quantile.md)
+* - Multiple treatments
+  - Combinatorial
+  - [Combinatorial](combinatorial.md)
+* - Before/after, treated/control
+  - Difference-in-Differences
+  - [Difference-in-Differences](did.md)
 ```
 
-```{note}
-More model pages (Gaussian, Probit, Beta, Zero-Inflated Poisson, Quantile, Combinatorial, and
-the Difference-in-Differences family) are being written to the same template and will appear
-here as they land. Until then, see the [API reference](../api/families.md) for their signatures
-and the [GLM formula table](../guide/index.md) for their loss and Hessian.
+## Which regime does each model land in?
+
+The regime (covered in [Estimation](../estimation/index.md)) follows from one fact: does the
+Hessian depend on the parameters? Linear-style squared-error losses have a parameter-free
+Hessian and use the fast two-way path (Regime B); everything nonlinear estimates the curvature
+on a three-way split (Regime C), unless the treatment is randomized with a known law (Regime A).
+
+```{list-table}
+:header-rows: 1
+
+* - Regime
+  - Models
+* - B (analytic, 2-way)
+  - Linear, Difference-in-Differences
+* - C (estimated, 3-way)
+  - Logit, Probit, Poisson, Negative Binomial, ZIP, Gamma, Weibull, Gumbel, Tobit, Beta, Gaussian, Multinomial, Quantile, Combinatorial
+* - A (computed, randomized)
+  - Any model when the treatment law is known
 ```
 
 ```{toctree}
@@ -71,12 +105,19 @@ and the [GLM formula table](../guide/index.md) for their loss and Hessian.
 :caption: Models
 
 linear
+gaussian
 logit
+probit
 poisson
 negbin
+zip
 gamma
 weibull
 gumbel
 tobit
+beta
 multinomial
+quantile
+combinatorial
+did
 ```
