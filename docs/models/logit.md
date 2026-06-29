@@ -10,7 +10,7 @@ The package now defaults to `lambda_method='ridge'` which provides validated 96%
 result = structural_dml(Y, T, X, family='logit')  # ridge is default
 ```
 
-**Warning:** Avoid `lambda_method='mlp'` - it produces invalid standard errors (67% coverage) despite high correlation with oracle Lambda. See [Algorithm: Lambda Estimation](../algorithm/index.md#regime-c-observational-nonlinear-estimatelambda) for details.
+**Warning:** Avoid `lambda_method='mlp'` - it produces invalid standard errors (67% coverage) despite high correlation with oracle Lambda. See [Algorithm: Lambda Estimation](../estimation/index.md#regime-c-observational-nonlinear-estimatelambda) for details.
 
 ## When to Use
 
@@ -88,13 +88,13 @@ print(result.summary())
 
 ## Expected Results
 
-From [Eval 01: Parameter Recovery](../validation/eval_01.md):
+From [Eval 01: Parameter Recovery](../simulation_studies/eval_01.md):
 
 | Family | Corr(α) | Corr(β) | Status |
 |--------|---------|---------|--------|
 | logit | 0.963 | 0.968 | PASS |
 
-The influence function correction produces valid confidence intervals. See [Validation](../validation/index.md) for full results.
+The influence function correction produces valid confidence intervals. See [Validation](../simulation_studies/index.md) for full results.
 
 ## Alternative Targets
 

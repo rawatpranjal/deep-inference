@@ -76,7 +76,7 @@ html_theme_options = {
     "style_external_links": True,
     "collapse_navigation": False,
     "sticky_navigation": True,
-    "navigation_depth": 3,
+    "navigation_depth": 2,
     "includehidden": True,
     "titles_only": False,
 }
@@ -93,7 +93,14 @@ html_context = {
 
 # -- Source settings ---------------------------------------------------------
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = [
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "dev/**",
+    "notes/**",
+    "reports/**",
+]
 source_suffix = {
     ".rst": "restructuredtext",
     ".md": "markdown",
@@ -107,4 +114,3 @@ copybutton_prompt_is_regexp = True
 # -- Mermaid settings --------------------------------------------------------
 mermaid_version = "11.4.0"
 mermaid_init_js = "mermaid.initialize({startOnLoad:true, securityLevel:'loose'});"
-

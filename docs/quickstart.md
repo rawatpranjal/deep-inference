@@ -1,4 +1,4 @@
-# Quickstart
+# Quick Start
 
 This guide shows you how to use `deep-inference` to estimate treatment effects with valid inference.
 
@@ -184,6 +184,6 @@ Benefits:
 
 ## Next Steps
 
-- See [Tutorials](../tutorials/index.md) for detailed examples with each model
-- Read [Theory](../theory/index.md) for the mathematical background
-- Check [API Reference](../api/index.md) for complete documentation
+- See [Tutorials](models/index.md) for detailed examples with each model
+- Read [Theory](theory/index.md) for the mathematical background
+- Check [API Reference](api/index.md) for complete documentation

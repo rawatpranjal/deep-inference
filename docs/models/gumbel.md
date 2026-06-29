@@ -85,13 +85,13 @@ print(result.summary())
 
 ## Expected Results
 
-From [Eval 01: Parameter Recovery](../validation/eval_01.md):
+From [Eval 01: Parameter Recovery](../simulation_studies/eval_01.md):
 
 | Family | Corr(α) | Corr(β) | Status |
 |--------|---------|---------|--------|
 | gumbel | 0.967 | 0.991 | PASS |
 
-The influence function correction produces valid confidence intervals. See [Validation](../validation/index.md) for full results.
+The influence function correction produces valid confidence intervals. See [Validation](../simulation_studies/index.md) for full results.
 
 ## Real-World Applications
 

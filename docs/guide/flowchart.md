@@ -330,8 +330,8 @@ result = inference(Y, T, X, model='logit', target='ame', ...)
 
 ## See Also
 
-- [Getting Started](getting_started/index.md) - Installation and first steps
-- [Tutorials](tutorials/index.md) - Detailed worked examples
-- [Theory](theory/index.md) - Mathematical foundations
-- [Algorithm](algorithm/index.md) - Implementation details
-- [API Reference](api/index.md) - Full API documentation
+- [Getting Started](../overview.md) - Installation and first steps
+- [Tutorials](../models/index.md) - Detailed worked examples
+- [Theory](../theory/index.md) - Mathematical foundations
+- [Algorithm](../estimation/index.md) - Implementation details
+- [API Reference](../api/index.md) - Full API documentation

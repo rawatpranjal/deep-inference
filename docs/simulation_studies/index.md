@@ -1,6 +1,8 @@
-# Validation
+# Simulation Studies
 
-Comprehensive eval suite validating every mathematical component of the influence function methodology.
+Head-to-head method comparisons on data where the truth is known. Each study reports coverage,
+the standard-error ratio, and bias, so you can see which method is valid and by how much. The
+eval suite below validates every mathematical component of the influence-function methodology.
 
 ```{toctree}
 :maxdepth: 2

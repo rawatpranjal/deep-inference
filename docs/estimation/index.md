@@ -1,6 +1,9 @@
-# Algorithm
+# Estimation
 
-Implementation of Farrell-Liang-Misra influence function-based inference for neural networks.
+How the package fits the heterogeneous parameters and the nuisance object the correction needs.
+This is the machinery: the structural network, cross-fitting, the three ways the expected
+Hessian is obtained, and how the influence function is assembled. It implements the
+Farrell, Liang, Misra algorithm.
 
 ```{toctree}
 :hidden:
@@ -52,7 +55,7 @@ The conditional Hessian Λ(x) = E[ℓ_θθ|X=x] has three estimation regimes:
 ### Regime A: Randomized Experiments (`ComputeLambda`)
 
 When treatment T is randomized and independent of X:
-```python
+```text
 # Monte Carlo integration over treatment distribution
 Λ(x) = E_T[ℓ_θθ(Y, T, θ(x)) | X=x]
      ≈ (1/M) Σₘ ℓ_θθ(y, tₘ, θ(x))  where tₘ ~ P(T)
@@ -167,7 +170,7 @@ Consider increasing ridge regularization or checking model fit.
 
 ### Within-Fold Formula
 
-```python
+```text
 # From core/algorithm.py
 Ψ̂ = (1/K) Σ_k Var_k(ψ)
   = (1/K) Σ_k (1/|I_k|) Σ_{i ∈ I_k} (ψᵢ - μ̂_k)²

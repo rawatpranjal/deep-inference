@@ -145,7 +145,7 @@ print(result.summary())
 
 ## Expected Results
 
-From [Eval 09: Multinomial Logit](../validation/eval_09.md):
+From [Eval 09: Multinomial Logit](../simulation_studies/eval_09.md):
 
 ### Parameter Recovery
 
