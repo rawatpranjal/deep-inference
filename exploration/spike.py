@@ -174,6 +174,39 @@ def truth_gamma(rng):
     return float(np.mean(np.exp(a + b) - np.exp(a)))
 
 
+# ---- NegBin DGP: Y ~ NB2(mean=exp(a(X)+b(X)T), dispersion r) --------------
+# Log link, overdispersed count (var = μ + μ²/r). Loss (r+y)·log(r+μ) - y·η has Hessian
+# weight rμ(r+y)/(r+μ)² -- depends on theta AND y. Expected weight E[·|X,T]=rμ/(r+μ)
+# (between 0 and μ; -> μ as r->inf, the Poisson limit). A second noisy y-dependent
+# Hessian, to test whether gamma's cholesky failure is family-specific or general.
+NBA0, NBA1, NBA2 = 0.2, 0.4, -0.3
+NBB0, NBB1 = 0.4, 0.2
+R_NB = 3.0  # NB dispersion (size / number of failures); smaller = more overdispersed
+
+
+def a_of_nb(X):
+    return NBA0 + NBA1 * X[:, 0] + NBA2 * X[:, 1]
+
+
+def b_of_nb(X):
+    return NBB0 + NBB1 * X[:, 0]
+
+
+def gen_negbin(n, rng):
+    X = draw_X(n, rng)
+    T = (rng.uniform(size=n) < propensity(X)).astype(float)
+    mu = np.exp(a_of_nb(X) + b_of_nb(X) * T)
+    Y = rng.negative_binomial(R_NB, R_NB / (R_NB + mu)).astype(float)  # E[Y]=mu
+    return Y, T, X
+
+
+def truth_negbin(rng):
+    # ATE on the count-mean scale: E[ exp(a+b) - exp(a) ].
+    Xb = draw_X(2_000_000, rng)
+    a, b = a_of_nb(Xb), b_of_nb(Xb)
+    return float(np.mean(np.exp(a + b) - np.exp(a)))
+
+
 # ---- Oracle (gold standard, correctly specified) --------------------------
 def oracle_linear(Y, T, X):
     # True mean: A0 + A1 X0 + A2 X1 + (B0 + B1 X0) T. Design includes T, T*X0.
@@ -248,6 +281,23 @@ def oracle_gamma(Y, T, X):
     return mu, np.sqrt(var)
 
 
+def oracle_negbin(Y, T, X):
+    # correctly-specified NB2 GLM (log link, known dispersion alpha=1/r) + delta-method SE.
+    D = np.column_stack([np.ones_like(T), X[:, 0], X[:, 1], T, T * X[:, 0]])
+    m = sm.GLM(Y, D, family=sm.families.NegativeBinomial(alpha=1.0 / R_NB)).fit()
+    th = np.asarray(m.params)
+    cov = np.asarray(m.cov_params())
+    D1 = np.column_stack([np.ones_like(T), X[:, 0], X[:, 1], np.ones_like(T), X[:, 0]])
+    D0 = np.column_stack(
+        [np.ones_like(T), X[:, 0], X[:, 1], np.zeros_like(T), np.zeros_like(T)]
+    )
+    l1, l0 = np.exp(D1 @ th), np.exp(D0 @ th)
+    mu = float(np.mean(l1 - l0))
+    g = ((l1[:, None] * D1) - (l0[:, None] * D0)).mean(0)
+    var = float(g @ cov @ g)
+    return mu, np.sqrt(var)
+
+
 # ---- RieszNet: faithful automatic debiased ML -----------------------------
 # Chernozhukov, Newey, Quintas-Martinez, Syrgkanis (2022), RieszNet, arXiv
 # 2110.03031. Implements the Section 3 multitasking architecture and the
@@ -307,6 +357,11 @@ def _outcome_g_reg(g_raw, y, outcome):
         return g, (
             y * torch.exp(-g_raw) + g_raw
         ).mean()  # Gamma NLL y/μ+log μ, μ=exp(η)
+    if outcome == "negbin":
+        g = torch.exp(g_raw)
+        return g, (
+            (R_NB + y) * torch.log(R_NB + g) - y * g_raw
+        ).mean()  # NB2 NLL (r+y)·log(r+μ)-y·η, μ=exp(η)
     return g_raw, ((g_raw - y) ** 2).mean()  # linear / MSE
 
 
@@ -444,7 +499,7 @@ def _riesz_single(Y, T, X, outcome, K, max_epochs, patience, seed):
                 g, a = net(traw, xe)
                 if outcome == "logit":
                     g = torch.sigmoid(g)
-                elif outcome in ("poisson", "gamma"):
+                elif outcome in ("poisson", "gamma", "negbin"):
                     g = torch.exp(g)
                 return g.numpy(), a.numpy()
 
@@ -925,6 +980,169 @@ def flm_gamma(
     return r.mu_hat, r.se
 
 
+NEGBIN_TIKHONOV = {"oracle": 1e-8, "cholesky": 0.01, "ridge": 0.01}
+
+
+class OracleNegBinLambda:
+    """Oracle Λ(x)=E[ℓ_θθ|X] for the NB2 DGP. Loss (r+y)·log(r+μ)-y·η has per-obs Hessian
+    weight rμ(r+y)/(r+μ)² with E[y|X,T]=μ, so the expected weight is rμ/(r+μ) and
+    Λ*(x) = (1-e)·w0·[[1,0],[0,0]] + e·w1·[[1,1],[1,1]], w_j=r·μ_j/(r+μ_j),
+    μ0=exp(a), μ1=exp(a+b), e=σ(γ(x0+x1)). Ceiling reference, NOT general."""
+
+    requires_theta = True
+    requires_separate_fold = True
+
+    def fit(self, X, T, Y, theta_hat, model):
+        return None
+
+    def predict(self, X, theta_hat=None):
+        x0, x1 = X[:, 0], X[:, 1]
+        a = NBA0 + NBA1 * x0 + NBA2 * x1
+        b = NBB0 + NBB1 * x0
+        e = torch.sigmoid(GAMMA * (x0 + x1))
+        mu0, mu1 = torch.exp(a), torch.exp(a + b)
+        w0, w1 = R_NB * mu0 / (R_NB + mu0), R_NB * mu1 / (R_NB + mu1)
+        L = X.new_zeros(len(X), 2, 2)
+        L[:, 0, 0] = (1 - e) * w0 + e * w1
+        L[:, 0, 1] = e * w1
+        L[:, 1, 0] = e * w1
+        L[:, 1, 1] = e * w1
+        return L
+
+
+def flm_negbin(
+    Y,
+    T,
+    X,
+    n_folds,
+    epochs,
+    n_repeats=1,
+    lambda_spec="cholesky",
+    tikhonov=None,
+    max_condition=None,
+):
+    # ATE on the count-mean scale exp(a+b)-exp(a), via a CUSTOM NB2 NLL (log link, known r)
+    # -> fully autodiff. Hessian depends on theta AND y (weight rμ(r+y)/(r+μ)²).
+    def nbloss(y, t, theta):
+        eta = theta[0] + theta[1] * t
+        return (R_NB + y) * torch.log(R_NB + torch.exp(eta)) - y * eta
+
+    def ate_target(x, theta, t_tilde):
+        return torch.exp(theta[0] + theta[1]) - torch.exp(theta[0])
+
+    kw = dict(
+        loss=nbloss,
+        target_fn=ate_target,
+        theta_dim=2,
+        t_tilde=0.0,
+        hessian_depends_on_theta=True,
+        hessian_depends_on_y=True,
+        n_folds=n_folds,
+        epochs=epochs,
+        n_repeats=n_repeats,
+        hidden_dims=[32],
+        verbose=False,
+    )
+    if lambda_spec == "oracle":
+        kw["lambda_strategy"] = OracleNegBinLambda()
+    elif lambda_spec == "cholesky":
+        if max_condition is not None:
+            kw["lambda_strategy"] = _cholesky_strategy(max_condition)
+        else:
+            kw["lambda_method"] = "cholesky"
+    elif lambda_spec == "ridge":
+        kw["lambda_method"] = "ridge"
+    else:
+        raise ValueError(f"unknown negbin lambda_spec: {lambda_spec}")
+    kw["tikhonov_scale"] = (
+        tikhonov if tikhonov is not None else NEGBIN_TIKHONOV[lambda_spec]
+    )
+    r = inference(Y, T, X.astype(float), **kw)
+    return r.mu_hat, r.se
+
+
+GAUSSIAN_TIKHONOV = {"oracle": 1e-8, "cholesky": 0.01, "ridge": 0.01}
+
+
+class OracleGaussianLambda:
+    """Oracle Λ(x)=E[ℓ_θθ|X] for the 3-dim Gaussian model θ=[α,β,log σ], loss
+    0.5(y-μ)²/σ²+log σ, μ=α+βt. Taking E over Y (E[r]=0, E[r²]=σ²) gives a BLOCK-DIAGONAL
+    Λ*(x) = [[1/σ², e/σ², 0],[e/σ², e/σ², 0],[0,0,2]], e=σ(γ(x0+x1)), true σ=SIGMA. The
+    (α,β) block is linear's [[1,e],[e,e]]/σ²; the log-σ block (=2) is orthogonal to the ATE
+    target E[β]. Ceiling reference, NOT general."""
+
+    requires_theta = True
+    requires_separate_fold = True
+
+    def fit(self, X, T, Y, theta_hat, model):
+        return None
+
+    def predict(self, X, theta_hat=None):
+        e = torch.sigmoid(GAMMA * (X[:, 0] + X[:, 1]))
+        inv_s2 = 1.0 / (SIGMA**2)  # true variance (gaussian noise sd = SIGMA)
+        L = X.new_zeros(len(X), 3, 3)
+        L[:, 0, 0] = inv_s2
+        L[:, 0, 1] = e * inv_s2
+        L[:, 1, 0] = e * inv_s2
+        L[:, 1, 1] = e * inv_s2
+        L[:, 2, 2] = 2.0
+        return L
+
+
+def flm_gaussian(
+    Y,
+    T,
+    X,
+    n_folds,
+    epochs,
+    n_repeats=1,
+    lambda_spec="cholesky",
+    tikhonov=None,
+    max_condition=None,
+):
+    # Gaussian NLL with ESTIMATED variance: theta=[alpha, beta, log sigma], mu=alpha+beta*t.
+    # 3-dim theta -> the cholesky path must fit a 3x3 Lambda; the log-sigma block is
+    # orthogonal to the ATE target E[beta]. Isolates theta_dim>2 generality. Hessian
+    # depends on theta (sigma) AND y (the sigma-score carries (y-mu)^2).
+    def gloss(y, t, theta):
+        mu = theta[0] + theta[1] * t
+        s = theta[2]  # log sigma
+        return 0.5 * (y - mu) ** 2 * torch.exp(-2.0 * s) + s
+
+    def ate_target(x, theta, t_tilde):
+        return theta[1]
+
+    kw = dict(
+        loss=gloss,
+        target_fn=ate_target,
+        theta_dim=3,
+        t_tilde=0.0,
+        hessian_depends_on_theta=True,
+        hessian_depends_on_y=True,
+        n_folds=n_folds,
+        epochs=epochs,
+        n_repeats=n_repeats,
+        hidden_dims=[32],
+        verbose=False,
+    )
+    if lambda_spec == "oracle":
+        kw["lambda_strategy"] = OracleGaussianLambda()
+    elif lambda_spec == "cholesky":
+        if max_condition is not None:
+            kw["lambda_strategy"] = _cholesky_strategy(max_condition)
+        else:
+            kw["lambda_method"] = "cholesky"
+    elif lambda_spec == "ridge":
+        kw["lambda_method"] = "ridge"
+    else:
+        raise ValueError(f"unknown gaussian lambda_spec: {lambda_spec}")
+    kw["tikhonov_scale"] = (
+        tikhonov if tikhonov is not None else GAUSSIAN_TIKHONOV[lambda_spec]
+    )
+    r = inference(Y, T, X.astype(float), **kw)
+    return r.mu_hat, r.se
+
+
 # ---- Monte Carlo driver ---------------------------------------------------
 def covered(mu, se, truth):
     z = norm.ppf(0.975)
@@ -941,19 +1159,38 @@ DGPS = {
         gen=gen_poisson, oracle=oracle_poisson, flm=flm_poisson, outcome="poisson"
     ),
     "gamma": dict(gen=gen_gamma, oracle=oracle_gamma, flm=flm_gamma, outcome="gamma"),
+    "negbin": dict(
+        gen=gen_negbin, oracle=oracle_negbin, flm=flm_negbin, outcome="negbin"
+    ),
+    # gaussian: same DGP/oracle/RieszNet-outcome as linear, but a 3-dim FLM model that also
+    # estimates sigma (theta=[alpha,beta,log sigma]). Tests the cholesky 3x3 path.
+    "gaussian": dict(
+        gen=gen_linear, oracle=oracle_linear, flm=flm_gaussian, outcome="linear"
+    ),
 }
 DEFAULT_SPECS = {  # 'flat'/'ridge' = naive-Λ contrast, 'oracle' = ceiling ref, cholesky = general
     "linear": ("cholesky", "flat", "oracle"),
     "logit": ("cholesky", "ridge", "oracle"),
     "poisson": ("cholesky", "ridge", "oracle"),
     "gamma": ("cholesky", "ridge", "oracle"),
+    "negbin": ("cholesky", "ridge", "oracle"),
+    "gaussian": ("cholesky", "ridge", "oracle"),
 }
-DGP_BASE_SEED = {"linear": 1000, "logit": 5000, "poisson": 9000, "gamma": 13000}
+DGP_BASE_SEED = {
+    "linear": 1000,
+    "logit": 5000,
+    "poisson": 9000,
+    "gamma": 13000,
+    "negbin": 17000,
+    "gaussian": 21000,
+}
 TRUTH_FN = {
     "linear": lambda rng: truth_linear(),
     "logit": truth_logit,
     "poisson": truth_poisson,
     "gamma": truth_gamma,
+    "negbin": truth_negbin,
+    "gaussian": lambda rng: truth_linear(),
 }
 
 
@@ -1211,9 +1448,18 @@ def main():
     )
     ap.add_argument(
         "--dgp",
-        choices=["both", "all", "linear", "logit", "poisson", "gamma"],
+        choices=[
+            "both",
+            "all",
+            "linear",
+            "logit",
+            "poisson",
+            "gamma",
+            "negbin",
+            "gaussian",
+        ],
         default="both",
-        help="which DGP(s): both=linear+logit, all=+poisson+gamma, or a single name",
+        help="which DGP(s): both=linear+logit, all=+poisson+gamma+negbin+gaussian, or a name",
     )
     ap.add_argument(
         "--lambda-method",
@@ -1257,6 +1503,18 @@ def main():
         "--gamma-lambdas",
         default="cholesky,ridge,oracle",
         help="comma-sep FLM Lambda specs for the GAMMA DGP: cholesky (general),"
+        " ridge (contrast), oracle (true Lambda ceiling).",
+    )
+    ap.add_argument(
+        "--negbin-lambdas",
+        default="cholesky,ridge,oracle",
+        help="comma-sep FLM Lambda specs for the NEGBIN DGP: cholesky (general),"
+        " ridge (contrast), oracle (true Lambda ceiling).",
+    )
+    ap.add_argument(
+        "--gaussian-lambdas",
+        default="cholesky,ridge,oracle",
+        help="comma-sep FLM Lambda specs for the GAUSSIAN DGP: cholesky (general),"
         " ridge (contrast), oracle (true Lambda ceiling).",
     )
     ap.add_argument(
@@ -1306,6 +1564,8 @@ def main():
         "logit": [s for s in args.logit_lambdas.split(",") if s],
         "poisson": [s for s in args.poisson_lambdas.split(",") if s],
         "gamma": [s for s in args.gamma_lambdas.split(",") if s],
+        "negbin": [s for s in args.negbin_lambdas.split(",") if s],
+        "gaussian": [s for s in args.gaussian_lambdas.split(",") if s],
     }
 
     if args.smoke:
@@ -1329,7 +1589,7 @@ def main():
 
     sel = {
         "both": ["linear", "logit"],
-        "all": ["linear", "logit", "poisson", "gamma"],
+        "all": ["linear", "logit", "poisson", "gamma", "negbin", "gaussian"],
     }.get(args.dgp, [args.dgp])
     truths = {name: TRUTH_FN[name](np.random.default_rng(99)) for name in sel}
     print("truths: " + "  ".join(f"{k} ATE={v:.4f}" for k, v in truths.items()))
