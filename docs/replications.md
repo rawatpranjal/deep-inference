@@ -63,14 +63,27 @@ M=100. An M=200 confirm would tighten it.
 
 | family | known-truth DGP | oracle-MLE | FLM[cholesky] valid | RieszNet | tier |
 |---|---|---|---|---|---|
-| linear | yes | yes | yes (93%) | yes | done |
-| logit | yes | yes | yes (98%) | yes | done |
-| poisson | yes | yes | yes (98%) | unreliable | done |
-| gamma | building | - | - | - | A |
-| negbin | - | - | - | - | A |
-| gaussian | - | - | - | - | A |
+| linear | yes | yes | yes (93%, M=100) | yes | done |
+| logit | yes | yes | yes (98%, M=100) | yes | done |
+| poisson | yes | yes | yes (98%, M=100) | unreliable | done |
+| gamma | yes | yes | no (88%, bias -0.07, M=50) | yes (96%) | A, blocked |
+| negbin | yes | yes | no (bias -0.11, fragile 96%, M=50) | yes (96%) | A, blocked |
+| gaussian | yes | yes | marginal (92%, M=50); oracle-Λ + RieszNet 96% | yes (96%) | A, ~done |
 | probit, weibull, gumbel, tobit, beta, zip | - | - | - | - | B |
 | multinomial, quantile, combinatorial | partial | - | - | - | C |
+
+## Tier A, M=50 (2026-06-29)
+
+gamma, negbin, gaussian wired into the benchmark (`exploration/results_tierA_M50.html`).
+The result is a two-part diagnosis, not a clean cert. (1) FLM[cholesky] is fragile on the
+heavy-tailed log-link count families (gamma bias -0.072 / coverage 88%, negbin bias -0.111 /
+fragile 96%): the cholesky Λ̂-net misfits the noisy y-dependent per-obs Hessians, a left tail
+of bad-Λ reps that the exact oracle-Λ does not have. (2) Those same count families carry a
+separate downward nuisance bias of ~-0.045 that hits even RieszNet and oracle-Λ (Jensen
+shrinkage on E[exp(η)]), absent on gaussian. The gaussian control confirms both are
+count-family-specific: its oracle-Λ (+0.001 / 96%) and RieszNet (+0.000 / 96%) are perfect,
+and the 3-dim θ / 3x3 Λ path works. Certifying cholesky on gamma/negbin needs a cholesky-Λ
+hardening plus a log-link nuisance-bias fix, both in the core package.
 
 Older component validations (parameter recovery, autodiff, Λ accuracy, ψ assembly, per-family
 coverage evals) live under `evals/` and `docs/validation/`. The FLM framework itself follows
