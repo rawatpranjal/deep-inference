@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # DGP Module (Archived)
 
 Data Generating Processes for Monte Carlo simulation.

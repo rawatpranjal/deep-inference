@@ -125,7 +125,7 @@ consumer characteristics, they compute:
 - **Consumer welfare** using the Small & Rosen (1981) logsum formula $CS = \log(1 + e^V)/|\beta_{\text{price}}|$.
 
 `deep-inference` implements all three as built-in targets: `Elasticity`, `WTP`,
-`ConsumerWelfare`. See the [Pricing Tutorial](../tutorials/pricing.md).
+`ConsumerWelfare`. See the [Pricing Tutorial](../guide/pricing.md).
 
 ### Continuous treatment inference (Colangelo & Lee, 2026)
 
@@ -134,4 +134,4 @@ continuous treatments, citing FLM DNNs as valid nuisance estimators that achieve
 the required convergence rates. `deep-inference` complements their nonparametric
 approach with a structural alternative: all model families natively support
 continuous $T$, enabling dose-response analysis with economic structure. See the
-[Continuous Treatment Tutorial](../tutorials/continuous_treatment.md).
+[Continuous Treatment Tutorial](../guide/continuous_treatment.md).
