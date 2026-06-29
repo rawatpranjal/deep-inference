@@ -230,6 +230,40 @@ def _torch_Phi(x):
     return 0.5 * (1.0 + torch.erf(x * 0.7071067811865476))  # standard normal CDF
 
 
+# ---- Beta DGP: Y ~ Beta(mu*phi, (1-mu)*phi), mu=sigmoid(a(X)+b(X)T), precision phi -------
+# Bounded CONTINUOUS outcome (0,1) with logit-link mean. The mean-MLE is well-behaved but the
+# Hessian is y-dependent (log y terms). Tests whether the cholesky failure tracks "bounded"
+# (logit -> pass) or "continuous y-dependent Hessian" (gamma -> fail).
+BTA0, BTA1, BTA2 = 0.2, 0.4, -0.3
+BTB0, BTB1 = 0.4, 0.2
+PHI_BETA = 5.0  # beta precision (var = mu(1-mu)/(1+phi))
+
+
+def a_of_beta(X):
+    return BTA0 + BTA1 * X[:, 0] + BTA2 * X[:, 1]
+
+
+def b_of_beta(X):
+    return BTB0 + BTB1 * X[:, 0]
+
+
+def gen_beta(n, rng):
+    X = draw_X(n, rng)
+    T = (rng.uniform(size=n) < propensity(X)).astype(float)
+    mu = 1.0 / (1.0 + np.exp(-(a_of_beta(X) + b_of_beta(X) * T)))
+    Y = rng.beta(mu * PHI_BETA, (1 - mu) * PHI_BETA)
+    return np.clip(Y, 1e-4, 1 - 1e-4), T, X
+
+
+def truth_beta(rng):
+    # ATE on the (0,1) mean scale: E[ sigmoid(a+b) - sigmoid(a) ].
+    Xb = draw_X(2_000_000, rng)
+    a, b = a_of_beta(Xb), b_of_beta(Xb)
+    s1 = 1.0 / (1.0 + np.exp(-(a + b)))
+    s0 = 1.0 / (1.0 + np.exp(-a))
+    return float(np.mean(s1 - s0))
+
+
 # ---- Oracle (gold standard, correctly specified) --------------------------
 def oracle_linear(Y, T, X):
     # True mean: A0 + A1 X0 + A2 X1 + (B0 + B1 X0) T. Design includes T, T*X0.
@@ -336,6 +370,27 @@ def oracle_probit(Y, T, X):
     mu = float(np.mean(s1 - s0))
     # delta method: d/dθ mean(Phi(D1θ)-Phi(D0θ)) uses the normal pdf φ
     g = ((norm.pdf(D1 @ th)[:, None] * D1) - (norm.pdf(D0 @ th)[:, None] * D0)).mean(0)
+    var = float(g @ cov @ g)
+    return mu, np.sqrt(var)
+
+
+def oracle_beta(Y, T, X):
+    # correctly-specified Beta regression (logit-link mean) + delta-method SE.
+    from statsmodels.othermod.betareg import BetaModel
+
+    D = np.column_stack([np.ones_like(T), X[:, 0], X[:, 1], T, T * X[:, 0]])
+    m = BetaModel(Y, D).fit(disp=0)
+    k = D.shape[1]
+    th = np.asarray(m.params)[:k]  # mean params (precision param trails)
+    cov = np.asarray(m.cov_params())[:k, :k]
+    D1 = np.column_stack([np.ones_like(T), X[:, 0], X[:, 1], np.ones_like(T), X[:, 0]])
+    D0 = np.column_stack(
+        [np.ones_like(T), X[:, 0], X[:, 1], np.zeros_like(T), np.zeros_like(T)]
+    )
+    s1 = 1.0 / (1.0 + np.exp(-(D1 @ th)))
+    s0 = 1.0 / (1.0 + np.exp(-(D0 @ th)))
+    mu = float(np.mean(s1 - s0))
+    g = (((s1 * (1 - s1))[:, None] * D1) - ((s0 * (1 - s0))[:, None] * D0)).mean(0)
     var = float(g @ cov @ g)
     return mu, np.sqrt(var)
 
@@ -1271,6 +1326,65 @@ def flm_probit(
     return r.mu_hat, r.se
 
 
+BETA_TIKHONOV = {"cholesky": 0.01, "ridge": 0.01}
+
+
+def flm_beta(
+    Y,
+    T,
+    X,
+    n_folds,
+    epochs,
+    n_repeats=1,
+    lambda_spec="cholesky",
+    tikhonov=None,
+    max_condition=None,
+):
+    # ATE on the (0,1) mean scale sigmoid(a+b)-sigmoid(a), custom Beta NLL (logit-link mean,
+    # known precision phi) -> fully autodiff. No oracle-Lambda ceiling for this one (the beta
+    # Fisher info is messy); cholesky vs ridge vs Oracle-MLE/RieszNet still places it on the map.
+    def bloss(y, t, theta):
+        mu = torch.sigmoid(theta[0] + theta[1] * t)
+        a_, b_ = mu * PHI_BETA, (1 - mu) * PHI_BETA
+        return (
+            torch.lgamma(a_)
+            + torch.lgamma(b_)
+            - (a_ - 1) * torch.log(y)
+            - (b_ - 1) * torch.log(1 - y)
+        )
+
+    def ate_target(x, theta, t_tilde):
+        return torch.sigmoid(theta[0] + theta[1]) - torch.sigmoid(theta[0])
+
+    kw = dict(
+        loss=bloss,
+        target_fn=ate_target,
+        theta_dim=2,
+        t_tilde=0.0,
+        hessian_depends_on_theta=True,
+        hessian_depends_on_y=True,
+        n_folds=n_folds,
+        epochs=epochs,
+        n_repeats=n_repeats,
+        hidden_dims=[32],
+        verbose=False,
+    )
+    if lambda_spec == "cholesky":
+        if max_condition is not None:
+            kw["lambda_strategy"] = _cholesky_strategy(max_condition)
+        else:
+            kw["lambda_method"] = "cholesky"
+    elif lambda_spec == "ridge":
+        kw["lambda_method"] = "ridge"
+    else:
+        raise ValueError(f"unknown beta lambda_spec: {lambda_spec}")
+    kw["tikhonov_scale"] = (
+        tikhonov if tikhonov is not None else BETA_TIKHONOV[lambda_spec]
+    )
+    r = inference(Y, T, X.astype(float), **kw)
+    return r.mu_hat, r.se
+
+
 # ---- Monte Carlo driver ---------------------------------------------------
 def covered(mu, se, truth):
     z = norm.ppf(0.975)
@@ -1298,6 +1412,9 @@ DGPS = {
     "probit": dict(
         gen=gen_probit, oracle=oracle_probit, flm=flm_probit, outcome="probit"
     ),
+    # beta: bounded continuous (0,1), logit-link mean. RieszNet reuses outcome="logit"
+    # (sigmoid + BCE is a proper score for a (0,1) mean). No oracle-Lambda ceiling.
+    "beta": dict(gen=gen_beta, oracle=oracle_beta, flm=flm_beta, outcome="logit"),
 }
 DEFAULT_SPECS = {  # 'flat'/'ridge' = naive-Λ contrast, 'oracle' = ceiling ref, cholesky = general
     "linear": ("cholesky", "flat", "oracle"),
@@ -1307,6 +1424,7 @@ DEFAULT_SPECS = {  # 'flat'/'ridge' = naive-Λ contrast, 'oracle' = ceiling ref,
     "negbin": ("cholesky", "ridge", "oracle"),
     "gaussian": ("cholesky", "ridge", "oracle"),
     "probit": ("cholesky", "ridge", "oracle"),
+    "beta": ("cholesky", "ridge"),  # no oracle-Lambda for beta (messy Fisher info)
 }
 DGP_BASE_SEED = {
     "linear": 1000,
@@ -1316,6 +1434,7 @@ DGP_BASE_SEED = {
     "negbin": 17000,
     "gaussian": 21000,
     "probit": 25000,
+    "beta": 29000,
 }
 TRUTH_FN = {
     "linear": lambda rng: truth_linear(),
@@ -1325,6 +1444,7 @@ TRUTH_FN = {
     "negbin": truth_negbin,
     "gaussian": lambda rng: truth_linear(),
     "probit": truth_probit,
+    "beta": truth_beta,
 }
 
 
@@ -1592,6 +1712,7 @@ def main():
             "negbin",
             "gaussian",
             "probit",
+            "beta",
         ],
         default="both",
         help="which DGP(s): both=linear+logit, all=the GLM set, or a single name",
@@ -1659,6 +1780,12 @@ def main():
         " ridge (contrast), oracle (true Lambda ceiling).",
     )
     ap.add_argument(
+        "--beta-lambdas",
+        default="cholesky,ridge",
+        help="comma-sep FLM Lambda specs for the BETA DGP: cholesky (general),"
+        " ridge (contrast). No oracle-Lambda ceiling for beta.",
+    )
+    ap.add_argument(
         "--tikhonov",
         type=float,
         default=None,
@@ -1708,6 +1835,7 @@ def main():
         "negbin": [s for s in args.negbin_lambdas.split(",") if s],
         "gaussian": [s for s in args.gaussian_lambdas.split(",") if s],
         "probit": [s for s in args.probit_lambdas.split(",") if s],
+        "beta": [s for s in args.beta_lambdas.split(",") if s],
     }
 
     if args.smoke:
@@ -1739,6 +1867,7 @@ def main():
             "negbin",
             "gaussian",
             "probit",
+            "beta",
         ],
     }.get(args.dgp, [args.dgp])
     truths = {name: TRUTH_FN[name](np.random.default_rng(99)) for name in sel}
