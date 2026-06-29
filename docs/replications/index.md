@@ -101,6 +101,6 @@ and the 3-dim θ / 3x3 Λ path works. Certifying cholesky on gamma/negbin needs 
 hardening plus a log-link nuisance-bias fix, both in the core package.
 
 Older component validations (parameter recovery, autodiff, Λ accuracy, ψ assembly, per-family
-coverage evals) live under `evals/` and `docs/validation/`. The FLM framework itself follows
+coverage evals) live under `evals/` and `docs/simulation_studies/`. The FLM framework itself follows
 Farrell-Liang-Misra (2021, 2025); see `docs/dev/paper_replication_details.md` for the
 paper-to-code mapping.

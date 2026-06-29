@@ -59,5 +59,5 @@ al., 2018). The Neyman orthogonality property is central to the broader program 
 orthogonal statistical learning (Foster & Syrgkanis, 2023); related automatic
 debiasing approaches include RieszNet (Chernozhukov et al., 2022). The
 contribution of Farrell, Liang, and Misra (2021, 2025) is showing that this
-correction remains valid when the first-stage nuisance — the structural parameters
-— is estimated by a **deep neural network**.
+correction remains valid when the first-stage nuisance (the structural parameters)
+is estimated by a **deep neural network**.

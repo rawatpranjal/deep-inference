@@ -6,7 +6,7 @@ This tutorial demonstrates `deep-inference` with **high-dimensional embeddings**
 
 ## Why Embeddings?
 
-Traditional econometrics uses tabular covariates (age, income, education). But rich data sources—job descriptions, product images, research abstracts—contain information that drives treatment effect heterogeneity.
+Traditional econometrics uses tabular covariates (age, income, education). But rich data sources (job descriptions, product images, research abstracts) contain information that drives treatment effect heterogeneity.
 
 **This package handles high-dimensional X seamlessly:**
 - Feature embeddings (64+ dimensions)
@@ -29,9 +29,9 @@ We demonstrate three model families with realistic scenarios:
 
 ---
 
-## Example 1: Linear — Wages with Job Embeddings
+## Example 1: Linear, Wages with Job Embeddings
 
-**Scenario:** A labor economist studies how experience affects wages. The effect may vary by job type—captured via job description embeddings.
+**Scenario:** A labor economist studies how experience affects wages. The effect may vary by job type, captured via job description embeddings.
 
 $$Y_i = \alpha(X_i) + \beta(X_i) \cdot T_i + \varepsilon_i$$
 
@@ -77,7 +77,7 @@ Max                  0.103             0.166
 
 ---
 
-## Example 2: Logit — Purchases with Image Embeddings
+## Example 2: Logit, Purchases with Image Embeddings
 
 **Scenario:** An e-commerce company studies discount effectiveness. Does a 10% discount work better for some products than others?
 
@@ -111,7 +111,7 @@ print(f"Products to discount: {discount_sensitive.sum()} / {len(beta_hat)}")
 
 ---
 
-## Example 3: Poisson — Citations with Abstract Embeddings
+## Example 3: Poisson, Citations with Abstract Embeddings
 
 **Scenario:** A bibliometrics researcher studies the Open Access (OA) citation advantage. Which papers benefit most from OA?
 

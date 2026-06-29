@@ -62,6 +62,9 @@ result = structural_dml(
 print(result.summary())
 ```
 
+This example sets `epochs=100`. The default is `200`; for a well-behaved linear model 100 is
+plenty, and you can raise it if the diagnostics suggest underfitting.
+
 ## What you get back
 
 Running the above prints (date and time will differ; this is real output from the example):

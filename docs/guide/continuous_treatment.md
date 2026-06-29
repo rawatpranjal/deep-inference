@@ -1,4 +1,4 @@
-# Continuous Treatment Tutorial
+# Continuous Treatment Guide
 
 This tutorial demonstrates dose-response analysis with continuous treatments using `deep-inference`, following Colangelo & Lee (2026).
 

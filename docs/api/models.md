@@ -145,7 +145,7 @@ model = CombinatorialModel(n_treatments=3, link='gen_sigmoid_ii')
 target = MultiTreatmentATE(model=model, treatment=[1, 0, 1])
 ```
 
-*Reference: Ye et al. (2025, Management Science) — DeDL: Debiased Deep Learning for Combinatorial Experiments*
+*Reference: Ye et al. (2025, Management Science), DeDL: Debiased Deep Learning for Combinatorial Experiments*
 
 ---
 

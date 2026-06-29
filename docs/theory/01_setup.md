@@ -1,16 +1,16 @@
 # 1. Setup
 
 ```{note}
-This is the first of seven theory pages. They build on each other — read them
+This is the first of seven theory pages. They build on each other, so read them
 top to bottom. Use the **Next** button at the bottom of each page to follow the
 phases in order.
 ```
 
-This section lays out the Farrell–Liang–Misra (FLM) framework as a practitioner
+This section lays out the Farrell-Liang-Misra (FLM) framework as a practitioner
 would encounter it. We describe the structural model, define target functionals,
 explain why naive neural network inference fails, present the influence function
 correction, and classify problems into three "regimes" that determine how a key
-quantity — the expected Hessian $\Lambda(x)$ — is handled.
+quantity, the expected Hessian $\Lambda(x)$, is handled.
 
 ## The structural model
 
@@ -70,5 +70,5 @@ their loss functions and parameter dimensions.
 
 Here $\eta = \alpha + \beta t$ and $\mu = g^{-1}(\eta)$. The package includes over
 a dozen families (Weibull, Gumbel, Tobit, NegBin, Probit, Beta, ZIP, and others).
-Custom losses can be supplied via the `loss=` argument — see
+Custom losses can be supplied via the `loss=` argument. See
 [Available Models and Targets](07_models_and_targets.md).
