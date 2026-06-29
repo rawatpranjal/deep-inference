@@ -120,6 +120,15 @@ family. Not a blocker for Tier A, whose families all have a canonical TMLE form.
 
 ## Done log (replication ledger goal)
 
+- **repl-03-ledger-page** (2026-06-29, VERIFIED, merged to docs/rebuild-rtd). Restructured
+  `docs/replications/index.md` into the econirl ledger style and created root `replications.md`.
+  **Part 1 - Paper replications (package vs paper)**: FLM2021 Monte-Carlo (randomized +
+  observational tables) and RieszNet IHDP (MAE + coverage table), each with paragraph, a
+  `Quantity | Package | Paper` table, honest caveats, and a reproduce command. **Part 2** keeps
+  the prior package-vs-known-truth benchmark intact (git-diff confirmed no section/number lost,
+  only Greek->ASCII + heading nesting). Sphinx build succeeds, page renders (32 KB). Fresh-Opus
+  verified every cell against the saved reports and the no-deletion diff.
+
 - **repl-02-riesz-leg** (2026-06-29, VERIFIED, merged to docs/rebuild-rtd). `riesz` mode of
   `exploration/replicate_papers.py` replicates the RieszNet (Chernozhukov et al. 2022) IHDP
   binary-ATE experiment via the package's `riesz_inference` (outcome='linear'), over N=50 of
@@ -146,6 +155,23 @@ family. Not a blocker for Tier A, whose families all have a canonical TMLE form.
   `exploration/replicate_papers_flm_full.md`, `exploration/replicate_papers_flm_smoke.md`.
 
 ## STATUS
+
+```
+state: idle
+goal_reached: paper-vs-package replication ledger for FLM and RieszNet (2026-06-29)
+```
+
+**Replication ledger goal: REACHED (2026-06-29).** All three deliverables shipped and merged to
+docs/rebuild-rtd: the harness `exploration/replicate_papers.py` (FLM + RieszNet modes), root
+`replications.md`, and the econirl-style `docs/replications/index.md` (builds in RTD). FLM2021
+randomized matches the paper (coverage 0.955 vs 0.951); FLM observational under-covers honestly
+(0.840 vs 0.946, the documented Lambda-collapse); RieszNet IHDP MAE 0.124 vs 0.110. Three chunks
+(repl-01/02/03) each fresh-Opus verified. Next per the success condition: `/autoloop` returns to
+the paused Tier-A cert (see BACKLOG top item).
+
+---
+
+**Prior (Tier-A) status, paused:**
 
 linear, logit, poisson wired and certified at M=100 on RunPod (commit 12524f1).
 FLM[cholesky] valid on all three (linear 93%/0.92, logit 98%/1.07, poisson 98%/0.98),
