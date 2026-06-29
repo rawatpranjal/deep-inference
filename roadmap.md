@@ -120,6 +120,18 @@ family. Not a blocker for Tier A, whose families all have a canonical TMLE form.
 
 ## Done log (replication ledger goal)
 
+- **repl-02-riesz-leg** (2026-06-29, VERIFIED, merged to docs/rebuild-rtd). `riesz` mode of
+  `exploration/replicate_papers.py` replicates the RieszNet (Chernozhukov et al. 2022) IHDP
+  binary-ATE experiment via the package's `riesz_inference` (outcome='linear'), over N=50 of
+  the IHDP-1000 semi-synthetic realizations (the public Dragonnet mirror ships 50). **Package
+  vs Paper:** MAE **0.124** vs paper **0.110** (Table 1 DR RieszNet, directly comparable,
+  close); coverage **0.98** vs paper **0.95** (NOT directly comparable - the paper redraws T
+  per propensity 'True', the harness uses the CSVs' original confounded T, so MAE is the
+  comparable headline). No leakage: the estimator sees only (Y,T,X); mu0/mu1 score MAE/coverage
+  only. Fresh-Opus verified the IHDP column mapping and the verbatim RieszNet-not-ForestRiesz
+  transcription (MAE 0.110 line 219, coverage 0.95 line 227). Report:
+  `exploration/replicate_papers_riesz_full.md`.
+
 - **repl-01-flm-leg** (2026-06-29, VERIFIED, merged to docs/rebuild-rtd). `exploration/replicate_papers.py`
   replicates the FLM2021 Section-6 Monte Carlo (d=20, linear outcome, n=10000, M=200) via
   `structural_dml(family='linear')`, arch 2 = [60,30,20]. **Package vs Paper:** randomized
