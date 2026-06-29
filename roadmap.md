@@ -1,53 +1,56 @@
 # deep-inference roadmap
 
-## CURRENT GOAL — paper-vs-package replication ledger for FLM and RieszNet
+## CURRENT GOAL — scope DID + deep-learning replication candidates (observational panels) into an options menu
 
-**The directive (frozen).** Build a Replications section in the RTD docs and a root
-`replications.md` that replicate the published Monte-Carlo simulations of (1) Farrell, Liang,
-Misra (2021, 2025) and (2) RieszNet (Chernozhukov et al. 2022). Run THIS package's own
-estimators on each paper's DGP and present **Package-vs-Paper** tables side by side, in the
-econirl `replications.html` style: an intro ledger line, then one section per replicated
-simulation, each a `Quantity | Package | Paper` table plus the exact reproduce command. The
-prior Tier-A cert goal is paused (parked in BACKLOG); its in-flight state stays in STATUS.
+**The directive (frozen).** Two parts. (1) Add the two honest caveats to the shipped
+replication ledger (scale M=200 / N=50 is below the papers' 1000; IHDP uses the public
+Dragonnet mirror, which ships only 50 realizations) on both `docs/replications/index.md` and
+root `replications.md`. (2) Produce ONE rigorous scoping document,
+`docs/replications/did_candidates.md`, that surveys difference-in-differences /
+observational-panel methods built on deep learning and the FLM / RieszNet (automatic-debiasing,
+influence-function) machinery, and lays out a ranked **menu of replication options** the user
+picks from. This is a SCOPE-ONLY goal: it produces the options doc, it does NOT implement any
+new replication. The user picks from the menu, and the chosen items become the next goal.
 
 **Deliverables.**
-1. Restructure `docs/replications/index.md` into the paper-ledger style. Lead line:
-   "Each section sets the package value against the paper's published value, side by side."
-   Keep the existing known-truth MC benchmark as a clearly-labelled second part. Delete
-   nothing (project rule 2).
-2. `replications.md` at repo root — the working source-of-truth markdown the harness writes
-   and the RTD page curates.
-3. `exploration/replicate_papers.py` — the harness that runs the package on each paper's
-   exact DGP, with the paper's published numbers transcribed (quoted from the docling source)
-   as the Paper column, saving a timestamped report under `exploration/`.
+1. The two caveats added to `docs/replications/index.md` (Part 1) and `replications.md`.
+2. `docs/replications/did_candidates.md` — the options menu, with these sections:
+   - **What the package already does for DID** (verbatim from the code): `did(method='exact')`
+     closed-form 2x2; `did(method='neural')` heterogeneous saturated 2x2, target E[tau(X)],
+     Regime B; `did(method='panel_fe')` two-way FE panel DiD, network learns tau(X). Plus the
+     existing evals (`evals/eval_13_did.py`, `eval_14_did_nn.py`, `dgp_did_nn.py`) and tests.
+   - **Candidate papers** — each ACTUALLY downloaded via `websource` into the repo and READ
+     (full text on disk under `references/` or `literature/`, docling/markdown), never cited
+     from an abstract. For each: the estimand, the DGP/simulation it reports, whether it uses
+     deep learning and/or a Riesz/auto-debiasing correction, and the exact simulation table a
+     replication would target.
+   - **Clean-fit scoping** — per candidate, a HONEST verdict: drop-in (maps to an existing
+     `did()` method), small-lift (needs a new target/model but reuses the engine), or
+     research-item (needs new machinery). Name the specific package seam each would use
+     (`models/did.py`, `models/panel_fe.py`, `targets/`, `riesz/`, the `inference()` entry).
+   - **Ranked options** the user picks from, each with effort (S/M/L), what it proves, and the
+     concrete replication target (paper + table + metric).
 
-**Scope (minimum, both papers).**
-- FLM: at least one Monte-Carlo table — the ATE / CI-coverage simulation in the FLM2021 Monte
-  Carlo section (`references/FLM2021_docling.md`) — package coverage, RMSE, bias vs the
-  paper's reported values, via `inference()` / `structural_dml()`.
-- RieszNet: at least the IHDP binary-treatment ATE experiment (Section 5,
-  `references/RieszNet2022_docling.md`) — bias, RMSE, coverage, CI length vs the paper's
-  table, via the package's RieszNet estimator.
+**Scope.** Focus: observational panels, staggered/2x2 DiD, conditional parallel trends, and the
+deep-learning + doubly-robust/Riesz family (e.g. Sant'Anna-Zhao DR-DiD, Callaway-Sant'Anna,
+DML-DiD/Chang, any RieszNet-for-ATT or neural panel DiD found in the search). Minimum 5
+candidate papers downloaded and read; at least 3 with a concrete, named replication target.
 
-**Done when.** Both papers have at least one paper-simulation replicated with a
-Package-vs-Paper table; every Paper-column number is a verbatim transcription from the paper
-text on disk (`references/*_docling.md`, quotable span); every Package-column number comes
-from a saved harness run whose report path is shown; `docs/replications/index.md` builds in
-the RTD toctree; and a fresh Opus agent confirms the paper numbers are correctly quoted and
-the package numbers are from real output, not cooked.
+**Done when.** The caveats are on both ledger artifacts; `did_candidates.md` exists with all
+four sections; every candidate paper named in it has a real downloaded full-text file on disk
+(path shown) that was read (a quotable span from the method/simulation section appears in the
+scoping); the package-DID inventory matches the actual code; and a fresh Opus agent confirms
+(a) no paper is cited from an abstract only (each has on-disk full text), (b) the clean-fit
+verdicts correctly reference real package seams, (c) nothing in the existing ledger was deleted.
 
-**Acceptance (quantitative).** For the headline quantity of each replicated table (coverage),
-the package value lands within a stated, honest band of the paper's value — or the gap is
-reported plainly with its cause. No truth-tuning. Show every number (SHOW ME THE FACTS).
+**Acceptance (qualitative).** ultra-rigor: honest effort tags, no overclaiming a paper fits
+when it needs new machinery, the menu is genuinely pick-and-choose (independent options, ranked,
+each self-contained). Front-load the cheapest high-value option. No implementation — scope only.
 
-**Acceptance (qualitative).** econirl style (intro ledger line, per-section paragraph + table
-+ reproduce command). Nothing deleted from the existing replications page. Fresh-agent (Opus)
-verified.
-
-**Success condition (narrower than the whole roadmap).** Goal is met once the three
-deliverables exist, both papers have one replicated Package-vs-Paper table backed by a saved
-run, the RTD page builds, and the fresh-agent verification passes. Then `/autoloop` returns
-to the paused Tier-A cert.
+**Success condition (narrower than the whole roadmap).** Met once the caveats are added and
+`docs/replications/did_candidates.md` passes the fresh-agent check above. The user then picks
+options, which become the next `/goal`. Until the user picks, do NOT start implementing any
+candidate.
 
 ---
 
