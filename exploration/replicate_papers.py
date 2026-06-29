@@ -1,14 +1,22 @@
 """
-FLM2021 Section 6 Monte Carlo replication using THIS package (structural_dml).
+Paper replication harness for deep-inference.
 
-Paper: Farrell, Liang, Misra (2021). "Deep Neural Networks for Estimation and
-Inference." Econometrica 89(1):181-213. Section 6, Tables 6 and 7.
+Modes
+-----
+flm   -- FLM2021 Section 6 Monte Carlo (structural_dml, linear, d=20).
+          Paper: Farrell, Liang, Misra (2021). Econometrica 89(1):181-213.
+          Tables 6 and 7, architecture 2 = {60,30,20}.
 
-Compares package output vs paper-reported numbers for architecture 2 = {60,30,20},
-d=20 covariates, linear outcome, n=10,000 per replication.
+riesz -- RieszNet IHDP ATE replication (riesz_inference, binary T, 25 confounders).
+          Paper: Chernozhukov, Newey, Quintas-Martinez, Syrgkanis (2022, ICML).
+          §5.1 / Table 1: MAE 0.110, coverage ~95%.
+
+both  -- run both (default).
 
 Run:
     PYTHONPATH=src uv run python exploration/replicate_papers.py --smoke
+    PYTHONPATH=src uv run python exploration/replicate_papers.py --mode riesz --smoke
+    PYTHONPATH=src uv run python exploration/replicate_papers.py --mode flm --smoke
     PYTHONPATH=src uv run python exploration/replicate_papers.py --full
 """
 
@@ -196,23 +204,180 @@ def format_table(design: str, metrics: dict, n: int, M: int) -> str:
     )
 
 
+# ---- RieszNet IHDP ---------------------------------------------------------
+# Paper benchmarks:
+#   MAE 0.110 -- Table 1, DR RieszNet, RieszNet2022_docling.md line 219
+#   Coverage ~0.95 -- §5.1 / Figure 2, line 227
+RIESZ_PAPER_MAE = 0.110
+RIESZ_PAPER_COV = 0.95
+RIESZ_SMOKE_CFG = dict(N=3, n_folds=5, n_repeats=1, max_epochs=80, patience=15)
+RIESZ_FULL_CFG = dict(N=100, n_folds=5, n_repeats=2, max_epochs=200, patience=20)
+
+IHDP_URL = (
+    "https://raw.githubusercontent.com/claudiashi57/dragonnet/master/dat/ihdp/csv/"
+    "ihdp_npci_{i}.csv"
+)
+
+
+def fetch_ihdp(n: int, dest: str = "data/external/ihdp") -> Path:
+    """Download ihdp_npci_{i}.csv for i=1..n only if missing (idempotent)."""
+    import urllib.request as _req  # lazy: avoids import at module level
+
+    dest_path = Path(__file__).resolve().parent.parent / dest
+    dest_path.mkdir(parents=True, exist_ok=True)
+    for i in range(1, n + 1):
+        fpath = dest_path / f"ihdp_npci_{i}.csv"
+        if not fpath.exists():
+            _req.urlretrieve(IHDP_URL.format(i=i), str(fpath))
+    return dest_path
+
+
+def load_ihdp(i: int, dest_path: Path):
+    """Load realization i. Returns Y, T, X (estimator inputs only) and ate_i.
+
+    CSV layout (no header, 747 rows):
+      col 0 = T (binary), col 1 = y_factual, col 2 = y_cfactual (unused),
+      col 3 = mu0, col 4 = mu1, cols 5..29 = 25 confounders.
+    ate_i = mean(mu1 - mu0) used ONLY to score results, never passed to estimator.
+    """
+    data = np.loadtxt(str(dest_path / f"ihdp_npci_{i}.csv"), delimiter=",")
+    T = data[:, 0]
+    Y = data[:, 1]
+    # col 2 = y_cfactual -- do not use
+    mu0, mu1 = data[:, 3], data[:, 4]
+    X = data[:, 5:30]
+    ate_i = float(np.mean(mu1 - mu0))
+    return Y, T, X, ate_i
+
+
+def run_riesz_mode(args) -> str:
+    """Run RieszNet IHDP replication. Returns the markdown table string."""
+    from deep_inference.riesz import (
+        riesz_inference,  # noqa: PLC0415  lazy: not needed for flm
+    )
+
+    cfg = (
+        RIESZ_SMOKE_CFG.copy()
+        if (args.smoke or not args.full)
+        else RIESZ_FULL_CFG.copy()
+    )
+    if args.riesz_N is not None:
+        cfg["N"] = args.riesz_N
+    N, tag = cfg["N"], args.tag
+
+    print(
+        f"RieszNet IHDP replication: N={N} realizations, "
+        f"n_folds={cfg['n_folds']}, n_repeats={cfg['n_repeats']}, "
+        f"max_epochs={cfg['max_epochs']}, patience={cfg['patience']}"
+    )
+    dest_path = fetch_ihdp(N)
+
+    abs_errs: list[float] = []
+    covers: list[float] = []
+    t0 = time.time()
+    for i in range(1, N + 1):
+        Y, T, X, ate_i = load_ihdp(i, dest_path)
+        res = riesz_inference(
+            Y,
+            T,
+            X,
+            outcome="linear",
+            n_folds=cfg["n_folds"],
+            n_repeats=cfg["n_repeats"],
+            max_epochs=cfg["max_epochs"],
+            patience=cfg["patience"],
+            seed=i,
+        )
+        err = abs(res.mu_hat - ate_i)
+        cov = float(res.ci_lower <= ate_i <= res.ci_upper)
+        abs_errs.append(err)
+        covers.append(cov)
+        print(
+            f"  i={i:3d} ate_true={ate_i:.4f} mu_hat={res.mu_hat:.4f} "
+            f"se={res.se:.4f} err={err:.4f} cover={bool(cov)}"
+        )
+
+    elapsed = time.time() - t0
+    mae = float(np.mean(abs_errs))
+    coverage = float(np.mean(covers))
+
+    tbl = (
+        f"### RieszNet IHDP ATE replication "
+        f"(N={N} of the paper's 1000 semi-synthetic datasets)\n"
+        f"| Quantity | Package | Paper |\n"
+        f"|---|---|---|\n"
+        f"| MAE | {mae:.3f} | {RIESZ_PAPER_MAE} |\n"
+        f"| Coverage | {coverage:.2f} | {RIESZ_PAPER_COV} |"
+    )
+    # ponytail: using original-T from CSVs for coverage, not redrawn T (paper §5.1, line 225-227)
+    note = (
+        "NOTE: Data = Dragonnet IHDP-1000 CSVs (Shi et al. 2019). "
+        f"N={N} < the paper's 1000. "
+        "CI coverage uses the CSVs' original confounded T; the paper's coverage figure "
+        "(Figure 2, line 227) redraws T per propensity 'True' from NPCI -- "
+        "these coverage numbers are not directly comparable. "
+        "The MAE comparison (Table 1) is directly comparable."
+    )
+
+    print()
+    print(tbl)
+    print()
+    print(note)
+    print(f"\nWall time: {elapsed:.1f}s")
+
+    out_path = Path(__file__).parent / f"replicate_papers_riesz_{tag}.md"
+    out_path.write_text(
+        "\n".join(
+            [
+                "# RieszNet IHDP Replication",
+                "",
+                f"Config: N={N}, n_folds={cfg['n_folds']}, n_repeats={cfg['n_repeats']}, "
+                f"max_epochs={cfg['max_epochs']}, patience={cfg['patience']}",
+                f"Wall time: {elapsed:.1f}s",
+                "",
+                tbl,
+                "",
+                note,
+            ]
+        )
+    )
+    print(f"\nReport saved to: {out_path.resolve()}")
+    return tbl
+
+
 # ---- CLI -------------------------------------------------------------------
 def parse_args():
-    ap = argparse.ArgumentParser(description="FLM2021 Section 6 replication")
-    mode = ap.add_mutually_exclusive_group()
-    mode.add_argument("--smoke", action="store_true", help="M=5 quick check")
-    mode.add_argument("--full", action="store_true", help="M=200 full run")
-    ap.add_argument("--M", type=int, default=None)
-    ap.add_argument("--n", type=int, default=10_000)
-    ap.add_argument("--epochs", type=int, default=80)
-    ap.add_argument("--folds", type=int, default=5)
-    ap.add_argument("--tag", type=str, default="smoke")
+    ap = argparse.ArgumentParser(
+        description="Paper replication harness (flm | riesz | both)"
+    )
+    run_mode = ap.add_mutually_exclusive_group()
+    run_mode.add_argument(
+        "--smoke", action="store_true", help="quick check (small M/N)"
+    )
+    run_mode.add_argument("--full", action="store_true", help="full run (large M/N)")
+    ap.add_argument(
+        "--mode",
+        choices=["flm", "riesz", "both"],
+        default="both",
+        help="which replication to run (default: both)",
+    )
+    ap.add_argument("--M", type=int, default=None, help="FLM: override number of reps")
+    ap.add_argument("--n", type=int, default=10_000, help="FLM: sample size per rep")
+    ap.add_argument("--epochs", type=int, default=80, help="FLM: epochs per rep")
+    ap.add_argument("--folds", type=int, default=5, help="FLM: cross-fitting folds")
+    ap.add_argument(
+        "--riesz-N",
+        type=int,
+        default=None,
+        dest="riesz_N",
+        help="RieszNet: override number of IHDP realizations",
+    )
+    ap.add_argument("--tag", type=str, default="smoke", help="report filename tag")
     return ap.parse_args()
 
 
-def main():
-    args = parse_args()
-
+def run_flm_mode(args):
+    """Run the FLM2021 Monte Carlo replication."""
     if args.M is not None:
         M = args.M
     elif args.full:
@@ -253,7 +418,6 @@ def main():
     print(f"Wall time: {elapsed:.1f}s")
     print(f"Note: {PAPER_NOTE}")
 
-    # write report
     out_dir = Path(__file__).parent
     out_path = out_dir / f"replicate_papers_flm_{tag}.md"
     report_lines = [
@@ -269,6 +433,14 @@ def main():
     ] + [t + "\n" for t in tables]
     out_path.write_text("\n".join(report_lines))
     print(f"\nReport saved to: {out_path.resolve()}")
+
+
+def main():
+    args = parse_args()
+    if args.mode in ("flm", "both"):
+        run_flm_mode(args)
+    if args.mode in ("riesz", "both"):
+        run_riesz_mode(args)
 
 
 if __name__ == "__main__":
