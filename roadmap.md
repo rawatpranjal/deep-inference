@@ -160,9 +160,24 @@ family. Not a blocker for Tier A, whose families all have a canonical TMLE form.
 ## STATUS
 
 ```
-state: idle
-goal_reached: paper-vs-package replication ledger for FLM and RieszNet (2026-06-29)
+state: awaiting_user_pick
+deliverable_done: docs/replications/did_candidates.md (DID scoping menu), 2026-06-29
+blocking_on: user picks options from the menu -> next goal
 ```
+
+**DID-scoping goal: deliverable DONE, awaiting the user's pick (2026-06-29).** Caveats added to
+the ledger; `docs/replications/did_candidates.md` written and fresh-Opus verified (every one of
+six candidate papers has on-disk full text, spans grep out, package seams real, nothing deleted).
+Menu: Option A (S) replicate Sant'Anna-Zhao DR-DiD via `did(method='neural')`; Option B (M)
+RieszNet-for-DiD via the closed-form representer; Option C (S/M) heterogeneous CATT-MSE; Options
+D/E (L) staggered and continuous-dose DiD; C6 not a target. Per the success condition, do NOT
+implement any candidate until the user picks. Papers + markdown in `references/did_scoping/`.
+
+**Prior: replication ledger goal REACHED (2026-06-29).** All three deliverables shipped and merged to
+docs/rebuild-rtd: the harness `exploration/replicate_papers.py` (FLM + RieszNet modes), root
+`replications.md`, and the econirl-style `docs/replications/index.md` (builds in RTD). FLM2021
+randomized matches the paper (coverage 0.955 vs 0.951); FLM observational under-covers honestly
+(0.840 vs 0.946, the documented Lambda-collapse); RieszNet IHDP MAE 0.124 vs 0.110. Three chunks
 
 **Replication ledger goal: REACHED (2026-06-29).** All three deliverables shipped and merged to
 docs/rebuild-rtd: the harness `exploration/replicate_papers.py` (FLM + RieszNet modes), root
