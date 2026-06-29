@@ -1,56 +1,68 @@
 # deep-inference roadmap
 
-## CURRENT GOAL — scope DID + deep-learning replication candidates (observational panels) into an options menu
+## CURRENT GOAL — deep integration plan + research note for deep-learning DiD (FLM and RieszNet), all candidates
 
-**The directive (frozen).** Two parts. (1) Add the two honest caveats to the shipped
-replication ledger (scale M=200 / N=50 is below the papers' 1000; IHDP uses the public
-Dragonnet mirror, which ships only 50 realizations) on both `docs/replications/index.md` and
-root `replications.md`. (2) Produce ONE rigorous scoping document,
-`docs/replications/did_candidates.md`, that surveys difference-in-differences /
-observational-panel methods built on deep learning and the FLM / RieszNet (automatic-debiasing,
-influence-function) machinery, and lays out a ranked **menu of replication options** the user
-picks from. This is a SCOPE-ONLY goal: it produces the options doc, it does NOT implement any
-new replication. The user picks from the menu, and the chosen items become the next goal.
+**The directive (frozen).** The user accepted all six candidates from `did_candidates.md` and
+wants the next layer of depth: ONE deep integration research note,
+`docs/replications/did_integration_plan.md`, that says HOW to bring deep-learning DiD estimators
+into this package by BOTH the FLM (influence-function / Λ) path AND the RieszNet
+(automatic-debiasing / Riesz-representer) path, and names the concrete replication targets to
+hit afterward. The emphasis is deep-learning DiD (neural nuisances / neural representer);
+classical (logit/OLS) DiD is the no-neural subset, included only as the baseline each paper
+reports. This is STILL SCOPE-ONLY: it produces the plan, it implements no estimator. The chosen
+build items become a later goal.
+
+**Required pre-work (find the papers, do not cite from abstracts).**
+1. Chang (2020) DML-DiD is NOT paywalled-out: it is already on disk at
+   `Code/applied-science-new/causal-machine-learning-panels/papers/chang_2020_dml_did.pdf`
+   (also `Code/mldid/papers/`, `Code/testnvim/examples/causal-did/book/paper/`). Pull it in,
+   read its Section with the Monte-Carlo / orthogonal-DiD moment, and add it as a full candidate.
+2. Mine the local curated collections for more DL-DiD papers:
+   `Code/applied-science-new/causal-machine-learning-panels/papers/` (has `_log.csv`,
+   `_curriculum.md`, summaries), `Code/applied-science-new/causal-inference-panels/papers/`,
+   `Code/mldid/papers/`. Triage anything that is a deep-learning or Riesz/DML DiD/panel method.
+3. Run a Sonnet subagent to search arXiv for additional deep-learning DiD / neural panel /
+   Riesz-for-ATT papers beyond the current set; triage the hits, download the genuinely-new
+   deep-learning ones via `websource`, read them.
 
 **Deliverables.**
-1. The two caveats added to `docs/replications/index.md` (Part 1) and `replications.md`.
-2. `docs/replications/did_candidates.md` — the options menu, with these sections:
-   - **What the package already does for DID** (verbatim from the code): `did(method='exact')`
-     closed-form 2x2; `did(method='neural')` heterogeneous saturated 2x2, target E[tau(X)],
-     Regime B; `did(method='panel_fe')` two-way FE panel DiD, network learns tau(X). Plus the
-     existing evals (`evals/eval_13_did.py`, `eval_14_did_nn.py`, `dgp_did_nn.py`) and tests.
-   - **Candidate papers** — each ACTUALLY downloaded via `websource` into the repo and READ
-     (full text on disk under `references/` or `literature/`, docling/markdown), never cited
-     from an abstract. For each: the estimand, the DGP/simulation it reports, whether it uses
-     deep learning and/or a Riesz/auto-debiasing correction, and the exact simulation table a
-     replication would target.
-   - **Clean-fit scoping** — per candidate, a HONEST verdict: drop-in (maps to an existing
-     `did()` method), small-lift (needs a new target/model but reuses the engine), or
-     research-item (needs new machinery). Name the specific package seam each would use
-     (`models/did.py`, `models/panel_fe.py`, `targets/`, `riesz/`, the `inference()` entry).
-   - **Ranked options** the user picks from, each with effort (S/M/L), what it proves, and the
-     concrete replication target (paper + table + metric).
+1. Chang (2020) added as a read candidate (on-disk full text + a quotable MC/method span).
+2. `docs/replications/did_integration_plan.md`, with, per candidate (the 6 + Chang + any new
+   DL-DiD papers kept):
+   - **FLM integration path** — the `StructuralModel` (loss θ(X)), the `Target` (E[τ(X)] or the
+     paper's estimand), and the Λ regime (B vs C; flag the selection-on-X / Λ-collapse risk),
+     naming the package seams (`models/`, `targets/`, `lambda_/`, `engine/`, `inference()`).
+   - **RieszNet integration path** — the linear functional and its Riesz representer (give the
+     closed form where the literature provides it, e.g. the DiD ATT α(W)=D/p−(1−D)m(X)/(p(1−m(X)))),
+     the multitask loss, and how it slots into `riesz/inference.py` / `riesz/model.py`.
+   - **Replication target** — the exact paper table + metric (bias/RMSE/coverage/CIL or CATT-MSE)
+     the package run would be set against, and the deep-learning variant to emphasize.
+   - **Effort + dependency order** (which targets unlock which).
+3. A short **build sequence** at the end: the order to actually implement (later), front-loading
+   the cheapest deep-learning DiD win that exercises both an FLM and a RieszNet leg on a shared DGP.
 
-**Scope.** Focus: observational panels, staggered/2x2 DiD, conditional parallel trends, and the
-deep-learning + doubly-robust/Riesz family (e.g. Sant'Anna-Zhao DR-DiD, Callaway-Sant'Anna,
-DML-DiD/Chang, any RieszNet-for-ATT or neural panel DiD found in the search). Minimum 5
-candidate papers downloaded and read; at least 3 with a concrete, named replication target.
+**Scope.** Deep-learning DiD is the target; non-DL DiD is the baseline subset. Cover all six
+existing candidates plus Chang plus the new arXiv/local finds. Both the FLM and the RieszNet
+integration path must be spelled out for every candidate where each is defensible (mark
+"no defensible RieszNet path yet" honestly where true, e.g. multi-period staggered or
+continuous-dose until the representer is derived).
 
-**Done when.** The caveats are on both ledger artifacts; `did_candidates.md` exists with all
-four sections; every candidate paper named in it has a real downloaded full-text file on disk
-(path shown) that was read (a quotable span from the method/simulation section appears in the
-scoping); the package-DID inventory matches the actual code; and a fresh Opus agent confirms
-(a) no paper is cited from an abstract only (each has on-disk full text), (b) the clean-fit
-verdicts correctly reference real package seams, (c) nothing in the existing ledger was deleted.
+**Done when.** Chang (2020) is on disk and read; the local collections were mined and the
+arXiv subagent ran (its triage recorded); `did_integration_plan.md` exists with, for every kept
+candidate, BOTH an FLM and a RieszNet integration subsection (or an explicit, justified
+"not yet" for one path) plus a named replication target; every paper cited has on-disk full text
+with a quotable span; and a fresh Opus agent confirms (a) no abstract-only citations, (b) the
+named package seams exist, (c) the Riesz representers / FLM targets are stated correctly, not
+hand-waved, (d) nothing in `did_candidates.md` or the ledger was deleted.
 
-**Acceptance (qualitative).** ultra-rigor: honest effort tags, no overclaiming a paper fits
-when it needs new machinery, the menu is genuinely pick-and-choose (independent options, ranked,
-each self-contained). Front-load the cheapest high-value option. No implementation — scope only.
+**Acceptance (qualitative).** ultra-rigor, deep-learning-first. Every integration path is
+concrete enough to start coding from (named files, named target/representer), never a vague
+"use the engine". Honest "not yet" where a path is genuinely unsolved. Scope only — no estimator
+implemented.
 
-**Success condition (narrower than the whole roadmap).** Met once the caveats are added and
-`docs/replications/did_candidates.md` passes the fresh-agent check above. The user then picks
-options, which become the next `/goal`. Until the user picks, do NOT start implementing any
-candidate.
+**Success condition (narrower than the whole roadmap).** Met once `did_integration_plan.md`
+passes the fresh-agent check above and the build sequence is laid out. The user then greenlights
+the build order, which becomes the next `/goal`. Until then, implement nothing.
 
 ---
 
