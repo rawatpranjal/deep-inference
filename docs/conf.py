@@ -77,7 +77,10 @@ html_theme_options = {
     "sticky_navigation": True,
     "navigation_depth": 2,
     "includehidden": True,
-    "titles_only": False,
+    # Show page titles only in the sidebar; do NOT spill each page's in-page H2/H3
+    # headings into the nav as fake dropdowns. Single pages stay single-click; the
+    # multipart sections (Models, Inference, Theory) still show their child pages.
+    "titles_only": True,
 }
 
 # RTD theme has no github_url option; the "Edit on GitHub" ribbon is driven by
