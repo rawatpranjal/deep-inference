@@ -22,11 +22,44 @@ warnings.filterwarnings('ignore', category=UserWarning, module='sklearn')
 
 import torch
 from torch import Tensor
+import torch.nn as nn
 
 from .base import BaseLambdaStrategy
 
 if TYPE_CHECKING:
     from deep_inference.models import StructuralModel
+
+
+class _CholeskyNet(nn.Module):
+    """X -> Cholesky factor L(x) of a (d,d) PSD matrix; predicts Λ(x)=L(x)L(x)ᵀ.
+
+    PSD by construction for ANY net output, so the inverse never detonates the way
+    entry-wise regress-then-invert does at low overlap. General in d (= theta_dim):
+    the net outputs the d(d+1)/2 lower-triangular entries, with softplus on the
+    diagonal for positive definiteness.
+    """
+
+    def __init__(self, d_x: int, d: int = 2, hidden: int = 32):
+        super().__init__()
+        self.d = d
+        n_low = d * (d + 1) // 2
+        self.net = nn.Sequential(
+            nn.Linear(d_x, hidden), nn.ReLU(),
+            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(hidden, n_low),
+        )
+        tri = torch.tril_indices(d, d)
+        self.register_buffer("tri_row", tri[0])
+        self.register_buffer("tri_col", tri[1])
+        self.register_buffer("diag_mask", tri[0] == tri[1])
+
+    def forward(self, X: Tensor) -> Tensor:
+        p = self.net(X)
+        vals = p.clone()
+        vals[:, self.diag_mask] = nn.functional.softplus(p[:, self.diag_mask]) + 1e-3
+        L = X.new_zeros(len(X), self.d, self.d)
+        L[:, self.tri_row, self.tri_col] = vals
+        return L @ L.transpose(-1, -2)  # (n, d, d), PSD by construction
 
 
 class EstimateLambda(BaseLambdaStrategy):
@@ -45,24 +78,37 @@ class EstimateLambda(BaseLambdaStrategy):
 
     def __init__(
         self,
-        method: Literal["mlp", "rf", "ridge", "aggregate", "lgbm"] = "ridge",
+        method: Literal["mlp", "rf", "ridge", "aggregate", "lgbm", "cholesky"] = "ridge",
         ridge_alpha: float = 1000.0,
         mlp_alpha: float = 0.0001,
         rf_max_depth: Optional[int] = 10,
         lgbm_reg_lambda: float = 0.0,
+        chol_hidden: int = 32,
+        chol_epochs: int = 250,
+        chol_lr: float = 5e-3,
+        max_condition: float = 100.0,
     ):
         """
         Initialize EstimateLambda strategy.
 
         Args:
-            method: Regression method ("ridge" [default], "aggregate", "lgbm", "mlp", "rf")
+            method: Regression method ("ridge" [default], "aggregate", "lgbm", "mlp",
+                    "rf", "cholesky").
                     "ridge" is recommended for validated coverage.
                     "aggregate" is stable when Hessian doesn't depend on X.
+                    "cholesky" is a PSD-by-construction net Λ(x)=L(x)L(x)ᵀ trained in
+                    Frobenius norm to the per-obs Hessians; general (any family/theta_dim)
+                    and stable to invert at low overlap where entry-wise regress-then-invert
+                    breaks PSD. Pair with a non-trivial tikhonov_scale when Λ(x) is
+                    near-singular (e.g. logit, where w=p(1-p)->0).
                     "mlp" can produce invalid standard errors - use with caution.
             ridge_alpha: L2 regularization for ridge regression (default 1000.0)
             mlp_alpha: L2 regularization for MLP (default 0.0001)
             rf_max_depth: Max tree depth for RF (default 10, None=unlimited)
             lgbm_reg_lambda: L2 regularization for LightGBM (default 0.0)
+            chol_hidden: Hidden width of the cholesky net (default 32)
+            chol_epochs: Training epochs for the cholesky net (default 250)
+            chol_lr: Adam learning rate for the cholesky net (default 5e-3)
         """
         # Warn about potentially dangerous methods
         if method in ("mlp", "neural"):
@@ -79,10 +125,15 @@ class EstimateLambda(BaseLambdaStrategy):
         self.mlp_alpha = mlp_alpha
         self.rf_max_depth = rf_max_depth
         self.lgbm_reg_lambda = lgbm_reg_lambda
+        self.chol_hidden = chol_hidden
+        self.chol_epochs = chol_epochs
+        self.chol_lr = chol_lr
+        self.max_condition = max_condition  # relative eigenvalue-floor for inverse stability
         self._model = None
         self._mean_hessian = None
         self._d_theta = None
         self._triu_idx = None
+        self._chol_net = None
 
     def fit(
         self,
@@ -152,6 +203,58 @@ class EstimateLambda(BaseLambdaStrategy):
 
         elif self.method == "lgbm":
             self._fit_lgbm(X, hessians)
+
+        elif self.method == "cholesky":
+            self._fit_cholesky(X, hessians)
+
+    def _fit_cholesky(self, X: Tensor, hessians: Tensor) -> None:
+        """Fit a PSD-by-construction net Λ(x)=L(x)L(x)ᵀ in Frobenius norm to the
+        per-obs Hessians. General: works for any family (the Hessians are read off
+        directly, closed-form or autodiff) and any theta_dim."""
+        d_theta = hessians.shape[1]
+        Xf = X.detach().float()
+        H = hessians.detach().float()
+        # Init is NOT fixed-seeded: the net's init variance is a real source of estimator
+        # variability and is deliberately left IN the empirical SD (the SE-ratio denominator),
+        # so the calibration test stays honest/conservative. The benchmark is still
+        # reproducible via the caller's per-run global seed. Net moved to X's device for GPU.
+        net = _CholeskyNet(Xf.shape[1], d=d_theta, hidden=self.chol_hidden).to(Xf.device)
+        opt = torch.optim.Adam(net.parameters(), lr=self.chol_lr)
+        # Early stopping on a held-out split. The targets are NOISY rank-1 per-obs Hessians;
+        # the object we want is the SMOOTH conditional mean E[H|X]. Without early stopping the
+        # net overfits the per-obs noise (more epochs made Λ̂ WORSE, not better), which poisons
+        # the near-singular inverse -> biased correction + heavy-tailed ψ. Validating on a held
+        # split and keeping the best-val state fits the smooth mean instead.
+        n = len(Xf)
+        n_val = max(8, n // 5)
+        perm = torch.randperm(n, device=Xf.device)
+        vi, ti = perm[:n_val], perm[n_val:]
+        Xt, Ht, Xv, Hv = Xf[ti], H[ti], Xf[vi], H[vi]
+        best_val, best_state, wait, patience = float("inf"), None, 0, 25
+        for _ in range(self.chol_epochs):
+            net.train()
+            opt.zero_grad()
+            ((net(Xt) - Ht) ** 2).mean().backward()
+            opt.step()
+            net.eval()
+            with torch.no_grad():
+                v = ((net(Xv) - Hv) ** 2).mean().item()
+            if v < best_val - 1e-9:
+                best_val, best_state, wait = v, {k: p.clone() for k, p in net.state_dict().items()}, 0
+            else:
+                wait += 1
+                if wait >= patience:
+                    break
+        if best_state is not None:
+            net.load_state_dict(best_state)
+        net.eval()
+        self._chol_net = net
+
+    def _predict_cholesky(self, X: Tensor, dtype, device) -> Tensor:
+        """Return Λ(x)=L(x)L(x)ᵀ for the eval covariates."""
+        with torch.no_grad():
+            Lambda = self._chol_net(X.detach().float())
+        return Lambda.to(dtype=dtype, device=device)
 
     def _fit_mlp(self, X: Tensor, hessians: Tensor) -> None:
         """Fit MLP regression for Λ(x)."""
@@ -275,8 +378,14 @@ class EstimateLambda(BaseLambdaStrategy):
             Lambda[:, self._triu_idx[0], self._triu_idx[1]] = pred
             Lambda[:, self._triu_idx[1], self._triu_idx[0]] = pred
 
-        # Project to PSD to ensure valid matrices (fixes numerical instability)
-        Lambda = self._project_to_psd(Lambda)
+        elif self.method == "cholesky":
+            Lambda = self._predict_cholesky(X, dtype, device)
+
+        # Project to PSD to ensure valid matrices (fixes numerical instability).
+        # max_condition is the spectrum-adaptive inverse regularizer (floor min-eig at
+        # max-eig/max_condition): a single value adapts to each Λ̂'s own conditioning,
+        # which a fixed additive tikhonov cannot (it does not see the DGP's curvature scale).
+        Lambda = self._project_to_psd(Lambda, max_condition=self.max_condition)
 
         return Lambda
 

@@ -14,8 +14,8 @@ regularization introduces systematic bias.
 
 ## The problem is quantitatively severe
 
-In our simulations, naive 95% confidence intervals achieve only **0–20% actual
-coverage**, the naive SE is **3–10× too small**, and the bias is toward zero
+In our simulations, naive 95% confidence intervals achieve only **0-20% actual
+coverage**, the naive SE is **3-10× too small**, and the bias is toward zero
 because regularization shrinks $\hat{\theta}$.
 
 This is *not* a small-sample problem; it persists at $n = 50{,}000$. The

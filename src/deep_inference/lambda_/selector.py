@@ -97,6 +97,9 @@ def select_lambda_strategy(
             return EstimateLambda(method="rf", **kwargs)
         elif lambda_method == "ridge":
             return EstimateLambda(method="ridge", **kwargs)
+        elif lambda_method == "cholesky":
+            # PSD-by-construction Λ(x)=L(x)L(x)ᵀ (general; stable inverse at low overlap)
+            return EstimateLambda(method="cholesky", **kwargs)
 
     # Create strategy based on regime
     if regime == Regime.A:
