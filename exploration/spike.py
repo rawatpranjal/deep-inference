@@ -207,6 +207,29 @@ def truth_negbin(rng):
     return float(np.mean(np.exp(a + b) - np.exp(a)))
 
 
+# ---- Probit DGP: Y ~ Bernoulli(Phi(a(X)+b(X)T)) ---------------------------
+# Bounded link like logit (second bounded-link landscape point), but a DIFFERENT curvature
+# (Fisher weight φ²/(Φ(1-Φ)) vs logit's p(1-p)). Reuses the shared a(X),b(X). ATE on the
+# probability scale; truth by Monte Carlo. Predicted to pass like logit.
+def gen_probit(n, rng):
+    X = draw_X(n, rng)
+    T = (rng.uniform(size=n) < propensity(X)).astype(float)
+    p = norm.cdf(a_of(X) + b_of(X) * T)
+    Y = (rng.uniform(size=n) < p).astype(float)
+    return Y, T, X
+
+
+def truth_probit(rng):
+    # MC truth: E[ Phi(a+b) - Phi(a) ] over the X distribution.
+    Xb = draw_X(2_000_000, rng)
+    a, b = a_of(Xb), b_of(Xb)
+    return float(np.mean(norm.cdf(a + b) - norm.cdf(a)))
+
+
+def _torch_Phi(x):
+    return 0.5 * (1.0 + torch.erf(x * 0.7071067811865476))  # standard normal CDF
+
+
 # ---- Oracle (gold standard, correctly specified) --------------------------
 def oracle_linear(Y, T, X):
     # True mean: A0 + A1 X0 + A2 X1 + (B0 + B1 X0) T. Design includes T, T*X0.
@@ -298,6 +321,25 @@ def oracle_negbin(Y, T, X):
     return mu, np.sqrt(var)
 
 
+def oracle_probit(Y, T, X):
+    # correctly-specified Probit + delta-method SE for E[Phi(D1θ)-Phi(D0θ)].
+    D = np.column_stack([np.ones_like(T), X[:, 0], X[:, 1], T, T * X[:, 0]])
+    m = sm.Probit(Y, D).fit(disp=0)
+    th = np.asarray(m.params)
+    cov = np.asarray(m.cov_params())
+    D1 = np.column_stack([np.ones_like(T), X[:, 0], X[:, 1], np.ones_like(T), X[:, 0]])
+    D0 = np.column_stack(
+        [np.ones_like(T), X[:, 0], X[:, 1], np.zeros_like(T), np.zeros_like(T)]
+    )
+    s1 = norm.cdf(D1 @ th)
+    s0 = norm.cdf(D0 @ th)
+    mu = float(np.mean(s1 - s0))
+    # delta method: d/dθ mean(Phi(D1θ)-Phi(D0θ)) uses the normal pdf φ
+    g = ((norm.pdf(D1 @ th)[:, None] * D1) - (norm.pdf(D0 @ th)[:, None] * D0)).mean(0)
+    var = float(g @ cov @ g)
+    return mu, np.sqrt(var)
+
+
 # ---- RieszNet: faithful automatic debiased ML -----------------------------
 # Chernozhukov, Newey, Quintas-Martinez, Syrgkanis (2022), RieszNet, arXiv
 # 2110.03031. Implements the Section 3 multitasking architecture and the
@@ -362,6 +404,9 @@ def _outcome_g_reg(g_raw, y, outcome):
         return g, (
             (R_NB + y) * torch.log(R_NB + g) - y * g_raw
         ).mean()  # NB2 NLL (r+y)·log(r+μ)-y·η, μ=exp(η)
+    if outcome == "probit":
+        p = _torch_Phi(g_raw).clamp(1e-6, 1 - 1e-6)
+        return p, -(y * torch.log(p) + (1 - y) * torch.log(1 - p)).mean()  # probit NLL
     return g_raw, ((g_raw - y) ** 2).mean()  # linear / MSE
 
 
@@ -501,6 +546,8 @@ def _riesz_single(Y, T, X, outcome, K, max_epochs, patience, seed):
                     g = torch.sigmoid(g)
                 elif outcome in ("poisson", "gamma", "negbin"):
                     g = torch.exp(g)
+                elif outcome == "probit":
+                    g = _torch_Phi(g)
                 return g.numpy(), a.numpy()
 
             g1, a1 = gmean(ones)
@@ -1143,6 +1190,87 @@ def flm_gaussian(
     return r.mu_hat, r.se
 
 
+PROBIT_TIKHONOV = {"oracle": 1e-8, "cholesky": 0.01, "ridge": 0.01}
+
+
+class OracleProbitLambda:
+    """Oracle Λ(x)=E[ℓ_θθ|X] for the Probit DGP. Fisher weight w(η)=φ(η)²/(Φ(η)(1-Φ(η))),
+    η0=a, η1=a+b. Λ*(x) = (1-e)·w0·[[1,0],[0,0]] + e·w1·[[1,1],[1,1]], e=σ(γ(x0+x1)).
+    Ceiling reference, NOT general."""
+
+    requires_theta = True
+    requires_separate_fold = True
+
+    def fit(self, X, T, Y, theta_hat, model):
+        return None
+
+    def predict(self, X, theta_hat=None):
+        x0, x1 = X[:, 0], X[:, 1]
+        a = A0 + A1 * x0 + A2 * x1
+        b = B0 + B1 * x0
+        e = torch.sigmoid(GAMMA * (x0 + x1))
+        phi = lambda z: torch.exp(-0.5 * z * z) * 0.3989422804014327
+        Phi0, Phi1 = _torch_Phi(a), _torch_Phi(a + b)
+        w0 = phi(a) ** 2 / (Phi0 * (1 - Phi0)).clamp_min(1e-6)
+        w1 = phi(a + b) ** 2 / (Phi1 * (1 - Phi1)).clamp_min(1e-6)
+        L = X.new_zeros(len(X), 2, 2)
+        L[:, 0, 0] = (1 - e) * w0 + e * w1
+        L[:, 0, 1] = e * w1
+        L[:, 1, 0] = e * w1
+        L[:, 1, 1] = e * w1
+        return L
+
+
+def flm_probit(
+    Y,
+    T,
+    X,
+    n_folds,
+    epochs,
+    n_repeats=1,
+    lambda_spec="cholesky",
+    tikhonov=None,
+    max_condition=None,
+):
+    # ATE on the probability scale Phi(a+b)-Phi(a), custom Probit NLL -> fully autodiff.
+    def ploss(y, t, theta):
+        p = _torch_Phi(theta[0] + theta[1] * t).clamp(1e-6, 1 - 1e-6)
+        return -(y * torch.log(p) + (1 - y) * torch.log(1 - p))
+
+    def ate_target(x, theta, t_tilde):
+        return _torch_Phi(theta[0] + theta[1]) - _torch_Phi(theta[0])
+
+    kw = dict(
+        loss=ploss,
+        target_fn=ate_target,
+        theta_dim=2,
+        t_tilde=0.0,
+        hessian_depends_on_theta=True,
+        hessian_depends_on_y=True,
+        n_folds=n_folds,
+        epochs=epochs,
+        n_repeats=n_repeats,
+        hidden_dims=[32],
+        verbose=False,
+    )
+    if lambda_spec == "oracle":
+        kw["lambda_strategy"] = OracleProbitLambda()
+    elif lambda_spec == "cholesky":
+        if max_condition is not None:
+            kw["lambda_strategy"] = _cholesky_strategy(max_condition)
+        else:
+            kw["lambda_method"] = "cholesky"
+    elif lambda_spec == "ridge":
+        kw["lambda_method"] = "ridge"
+    else:
+        raise ValueError(f"unknown probit lambda_spec: {lambda_spec}")
+    kw["tikhonov_scale"] = (
+        tikhonov if tikhonov is not None else PROBIT_TIKHONOV[lambda_spec]
+    )
+    r = inference(Y, T, X.astype(float), **kw)
+    return r.mu_hat, r.se
+
+
 # ---- Monte Carlo driver ---------------------------------------------------
 def covered(mu, se, truth):
     z = norm.ppf(0.975)
@@ -1167,6 +1295,9 @@ DGPS = {
     "gaussian": dict(
         gen=gen_linear, oracle=oracle_linear, flm=flm_gaussian, outcome="linear"
     ),
+    "probit": dict(
+        gen=gen_probit, oracle=oracle_probit, flm=flm_probit, outcome="probit"
+    ),
 }
 DEFAULT_SPECS = {  # 'flat'/'ridge' = naive-Λ contrast, 'oracle' = ceiling ref, cholesky = general
     "linear": ("cholesky", "flat", "oracle"),
@@ -1175,6 +1306,7 @@ DEFAULT_SPECS = {  # 'flat'/'ridge' = naive-Λ contrast, 'oracle' = ceiling ref,
     "gamma": ("cholesky", "ridge", "oracle"),
     "negbin": ("cholesky", "ridge", "oracle"),
     "gaussian": ("cholesky", "ridge", "oracle"),
+    "probit": ("cholesky", "ridge", "oracle"),
 }
 DGP_BASE_SEED = {
     "linear": 1000,
@@ -1183,6 +1315,7 @@ DGP_BASE_SEED = {
     "gamma": 13000,
     "negbin": 17000,
     "gaussian": 21000,
+    "probit": 25000,
 }
 TRUTH_FN = {
     "linear": lambda rng: truth_linear(),
@@ -1191,6 +1324,7 @@ TRUTH_FN = {
     "gamma": truth_gamma,
     "negbin": truth_negbin,
     "gaussian": lambda rng: truth_linear(),
+    "probit": truth_probit,
 }
 
 
@@ -1457,9 +1591,10 @@ def main():
             "gamma",
             "negbin",
             "gaussian",
+            "probit",
         ],
         default="both",
-        help="which DGP(s): both=linear+logit, all=+poisson+gamma+negbin+gaussian, or a name",
+        help="which DGP(s): both=linear+logit, all=the GLM set, or a single name",
     )
     ap.add_argument(
         "--lambda-method",
@@ -1518,6 +1653,12 @@ def main():
         " ridge (contrast), oracle (true Lambda ceiling).",
     )
     ap.add_argument(
+        "--probit-lambdas",
+        default="cholesky,ridge,oracle",
+        help="comma-sep FLM Lambda specs for the PROBIT DGP: cholesky (general),"
+        " ridge (contrast), oracle (true Lambda ceiling).",
+    )
+    ap.add_argument(
         "--tikhonov",
         type=float,
         default=None,
@@ -1566,6 +1707,7 @@ def main():
         "gamma": [s for s in args.gamma_lambdas.split(",") if s],
         "negbin": [s for s in args.negbin_lambdas.split(",") if s],
         "gaussian": [s for s in args.gaussian_lambdas.split(",") if s],
+        "probit": [s for s in args.probit_lambdas.split(",") if s],
     }
 
     if args.smoke:
@@ -1589,7 +1731,15 @@ def main():
 
     sel = {
         "both": ["linear", "logit"],
-        "all": ["linear", "logit", "poisson", "gamma", "negbin", "gaussian"],
+        "all": [
+            "linear",
+            "logit",
+            "poisson",
+            "gamma",
+            "negbin",
+            "gaussian",
+            "probit",
+        ],
     }.get(args.dgp, [args.dgp])
     truths = {name: TRUTH_FN[name](np.random.default_rng(99)) for name in sel}
     print("truths: " + "  ".join(f"{k} ATE={v:.4f}" for k, v in truths.items()))
