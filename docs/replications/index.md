@@ -57,6 +57,15 @@ IHDP CSVs' original confounded T. N=50 is also below the paper's 1000 realizatio
 
 Reproduce: `python exploration/replicate_papers.py --mode riesz --full`
 
+### Caveats (scale)
+
+These Part 1 runs are scaled down from the papers. FLM uses M=200 replications and RieszNet
+N=50 datasets, both below the papers' 1000, so the numbers carry Monte-Carlo noise (coverage
+SE roughly 1.5pp at M=200, ~3pp at N=50) and small gaps to the paper values should not be
+over-read. The RieszNet IHDP run uses the public Dragonnet mirror, which ships only the first
+50 of the 1000 semi-synthetic realizations; N=50 is the mirror ceiling, not a chosen
+subsample, and the full-1000 NPCI generation would need the R `NPCI` package.
+
 ## Part 2 -- Known-truth Monte-Carlo benchmark (package vs known truth)
 
 The sections below compare the package against a known-truth synthetic DGP rather than a
