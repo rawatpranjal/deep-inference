@@ -5,13 +5,9 @@ RieszNet is the second inference procedure. It reaches the same debiased estimat
 a neural network instead of deriving it from the model's Hessian. This is the "automatic
 debiasing" idea of Chernozhukov, Newey, Quintas-Martinez, Syrgkanis (2022).
 
-```{admonition} Status
-:class: note
-The conceptual design below reflects the procedure as implemented. The importable
-`riesz_inference(...)` entry point and its validated coverage numbers are documented in full
-once the core port lands; this page is being filled out alongside that work. The working
-reference implementation lives at `exploration/spike.py`.
-```
+It is available as `riesz_inference(...)` in the core package; see the
+[API reference](../api/riesz.md) for the full signature. Usage and validated coverage are at the
+bottom of this page.
 
 ## The one idea: the Riesz representer
 
@@ -73,8 +69,65 @@ outcome model `g` or the representer `a` is estimated well, not necessarily both
   is unreliable (for example heavy-tailed count outcomes, where its empirical standard error is
   inflated by divergent repeats).
 
+## Usage
+
+```python
+import numpy as np
+from deep_inference import riesz_inference
+
+rng = np.random.default_rng(0)
+n = 1500
+X = rng.standard_normal((n, 3))
+e = 1 / (1 + np.exp(-(0.8 * X[:, 0])))     # confounded binary treatment
+T = (rng.random(n) < e).astype(float)
+Y = 1.0 + 0.5 * X[:, 0] + (0.5 + 0.3 * X[:, 1]) * T + rng.standard_normal(n)
+
+result = riesz_inference(Y, T, X, outcome='linear', n_folds=5, n_repeats=3)
+print(result.summary())
+```
+
+`outcome` is one of `linear`, `logit`, `poisson`, `gamma`, `negbin`, `probit`. The estimand is
+the ATE contrast `E[g(1, X) - g(0, X)]`. Arguments are documented on the
+[API page](../api/riesz.md).
+
+## Evidence
+
+The ported `riesz_inference` was run on known-truth data, M=40 replications per family
+(`exploration/riesz_coverage.py`). The interval should cover the truth about 95% of the time
+with a standard-error ratio near 1.
+
+```{list-table}
+:header-rows: 1
+
+* - Outcome
+  - Truth
+  - Mean estimate
+  - Bias
+  - SE-ratio
+  - Coverage
+* - linear
+  - 0.5012
+  - 0.5052
+  - +0.0041
+  - 0.96
+  - 95%
+* - logit
+  - 0.1812
+  - 0.1807
+  - -0.0006
+  - 0.91
+  - 92%
+```
+
+Both are valid (the logit 92% sits within Monte-Carlo noise of the band at M=40, with bias
+essentially zero). These reproduce the prototype's larger M=100 study reported on the
+[Replications](../replications/index.md) page (linear 97%, logit 100%), where RieszNet is run
+side by side with the influence-function method and the oracle. The unit tests in
+`src/deep_inference/tests/test_riesz.py` check the same recovery on every commit.
+
 ## See also
 
 - [Influence Function](influence_function.md), the default procedure.
 - [Replications](../replications/index.md) for the head-to-head numbers.
+- [API: RieszNet module](../api/riesz.md) for the function signatures.
 - The RieszNet paper, annotated, in [References](../references/index.md).
