@@ -1,4 +1,4 @@
-# Personalized Pricing Tutorial
+# Personalized Pricing Guide
 
 This tutorial demonstrates how to use `deep-inference` for personalized pricing analysis with heterogeneous demand, following Dube & Misra (2022, *Journal of Political Economy*).
 

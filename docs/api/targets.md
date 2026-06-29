@@ -72,7 +72,7 @@ Where p_i = σ(α_i + β_i·t̃).
 
 ### Elasticity
 
-Price elasticity of demand — the key object in personalized pricing.
+Price elasticity of demand, the key object in personalized pricing.
 
 ```python
 from deep_inference.targets import Elasticity
@@ -165,7 +165,7 @@ result = inference(Y, T, X, model='logit', target='welfare', t_tilde=0.0)
 
 ### DoseResponse
 
-Average predicted outcome at a given treatment level — the fundamental counterfactual target.
+Average predicted outcome at a given treatment level, the fundamental counterfactual target.
 
 ```python
 from deep_inference.targets import DoseResponse
@@ -255,7 +255,7 @@ Closed-form Jacobian for logit and linear; autodiff for Poisson.
 
 ### ConditionalVariance
 
-Model-implied variance of outcomes — captures heterogeneity in risk across covariates.
+Model-implied variance of outcomes, capturing heterogeneity in risk across covariates.
 
 ```python
 from deep_inference.targets import ConditionalVariance

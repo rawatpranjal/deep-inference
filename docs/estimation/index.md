@@ -38,7 +38,7 @@ Aggregate:
 ```
 
 > "Cross-fitting prevents overfitting: the model is trained on data independent of where it is evaluated. This ensures the influence function correction is unbiased."
-> — FLM (2021), Algorithm 1
+> FLM (2021), Algorithm 1
 
 ---
 
@@ -102,7 +102,7 @@ Three-way splitting is required when Λ(x) depends on θ(x).
 - Hessian weights depend on θ: e.g., p(1-p) for logit where p = σ(θ'x)
 
 > "When the Hessian weight depends on θ (as in logit where w = p(1-p) and p = σ(θ'x)), separate samples are needed to estimate θ̂ and Λ̂ to avoid overfitting bias."
-> — FLM (2021), Section 3.2
+> FLM (2021), Section 3.2
 
 ### Auto-Detection
 

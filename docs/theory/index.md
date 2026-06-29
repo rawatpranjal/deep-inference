@@ -42,4 +42,4 @@ Farrell, Liang, Misra (2021, 2025) for the influence-function framework and Cher
 - **Combined**: ML learns heterogeneity patterns $\theta(X)$ while structure ensures valid economics
 
 > "The central idea is that machine learning methods and economic structure are complements, not substitutes. Machine learning methods alone predict well, but extrapolate nonsensically... Economic structure alone can produce robust inference, but may miss important heterogeneity that is visible in the data."
-> — Farrell, Liang, Misra (2021)
+> Farrell, Liang, Misra (2021)

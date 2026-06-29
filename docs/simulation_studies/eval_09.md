@@ -9,7 +9,7 @@ Comprehensive validation of the multinomial logit (conditional logit / McFadden)
 | Sample Size (n) | 10000 | 8000 |
 | Alternatives (J) | 3 | 3 |
 | Attributes (K) | 2 | 2 |
-| Simulations (M) | — | 50 |
+| Simulations (M) | - | 50 |
 | Epochs | 300 | 300 |
 | Patience | 50 | 50 |
 | Cross-fitting Folds | 50 | 50 |
