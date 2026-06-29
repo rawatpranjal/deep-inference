@@ -1,10 +1,34 @@
 # deep-inference roadmap
 
-## CURRENT GOAL — cross-family estimator benchmark
+## CURRENT GOAL — certify Tier A (gamma, negbin, gaussian) on the cross-family benchmark
 
-One harness that, for every estimator family, runs the full method panel on a known-truth
-DGP and logs every metric to one place. Extends the existing 3-family spike
-(`exploration/spike.py`) to the whole family library.
+**The directive (frozen).** Wire gamma, negbin, and gaussian into `exploration/spike.py`'s
+`DGPS` registry and certify FLM[cholesky] valid on each, rendering each as a tab in the
+master dashboard. This is the first milestone of the larger cross-family benchmark below;
+Tier B and Tier C stay in BACKLOG until this lands.
+
+**Done when.** Each of the three families is registered with a confounded DGP, a custom
+autodiff loss, an ATE `target_fn`, a Monte-Carlo true μ*, a statsmodels GLM oracle-MLE, and
+a canonical-TMLE RieszNet outcome, and `exploration/build_dashboard.py` shows it as a tab.
+
+**Acceptance (quantitative).** At M=100, on all three families: FLM[cholesky] coverage in
+[93,97]%, SE-ratio in [0.9,1.1], |bias| small; Naive under-covers (proves the correction is
+needed); the panel shows Oracle-MLE / FLM[cholesky] / FLM[ridge] / FLM[oracle-Λ] / RieszNet
+/ Naive side by side with the full metric set.
+
+**Acceptance (qualitative).** No truth-tuning. The cholesky path stays pure autodiff with no
+hardcoded family closed-form (see [[memory]]). One truth-free tikhonov across families.
+Fresh-agent (Opus) verified.
+
+**Sequencing.** gamma first (log link, Gamma-deviance TMLE), smoke at M=3 local, then M=100
+cert chunked on RunPod. negbin and gaussian follow the same pattern. The FLM[cholesky/ridge]
+and oracle-MLE legs are cheap; the per-family work is the RieszNet TMLE fluctuation.
+
+---
+
+The larger benchmark this milestone serves: one harness that, for every estimator family,
+runs the full method panel on a known-truth DGP and logs every metric to one place. Extends
+the existing 3-family spike (`exploration/spike.py`) to the whole family library.
 
 **Method panel (per family, per replication).**
 
@@ -55,13 +79,15 @@ markdown. `exploration/build_dashboard.py` renders one dark-HTML tab per section
 needed. Chunk-merge (`--rep-offset` / `--dump-raw` / `--from-raw`) keeps M exact across
 disjoint sub-60min cloud chunks, verified byte-identical to a single run.
 
-**Open decisions (need the user's call).**
-1. Family scope and order. Tier A first as a clean milestone, or all families at once.
-2. RieszNet policy on the hard families. Skip-and-mark where targeting is non-canonical,
-   force generic mean-scale targeting as an honest under-covering contrast, or derive correct
-   targeting per family (research-heavy).
-3. M and platform. RunPod cert standard is M=100 chunked; M=50 local validates wiring first;
-   M=200 tightens the coverage SE.
+**Decisions settled for this milestone.**
+1. Scope and order: Tier A first (gamma, negbin, gaussian), gamma leading.
+2. M and platform: smoke at M=3 local, validate at M=50 local, certify at M=100 chunked on
+   RunPod (the cert standard).
+
+**Still open (deferred to when Tier B starts).** RieszNet policy on the non-canonical
+families (probit, weibull, tobit, beta, zip, quantile): skip-and-mark, force generic
+mean-scale targeting as an honest under-covering contrast, or derive correct targeting per
+family. Not a blocker for Tier A, whose families all have a canonical TMLE form.
 
 **Key files.** `exploration/spike.py` (registry + method panel + chunking),
 `exploration/build_dashboard.py` (tabbed HTML), `src/deep_inference/lambda_/estimate.py`
