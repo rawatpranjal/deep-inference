@@ -166,10 +166,10 @@ available. Reach Gamma through `structural_dml(family='gamma')`.
 ## Evidence
 
 Component validations pass. Parameter recovery is reported in
-[Eval 01](../simulation_studies/eval_01.md), where Gamma gives RMSE on $\alpha$ of 0.039, RMSE on
+[Eval 01](../simulation_studies.md), where Gamma gives RMSE on $\alpha$ of 0.039, RMSE on
 $\beta$ of 0.028, correlation with the true $\alpha(X)$ of 0.997, and correlation with the true
 $\beta(X)$ of 0.999, marked PASS. Autodiff agreement with the closed-form score and Hessian is in
-[Eval 02](../simulation_studies/eval_02.md), with a score error of $2.22\times10^{-16}$ and a
+[Eval 02](../simulation_studies.md), with a score error of $2.22\times10^{-16}$ and a
 Hessian error of $4.44\times10^{-16}$, marked PASS.
 
 End-to-end coverage is not certified, and the [Replications](../replications/index.md) page is
@@ -208,5 +208,5 @@ print(f"Min lambda eigenvalue: {result.diagnostics.get('min_lambda_eigenvalue', 
 ## References and API
 
 The full API for every family, including the `GammaFamily` class with its `shape` argument and its
-`loss`, `gradient`, and `hessian` methods, is in the [Families API reference](../api/families.md).
+`loss`, `gradient`, and `hessian` methods, is in the [Families API reference](../api.md).
 The papers behind the method are annotated in [References](../references/index.md).

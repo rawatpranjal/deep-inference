@@ -24,10 +24,10 @@ loading_data
 models/index
 estimation/index
 inference/index
-guide/index
+guide
 theory/index
 replications/index
-simulation_studies/index
-api/index
+simulation_studies
+api
 references/index
 ```

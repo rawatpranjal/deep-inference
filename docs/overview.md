@@ -114,7 +114,7 @@ your own (autodiff handles the derivatives).
 Average marginal effect, price elasticity, willingness to pay, consumer welfare,
 dose-response, expected profit, tail probability, conditional variance, combinatorial
 treatment effects, and custom targets. Each is covered on its own page; targets are summarized
-in the [API reference](api/targets.md).
+in the [API reference](api.md).
 
 ## The three regimes (read this before you run anything serious)
 
@@ -160,15 +160,15 @@ Read the pages in menu order. They are written to be read linearly.
   - How the network is fit and how `Λ(x)` is obtained (the machinery)
 * - [Inference](inference/index.md)
   - How standard errors and intervals are formed; the two procedures
-* - [Guide](guide/index.md)
+* - [Guide](guide.md)
   - Practical decisions: which model, which `Λ` method, how to read diagnostics
 * - [Theory](theory/index.md)
   - The formal walkthrough, in order, with the theorems
 * - [Replications](replications/index.md)
   - What we have validated against known truth, with the numbers
-* - [Simulation Studies](simulation_studies/index.md)
+* - [Simulation Studies](simulation_studies.md)
   - Head-to-head method comparisons (coverage, SE ratio, bias)
-* - [API Reference](api/index.md)
+* - [API Reference](api.md)
   - Every function and result object
 * - [References](references/index.md)
   - The papers, annotated

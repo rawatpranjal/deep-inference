@@ -310,7 +310,7 @@ def structural_dml_core(Y, T, X, family, lambda_method, n_folds, ...):
 
 - [Inference](../inference/index.md): how the influence values become a standard error and a confidence interval, and the RieszNet alternative.
 - [Models](../models/index.md): each model page states which regime applies and why.
-- [Guide](../guide/index.md): choosing the Lambda method and reading the diagnostics.
+- [Guide](../guide.md): choosing the Lambda method and reading the diagnostics.
 - [Theory](../theory/index.md): the derivation and the formal guarantees.
 
 ## References
