@@ -27,6 +27,13 @@ only as ceiling diagnostics, never as the shipped estimator.
   genuinely near-singular (det = e(1-e)·w0·w1 to 0 at overlap AND outcome saturation), so the
   inverse needs real regularization. Even the oracle Λ under-covers at tikhonov approximately 0.
   A single truth-free tikhonov=0.01 works across linear/logit/poisson, NOT tuned per-DGP.
+- **FLM2021's own MC corroborates the Λ-collapse (2026-06-29).** Replicating the paper's
+  Section-6 DGP through `structural_dml(family='linear')` at n=10000, M=200: the randomized arm
+  (constant e=0.5) matches the paper cleanly (coverage 0.955 vs 0.951, IL 0.078 vs 0.079), but
+  the observational arm under-covers (0.840 vs 0.946). At n=10000 the under-coverage is
+  bias-driven (residual confounding bias ≈ 0.85·SE), not pure SE-miscalibration, and
+  `three_way=True` does NOT fix it. The randomized arm is the clean control that rules out an
+  outcome-model / ATE / transcription bug. Harness: `exploration/replicate_papers.py`.
 
 ## Methodology discipline (how to certify honestly)
 
