@@ -101,6 +101,48 @@ no truth-tuning, pure autodiff, fresh-agent verified. RieszNet reliable on linea
 unreliable on poisson (SE-ratio 0.32, divergent reps). Next is Tier A (gamma, negbin,
 gaussian). The three open decisions above are unresolved.
 
+**gamma (Tier A) wired and run at M=50 (2026-06-29).** FLM[cholesky] FAILS the band:
+bias -0.072, SE-ratio 0.76, coverage 88% (`exploration/results_gamma_M50.md`). Localized by
+the oracle ladder to Λ-ESTIMATION: with exact Λ ([[1,e],[e,e]]) the estimator is centered
+(median 0.928 vs truth 0.898, coverage 90%), but the cholesky Λ̂-net misfits gamma's noisy
+`y/μ`-weighted per-obs Hessians (CV~0.7 at shape k=2) on ~8/50 reps, producing a left tail
+(estimates down to 0.26) that biases low and inflates the SE. RieszNet is valid on gamma
+(96%, SE-ratio 1.04). So gamma exposes that the general cholesky path needs hardening for
+noisy y-dependent Hessians. Next: a legitimate cholesky-net robustness improvement (more
+regularization / better early-stop, NOT tikhonov-tuned-to-truth) in
+`src/deep_inference/lambda_/estimate.py`, verified to NOT regress linear/logit/poisson.
+
+**negbin (Tier A) wired and run at M=50 (2026-06-29).** Richer than gamma
+(`exploration/results_negbin_M50.md`). FLM[cholesky] bias -0.111, SE-ratio 0.88, coverage 96%
+- but the 96% is a FRAGILE pass, not clean: the estimator is biased low (12% of truth) with a
+big left tail (11/50 reps below 0.7, down to 0.24), and the wide CIs cover by luck. TWO
+effects, separable by the oracle ladder. (a) A baseline downward bias of ~-0.045 on the
+heavy-tailed exp-mean functional, present even with exact Λ (-0.047) and in RieszNet (-0.041)
+but NOT in the parametric Oracle-MLE (+0.008); it grows with outcome variance across the
+log-link families (poisson -0.012, gamma -0.072, negbin -0.111). Hypothesis: neural-nuisance
+shrinkage on the convex E[exp(η)] (Jensen), an undersmoothing/nuisance-bias issue, NOT a Λ
+issue. (b) The cholesky-Λ left tail ON TOP (cholesky -0.111 vs oracle-Λ -0.047), the same
+noisy y-dependent Hessian failure gamma showed. So the cholesky-Λ failure is GENERAL (gamma +
+negbin), and the heavy-tailed count families expose a second, deeper nuisance-bias effect.
+
+**gaussian (Tier A) the control, M=50 (2026-06-29).** Decisive
+(`exploration/results_gaussian_M50.md`). oracle-Λ bias +0.0014 / SE-ratio 1.03 / coverage 96%
+and RieszNet +0.0003 / 0.96 / 96% are BOTH essentially perfect. cholesky is mild (+0.051 /
+0.76 / 92%, no left tail, min 0.630). This isolates the two effects: (a) the neural nuisance
+bias is COUNT-FAMILY-SPECIFIC, gaussian's RieszNet is unbiased, confirming Jensen shrinkage on
+E[exp(η)] for the log-link families, not a general neural problem; (b) the 3-dim θ / 3x3 Λ
+path works with exact Λ (oracle-Λ 96%), so θ_dim>2 is fine. Consolidated dashboard of all
+three at `exploration/results_tierA_M50.html`.
+
+**Tier A verdict.** Two separable problems block certifying cholesky on the count families.
+1. Cholesky-Λ noisy-Hessian fragility: severe on gamma/negbin (noisy y-dependent TARGET-block
+   weight), mild on gaussian (noisy σ-block orthogonal to the target). Fix = harden the
+   cholesky Λ̂-net. 2. Neural-nuisance shrinkage bias on E[exp(η)], log-link heavy-tailed
+   only, hits RieszNet and oracle-Λ too (so NOT a Λ issue). Fix = undersmooth / bias-correct
+   the θ̂ net for log-link families. gaussian is essentially done (oracle-Λ + RieszNet valid,
+   cholesky needs the same Λ-hardening). Both fixes touch the core package and are the
+   user's call to greenlight.
+
 All of this lives on branch `night/general-lambda-perfect-scores`. **main is untouched,
 pending the user's go-ahead for the squash-merge** (one commit, user as author). Before
 declaring the cert done: run an existing eval as a regression check (changes are additive,
