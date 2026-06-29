@@ -143,6 +143,21 @@ three at `exploration/results_tierA_M50.html`.
    cholesky needs the same Λ-hardening). Both fixes touch the core package and are the
    user's call to greenlight.
 
+**Landscape mapped: probit + beta (Tier B), M=50 (2026-06-29).** Both PASS cholesky cleanly.
+probit (bounded link like logit) bias -0.010 / SE-ratio 1.16 / coverage 98%, no left tail;
+RieszNet 98% (`exploration/results_probit_M50.md`). beta (bounded CONTINUOUS, y-dependent
+Hessian) bias -0.0004 / 1.02 / 96%, tight spread; RieszNet 100% (`results_beta_M50.md`).
+**The decisive contrast: beta has a y-dependent Hessian and a continuous outcome yet passes,
+so the cholesky failure is NOT "y-dependent Hessian" or "continuous outcome" per se. It is
+specific to the heavy-tailed log-link count families (gamma, negbin)**, where the noisy
+y-dependent weight in the target block AND the high outcome variance combine. The 8-family
+landscape: cholesky valid on linear, gaussian (marginal), logit, probit, beta, poisson;
+fails on gamma, negbin. Consolidated dashboard `exploration/results_landscape.html`. Known
+ceiling artifact: `OracleProbitLambda` blows up under tikhonov 1e-8 (near-singular probit
+Fisher at extreme η), a diagnostic-row bug, not a method failure. Cheap GLM families still
+unmapped: zip (`ZeroInflatedPoisson` oracle available). Expensive (custom MLE oracle):
+weibull, gumbel, tobit. Research (different target): multinomial, quantile, combinatorial.
+
 All of this lives on branch `night/general-lambda-perfect-scores`. **main is untouched,
 pending the user's go-ahead for the squash-merge** (one commit, user as author). Before
 declaring the cert done: run an existing eval as a regression check (changes are additive,

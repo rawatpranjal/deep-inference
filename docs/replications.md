@@ -69,8 +69,22 @@ M=100. An M=200 confirm would tighten it.
 | gamma | yes | yes | no (88%, bias -0.07, M=50) | yes (96%) | A, blocked |
 | negbin | yes | yes | no (bias -0.11, fragile 96%, M=50) | yes (96%) | A, blocked |
 | gaussian | yes | yes | marginal (92%, M=50); oracle-Λ + RieszNet 96% | yes (96%) | A, ~done |
-| probit, weibull, gumbel, tobit, beta, zip | - | - | - | - | B |
+| probit | yes | yes | yes (98%, M=50) | yes (98%) | B, done |
+| beta | yes | yes | yes (96%, M=50) | yes (100%) | B, done |
+| zip | oracle ready | yes | - | - | B |
+| weibull, gumbel, tobit | needs custom MLE oracle | - | - | - | B |
 | multinomial, quantile, combinatorial | partial | - | - | - | C |
+
+## The landscape (2026-06-29)
+
+Eight GLM families mapped. FLM[cholesky] (the general fix) is valid everywhere EXCEPT the
+heavy-tailed log-link count families. Valid: linear, gaussian (marginal), logit, probit, beta,
+poisson. Fails: gamma, negbin. The decisive control is beta, which is bounded but continuous
+with a y-dependent Hessian and still passes (96%), so the failure is not "y-dependent Hessian"
+or "continuous outcome" - it is specific to gamma/negbin, where a noisy y-dependent weight in
+the target block combines with a heavy-tailed outcome. Two fixes (cholesky-Λ hardening,
+log-link nuisance-bias correction) would close them. Dashboard:
+`exploration/results_landscape.html`.
 
 ## Tier A, M=50 (2026-06-29)
 
