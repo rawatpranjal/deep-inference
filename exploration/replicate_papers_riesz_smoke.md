@@ -1,7 +1,7 @@
 # RieszNet IHDP Replication
 
 Config: N=3, n_folds=5, n_repeats=1, max_epochs=80, patience=15
-Wall time: 29.1s
+Wall time: 27.9s
 
 ### RieszNet IHDP ATE replication (N=3 of the paper's 1000 semi-synthetic datasets)
 | Quantity | Package | Paper |
