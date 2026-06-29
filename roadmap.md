@@ -1,28 +1,53 @@
 # deep-inference roadmap
 
-## CURRENT GOAL — certify Tier A (gamma, negbin, gaussian) on the cross-family benchmark
+## CURRENT GOAL — paper-vs-package replication ledger for FLM and RieszNet
 
-**The directive (frozen).** Wire gamma, negbin, and gaussian into `exploration/spike.py`'s
-`DGPS` registry and certify FLM[cholesky] valid on each, rendering each as a tab in the
-master dashboard. This is the first milestone of the larger cross-family benchmark below;
-Tier B and Tier C stay in BACKLOG until this lands.
+**The directive (frozen).** Build a Replications section in the RTD docs and a root
+`replications.md` that replicate the published Monte-Carlo simulations of (1) Farrell, Liang,
+Misra (2021, 2025) and (2) RieszNet (Chernozhukov et al. 2022). Run THIS package's own
+estimators on each paper's DGP and present **Package-vs-Paper** tables side by side, in the
+econirl `replications.html` style: an intro ledger line, then one section per replicated
+simulation, each a `Quantity | Package | Paper` table plus the exact reproduce command. The
+prior Tier-A cert goal is paused (parked in BACKLOG); its in-flight state stays in STATUS.
 
-**Done when.** Each of the three families is registered with a confounded DGP, a custom
-autodiff loss, an ATE `target_fn`, a Monte-Carlo true μ*, a statsmodels GLM oracle-MLE, and
-a canonical-TMLE RieszNet outcome, and `exploration/build_dashboard.py` shows it as a tab.
+**Deliverables.**
+1. Restructure `docs/replications/index.md` into the paper-ledger style. Lead line:
+   "Each section sets the package value against the paper's published value, side by side."
+   Keep the existing known-truth MC benchmark as a clearly-labelled second part. Delete
+   nothing (project rule 2).
+2. `replications.md` at repo root — the working source-of-truth markdown the harness writes
+   and the RTD page curates.
+3. `exploration/replicate_papers.py` — the harness that runs the package on each paper's
+   exact DGP, with the paper's published numbers transcribed (quoted from the docling source)
+   as the Paper column, saving a timestamped report under `exploration/`.
 
-**Acceptance (quantitative).** At M=100, on all three families: FLM[cholesky] coverage in
-[93,97]%, SE-ratio in [0.9,1.1], |bias| small; Naive under-covers (proves the correction is
-needed); the panel shows Oracle-MLE / FLM[cholesky] / FLM[ridge] / FLM[oracle-Λ] / RieszNet
-/ Naive side by side with the full metric set.
+**Scope (minimum, both papers).**
+- FLM: at least one Monte-Carlo table — the ATE / CI-coverage simulation in the FLM2021 Monte
+  Carlo section (`references/FLM2021_docling.md`) — package coverage, RMSE, bias vs the
+  paper's reported values, via `inference()` / `structural_dml()`.
+- RieszNet: at least the IHDP binary-treatment ATE experiment (Section 5,
+  `references/RieszNet2022_docling.md`) — bias, RMSE, coverage, CI length vs the paper's
+  table, via the package's RieszNet estimator.
 
-**Acceptance (qualitative).** No truth-tuning. The cholesky path stays pure autodiff with no
-hardcoded family closed-form (see [[memory]]). One truth-free tikhonov across families.
-Fresh-agent (Opus) verified.
+**Done when.** Both papers have at least one paper-simulation replicated with a
+Package-vs-Paper table; every Paper-column number is a verbatim transcription from the paper
+text on disk (`references/*_docling.md`, quotable span); every Package-column number comes
+from a saved harness run whose report path is shown; `docs/replications/index.md` builds in
+the RTD toctree; and a fresh Opus agent confirms the paper numbers are correctly quoted and
+the package numbers are from real output, not cooked.
 
-**Sequencing.** gamma first (log link, Gamma-deviance TMLE), smoke at M=3 local, then M=100
-cert chunked on RunPod. negbin and gaussian follow the same pattern. The FLM[cholesky/ridge]
-and oracle-MLE legs are cheap; the per-family work is the RieszNet TMLE fluctuation.
+**Acceptance (quantitative).** For the headline quantity of each replicated table (coverage),
+the package value lands within a stated, honest band of the paper's value — or the gap is
+reported plainly with its cause. No truth-tuning. Show every number (SHOW ME THE FACTS).
+
+**Acceptance (qualitative).** econirl style (intro ledger line, per-section paragraph + table
++ reproduce command). Nothing deleted from the existing replications page. Fresh-agent (Opus)
+verified.
+
+**Success condition (narrower than the whole roadmap).** Goal is met once the three
+deliverables exist, both papers have one replicated Package-vs-Paper table backed by a saved
+run, the RTD page builds, and the fresh-agent verification passes. Then `/autoloop` returns
+to the paused Tier-A cert.
 
 ---
 
@@ -92,6 +117,21 @@ family. Not a blocker for Tier A, whose families all have a canonical TMLE form.
 **Key files.** `exploration/spike.py` (registry + method panel + chunking),
 `exploration/build_dashboard.py` (tabbed HTML), `src/deep_inference/lambda_/estimate.py`
 (general cholesky/ridge Λ), `src/deep_inference/__init__.py` (`inference()` entry point).
+
+## Done log (replication ledger goal)
+
+- **repl-01-flm-leg** (2026-06-29, VERIFIED, merged to docs/rebuild-rtd). `exploration/replicate_papers.py`
+  replicates the FLM2021 Section-6 Monte Carlo (d=20, linear outcome, n=10000, M=200) via
+  `structural_dml(family='linear')`, arch 2 = [60,30,20]. **Package vs Paper:** randomized
+  Bias -0.0020 / IL 0.078 / Coverage **0.955** (paper -0.00032 / 0.079 / **0.951**) — clean
+  match. Observational Bias -0.0173 / IL 0.081 / Coverage **0.840** (paper 0.00011 / 0.079 /
+  **0.946**) — honest gap. The gap is the documented linear two-way Λ(x)-collapse
+  (`docs/notes/flm_lambda_se_undercount.md`): a flat-Λ undercounts the SE and leaves a small
+  residual confounding bias, firing ONLY when e(x) varies; the randomized arm (constant e=0.5)
+  is a clean 95.5% control. Scratchpad finding: at n=10000 the under-coverage is bias-driven
+  (bias ≈ 0.85·SE), and the 3-way Λ path does not fix it (bias worsens). Fresh-Opus verified
+  DGP fidelity + verbatim Table 6/7 transcription (two passes each), no truth leakage. Reports:
+  `exploration/replicate_papers_flm_full.md`, `exploration/replicate_papers_flm_smoke.md`.
 
 ## STATUS
 
@@ -168,8 +208,18 @@ cholesky-only early-stop, `max_condition` default 100 unchanged), fresh-agent ve
 numbers were not tuned to truth, then merge. linear 93% sits within ~2.6pp Monte-Carlo
 noise of the band edge at M=100, so it is the one thin spot.
 
+**Lineage (folded from the old STATUS.md, 2026-06-27).** This goal followed a positioning
+phase: an 86-paper causal-deep-learning corpus (2016-2026) and `docs/dev/competitors.md`
+mapping PyWhy / EconML / DoubleML / CausalML against this package on 16 method families. The
+white space identified was torch-native estimators with IF standard errors across causal AND
+structural-econ targets, which is what the build-next shortlist in BACKLOG draws from.
+
 ## BACKLOG
 
+- **[PAUSED — prior CURRENT GOAL]** Certify Tier A (gamma, negbin, gaussian) cholesky on the
+  cross-family benchmark at M=100. Blocked by two separable fixes (cholesky-Λ noisy-Hessian
+  hardening + log-link nuisance-bias correction), both in the core package, user's call to
+  greenlight. Full diagnosis in STATUS and the body above. Resume after the replication ledger.
 - Tier A families: gamma, negbin, gaussian (full panel incl. canonical RieszNet).
 - Tier B families: probit, weibull, gumbel, tobit, beta, zip (FLM+Oracle, RieszNet best-effort).
 - Tier C families: multinomial_logit, quantile, combinatorial (FLM-only).
