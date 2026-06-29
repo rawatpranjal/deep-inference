@@ -1,45 +1,39 @@
 # Theory
 
-Mathematical foundations of the Farrell-Liang-Misra framework for deep learning with valid inference.
-
-This section is a **linear walkthrough**. The eight phase pages below build on each other, so
-read them top to bottom. Page 8 connects the influence-function correction to the Riesz
-representer (and to the RieszNet procedure), and the final reference page collects the formal
-theorems and convergence rates.
+The mathematical foundations, in two tracks. This is the section to read slowly. The
+[Estimation](../estimation/index.md) and [Inference](../inference/index.md) sections tell you how
+to run the methods; this section is the why, the derivations and the guarantees.
 
 ```{toctree}
 :maxdepth: 1
-:caption: Theory (read in order)
+:caption: Theory
 
-01_setup
-02_targets
-03_why_naive_fails
-04_influence_function
-05_three_regimes
-06_multinomial
-07_models_and_targets
-08_riesz_representer
-influence_functions
+flm
+riesznet
 ```
 
-## Overview
+- **[The FLM Framework](flm.md)** is the influence-function theory, worked through linear and
+  logit: the enriched structural model, why naive plug-in inference fails, the influence-function
+  correction and where it comes from, the three regimes for the expected Hessian, and the formal
+  convergence and normality guarantees.
+- **[RieszNet and Automatic Debiasing](riesznet.md)** is the Riesz-representer theory: the
+  debiasing term, the mixed-bias (double-robustness) property, the Riesz loss that learns the
+  representer without an analytic formula, targeted regularization, and the bridge showing that
+  the FLM correction and the RieszNet correction are the same object.
 
-This section explains the theoretical foundations of `deep-inference`, specifically the enriched structural model approach from Farrell, Liang, and Misra. It walks from the structural setup, through the failure of naive inference, to the influence function correction that restores valid confidence intervals, and closes with the formal guarantees.
-
-## Key References
-
-The papers behind this framework, with one-line annotations and links, are collected on the
-[References](../references/index.md) page. The load-bearing ones for this section are
-Farrell, Liang, Misra (2021, 2025) for the influence-function framework and Chernozhukov et al.
-(2022) for the Riesz-representer view in the [last page](08_riesz_representer.md).
-
-## The Core Insight
+## The core insight
 
 **Machine learning and economic structure are complements, not substitutes.**
 
-- **ML alone** fits data well but extrapolates nonsensically and can't answer causal questions
-- **Structure alone** provides interpretability but misses heterogeneity
-- **Combined**: ML learns heterogeneity patterns $\theta(X)$ while structure ensures valid economics
+- **ML alone** fits data well but extrapolates nonsensically and cannot answer causal questions.
+- **Structure alone** provides interpretability but misses heterogeneity.
+- **Combined**, ML learns the heterogeneity patterns $\theta(X)$ while the structure keeps the
+  economics, and the target, valid.
 
-> "The central idea is that machine learning methods and economic structure are complements, not substitutes. Machine learning methods alone predict well, but extrapolate nonsensically... Economic structure alone can produce robust inference, but may miss important heterogeneity that is visible in the data."
-> Farrell, Liang, Misra (2021)
+> "The central idea is that machine learning methods and economic structure are complements, not
+> substitutes. Machine learning methods alone predict well, but extrapolate nonsensically.
+> Economic structure alone can produce robust inference, but may miss important heterogeneity
+> that is visible in the data."
+> (Farrell, Liang, Misra, 2021)
+
+The papers are collected, annotated, on the [References](../references/index.md) page.

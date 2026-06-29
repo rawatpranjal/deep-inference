@@ -256,7 +256,7 @@ passes despite having a $y$-dependent Hessian weight on a continuous outcome. Th
 replications index notes this as one of the falsification results: "beta passes despite a
 y-dependent Hessian on a continuous outcome (neither is sufficient to cause the failure)."
 
-Parameter recovery has not been reported for Beta in [Eval 01](../simulation_studies/eval_01.md),
+Parameter recovery has not been reported for Beta in [Eval 01](../simulation_studies.md),
 which covers nine other families. The coverage benchmark above is the primary evidence of
 correct implementation.
 
@@ -309,7 +309,7 @@ outcome, or using a different precision.
 
 - [References](../references/index.md) covers FLM 2021, FLM 2025, and Ferrari and
   Cribari-Neto (2004) in full.
-- [API: Families](../api/families.md) documents `BetaFamily` and its constructor
+- [API: Families](../api.md) documents `BetaFamily` and its constructor
   arguments (`precision`, `target`, and all inherited arguments).
 - Source:
   `src/deep_inference/families/beta.py`

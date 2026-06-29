@@ -121,7 +121,7 @@ $$H(\theta, y, t) = w \cdot \begin{bmatrix} 1 & t \\ t & t^2 \end{bmatrix} = \fr
 - Both dependencies mean $E[H \mid X]$ cannot be computed in closed form without
   knowledge of $\theta$. Lambda must be estimated from data (Regime C).
 - The Hessian is computed in closed form (no autodiff). Validated against autodiff in
-  [Eval 02](../simulation_studies/eval_02.md).
+  [Eval 02](../simulation_studies.md).
 - `GumbelFamily.hessian_depends_on_theta()` returns `True`.
 
 ## Target
@@ -221,7 +221,7 @@ result = structural_dml(-Y, T, X, family='gumbel', scale=1.0)
 
 ## Evidence
 
-From [Eval 01: Parameter Recovery](../simulation_studies/eval_01.md) (n=5000, seed=42):
+From [Eval 01: Parameter Recovery](../simulation_studies.md) (n=5000, seed=42):
 
 | Family | RMSE($\alpha$) | RMSE($\beta$) | Corr($\alpha$) | Corr($\beta$) | Status |
 |--------|---------------|--------------|----------------|---------------|--------|
@@ -270,7 +270,7 @@ sign of $Y$. The Gumbel distribution is supported on all of $\mathbb{R}$.
 ## References and API
 
 - [References](../references/index.md) covers FLM 2021 and FLM 2025 in full.
-- [API: Families](../api/families.md) documents `GumbelFamily` and its constructor
+- [API: Families](../api.md) documents `GumbelFamily` and its constructor
   arguments (`scale`, and all inherited arguments).
 - Source:
   `src/deep_inference/families/gumbel.py`

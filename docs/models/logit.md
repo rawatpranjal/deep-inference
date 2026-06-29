@@ -208,7 +208,7 @@ print(result.summary())
 ## Evidence
 
 **Parameter recovery** (n=5000, one seed, source:
-[Eval 01](../simulation_studies/eval_01.md)):
+[Eval 01](../simulation_studies.md)):
 
 | metric | value |
 |--------|-------|
@@ -270,5 +270,5 @@ probability-scale effect, use `target='ame'`.
 
 - [References index](../references/index.md) for the FLM 2021, FLM 2025, and
   Hetzenecker-Osterhaus 2024 paper transcripts.
-- [API: families](../api/families.md) for `LogitFamily` and the full `structural_dml`
+- [API: families](../api.md) for `LogitFamily` and the full `structural_dml`
   signature.

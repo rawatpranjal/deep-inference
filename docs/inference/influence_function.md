@@ -90,4 +90,4 @@ Call `result.summary()` for a statsmodels-style printout.
 
 - [Estimation](../estimation/index.md) for how `Λ(x)` is obtained, which is what makes or breaks the standard error.
 - [RieszNet](riesznet.md) for the alternative, learned correction.
-- [Theory](../theory/index.md) for the derivation and the formal guarantees.
+- [Theory: the FLM framework](../theory/flm.md) for the derivation and the formal guarantees.

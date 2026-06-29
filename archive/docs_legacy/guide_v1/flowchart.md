@@ -334,4 +334,4 @@ result = inference(Y, T, X, model='logit', target='ame', ...)
 - [Models](../models/index.md) - Detailed model pages
 - [Theory](../theory/index.md) - Mathematical foundations
 - [Algorithm](../estimation/index.md) - Implementation details
-- [API Reference](../api/index.md) - Full API documentation
+- [API Reference](../api.md) - Full API documentation

@@ -255,7 +255,7 @@ print(f"Mean beta_hat:  {beta_hat.mean():.4f}   (true E[beta] = {beta_true.mean(
 
 ## Evidence
 
-From [Eval 01: Parameter Recovery](../simulation_studies/eval_01.md) (n=5000, seed=42):
+From [Eval 01: Parameter Recovery](../simulation_studies.md) (n=5000, seed=42):
 
 | Family | RMSE($\alpha$) | RMSE($\beta$) | Corr($\alpha$) | Corr($\beta$) | Status |
 |--------|---------------|--------------|----------------|---------------|--------|
@@ -317,7 +317,7 @@ questions, but they differ numerically whenever any censoring occurs.
 ## References and API
 
 - [References](../references/index.md) covers FLM 2021 and FLM 2025 in full.
-- [API: Families](../api/families.md) documents `TobitFamily` and its constructor
+- [API: Families](../api.md) documents `TobitFamily` and its constructor
   arguments (`target`, and all inherited arguments).
 - Source:
   `src/deep_inference/families/tobit.py`
