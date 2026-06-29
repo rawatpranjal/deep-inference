@@ -35,5 +35,5 @@ $\mu^*$ with a valid confidence interval.
 ```{seealso}
 For implementation details (data encoding, the score/Hessian blocks, and sample
 size requirements for valid multinomial coverage), see the
-[Multinomial tutorial](../tutorials/multinomial.md).
+[Multinomial tutorial](../models/multinomial.md).
 ```

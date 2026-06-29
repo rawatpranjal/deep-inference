@@ -29,12 +29,12 @@ The Jacobian $H_\theta = \partial H / \partial \theta$ is required for the
 influence function correction introduced in
 [The Influence Function Correction](04_influence_function.md). For built-in
 targets, closed-form Jacobians are provided. For custom targets, the package
-computes them via **automatic differentiation** — the user supplies only the
+computes them via **automatic differentiation**. The user supplies only the
 target function $H$.
 
 ```{tip}
 Choosing a target is an economic modeling decision, not a statistical one. The
-same fitted neural network $\hat\theta(X)$ can answer many questions — average
-price sensitivity, elasticity at a chosen price, expected profit — simply by
+same fitted neural network $\hat\theta(X)$ can answer many questions (average
+price sensitivity, elasticity at a chosen price, expected profit) simply by
 swapping the target $H$.
 ```

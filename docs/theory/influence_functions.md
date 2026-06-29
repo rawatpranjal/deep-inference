@@ -2,9 +2,9 @@
 
 ```{note}
 This is the final, formal page of the theory section. The earlier pages build the
-intuition; this page states the two main guarantees — the neural network
+intuition; this page states the two main guarantees, the neural network
 convergence rate (Theorem 1) and the asymptotic normality of the debiased
-estimator (Theorem 2) — together with the supporting applications.
+estimator (Theorem 2), together with the supporting applications.
 ```
 
 ## Notation recap
@@ -22,7 +22,7 @@ $$
 \mu^\star = \mathbb{E}[H(X, \theta^\star(X), \tilde{t})].
 $$
 
-## Theorem 1 — Convergence rate of the network
+## Theorem 1: Convergence rate of the network
 
 The parameter functions are estimated by
 
@@ -43,11 +43,11 @@ $$
 > where $p$ is the smoothness of $\theta^\star(\cdot)$ and $d_c$ is the dimension
 > of continuous covariates."
 
-This rate is slower than $\sqrt{n}$ — which is exactly why naive inference fails
+This rate is slower than $\sqrt{n}$, which is exactly why naive inference fails
 ([Why Naive Inference Fails](03_why_naive_fails.md)) and why the influence function
 correction is needed.
 
-## Theorem 2 — Asymptotic normality of the debiased estimator
+## Theorem 2: Asymptotic normality of the debiased estimator
 
 Recall the influence function from [The Influence Function
 Correction](04_influence_function.md):
@@ -84,7 +84,7 @@ requirement:
 
 > "The product of nuisance estimation errors must satisfy
 > $\|\hat{\theta} - \theta^\star\| \cdot \|\hat{\Lambda} - \Lambda^\star\| = o_P(n^{-1/2})$"
-> — FLM (2021), Theorem 2 conditions.
+> FLM (2021), Theorem 2 conditions.
 
 Because Theorem 1 gives each factor an $o_P(n^{-1/4})$ rate, their product is
 $o_P(n^{-1/2})$, and the bias of $\hat\mu$ is negligible at the $\sqrt{n}$ scale.
@@ -120,12 +120,12 @@ Dubé & Misra (2023, *JPE*) apply the FLM framework to personalized pricing with
 heterogeneous demand. By estimating $\beta(X)$ (price sensitivity) as a function of
 consumer characteristics, they compute:
 
-- **Price elasticities** $\eta(X) = (1-p)\,\beta(X)\,P$ — how responsive each consumer is to price changes;
+- **Price elasticities** $\eta(X) = (1-p)\,\beta(X)\,P$, how responsive each consumer is to price changes;
 - **Optimal personalized prices** via the Lerner markup rule $\frac{P-MC}{P} = -1/\eta$;
 - **Consumer welfare** using the Small & Rosen (1981) logsum formula $CS = \log(1 + e^V)/|\beta_{\text{price}}|$.
 
 `deep-inference` implements all three as built-in targets: `Elasticity`, `WTP`,
-`ConsumerWelfare`. See the [Pricing Tutorial](../tutorials/pricing.md).
+`ConsumerWelfare`. See the [Pricing Tutorial](../guide/pricing.md).
 
 ### Continuous treatment inference (Colangelo & Lee, 2026)
 
@@ -134,4 +134,4 @@ continuous treatments, citing FLM DNNs as valid nuisance estimators that achieve
 the required convergence rates. `deep-inference` complements their nonparametric
 approach with a structural alternative: all model families natively support
 continuous $T$, enabling dose-response analysis with economic structure. See the
-[Continuous Treatment Tutorial](../tutorials/continuous_treatment.md).
+[Continuous Treatment Tutorial](../guide/continuous_treatment.md).

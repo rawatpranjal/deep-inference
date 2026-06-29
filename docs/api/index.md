@@ -7,6 +7,7 @@ Complete API documentation for `deep-inference`.
 :caption: API Reference
 
 inference
+riesz
 families
 targets
 lambda

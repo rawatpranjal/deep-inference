@@ -1,19 +1,13 @@
 # Spike: FLM vs RieszNet (known-truth ATE)
 
-### Linear DGP (lambda=rf, alpha=1000, three_way=True, n=2000)  (truth = 1.0000, M = 50)
+### Poisson DGP (lambdas=cholesky,oracle, n=2000, folds=10, tikhonov=0.01)  (truth = 0.8981, M = 50)
 
 | method | mean est | bias | emp SE | mean est SE | SE ratio | coverage |
 |---|---|---|---|---|---|---|
-| Oracle | 0.9993 | -0.0007 | 0.0548 | 0.0535 | 0.98 | 98% |
-| FLM | 1.0186 | +0.0186 | 0.0804 | 0.0918 | 1.14 | 98% |
-| RieszNet | 0.9898 | -0.0102 | 0.0541 | 0.0544 | 1.01 | 94% |
-| Naive | 0.9850 | -0.0150 | 0.0605 | 0.0109 | 0.18 | 26% |
-
-**FLM parameter recovery** (theta_hat(x) vs truth, mean over reps)
-
-| param | R2 | RMSE | bias |
-|---|---|---|---|
-| alpha(x) | 0.9215 | 0.2783 | +0.0272 |
-| beta(x)  | 0.4258 | 0.3765 | -0.0148 |
+| Oracle | 0.8888 | -0.0093 | 0.0703 | 0.0682 | 0.97 | 100% |
+| FLM[cholesky] | 0.8718 | -0.0263 | 0.1049 | 0.1106 | 1.05 | 98% |
+| FLM[oracle] | 0.8555 | -0.0427 | 0.0843 | 0.0792 | 0.94 | 90% |
+| RieszNet | 0.8755 | -0.0226 | 0.1086 | 0.1274 | 1.17 | 100% |
+| Naive | 0.8758 | -0.0224 | 0.1025 | 0.0236 | 0.23 | 28% |
 
 Pass if FLM and RieszNet both ~truth, coverage 90-97%, SE ratio ~1; Naive should under-cover (shows the correction is necessary).

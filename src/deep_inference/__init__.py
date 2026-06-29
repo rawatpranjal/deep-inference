@@ -36,12 +36,14 @@ Which entry point?
         from the arguments. A thin, friendly front-end over inference().
 """
 
+from collections.abc import Callable
+from typing import List, Optional
+
 import numpy as np
-from typing import Callable, List, Optional
 from torch import Tensor
 
-from .core import structural_dml_core, DMLResult
-from .families import get_family, FAMILY_REGISTRY, BaseFamily
+from .core import DMLResult, structural_dml_core
+from .families import FAMILY_REGISTRY, BaseFamily, get_family
 
 
 def _validate_inputs(Y, T, X, family_name=None):
@@ -51,8 +53,15 @@ def _validate_inputs(Y, T, X, family_name=None):
     # Sparse matrix check (issue 13)
     try:
         import scipy.sparse
-        if scipy.sparse.issparse(Y) or scipy.sparse.issparse(T) or scipy.sparse.issparse(X):
-            raise ValueError("Sparse matrices not supported. Convert with .toarray() first.")
+
+        if (
+            scipy.sparse.issparse(Y)
+            or scipy.sparse.issparse(T)
+            or scipy.sparse.issparse(X)
+        ):
+            raise ValueError(
+                "Sparse matrices not supported. Convert with .toarray() first."
+            )
     except ImportError:
         pass
 
@@ -96,20 +105,24 @@ def _validate_inputs(Y, T, X, family_name=None):
         warnings.warn("All Y values are zero. Results may be unreliable.", UserWarning)
 
     # Family-specific checks (issues 7, 8)
-    if family_name in ('poisson', 'negbin'):
+    if family_name in ("poisson", "negbin"):
         if np.any(Y < 0):
-            raise ValueError(f"Y contains negative values, invalid for family='{family_name}'.")
+            raise ValueError(
+                f"Y contains negative values, invalid for family='{family_name}'."
+            )
 
-    if family_name in ('logit', 'probit'):
+    if family_name in ("logit", "probit"):
         if len(np.unique(Y)) == 1:
             warnings.warn(
                 f"All Y values are {Y[0]}. Perfect separation — estimation may fail.",
                 UserWarning,
             )
 
-    if family_name in ('gamma', 'weibull'):
+    if family_name in ("gamma", "weibull"):
         if np.any(Y <= 0):
-            raise ValueError(f"Y contains non-positive values, invalid for family='{family_name}'.")
+            raise ValueError(
+                f"Y contains non-positive values, invalid for family='{family_name}'."
+            )
 
     return Y, T, X
 
@@ -118,21 +131,21 @@ def structural_dml(
     Y: np.ndarray,
     T: np.ndarray,
     X: np.ndarray,
-    family: Optional[str] = None,
-    target: Optional[str] = None,
-    loss_fn: Optional[Callable] = None,
-    target_fn: Optional[Callable] = None,
-    theta_dim: Optional[int] = None,
+    family: str | None = None,
+    target: str | None = None,
+    loss_fn: Callable | None = None,
+    target_fn: Callable | None = None,
+    theta_dim: int | None = None,
     n_folds: int = 50,
     n_repeats: int = 1,
     three_way_theta_frac: float = 0.6,
-    hidden_dims: List[int] = [64, 32],
+    hidden_dims: list[int] = [64, 32],
     epochs: int = 200,
     lr: float = 0.01,
-    patience: Optional[int] = None,
+    patience: int | None = None,
     dropout: float = 0.1,
     weight_decay: float = 0.0,
-    variance: str = 'pooled',
+    variance: str = "pooled",
     verbose: bool = False,
     store_data: bool = True,
     **kwargs,
@@ -280,17 +293,25 @@ def structural_dml(
     # whose 3-way split yields noisy val loss that triggers early stopping ~15 epochs
     # at patience=10 (fatal); bump to 50 unless the caller set patience explicitly.
     if patience is None:
-        patience = 50 if family == 'multinomial_logit' else 10
+        patience = 50 if family == "multinomial_logit" else 10
 
     # Get family or use custom functions
     if family is not None:
         # Build family kwargs (e.g., target='ame' for logit, n_alternatives=3 for multinomial)
         # Known family constructor params that should NOT pass through to structural_dml_core
-        FAMILY_CONSTRUCTOR_PARAMS = {'target', 'n_alternatives', 'n_attributes', 'target_idx',
-                                     'shape', 'scale', 'overdispersion', 'sigma'}
+        FAMILY_CONSTRUCTOR_PARAMS = {
+            "target",
+            "n_alternatives",
+            "n_attributes",
+            "target_idx",
+            "shape",
+            "scale",
+            "overdispersion",
+            "sigma",
+        }
         family_kwargs = {}
         if target is not None:
-            family_kwargs['target'] = target
+            family_kwargs["target"] = target
         for param in list(kwargs.keys()):
             if param in FAMILY_CONSTRUCTOR_PARAMS:
                 family_kwargs[param] = kwargs.pop(param)
@@ -303,7 +324,7 @@ def structural_dml(
         # NOT imply Lambda is x-independent: Lambda(x)=E[l_theta_theta|x] still
         # varies in x through the treatment design E[T|x]. Forcing three_way=True
         # lets the Lambda(x) estimator capture that heterogeneity.
-        three_way = kwargs.pop('three_way', None)
+        three_way = kwargs.pop("three_way", None)
         if three_way is None:
             three_way = fam.hessian_depends_on_theta()
 
@@ -311,7 +332,9 @@ def structural_dml(
         # Create test inputs with correct dimensions
         test_theta = Tensor([[0.0] * theta_dim])
         # Determine treatment dimension for test (T may be multi-dim for multinomial)
-        t_test_dim = getattr(fam, 'J', 1) * getattr(fam, 'K', 1) if hasattr(fam, 'J') else 1
+        t_test_dim = (
+            getattr(fam, "J", 1) * getattr(fam, "K", 1) if hasattr(fam, "J") else 1
+        )
         test_t = Tensor([0.0] * t_test_dim) if t_test_dim > 1 else Tensor([0.0])
         try:
             grad_result = fam.gradient(Tensor([0.0]), test_t.unsqueeze(0), test_theta)
@@ -331,7 +354,7 @@ def structural_dml(
         per_obs_target_grad_fn = fam.per_obs_target_gradient
     else:
         # Fully automatic mode
-        three_way = kwargs.pop('three_way', None)  # Auto-detect
+        three_way = kwargs.pop("three_way", None)  # Auto-detect
         gradient_fn = None
         hessian_fn = None
         per_obs_target_fn = None
@@ -339,11 +362,12 @@ def structural_dml(
 
         # Default target if not provided
         if target_fn is None:
+
             def target_fn(x, theta):
                 return theta[:, 1].mean()
 
     # Extract network_factory from kwargs if present
-    network_factory = kwargs.pop('network_factory', None)
+    network_factory = kwargs.pop("network_factory", None)
 
     result = structural_dml_core(
         Y=Y,
@@ -388,6 +412,7 @@ def structural_dml(
 # New API: inference() with general loss/target
 from dataclasses import dataclass, field
 from typing import Any
+
 import torch
 
 from .utils.result_mixin import PredictVisualizeMixin
@@ -406,18 +431,19 @@ class InferenceResult(PredictVisualizeMixin):
     diagnostics: dict
 
     # Metadata fields
-    _model: Optional[str] = None
-    _target: Optional[str] = None
-    _n_obs: Optional[int] = None
-    _n_folds: Optional[int] = None
+    _model: str | None = None
+    _target: str | None = None
+    _n_obs: int | None = None
+    _n_folds: int | None = None
 
     # Fields for prediction capability
-    _X_train: Optional[np.ndarray] = field(default=None, repr=False)
-    _theta_predictor: Optional[Any] = field(default=None, repr=False)
+    _X_train: np.ndarray | None = field(default=None, repr=False)
+    _theta_predictor: Any | None = field(default=None, repr=False)
 
     def __repr__(self) -> str:
         """Short representation."""
         from .utils.formatting import format_short_repr
+
         return format_short_repr(
             class_name="InferenceResult",
             estimate=self.mu_hat,
@@ -458,38 +484,42 @@ def inference(
     T: np.ndarray,
     X: np.ndarray,
     # Option 1: Built-in model/target (strings)
-    model: Optional[str] = None,
-    target: Optional[str] = None,
+    model: str | None = None,
+    target: str | None = None,
     # Option 2: Custom loss/target functions
-    loss: Optional[Callable] = None,
-    target_fn: Optional[Callable] = None,
-    theta_dim: Optional[int] = None,
+    loss: Callable | None = None,
+    target_fn: Callable | None = None,
+    theta_dim: int | None = None,
     # Hessian property overrides (for custom loss with non-scalar T)
-    hessian_depends_on_theta: Optional[bool] = None,
-    hessian_depends_on_y: Optional[bool] = None,
+    hessian_depends_on_theta: bool | None = None,
+    hessian_depends_on_y: bool | None = None,
     # Evaluation point
-    t_tilde: Optional[float] = None,
+    t_tilde: float | None = None,
     # Randomization settings (for Regime A)
     is_randomized: bool = False,
     treatment_dist: Optional["TreatmentDistribution"] = None,
     # Lambda estimation override
-    lambda_method: Optional[str] = None,
+    lambda_method: str | None = None,
+    # Advanced: supply a pre-built LambdaStrategy directly (bypasses auto-selection).
+    # Used to inject a custom/oracle Λ(x); the clean replacement for the legacy
+    # structural_dml lambda_eval_fn hook, which the new inference() path lacks.
+    lambda_strategy: Optional["LambdaStrategy"] = None,
     # Cross-fitting settings
     n_folds: int = 50,
     n_repeats: int = 1,
     three_way_theta_frac: float = 0.6,
     # Network settings
-    hidden_dims: List[int] = [64, 32],
+    hidden_dims: list[int] = [64, 32],
     epochs: int = 200,
     lr: float = 0.01,
     patience: int = 50,
     dropout: float = 0.1,
     weight_decay: float = 0.0,
     # Custom network architecture
-    network_factory: Optional[Callable] = None,
+    network_factory: Callable | None = None,
     # Other
     tikhonov_scale: float = 0.01,
-    variance: str = 'pooled',
+    variance: str = "pooled",
     verbose: bool = False,
     store_data: bool = True,
     # Model-specific kwargs (e.g., tau, smooth_eps for quantile)
@@ -579,10 +609,34 @@ def inference(
 
         result = inference(Y, T, X, loss=my_loss, target_fn=my_target, theta_dim=2)
     """
-    from .models import Linear, Logit, MultinomialLogit, CombinatorialModel, Quantile, DiDModel, FEPanelDiDModel, CustomModel, model_from_loss
-    from .targets import AverageParameter, AME, CustomTarget, ChoiceProbabilityTarget, MultinomialAME, Elasticity, WTP, ConsumerWelfare, DoseResponse, Profit, TailProbability, ConditionalVariance, MultiTreatmentATE
-    from .lambda_ import select_lambda_strategy, Regime, detect_regime
     from .engine import run_crossfit
+    from .lambda_ import Regime, detect_regime, select_lambda_strategy
+    from .models import (
+        CombinatorialModel,
+        CustomModel,
+        DiDModel,
+        FEPanelDiDModel,
+        Linear,
+        Logit,
+        MultinomialLogit,
+        Quantile,
+        model_from_loss,
+    )
+    from .targets import (
+        AME,
+        WTP,
+        AverageParameter,
+        ChoiceProbabilityTarget,
+        ConditionalVariance,
+        ConsumerWelfare,
+        CustomTarget,
+        DoseResponse,
+        Elasticity,
+        MultinomialAME,
+        MultiTreatmentATE,
+        Profit,
+        TailProbability,
+    )
 
     # Data validation and conversion
     Y, T, X = _validate_inputs(Y, T, X, family_name=model)
@@ -625,7 +679,9 @@ def inference(
             "did_fe": FEPanelDiDModel(),
         }
         if model not in model_map:
-            raise ValueError(f"Unknown model: {model}. Available: {list(model_map.keys())}")
+            raise ValueError(
+                f"Unknown model: {model}. Available: {list(model_map.keys())}"
+            )
         struct_model = model_map[model]
 
         # Multinomial theta is [alpha_1..alpha_{J-1}, beta_1..beta_K]; the first
@@ -637,7 +693,8 @@ def inference(
         if theta_dim is None:
             raise ValueError("theta_dim required for custom loss")
         struct_model = model_from_loss(
-            loss, theta_dim,
+            loss,
+            theta_dim,
             hessian_depends_on_theta=hessian_depends_on_theta,
             hessian_depends_on_y=hessian_depends_on_y,
         )
@@ -646,52 +703,74 @@ def inference(
 
     # Fail loudly on silently-dropped arguments (nothing downstream consumes kwargs).
     if kwargs:
-        raise ValueError(f"inference() got unexpected keyword arguments: {list(kwargs)}")
+        raise ValueError(
+            f"inference() got unexpected keyword arguments: {list(kwargs)}"
+        )
 
     # Resolve target
     if target is not None:
         # Built-in target
         target_map = {
-            "beta": AverageParameter(param_index=beta_index, theta_dim=struct_model.theta_dim),
-            "average_slope": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
-            "ame": AME(param_index=1, model_type="logit" if model == "logit" else "linear"),
+            "beta": AverageParameter(
+                param_index=beta_index, theta_dim=struct_model.theta_dim
+            ),
+            "average_slope": AverageParameter(
+                param_index=1, theta_dim=struct_model.theta_dim
+            ),
+            "ame": AME(
+                param_index=1, model_type="logit" if model == "logit" else "linear"
+            ),
             "elasticity": Elasticity(model_type="logit"),
             "wtp": WTP(attribute_index=1, price_index=2),
             "welfare": ConsumerWelfare(price_coef_index=1),
-            "dose_response": DoseResponse(model_type=model if model in ("logit", "linear") else "logit"),
-            "profit": Profit(model_type=model if model in ("logit", "linear") else "logit"),
-            "tail_probability": TailProbability(model_type=model if model in ("logit", "linear") else "logit"),
+            "dose_response": DoseResponse(
+                model_type=model if model in ("logit", "linear") else "logit"
+            ),
+            "profit": Profit(
+                model_type=model if model in ("logit", "linear") else "logit"
+            ),
+            "tail_probability": TailProbability(
+                model_type=model if model in ("logit", "linear") else "logit"
+            ),
             "conditional_variance": ConditionalVariance(model_type="logit"),
             "qte": AverageParameter(param_index=1, theta_dim=struct_model.theta_dim),
             # Saturated DiD interaction tau = theta[3] (E[tau(X)] DiD effect)
             "tau": AverageParameter(param_index=3, theta_dim=struct_model.theta_dim),
             "att": AverageParameter(param_index=3, theta_dim=struct_model.theta_dim),
             # FE panel DiD effect tau = theta[0] (theta_dim=1, intercept-free)
-            "fe_effect": AverageParameter(param_index=0, theta_dim=struct_model.theta_dim),
+            "fe_effect": AverageParameter(
+                param_index=0, theta_dim=struct_model.theta_dim
+            ),
         }
         if target not in target_map:
-            raise ValueError(f"Unknown target: {target}. Available: {list(target_map.keys())}")
+            raise ValueError(
+                f"Unknown target: {target}. Available: {list(target_map.keys())}"
+            )
         struct_target = target_map[target]
     elif target_fn is not None:
         # Custom target
         struct_target = CustomTarget(h_fn=target_fn)
     else:
         # Default: average beta
-        struct_target = AverageParameter(param_index=beta_index, theta_dim=struct_model.theta_dim)
+        struct_target = AverageParameter(
+            param_index=beta_index, theta_dim=struct_model.theta_dim
+        )
 
-    # Select Lambda strategy
-    lambda_strategy = select_lambda_strategy(
-        model=struct_model,
-        is_randomized=is_randomized,
-        treatment_dist=treatment_dist,
-        lambda_method=lambda_method,
-    )
+    # Select Lambda strategy (unless the caller supplied one, e.g. an oracle Λ(x))
+    if lambda_strategy is None:
+        lambda_strategy = select_lambda_strategy(
+            model=struct_model,
+            is_randomized=is_randomized,
+            treatment_dist=treatment_dist,
+            lambda_method=lambda_method,
+        )
 
     # Detect regime for diagnostics
     regime = detect_regime(struct_model, is_randomized, treatment_dist is not None)
 
     if verbose:
         from .lambda_.selector import describe_regime
+
         print(f"Detected: {describe_regime(regime)}")
 
     # Run cross-fitting
@@ -803,12 +882,12 @@ def _did_neural(
     post,
     X,
     *,
-    hidden_dims: Optional[List[int]] = None,
+    hidden_dims: list[int] | None = None,
     n_folds: int = 50,
     epochs: int = 200,
     lr: float = 0.01,
     patience: int = 50,
-    lambda_method: Optional[str] = None,
+    lambda_method: str | None = None,
     verbose: bool = False,
 ) -> InferenceResult:
     """
@@ -878,12 +957,12 @@ def _did_panel_fe(
     unit,
     time,
     *,
-    hidden_dims: Optional[List[int]] = None,
+    hidden_dims: list[int] | None = None,
     n_folds: int = 50,
     epochs: int = 200,
     lr: float = 0.01,
     patience: int = 50,
-    lambda_method: Optional[str] = None,
+    lambda_method: str | None = None,
     verbose: bool = False,
 ) -> InferenceResult:
     """
@@ -960,12 +1039,12 @@ def did(
     method: str = "auto",
     alpha: float = 0.05,
     use_bessel: bool = False,
-    hidden_dims: Optional[List[int]] = None,
+    hidden_dims: list[int] | None = None,
     n_folds: int = 50,
     epochs: int = 200,
     lr: float = 0.01,
     patience: int = 50,
-    lambda_method: Optional[str] = None,
+    lambda_method: str | None = None,
     verbose: bool = False,
 ) -> InferenceResult:
     """
@@ -1019,8 +1098,17 @@ def did(
         if group is None or post is None or X is None:
             raise ValueError("did(method='neural') requires `group`, `post`, and `X`.")
         return _did_neural(
-            Y, group, post, X, hidden_dims=hidden_dims, n_folds=n_folds, epochs=epochs,
-            lr=lr, patience=patience, lambda_method=lambda_method, verbose=verbose,
+            Y,
+            group,
+            post,
+            X,
+            hidden_dims=hidden_dims,
+            n_folds=n_folds,
+            epochs=epochs,
+            lr=lr,
+            patience=patience,
+            lambda_method=lambda_method,
+            verbose=verbose,
         )
 
     if method == "panel_fe":
@@ -1034,83 +1122,122 @@ def did(
                 )
             D = np.asarray(group, dtype=np.float64) * np.asarray(post, dtype=np.float64)
         return _did_panel_fe(
-            Y, D, X, unit, time, hidden_dims=hidden_dims, n_folds=n_folds, epochs=epochs,
-            lr=lr, patience=patience, lambda_method=lambda_method, verbose=verbose,
+            Y,
+            D,
+            X,
+            unit,
+            time,
+            hidden_dims=hidden_dims,
+            n_folds=n_folds,
+            epochs=epochs,
+            lr=lr,
+            patience=patience,
+            lambda_method=lambda_method,
+            verbose=verbose,
         )
 
-    raise ValueError(f"Unknown method: {method!r}. Use 'auto', 'exact', 'neural', or 'panel_fe'.")
+    raise ValueError(
+        f"Unknown method: {method!r}. Use 'auto', 'exact', 'neural', or 'panel_fe'."
+    )
 
 
 # Re-export key classes
 from .core import DMLResult, compute_coverage, compute_se_ratio
 from .families import (
-    LinearFamily,
-    LogitFamily,
-    PoissonFamily,
     GammaFamily,
     GumbelFamily,
-    TobitFamily,
+    LinearFamily,
+    LogitFamily,
+    MultinomialLogitFamily,
     NegBinFamily,
+    PoissonFamily,
+    TobitFamily,
     WeibullFamily,
-    BaseFamily,
 )
+from .lambda_ import Regime, detect_regime, select_lambda_strategy
 
 # New architecture exports
-from .models import StructuralModel, CustomModel, Linear, Logit, MultinomialLogit, CombinatorialModel, Quantile, DiDModel, FEPanelDiDModel
-from .targets import Target, CustomTarget, AverageParameter, AME, ChoiceProbabilityTarget, MultinomialAME, Elasticity, WTP, ConsumerWelfare, DoseResponse, Profit, TailProbability, ConditionalVariance, MultiTreatmentATE
-from .families import MultinomialLogitFamily
-from .lambda_ import Regime, detect_regime, select_lambda_strategy
+from .models import (
+    CombinatorialModel,
+    CustomModel,
+    DiDModel,
+    FEPanelDiDModel,
+    Linear,
+    Logit,
+    MultinomialLogit,
+    Quantile,
+    StructuralModel,
+)
+from .riesz import RieszNet, riesz_inference
+from .targets import (
+    AME,
+    WTP,
+    AverageParameter,
+    ChoiceProbabilityTarget,
+    ConditionalVariance,
+    ConsumerWelfare,
+    CustomTarget,
+    DoseResponse,
+    Elasticity,
+    MultinomialAME,
+    MultiTreatmentATE,
+    Profit,
+    TailProbability,
+    Target,
+)
 
 __all__ = [
     # New API
-    'inference',
-    'InferenceResult',
-    'did',
+    "inference",
+    "InferenceResult",
+    "riesz_inference",
+    "RieszNet",
+    "did",
     # Legacy API
-    'structural_dml',
+    "structural_dml",
     # Result class
-    'DMLResult',
+    "DMLResult",
     # Families (legacy)
-    'LinearFamily',
-    'LogitFamily',
-    'PoissonFamily',
-    'GammaFamily',
-    'GumbelFamily',
-    'TobitFamily',
-    'NegBinFamily',
-    'WeibullFamily',
-    'BaseFamily',
-    'get_family',
-    'FAMILY_REGISTRY',
+    "LinearFamily",
+    "LogitFamily",
+    "PoissonFamily",
+    "GammaFamily",
+    "GumbelFamily",
+    "TobitFamily",
+    "NegBinFamily",
+    "WeibullFamily",
+    "BaseFamily",
+    "get_family",
+    "FAMILY_REGISTRY",
     # New architecture
-    'StructuralModel',
-    'CustomModel',
-    'Linear',
-    'Logit',
-    'MultinomialLogit',
-    'MultinomialLogitFamily',
-    'Quantile',
-    'CombinatorialModel',
-    'DiDModel',
-    'FEPanelDiDModel',
-    'Target',
-    'CustomTarget',
-    'AverageParameter',
-    'AME',
-    'ChoiceProbabilityTarget',
-    'MultinomialAME',
-    'Elasticity',
-    'WTP',
-    'ConsumerWelfare',
-    'DoseResponse',
-    'Profit',
-    'TailProbability',
-    'ConditionalVariance',
-    'MultiTreatmentATE',
-    'Regime',
-    'detect_regime',
-    'select_lambda_strategy',
+    "StructuralModel",
+    "CustomModel",
+    "Linear",
+    "Logit",
+    "MultinomialLogit",
+    "MultinomialLogitFamily",
+    "Quantile",
+    "CombinatorialModel",
+    "DiDModel",
+    "FEPanelDiDModel",
+    "Target",
+    "CustomTarget",
+    "AverageParameter",
+    "AME",
+    "ChoiceProbabilityTarget",
+    "MultinomialAME",
+    "Elasticity",
+    "WTP",
+    "ConsumerWelfare",
+    "DoseResponse",
+    "Profit",
+    "TailProbability",
+    "ConditionalVariance",
+    "MultiTreatmentATE",
+    "Regime",
+    "detect_regime",
+    "select_lambda_strategy",
     # Utilities
-    'compute_coverage',
-    'compute_se_ratio',
+    "compute_coverage",
+    "compute_se_ratio",
 ]

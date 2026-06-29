@@ -280,7 +280,7 @@ tau_x = r.predict_theta(X_new)[:, 3]             # conditional effect τ(X_new)
 For panel data, `Y` and the treatment `D = group*post` (or an explicit `D=`) are
 residualized by unit + time fixed effects, then a network learns `τ(X)` in
 `Ỹ_it = D̃_it·τ(X_it) + ε_it`; target **E[τ(X)]**, Regime B (`Λ = E[D̃²|X]`). Works for
-**continuous and binary** outcomes — for binary `Y` this is a fixed-effects **linear
+**continuous and binary** outcomes, and for binary `Y` this is a fixed-effects **linear
 probability model** and the IF SE is heteroskedasticity-robust.
 
 ```python
